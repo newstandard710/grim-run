@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.6.1</title>
+  <title>GRIM RUN — v0.6.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -134,7 +134,7 @@ button {cursor:pointer;}
       <h1>GRIM <em>RUN</em></h1>
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.6.1 · TERRAIN COLLISION HOTFIX</div>
+      <div class="mini">v0.6.2 · SLIDE COLLISION HOTFIX</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -177,7 +177,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.6.1',
+  version: '0.6.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -194,7 +194,7 @@ window.GRIM_CONFIG = Object.freeze({
   attackCooldownMs: 405,
   slideMaxMs: 850,
   slideMinMs: 150,
-  slideClearancePx: 35,          // hitbox reaches from ceiling to this height above floor
+  slideClearancePx: 48,          // sloping ceiling: 29px slide collider + 19px visible safety margin
   damageInvulnerabilityMs: 1100,
   startingHP: 3,
   coinScore: 5,
@@ -238,8 +238,9 @@ window.GRIM_CONFIG = Object.freeze({
     return Math.max(0, Math.floor(distance)) + Math.max(0, souls) * soulScore + Math.max(0, coins) * coinScore;
   }
   function obstacle(type, x, groundY, variant = 0, clearance = 35, viewHeight = 440) {
-    // Tall obstacles cannot be jumped over; hanging obstacles extend above the camera.
-    // All visual variants of a class share exactly the same collision dimensions.
+    // Hanging branches extend above the camera. Their AABB is a coarse
+    // container only: the actual underside and hit detection follow the hill.
+    // Other obstacle types retain their normal axis-aligned hitboxes.
     const dims = {
       rock: { width: 54, height: 48, y: groundY - 48 },
       branch: { width: 74, height: 2000 - clearance, y: groundY - 2000 },
@@ -248,6 +249,34 @@ window.GRIM_CONFIG = Object.freeze({
     }[type];
     if (!dims) throw new Error('Unknown obstacle ' + type);
     return { type, x, y: dims.y, width: dims.width, height: dims.height, variant, dealtDamage: false, destroyed: false };
+  }
+  // A branch's underside follows the *local* slope, not the ground height
+  // at its left edge. The higher neighboring surface is used to allow room
+  // for the Reaper's 56px-wide sliding body at hill crests and sharp climbs.
+  // Rendering and gameplay both use this SAME contour function.
+  function slideCeilingBottomAt(groundAt, x, clearance = 48) {
+    let highest = Infinity;
+    for (let offset = -32; offset <= 32; offset += 8) {
+      const ground = groundAt(x + offset);
+      if (ground !== null && Number.isFinite(ground)) highest = Math.min(highest, ground);
+    }
+    return Number.isFinite(highest) ? highest - clearance : null;
+  }
+  function branchHits(box, ob, groundAt, clearance = 48, groundedSlide = false) {
+    const left = Math.max(box.x, ob.x), right = Math.min(box.x + box.width, ob.x + ob.width);
+    if (!(left < right) || box.y + box.height <= ob.y) return false;
+    // Sliding along solid ground is the explicit safe counter to a branch.
+    // The player collider uses the height at its center, but slopes have
+    // different heights under its leading/trailing edges. Never punish a
+    // correctly held ground slide for that difference.
+    if (groundedSlide) return false;
+    const samples = Math.max(1, Math.ceil((right-left)/6));
+    for (let i=0; i<=samples; i++) {
+      const x = left+(right-left)*i/samples;
+      const underside = slideCeilingBottomAt(groundAt,x,clearance);
+      if (underside!==null && box.y < underside && box.y+box.height > ob.y) return true;
+    }
+    return false;
   }
   function collisionBox(reaperX, feetY, sliding) {
     return sliding
@@ -371,7 +400,8 @@ window.GRIM_CONFIG = Object.freeze({
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding };
+    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
+    slideCeilingBottomAt, branchHits };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -1547,7 +1577,18 @@ window.GRIM_CONFIG = Object.freeze({
       if(p.invulMs>0&&!this.godMode)return;
       const box=Core.collisionBox(p.x,this.feetY,this.lowProfile);
       for(const ob of this.obstacles){
-        if(ob.destroyed||ob.dealtDamage||!Core.overlaps(box,ob))continue;
+        if(ob.destroyed||ob.dealtDamage)continue;
+        // A regular AABB misses the changing clearance underneath a beam
+        // straddling a hill or hill crest. Test the SAME underside contour
+        // used for the artwork, and preserve the slide-as-safe-counter rule.
+        const localSlideGround=this.terrain.groundAt(p.x);
+        const nearGroundSlide=p.sliding && p.onSoulPlatform===false &&
+          (p.grounded || (localSlideGround!==null &&
+            p.y>=localSlideGround-14 && p.y<=localSlideGround+24));
+        const hit=ob.type==='branch'
+          ? Core.branchHits(box,ob,this.terrain.groundAt.bind(this.terrain),C.slideClearancePx,nearGroundSlide)
+          : Core.overlaps(box,ob);
+        if(!hit)continue;
         ob.dealtDamage=true;
         if(ob.type==='fire' && this.powerManager.level('fireproofBoots')>0 && p.fireproofCooldownMs<=0){
           p.fireproofCooldownMs=this.powerManager.fireCooldownMs();
@@ -2009,31 +2050,45 @@ window.GRIM_CONFIG = Object.freeze({
         return;
       }
       if(o.type==='branch'){
-        const tip=ground-C.slideClearancePx;
-        const ceiling=ground-2000;
+        // Keep the bottom of the overhead obstacle visibly parallel to the
+        // actual terrain, including uphill, downhill and crest transitions.
+        // Using the identical contour for graphics and collision avoids the
+        // old flat-bottom/flat-hitbox mismatch on steep slopes.
+        const groundAt=this.terrain.groundAt.bind(this.terrain);
+        const n=Math.max(7,Math.ceil(o.width/6));
+        const contour=[];
+        for(let i=0;i<=n;i++){
+          const sx=x+o.width*i/n;
+          contour.push({x:sx,y:Core.slideCeilingBottomAt(groundAt,sx,C.slideClearancePx)
+            ?? (this.terrain.anchorAt(sx)-C.slideClearancePx)});
+        }
+        const ceiling=o.y;
+        const edge=contour.map(pt=>({x:pt.x,y:pt.y}));
+        const polygon=[{x,y:ceiling},{x:x+o.width,y:ceiling},...edge.slice().reverse()];
         const pillar=v%2===0;
+        g.fillStyle(pillar?0x293441:0x293d47,.99);g.fillPoints(polygon,true);
         if(pillar){
-          g.fillStyle(0x272e3d);g.fillRect(x,ceiling,o.width,tip-ceiling-6);
-          g.fillStyle(0x394555);g.fillRect(x+5,ceiling,o.width-15,tip-ceiling-11);
-          g.fillStyle(0x586172,.65);g.fillRect(x+11,ceiling,7,tip-ceiling-11);
-          g.fillStyle(0x212e39);g.fillRect(x+o.width-15,ceiling,10,tip-ceiling-11);
-          g.fillStyle(0x515665);g.fillRoundedRect(x-3,tip-19,o.width+5,19,3);
-          g.lineStyle(3,0x84909c,.35);g.lineBetween(x+12,tip-40,x+25,tip-60);
-          g.lineBetween(x+25,tip-60,x+34,tip-53);
-          for(let j=1;j<4;j++){
-            g.lineStyle(2,0x1d2531,.6);g.lineBetween(x+5,ceiling+j*(tip-ceiling)/4,x+o.width-8,ceiling+j*(tip-ceiling)/4+4);
-          }
+          g.fillStyle(0x465364,.82);
+          g.fillPoints([{x:x+5,y:ceiling},{x:x+o.width-9,y:ceiling},
+            ...edge.slice(1,-1).reverse().map(pt=>({x:pt.x,y:pt.y-13}))],true);
+          g.fillStyle(0x566775,.62);
+          g.fillRect(x+12,ceiling+15,6,Math.max(0,Math.min(...edge.map(pt=>pt.y))-ceiling-36));
         }else{
-          // Jagged stalactite formation continues to the ceiling; never jumpable.
-          g.fillStyle(0x293d47);
-          g.fillPoints([{x:x-1,y:ceiling},{x:x+o.width+1,y:ceiling},
-            {x:x+o.width-4,y:tip-18},{x:x+o.width*.65,y:tip-4},
-            {x:x+o.width*.48,y:tip},{x:x+o.width*.2,y:tip-7},{x:x+4,y:tip-17}],true);
-          g.fillStyle(0x425864,.85);
-          g.fillPoints([{x:x+11,y:ceiling},{x:x+o.width*.53,y:ceiling},
-            {x:x+o.width*.63,y:tip-17},{x:x+o.width*.4,y:tip-4},{x:x+22,y:tip-25}],true);
-          g.lineStyle(3,0x66808a,.44);g.lineBetween(x+22,ceiling+8,x+30,tip-41);
-          g.lineStyle(2,0x162a34,.7);g.lineBetween(x+o.width-15,tip-85,x+o.width-25,tip-29);
+          // Stalactites stop ABOVE the contoured safe passage rather than
+          // protruding unpredictably below it at a hill crest.
+          g.fillStyle(0x526879,.8);
+          g.fillPoints([{x:x+11,y:ceiling},{x:x+o.width*.57,y:ceiling},
+            ...edge.slice(1,-1).reverse().map((pt,i)=>({x:pt.x,y:pt.y-16-(i%3)*6}))],true);
+        }
+        // Lower rim follows the same rising/falling contour and is therefore
+        // a reliable visual indication of the space available for sliding.
+        g.lineStyle(6,pillar?0x667987:0x627e8d,.96);
+        for(let i=1;i<contour.length;i++){
+          const a=contour[i-1],b=contour[i];g.lineBetween(a.x,a.y,b.x,b.y);
+        }
+        g.lineStyle(2,0xb1c2c9,.56);
+        for(let i=1;i<contour.length;i++){
+          const a=contour[i-1],b=contour[i];g.lineBetween(a.x,a.y-8,b.x,b.y-8);
         }
         return;
       }
