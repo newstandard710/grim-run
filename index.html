@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.3.1</title>
+  <title>GRIM RUN — v0.3.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -103,8 +103,8 @@ button {cursor:pointer;}
       <h1>GRIM <em>RUN</em></h1>
       <p>Slash towering stalks, hop over fallen obstacles, and slide beneath hanging stone. Gather coins, claim a rare soul every 666 meters, and choose a supernatural power every 500 meters.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.3.1 · MOVEMENT & FLOW</div>
-      <div class="instructions">⚔ Tap to swing · ↑ Tap to hop / hold to leap · ⇥ Hold to slide</div>
+      <div class="mini">v0.3.2 · COMBO & BALANCE</div>
+      <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
   </div>
   <div id="upgrade-screen" class="modal-wrap reward-wrap hidden" aria-label="Choose your upgrade">
@@ -141,7 +141,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.3.1',
+  version: '0.3.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -170,6 +170,7 @@ window.GRIM_CONFIG = Object.freeze({
   upgradeSafetyAfterMeters: 50, // hazard-free road when gameplay resumes
   resumeCountdownMs: 3000,
   slowCooldownMs: 3300,
+  slideReleaseComboMs: 500, // tap JUMP within half a second after releasing SLIDE to latch air tuck
   firstEncounterX: 1000
 });
 
@@ -232,6 +233,31 @@ window.GRIM_CONFIG = Object.freeze({
     if (candidate < 1) return true;
     return !(offset >= candidate * period - beforePx && offset <= candidate * period + afterMeters * pxPerMeter);
   }
+  // Positions three coins along an unmodified FULL jump. Fractions of total flight
+  // time (12%, 50%, 88%) yield a broad arc at every supported run speed.
+  // offset is measured from ground, aligned with the Reaper's collectible center.
+  function fullJumpCoinArc(firstX, speed, jumpVelocity = -610, gravity = 1550, pickupCenterAboveFeet = 43) {
+    if (!(speed > 0) || !(gravity > 0) || !(jumpVelocity < 0)) throw new Error('Invalid jump arc physics');
+    const fullFlightSeconds = -2 * jumpVelocity / gravity;
+    const fractions = [.12, .50, .88];
+    const firstSeconds = fractions[0] * fullFlightSeconds;
+    return fractions.map(f => {
+      const t = f * fullFlightSeconds;
+      const jumpOffset = jumpVelocity * t + .5 * gravity * t * t;
+      return {
+        x: firstX + speed * (t - firstSeconds),
+        offset: Math.round(jumpOffset - pickupCenterAboveFeet),
+        kind: 'free', taken: false
+      };
+    });
+  }
+  // Release-triggered combo buffer: zero after expiration, positive during a valid combo.
+  function comboBufferAfterFrame(bufferMs, frameMs) {
+    return Math.max(0, bufferMs - Math.max(0, frameMs));
+  }
+  function canAirTuck(holdingSlide, releaseBufferMs) {
+    return Boolean(holdingSlide || releaseBufferMs > 0);
+  }
   function cutJumpVelocity(velocityY, elapsedMs, isHeld, cutSpeed = -310, windowMs = 190) {
     return !isHeld && elapsedMs <= windowMs && velocityY < cutSpeed ? cutSpeed : velocityY;
   }
@@ -241,12 +267,12 @@ window.GRIM_CONFIG = Object.freeze({
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, cutJumpVelocity, attackActive };
+    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
   <script>
-// Grim Run v0.3.1 — engine-agnostic temporary power/reward rules.
+// Grim Run v0.3.2 — engine-agnostic temporary power/reward rules.
 // No browser, Phaser, UI, or persistence dependencies. Reset for every run.
 (function(scope){
   'use strict';
@@ -257,7 +283,7 @@ window.GRIM_CONFIG = Object.freeze({
     ravenWings: Object.freeze({id:'ravenWings',name:'RAVEN WINGS',action:'JUMP',icon:'✦',color:'#c5b5ff',
       descriptions:['Unlock a second jump in midair.','Your second jump gains more height.','A still stronger second jump.']}),
     deathsDelay: Object.freeze({id:'deathsDelay',name:"DEATH'S DELAY",action:'SLIDE',icon:'◷',color:'#9bdcff',
-      descriptions:['Sliding slows the world by 15% for 0.4 seconds.','Slow time by 25% for 0.5 seconds.','Slow time by 35% for 0.6 seconds.']})
+      descriptions:['Sliding slows time by 25% for 0.6 seconds.','Slow time by 35% for 0.8 seconds.','Slow time by 45% for 1 second.']})
   });
   const HEALTH = Object.freeze({id:'vitalEssence',name:'VITAL ESSENCE',action:'HEALTH',icon:'♥',color:'#ffc2c9',
     description:'Increase maximum HP by 1 and heal 1 HP.'});
@@ -273,9 +299,9 @@ window.GRIM_CONFIG = Object.freeze({
   const ATTACK_BONUSES = Object.freeze([0,.20,.35,.50]);
   const SLOW_TIME = Object.freeze([
     Object.freeze({durationMs:0,multiplier:1}),
-    Object.freeze({durationMs:400,multiplier:.85}),
-    Object.freeze({durationMs:500,multiplier:.75}),
-    Object.freeze({durationMs:600,multiplier:.65})
+    Object.freeze({durationMs:600,multiplier:.75}),
+    Object.freeze({durationMs:800,multiplier:.65}),
+    Object.freeze({durationMs:1000,multiplier:.55})
   ]);
   const SECOND_JUMP_VELOCITIES = Object.freeze([null,-610,-665,-720]);
   function makePowerManager(){
@@ -510,7 +536,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.goFlashMs = 0;
       this.elapsed = 0;
       this.frame = 0;
-      this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false,jumpsUsed:0,
+      this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false,airTuck:false,slideReleaseBufferMs:0,jumpsUsed:0,
         attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0 };
       this.obstacles = [];
       this.souls = [];
@@ -556,7 +582,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     get feetY() { return this.groundY + this.player.offsetY; }
     get onGround() { return this.player.offsetY >= -0.01 && this.player.velocityY >= 0; }
-    get lowProfile() { return this.player.sliding || (!this.onGround && this.player.holdSlide); }
+    get lowProfile() { return this.player.sliding || (!this.onGround && (this.player.holdSlide || this.player.airTuck)); }
     startRun() {
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
@@ -564,7 +590,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.rng = Core.makeRng(this.seed);
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
-      this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, jumpsUsed:0,
+      this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0};
       this.startX = this.player.x;
       this.speed = C.initialSpeed;
@@ -591,20 +617,20 @@ window.GRIM_CONFIG = Object.freeze({
     goToMenu() {
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
-      this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;
+      this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
       this.ui.showTimeSlow(false);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
         this.state='paused';this.countdownMs=0;this.goFlashMs=0;
-        this.player.holdSlide=false;this.player.jumpHeld=false;this.player.sliding=false;this.player.slideConsumed=false;
+        this.player.holdSlide=false;this.player.jumpHeld=false;this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
         this.ui.showTimeSlow(false);this.ui.setMode('paused');
       } else if(this.state==='paused') this.resume();
     }
     autoPause() { if(this.state==='playing' || this.state==='countdown') this.togglePause(); }
     beginCountdown(){
       this.state='countdown'; this.countdownMs=C.resumeCountdownMs;this.goFlashMs=0;
-      this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;
+      this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
       this.ui.setMode('countdown');this.ui.updateCountdown(this.countdownMs/1000);
     }
     resume() { if(this.state==='paused') this.beginCountdown(); }
@@ -613,11 +639,14 @@ window.GRIM_CONFIG = Object.freeze({
       const p=this.player;
       const grounded=this.onGround;
       if (!grounded && (p.jumpsUsed!==1 || this.powerManager.level('ravenWings')===0)) return;
+      // A tap after releasing Slide latches the tuck for this jump until landing.
+      // Holding both buttons at once still works, as does a double-jump combo.
+      if (Core.canAirTuck(p.holdSlide,p.slideReleaseBufferMs)) p.airTuck=true;
+      p.slideReleaseBufferMs=0; // a valid jump consumes the combo window
       if (grounded) {
         p.jumpsUsed=1;
         p.sliding=false;
-        // Holding SLIDE through the jump creates a low-profile aerial tuck.
-        // Preserve holdSlide until the player actually releases the button.
+        // Jump launches directly out of a slide; tuck is latched independently.
         p.slideConsumed=false;
         p.offsetY=-1;
         p.velocityY=C.jumpVelocity;
@@ -662,8 +691,14 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     endSlide() {
-      this.player.holdSlide=false;this.player.slideConsumed=false;
-      // Finish the minimum slide duration on the ground to prevent flicker.
+      const p=this.player;
+      const wasHolding=p.holdSlide;
+      p.holdSlide=false;p.slideConsumed=false;
+      // Start the combo clock on RELEASE, regardless of how long Slide was held.
+      // Ignore synthetic button releases from a pause/menu transition.
+      if (this.state==='playing' && wasHolding) p.slideReleaseBufferMs=C.slideReleaseComboMs;
+      // Finish the minimum ground slide duration to prevent flicker.
+      // An already activated aerial tuck stays latched until landing.
     }
     triggerUpgrade(){
       if(this.state!=='playing' || this.pendingOffers.length) return;
@@ -672,6 +707,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.pendingOffers=Powers.rewardOffers(this.powerManager,this.player,this.rng,3);
       this.player.jumpHeld=false;
       this.player.holdSlide=false;
+      this.player.slideReleaseBufferMs=0;
+      this.player.airTuck=false;
       this.state='upgrade';
       this.ui.offerRewards(this.pendingOffers,distanceMark);
     }
@@ -721,7 +758,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     placeEncounter(type, x) {
       if (type === 'coins') {
-        for (let i=0;i<3;i++) this.coins.push({x:x+i*54,offset:-51-(i%2)*17,kind:'free',taken:false});
+        // Spacing and height now follow the full jump's flight path at current speed.
+        this.coins.push(...Core.fullJumpCoinArc(x,this.speed,C.jumpVelocity,C.gravity));
       } else {
         const ob=Core.obstacle(type,x,this.groundY,this.rng.integer(0,5),C.slideClearancePx);
         this.obstacles.push(ob);
@@ -770,6 +808,7 @@ window.GRIM_CONFIG = Object.freeze({
         p.x += this.speed*dt*worldFactor;
         p.slowMs=Math.max(0,p.slowMs-frameMs);
         p.slowCooldownMs=Math.max(0,p.slowCooldownMs-frameMs);
+        p.slideReleaseBufferMs=Core.comboBufferAfterFrame(p.slideReleaseBufferMs,frameMs);
         this.ui.showTimeSlow(p.slowMs>0);
         if(this.goFlashMs>0){
           this.goFlashMs=Math.max(0,this.goFlashMs-frameMs);
@@ -788,7 +827,7 @@ window.GRIM_CONFIG = Object.freeze({
           p.offsetY += p.velocityY*dt;
           p.velocityY += C.gravity*dt;
           if (p.offsetY >= 0) {
-            p.offsetY=0;p.velocityY=0;p.jumpHeld=false;p.jumpsUsed=0;
+            p.offsetY=0;p.velocityY=0;p.jumpHeld=false;p.jumpsUsed=0;p.airTuck=false;
             if(p.holdSlide){p.sliding=true;p.slideMs=0;p.slideConsumed=true;}
             this.puff(p.x,this.groundY,0x9badb7,3);
           }
