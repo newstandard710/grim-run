@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.6.0</title>
+  <title>GRIM RUN — v0.6.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -134,7 +134,7 @@ button {cursor:pointer;}
       <h1>GRIM <em>RUN</em></h1>
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.6.0 · POWERS & PERIL</div>
+      <div class="mini">v0.6.1 · TERRAIN COLLISION HOTFIX</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -177,7 +177,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.6.0',
+  version: '0.6.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -309,34 +309,53 @@ window.GRIM_CONFIG = Object.freeze({
   function cutJumpVelocity(velocityY, elapsedMs, isHeld, cutSpeed = -310, windowMs = 190) {
     return !isHeld && elapsedMs <= windowMs && velocityY < cutSpeed ? cutSpeed : velocityY;
   }
-  // Swept, one-way ground collision. On a rising slope the ground can move
-  // upward between two frames because the Reaper runs horizontally. Comparing
-  // the OLD foot position only against the NEW ground height misses that contact
-  // and lets the player fall through perfectly solid hills. The previous ground
-  // surface establishes whether the feet were above the terrain last frame.
-  // A missing previous surface (an actual gap) cannot supply support: only a
-  // genuine landing from above the new ledge is valid in that case.
-  // Sample the entire horizontal step, including intermediate hills. Prevents
-  // falling through steep rising segment boundaries without bridging real gaps.
+  // Treat terrain as a SOLID top surface, including steep uphill approaches.
+  // The Reaper moves horizontally while jumping: an uphill can overtake his
+  // feet even when vertical velocity is still negative (rising). Ignoring those
+  // frames lets him pass under a hill crest and fall forever inside solid ground.
+  // The sweep also supports real landings on the far side of a gap, but never
+  // carries support across the gap: contact must begin on the new solid section.
   function sweptTerrainLanding(groundAt, fromX, toX, fromFeet, toFeet, velocityY) {
-    if(velocityY < 0 || toX < fromX) return null;
-    const dx=toX-fromX,steps=Math.max(1,Math.ceil(dx/4));
-    // A single gap anywhere along the horizontal sweep forbids landing on the far lip.
-    for(let i=0;i<=steps;i++)if(groundAt(fromX+dx*i/steps)===null)return null;
+    if(!Number.isFinite(fromX)||!Number.isFinite(toX)||!Number.isFinite(fromFeet)||
+       !Number.isFinite(toFeet)||toX<fromX)return null;
     const finalGround=groundAt(toX);
-    if(finalGround===null)return null;
-    let previous=null,previousAbove=false;
+    if(finalGround===null||!Number.isFinite(finalGround))return null;
+    const dx=toX-fromX,steps=Math.max(1,Math.ceil(dx/2.5));
+    const tolerance=1.5;
+    // The correction is limited to ordinary single-frame penetration. Never
+    // teleport a player up from the bottom of an abyss or through a tall ledge.
+    const maxPenetration=Math.max(36,Math.min(70,dx*3+18));
+    const finalPenetration=toFeet-finalGround;
+    if(finalPenetration < -tolerance || finalPenetration > maxPenetration)return null;
+    let aboveOnSolid=false,contact=false,wasSolid=false;
     for(let i=0;i<=steps;i++){
       const t=i/steps,x=fromX+dx*t,ground=groundAt(x);
-      if(ground===null){previous=null;previousAbove=false;continue;}
-      const foot=fromFeet+(toFeet-fromFeet)*t;
-      const above=foot<=ground+1.5;
-      if((previousAbove && !above)||(i===0&&Math.abs(foot-ground)<2&&toFeet>=finalGround)){
-        // Any intermediate contact is valid only if final terrain remains solid.
-        // Never snap up from deep beneath a newly reached ledge.
-        if(toFeet-finalGround<=Math.max(70,dx*1.1))return finalGround;
+      if(ground===null||!Number.isFinite(ground)){
+        // A gap breaks support; entering its far side requires a new crossing.
+        aboveOnSolid=false;wasSolid=false;continue;
       }
-      previous=ground;previousAbove=above;
+      const foot=fromFeet+(toFeet-fromFeet)*t;
+      const separation=foot-ground; // Positive means inside the terrain.
+      if(!wasSolid){
+        // At a sharp ledge, a near-top arrival is still a valid landing.
+        // Arriving already far below the lip must NOT become a landing.
+        aboveOnSolid=separation<=tolerance;
+        wasSolid=true;
+      }
+      if(separation<=-tolerance)aboveOnSolid=true;
+      if(aboveOnSolid&&separation>=-tolerance){contact=true;break;}
+    }
+    if(contact)return finalGround;
+    // Limited recovery for a previously missed uphill contact. Only solid
+    // ground at the start of this frame may supply this recovery; an airborne
+    // player below a new platform/ledge after a gap cannot snap to its top.
+    const priorGround=groundAt(fromX);
+    if(priorGround!==null&&Number.isFinite(priorGround)&&
+       fromFeet-priorGround>=-tolerance&&fromFeet-priorGround<=28&&
+       finalPenetration<=45){
+      // Require continuous solid terrain across the ENTIRE step for recovery.
+      for(let i=1;i<steps;i++)if(groundAt(fromX+dx*i/steps)===null)return null;
+      return finalGround;
     }
     return null;
   }
@@ -1250,10 +1269,10 @@ window.GRIM_CONFIG = Object.freeze({
       this.obstacles.push(ob);this.makeTip(type,ob);
     }
     populateComboObstacles(){
-      // Place advanced patterns inside existing abyss gaps, never on ordinary flat ground.
-      // Those gaps already demand a jump; the gate additionally demands air tuck / attack.
+      // Place combo patterns inside existing abyss gaps, never on ordinary flat ground.
+      // Air tuck gates start at 7,000m; jump-attack challenges may appear earlier.
       const segments=this.terrain.segments;
-      let last=-100000,used=0;
+      let last=-100000,used=0,lateUsed=0;
       for(const s of segments){
         if(s.kind!=='gap')continue;
         const m=(s.start-this.startX)/C.pxPerMeter;
@@ -1264,10 +1283,12 @@ window.GRIM_CONFIG = Object.freeze({
         if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
         if(!Core.isUpgradeSafe(x+86,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
         if(this.coins.some(c=>Math.abs(c.x-x)<80))continue;
-        const type=used%2===0?'tuckGate':'airBramble';
+        // Jump + attack may appear earlier. Air tuck is reserved for the
+        // high-difficulty stretch beginning at 7,000m.
+        const type=m>=7000 && (lateUsed++%2===0)?'tuckGate':'airBramble';
         const base=s.y0;
         const ob=type==='tuckGate'
-          ?{type,x,y:base-1600,width:80,height:1448,variant:0,dealtDamage:false,destroyed:false,baseY:base}
+          ?{type,x,y:base-1600,width:80,height:1433,variant:0,dealtDamage:false,destroyed:false,baseY:base}
           :{type,x,y:base-215,width:80,height:143,variant:0,dealtDamage:false,destroyed:false,baseY:base};
         this.obstacles.push(ob);this.makeTip(type,ob);
         used++;last=m;
