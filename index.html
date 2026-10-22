@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.4.2</title>
+  <title>GRIM RUN — v0.4.2.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -114,7 +114,7 @@ button {cursor:pointer;}
       <h1>GRIM <em>RUN</em></h1>
       <p>Climb beyond the forest into mountains and stars. At 5,000m enter the Underworld, descend into Hell, and reach the final gate at 6,666m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.4.2 · HILLS & SOUL REWARDS</div>
+      <div class="mini">v0.4.2.1 · TERRAIN COLLISION FIX</div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
   </div>
@@ -152,7 +152,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.4.2',
+  version: '0.4.2.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -275,13 +275,26 @@ window.GRIM_CONFIG = Object.freeze({
   function cutJumpVelocity(velocityY, elapsedMs, isHeld, cutSpeed = -310, windowMs = 190) {
     return !isHeld && elapsedMs <= windowMs && velocityY < cutSpeed ? cutSpeed : velocityY;
   }
+  // Swept, one-way ground collision. On a rising slope the ground can move
+  // upward between two frames because the Reaper runs horizontally. Comparing
+  // the OLD foot position only against the NEW ground height misses that contact
+  // and lets the player fall through perfectly solid hills. The previous ground
+  // surface establishes whether the feet were above the terrain last frame.
+  // A missing previous surface (an actual gap) cannot supply support: only a
+  // genuine landing from above the new ledge is valid in that case.
+  function landsOnGround(previousFeetY, nextFeetY, previousGroundY, nextGroundY, velocityY) {
+    if(nextGroundY === null || !Number.isFinite(nextGroundY) || velocityY < 0 || nextFeetY < nextGroundY) return false;
+    const wasAboveCurrent = previousFeetY <= nextGroundY;
+    const wasAbovePrevious = previousGroundY !== null && Number.isFinite(previousGroundY) && previousFeetY <= previousGroundY;
+    return wasAboveCurrent || wasAbovePrevious;
+  }
   function attackActive(remainingMs, durationMs = 260, start = .20, end = .79) {
     if (remainingMs <= 0) return false;
     const progress = 1 - remainingMs / durationMs;
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive };
+    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -1066,6 +1079,9 @@ window.GRIM_CONFIG = Object.freeze({
         const p=this.player;
         this.elapsed += dt;
         const worldFactor=p.slowMs>0?this.powerManager.slowEffect().multiplier:1;
+        // Sample the previous terrain BEFORE horizontal movement. This is
+        // required for correct landings on steep uphill sections.
+        const previousGround=this.terrain.groundAt(p.x);
         p.x += this.speed*dt*worldFactor;
         p.slowMs=Math.max(0,p.slowMs-frameMs);
         p.slowCooldownMs=Math.max(0,p.slowCooldownMs-frameMs);
@@ -1097,7 +1113,7 @@ window.GRIM_CONFIG = Object.freeze({
           const priorY=p.y;
           p.y+=p.velocityY*dt;
           p.velocityY+=C.gravity*dt;
-          if(localGround!==null && p.velocityY>=0 && priorY<=localGround && p.y>=localGround){
+          if(Core.landsOnGround(priorY,p.y,previousGround,localGround,p.velocityY)){
             p.y=localGround;p.velocityY=0;p.grounded=true;p.coyoteMs=0;
             p.jumpHeld=false;p.jumpsUsed=0;p.airTuck=false;
             if(p.holdSlide){p.sliding=true;p.slideMs=0;p.slideConsumed=true;}
