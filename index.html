@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.4.1</title>
+  <title>GRIM RUN — v0.4.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -83,7 +83,7 @@ button {cursor:pointer;}
 /* v0.4: short, unobtrusive feedback when a chasm costs health. */
 .fall-notice{position:absolute;top:37%;left:50%;transform:translateX(-50%);z-index:9;pointer-events:none;color:#ffc9d2;font-size:clamp(17px,4.5vh,27px);font-weight:1000;letter-spacing:.14em;text-shadow:0 0 18px #8d183f,0 2px 8px #000;text-align:center;white-space:nowrap;}
 
-/* v0.4.1 portal cutscene; freezes gameplay before the next 500m reward. */
+/* v0.4.1 portal cutscene; freezes gameplay before continuing your run. */
 .portal-overlay{position:absolute;inset:0;z-index:21;pointer-events:none;background:radial-gradient(ellipse at center,#443b81d9 0%,#070a19f5 75%);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:12px;color:#e4fff9;}
 .portal-rune{font-size:clamp(35px,13vh,85px);color:#9bf7ec;text-shadow:0 0 37px #bba4ff;margin-bottom:5px;}
 .portal-title{font-size:clamp(20px,5.5vh,44px);font-weight:1000;letter-spacing:.08em;text-shadow:0 0 28px #8265eb;}
@@ -114,7 +114,7 @@ button {cursor:pointer;}
       <h1>GRIM <em>RUN</em></h1>
       <p>Climb beyond the forest into mountains and stars. At 5,000m enter the Underworld, descend into Hell, and reach the final gate at 6,666m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.4.1 · ASCENT & UNDERWORLD</div>
+      <div class="mini">v0.4.2 · HILLS & SOUL REWARDS</div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
   </div>
@@ -122,7 +122,7 @@ button {cursor:pointer;}
     <div class="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="reward-title">
       <div class="eyebrow">THE UNDERWORLD OFFERS A GIFT</div>
       <h2 id="reward-title">CHOOSE YOUR POWER</h2>
-      <div class="reward-subtitle"><span id="reward-distance">500</span> METERS · CHOOSE ONE</div>
+      <div class="reward-subtitle">SOUL AT <span id="reward-distance">666</span> METERS · CHOOSE ONE</div>
       <div id="reward-cards" class="reward-cards" aria-label="Three randomized upgrades"></div>
       <div class="reward-foot">THE RUN IS PAUSED WHILE YOU CHOOSE</div>
     </div>
@@ -152,7 +152,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.4.1',
+  version: '0.4.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -175,10 +175,10 @@ window.GRIM_CONFIG = Object.freeze({
   coinScore: 5,
   soulScore: 50,
   soulEveryMeters: 666,
-  upgradeEveryMeters: 500,
+  upgradeEveryMeters: 666, // soul-triggered reward opportunity; not distance-triggered
   minEncounterGapSeconds: 1.40,
-  upgradeSafetyBeforePx: 200, // clear last moments before the reward milestone
-  upgradeSafetyAfterMeters: 50, // hazard-free road when gameplay resumes
+  upgradeSafetyBeforePx: 260, // clear a safe approach before the soul pickup
+  upgradeSafetyAfterMeters: 50, // hazard- and platform-free ground after EVERY soul milestone
   resumeCountdownMs: 3000,
   slowCooldownMs: 3300,
   slideReleaseComboMs: 500, // tap JUMP within half a second after releasing SLIDE to latch air tuck
@@ -211,7 +211,7 @@ window.GRIM_CONFIG = Object.freeze({
     // All visual variants of a class share exactly the same collision dimensions.
     const dims = {
       rock: { width: 54, height: 48, y: groundY - 48 },
-      branch: { width: 74, height: groundY + 2000 - clearance, y: -2000 },
+      branch: { width: 74, height: 2000 - clearance, y: groundY - 2000 },
       bramble: { width: 60, height: Math.max(195, groundY * 0.79), y: groundY - Math.max(195, groundY * 0.79) }
     }[type];
     if (!dims) throw new Error('Unknown obstacle ' + type);
@@ -240,7 +240,7 @@ window.GRIM_CONFIG = Object.freeze({
     const mod = ((x - startX) % period + period) % period;
     return Math.min(mod, period-mod) > radius;
   }
-  function isUpgradeSafe(x, startX, meters = 500, pxPerMeter = 12, beforePx = 200, afterMeters = 50) {
+  function isUpgradeSafe(x, startX, meters = 666, pxPerMeter = 12, beforePx = 260, afterMeters = 50) {
     const offset = x - startX;
     const period = meters * pxPerMeter;
     const candidate = Math.floor((offset + beforePx) / period);
@@ -383,7 +383,7 @@ window.GRIM_CONFIG = Object.freeze({
 
 </script>
   <script>
-// Grim Run v0.4.1 — deterministic, elevation-aware terrain with a portal to the Underworld.
+// Grim Run v0.4.2 — deterministic, elevation-aware terrain with a portal to the Underworld.
 // Coordinates are world pixels (larger y = lower altitude). No Phaser dependency.
 (function(scope){
   'use strict';
@@ -391,8 +391,8 @@ window.GRIM_CONFIG = Object.freeze({
   const smooth=t=>t*t*(3-2*t);
   const lerp=(a,b,t)=>a+(b-a)*t;
   // Elevation milestones are cumulative heights measured relative to the initial ground.
-  const SURFACE_PROFILE=[[0,0],[1000,-45],[2000,-430],[3000,-850],[4000,-1270],[5000,-1510]];
-  const CAVERN_PROFILE=[[5000,115],[5300,230],[6000,720],[6666,1020],[6900,1020]];
+  const SURFACE_PROFILE=[[0,0],[1000,-85],[2000,-730],[3000,-1550],[4000,-2470],[5000,-3420]];
+  const CAVERN_PROFILE=[[5000,185],[5300,580],[6000,1820],[6666,2700],[6900,2700]];
   function interpolateProfile(points,m){
     if(m<=points[0][0])return points[0][1];
     for(let i=1;i<points.length;i++)if(m<=points[i][0]){
@@ -416,10 +416,15 @@ window.GRIM_CONFIG = Object.freeze({
       const m=Math.max(0,meters(x));
       const cavern=isCavern(x);
       const trend=interpolateProfile(cavern?CAVERN_PROFILE:SURFACE_PROFILE,m);
-      const amplitude=cavern?clamp(75+(m-5000)*.038,75,140):
-        m<1000?28:clamp(65+(m-1000)*.027,65,160);
-      const waves=Math.sin(x/500+phase1)*.49+Math.sin(x/1130+phase2)*.31+
-        Math.sin(x/240+phase3)*.20;
+      // High frequency undulation gives locally VISIBLE climbs/descents, not just
+      // a long-term rise hidden by the camera. Smooth altitude bands avoid seams.
+      const surfaceAmp=33+235*smooth(clamp((m-750)/750,0,1))+
+        185*smooth(clamp((m-1700)/950,0,1))+
+        225*smooth(clamp((m-2750)/1050,0,1));
+      const caveAmp=270+195*smooth(clamp((m-5000)/1250,0,1));
+      const amplitude=cavern?caveAmp:surfaceAmp;
+      const waves=Math.sin(x/375+phase1)*.54+Math.sin(x/930+phase2)*.29+
+        Math.sin(x/188+phase3)*.17;
       const firstKmBlend=clamp((m-80)/180,0,1);
       return baseY+trend+amplitude*waves*firstKmBlend;
     }
@@ -428,28 +433,27 @@ window.GRIM_CONFIG = Object.freeze({
       segments.push({start:cursor,end,y0:elevation,y1:yEnd,kind,group});
       cursor=end;elevation=yEnd;
     }
-    function plan(group){
-      // First encounter introduces one easy gap; by ~1200m, sequences use three gaps.
-      const count=group===0?1:group===1?2:3;
-      const gapWidth=group===0?88:Math.min(162,98+Math.sqrt(group)*10);
-      const widths=Array.from({length:count},(_,i)=>Math.round(gapWidth+(i%2)*7));
-      const platformWidth=Math.max(280,350-Math.min(group,14)*4);
+    function plan(group,m){
+      // Real escalation after 1,300m: more gaps, shorter landing runways,
+      // tighter horizontal clearances and greater vertical step variety.
+      const count=group===0?1:group===1?2:m<1500?3:m<2250?4:m<3100?5:6;
+      const gapWidth=group===0?88:group===1?108:Math.min(200,120+Math.max(0,m-1200)*.017);
+      const widths=Array.from({length:count},(_,i)=>Math.round(gapWidth+(i%3===1?9:i%3===2?-5:0)));
+      const platformWidth=group===0?350:group===1?330:Math.max(222,306-Math.max(0,m-1200)*.024);
       return {widths,platformWidth,length:widths.reduce((a,b)=>a+b,0)+(count-1)*platformWidth};
     }
     function allowedAt(m,group){
-      const p=plan(group),lengthMeters=(p.length+350)/pxPerMeter;
+      const p=plan(group,m),lengthMeters=(p.length+420)/pxPerMeter;
       if(m>6650)return false;
       // Never let a sequence cross the teleporter or the finish.
       if(m<5000 && m+lengthMeters>4930)return false;
       if(m>=5000 && m<5105)return false;
       if(m+lengthMeters>6630)return false;
-      for(let k=Math.max(1,Math.floor((m-110)/500));k<=Math.ceil((m+lengthMeters+110)/500);k++){
-        const milestone=k*500;
-        if(m<milestone+85 && m+lengthMeters>milestone-24)return false;
-      }
-      for(let k=Math.max(1,Math.floor((m-100)/666));k<=Math.ceil((m+lengthMeters+100)/666);k++){
+      // Keep BOTH gaps and their landing platforms out of the 20m approach
+      // and the first 50m after each 666m soul, whether collected or missed.
+      for(let k=Math.max(1,Math.floor((m-75)/666));k<=Math.ceil((m+lengthMeters+75)/666);k++){
         const milestone=k*666;
-        if(m<milestone+40 && m+lengthMeters>milestone-24)return false;
+        if(m<milestone+50 && m+lengthMeters>milestone-20)return false;
       }
       return true;
     }
@@ -461,30 +465,42 @@ window.GRIM_CONFIG = Object.freeze({
       }
       return Infinity; // Near the 6,666m finish, leave safe ground.
     }
-    function addHillsUntil(target){
+    function addHillsUntil(target,prepareTakeoff=false){
       while(cursor<target-.01){
         const remain=target-cursor;
         if(cursor<startX+100*pxPerMeter){
           const end=Math.min(target,startX+100*pxPerMeter);add(end,baseY);continue;
         }
-        if(remain<=350){add(target,elevation);continue;} // Safe, flat takeoff before each gap.
-        const width=Math.min(remain-350,300+random()*230);
+        if(prepareTakeoff && remain<=330){add(target,elevation);continue;} // Level launch strip before a gap.
+        const width=Math.min(prepareTakeoff?remain-330:remain,240+random()*190);
         if(width<1){add(target,elevation);continue;}
         const end=cursor+width;
-        let targetY=profileAt(end);
-        // Avoid sheer slopes that are unreadable at auto-run speed; remaining climb accumulates.
-        targetY=clamp(targetY,elevation-width*.33,elevation+width*.33);
+        const m=Math.max(0,meters(end));
+        const maxSlope=m<1000?.23:m<2000?.48:m<3000?.60:.70;
+        // Some actual plateaus between more dramatic peaks/valleys.
+        let targetY=(random()<.095 && m>1000)?elevation:profileAt(end);
+        targetY=clamp(targetY,elevation-width*maxSlope,elevation+width*maxSlope);
         add(end,targetY);
       }
       if(cursor<target)add(target,elevation);
     }
     function addSequence(group){
-      const initialY=elevation,start=cursor,p=plan(group);
+      const initialY=elevation,start=cursor,p=plan(group,Math.max(0,meters(cursor)));
+      const trendAcross=profileAt(start+p.length+420)-initialY;
       p.widths.forEach((width,i)=>{
         add(cursor+width,elevation,'gap',group);
-        const vertical=group===0?0:clamp((random()-.5)*(55+Math.min(group,8)*5),-42,42);
+        const m=Math.max(0,meters(start));
+        const maxStep=group===0?0:Math.min(58,33+Math.max(0,m-1000)*.006);
+        const directional=clamp(trendAcross/p.widths.length*.58,-35,35);
+        const vertical=group===0?0:clamp(directional+(random()-.5)*maxStep*1.08,-maxStep,maxStep);
         elevation+=vertical;
-        if(i<p.widths.length-1)add(cursor+p.platformWidth,elevation,'platform',group);
+        if(i<p.widths.length-1){
+          // Platforms can climb or descend, rather than remaining a chain
+          // of identical flat ledges. Keep their slopes gentler than hills.
+          const end=cursor+p.platformWidth;
+          const platformSlope=group<2?0:clamp((profileAt(end)-elevation)*.11,-24,24);
+          add(end,elevation+platformSlope,'platform',group);
+        }
       });
       const endX=cursor;
       sequences.push({id:group,startX:start,endX,respawnX:endX+170,initialY});
@@ -493,7 +509,7 @@ window.GRIM_CONFIG = Object.freeze({
     function makePortalBoundary(){
       // Player is teleported at 5,000m: the terrain jumps discontinuously to cave depth.
       // This section is solid but never traversed on foot.
-      if(cursor<portalX)addHillsUntil(portalX);
+      if(cursor<portalX)addHillsUntil(portalX,true);
       if(cursor===portalX){
         add(cursor+200,elevation,'portal');
         elevation=profileAt(cursor);
@@ -501,7 +517,9 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     function advance(minX){
-      const bound=Math.min(minX,finishX+1000);
+      // Generate in meaningful chunks. Previously tiny advances every frame
+      // produced a new flat segment, accidentally flattening nearly the ENTIRE map.
+      const bound=Math.min(Math.max(minX,cursor+1750),finishX+1000);
       let watchdog=0;
       while(cursor<bound && watchdog++<20000){
         if(cursor>=portalX-0.01 && cursor<portalX+200){makePortalBoundary();continue;}
@@ -509,16 +527,23 @@ window.GRIM_CONFIG = Object.freeze({
         const nextX=startX+nextGapMeters*pxPerMeter;
         // Handle portal ahead of any scheduled gap.
         if(cursor<portalX && (nextX>=portalX || cursor>nextX)){
-          addHillsUntil(Math.min(bound,portalX));continue;
+          const until=Math.min(bound,portalX);
+          addHillsUntil(until,until===portalX);continue;
         }
         if(nextX>cursor+.01 && nextX<finishX && ((nextX<portalX)===(cursor<portalX))){
-          addHillsUntil(Math.min(bound,nextX,cursor<portalX?portalX:Infinity));
+          const until=Math.min(bound,nextX,cursor<portalX?portalX:Infinity);
+          addHillsUntil(until,until===nextX);
         } else if(Math.abs(cursor-nextX)<.01 && nextGapMeters<6620 && allowedAt(nextGapMeters,groupsMade)){
           addSequence(groupsMade);groupsMade++;
           let nominal;
           if(groupsMade===1)nominal=940;
           else if(groupsMade===2)nominal=1170;
-          else nominal=nextGapMeters+Math.max(195,260-Math.min(groupsMade,15)*4);
+          else {
+            // Between 1,300 and 6,666m sequences come closer together,
+            // while safe soul zones and portal/finish boundaries win.
+            const spacing=Math.max(100,198-Math.max(0,nextGapMeters-1250)*.018);
+            nominal=Math.max(nextGapMeters+spacing, meters(cursor)+75);
+          }
           nextGapMeters=nextPosition(nominal,groupsMade);
         } else {
           addHillsUntil(Math.min(bound,cursor+900, cursor<portalX?portalX:finishX+1000));
@@ -545,7 +570,9 @@ window.GRIM_CONFIG = Object.freeze({
     }
     function visibleSections(from,to){advance(to+60);return segments.filter(s=>s.end>=from&&s.start<=to);}
     function shiftY(dy){elevation+=dy;baseY+=dy;for(const s of segments){s.y0+=dy;s.y1+=dy;}for(const seq of sequences)seq.initialY+=dy;}
-    advance(startX+2500);
+    // The full 6,666m world is small enough to generate once. This also
+    // makes seeded terrain identical regardless of frame rate or camera calls.
+    advance(finishX+1000);
     return {segments,sequences,groundAt,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
       get firstGapX(){return startX+766*pxPerMeter;},get portalX(){return portalX;},get portalExitX(){return portalX+310;},
       get finishX(){return finishX;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
@@ -750,7 +777,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.distance = 0;
       this.points = 0;
       this.powerManager = Powers.makePowerManager();
-      this.nextUpgradeDistance=C.upgradeEveryMeters;
+      this.lastRewardSoulNumber=0;
       this.pendingOffers=[];
       this.ui = new GrimUI({
         start: () => this.startRun(), menu: () => this.goToMenu(),
@@ -812,7 +839,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.distance = 0;
       this.points = 0;
       this.powerManager = Powers.makePowerManager();
-      this.nextUpgradeDistance=C.upgradeEveryMeters;
+      this.lastRewardSoulNumber=0;
       this.pendingOffers=[];
       this.ui.setMode('playing');
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, 0, 0, []);
@@ -905,34 +932,41 @@ window.GRIM_CONFIG = Object.freeze({
       // Finish the minimum ground slide duration to prevent flicker.
       // An already activated aerial tuck stays latched until landing.
     }
-    triggerUpgrade(){
-      if(this.state!=='playing' || this.pendingOffers.length) return;
-      const distanceMark=this.nextUpgradeDistance;
-      this.nextUpgradeDistance+=C.upgradeEveryMeters;
+    triggerUpgrade(soul){
+      // Rewards are EARNED by touching the milestone soul. Distance alone
+      // never creates an upgrade. A missed soul is a missed opportunity.
+      if(this.state!=='playing' || this.pendingOffers.length ||
+         !soul || soul.kind!=='milestone' || soul.number<=this.lastRewardSoulNumber)return;
+      this.lastRewardSoulNumber=soul.number;
       this.pendingOffers=Powers.rewardOffers(this.powerManager,this.player,this.rng,3);
       this.player.jumpHeld=false;
       this.player.holdSlide=false;
       this.player.slideReleaseBufferMs=0;
       this.player.airTuck=false;
+      this.clearUpgradeCorridor(soul.x);
       this.state='upgrade';
-      this.ui.offerRewards(this.pendingOffers,distanceMark);
+      this.ui.offerRewards(this.pendingOffers,soul.number*C.soulEveryMeters);
     }
     chooseUpgrade(id){
       if(this.state!=='upgrade' || !this.pendingOffers.some(option=>option.id===id))return;
       const applied=this.powerManager.apply(id,this.player,coins=>{this.coinCount+=coins;});
       if(!applied)return;
       this.pendingOffers=[];
-      this.clearUpgradeCorridor();
-      this.beginCountdown();
+      // No countdown after an upgrade: safe ground for 50 meters protects
+      // the immediate return to action. Pause-menu resume still counts down.
+      this.countdownMs=0;this.goFlashMs=0;
+      this.state='playing';
+      this.ui.setMode('playing');this.ui.hideCountdown();
       this.puff(this.player.x,this.feetY-45,id==='vitalEssence'?0xffb5c3:0x9dece7,14);
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
-    clearUpgradeCorridor(){
-      // Protect an already-generated slice near the milestone, not just future spawns.
-      const endX=this.startX+(this.nextUpgradeDistance-C.upgradeEveryMeters + C.upgradeSafetyAfterMeters)*C.pxPerMeter;
-      const beginX=this.player.x-C.upgradeSafetyBeforePx-70;
-      this.obstacles=this.obstacles.filter(ob=>ob.x> endX || ob.x+ob.width<beginX);
+    clearUpgradeCorridor(soulX){
+      // Clear any already-generated hazard too; future placement is blocked
+      // by the 666-meter corridor rule and terrain.allowedAt().
+      const endX=soulX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
+      const beginX=soulX-C.upgradeSafetyBeforePx-70;
+      this.obstacles=this.obstacles.filter(ob=>ob.x>endX || ob.x+ob.width<beginX);
       for(const tip of this.tips){
         if(tip.atX+80>=beginX && tip.atX<=endX)tip.label.destroy();
       }
@@ -983,7 +1017,8 @@ window.GRIM_CONFIG = Object.freeze({
         const width=type==='coins'?Math.max(330,this.speed*.75):100;
         if(this.terrain.canPlace(x,width) &&
            Core.isMilestoneSafe(x,this.startX,C.soulEveryMeters,C.pxPerMeter,245) &&
-           Core.isUpgradeSafe(x,this.startX,C.upgradeEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters)){
+           Core.isUpgradeSafe(x,this.startX,C.soulEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters) &&
+           Core.isUpgradeSafe(x+width,this.startX,C.soulEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters)){
           this.placeEncounter(type,x);
         }
         this.nextEncounterX+=Core.encounterGap(this.speed,this.rng);
@@ -1010,10 +1045,9 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.portalMs===0){
           this.ui.showPortal(false);
           this.state='playing';
-          // The teleport is at a 500m reward milestone, so offer that reward
-          // before the ordinary 3-second countdown resumes the action.
-          if(this.distance>=this.nextUpgradeDistance)this.triggerUpgrade();
-          else this.beginCountdown();
+          // Portal animation provides its own clear pause; only explicit pause
+          // menu resume uses the 3-second countdown.
+          this.ui.setMode('playing');
         }
       }
       else if(this.state==='countdown'){
@@ -1090,6 +1124,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.spawnAhead();
         if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
         this.checkCollectibles();
+        if(this.state==='upgrade'){this.drawScene();return;}
         this.checkHazards();
         this.obstacles = this.obstacles.filter(ob => !ob.destroyed && ob.x + ob.width > p.x - this.width);
         this.souls = this.souls.filter(s => !s.taken && s.x > p.x-this.width);
@@ -1104,7 +1139,6 @@ window.GRIM_CONFIG = Object.freeze({
         this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
-        if(this.distance>=this.nextUpgradeDistance) this.triggerUpgrade();
       }
       if(this.fallFeedbackMs>0){
         this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
@@ -1138,6 +1172,8 @@ window.GRIM_CONFIG = Object.freeze({
         if(Math.abs(p.x-soul.x)<34 && Math.abs(centerY-y)<41) {
           soul.taken=true;this.soulCount++;
           this.puff(soul.x,y,CYAN,23);
+          this.triggerUpgrade(soul);
+          break;
         }
       }
     }
@@ -1515,28 +1551,29 @@ window.GRIM_CONFIG = Object.freeze({
       }
       if(o.type==='branch'){
         const tip=ground-C.slideClearancePx;
+        const ceiling=ground-2000;
         const pillar=v%2===0;
         if(pillar){
-          g.fillStyle(0x272e3d);g.fillRect(x,0,o.width,tip-6);
-          g.fillStyle(0x394555);g.fillRect(x+5,0,o.width-15,tip-11);
-          g.fillStyle(0x586172,.65);g.fillRect(x+11,0,7,tip-11);
-          g.fillStyle(0x212e39);g.fillRect(x+o.width-15,0,10,tip-11);
+          g.fillStyle(0x272e3d);g.fillRect(x,ceiling,o.width,tip-ceiling-6);
+          g.fillStyle(0x394555);g.fillRect(x+5,ceiling,o.width-15,tip-ceiling-11);
+          g.fillStyle(0x586172,.65);g.fillRect(x+11,ceiling,7,tip-ceiling-11);
+          g.fillStyle(0x212e39);g.fillRect(x+o.width-15,ceiling,10,tip-ceiling-11);
           g.fillStyle(0x515665);g.fillRoundedRect(x-3,tip-19,o.width+5,19,3);
           g.lineStyle(3,0x84909c,.35);g.lineBetween(x+12,tip-40,x+25,tip-60);
           g.lineBetween(x+25,tip-60,x+34,tip-53);
           for(let j=1;j<4;j++){
-            g.lineStyle(2,0x1d2531,.6);g.lineBetween(x+5,j*tip/4,x+o.width-8,j*tip/4+4);
+            g.lineStyle(2,0x1d2531,.6);g.lineBetween(x+5,ceiling+j*(tip-ceiling)/4,x+o.width-8,ceiling+j*(tip-ceiling)/4+4);
           }
         }else{
           // Jagged stalactite formation continues to the ceiling; never jumpable.
           g.fillStyle(0x293d47);
-          g.fillPoints([{x:x-1,y:0},{x:x+o.width+1,y:0},
+          g.fillPoints([{x:x-1,y:ceiling},{x:x+o.width+1,y:ceiling},
             {x:x+o.width-4,y:tip-18},{x:x+o.width*.65,y:tip-4},
             {x:x+o.width*.48,y:tip},{x:x+o.width*.2,y:tip-7},{x:x+4,y:tip-17}],true);
           g.fillStyle(0x425864,.85);
-          g.fillPoints([{x:x+11,y:0},{x:x+o.width*.53,y:0},
+          g.fillPoints([{x:x+11,y:ceiling},{x:x+o.width*.53,y:ceiling},
             {x:x+o.width*.63,y:tip-17},{x:x+o.width*.4,y:tip-4},{x:x+22,y:tip-25}],true);
-          g.lineStyle(3,0x66808a,.44);g.lineBetween(x+22,8,x+30,tip-41);
+          g.lineStyle(3,0x66808a,.44);g.lineBetween(x+22,ceiling+8,x+30,tip-41);
           g.lineStyle(2,0x162a34,.7);g.lineBetween(x+o.width-15,tip-85,x+o.width-25,tip-29);
         }
         return;
