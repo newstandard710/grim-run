@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.1</title>
+  <title>GRIM RUN — v0.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -18,17 +18,21 @@ html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#090
 .top-center {position:absolute;top:max(env(safe-area-inset-top),13px);left:50%;transform:translateX(-50%);white-space:nowrap;}
 .top-center small {font-size:.52em; opacity:.78;}.score-inline {font-size:.63em;opacity:.8}
 .top-right {position:absolute;top:max(env(safe-area-inset-top),13px);right:max(env(safe-area-inset-right),77px);white-space:nowrap}
-.soul-icon {color:var(--cyan);font-size:1.25em;}
+.soul-icon {color:var(--cyan);font-size:1.2em;}
+.coin-icon {color:#ffd36c;font-size:1.13em;text-shadow:0 0 10px #ffc45b;}
+.collect-divider {opacity:.48;margin:0 5px;}
 .top-pause {position:absolute;right:max(env(safe-area-inset-right),16px);top:max(env(safe-area-inset-top),9px);border:1px solid #b8cbde77;border-radius:9px;background:#122033bb;color:#fff;font-weight:900;font-size:18px;width:42px;height:39px;pointer-events:auto;touch-action:manipulation;}
 #controls {position:absolute;inset:0;z-index:6;pointer-events:none;}
-.action {pointer-events:auto;touch-action:none;position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;border-radius:22px;border:2px solid #bdefff9a;background:linear-gradient(160deg,#263e5bce,#111a33d9);box-shadow:inset 0 1px 9px #80baff36,0 4px 16px #0008;color:#f0fbff;font-weight:900;letter-spacing:.13em;font-size:clamp(10px,2.2vh,14px);min-width:76px;min-height:68px;width:clamp(78px,13.5vh,104px);height:clamp(68px,19vh,94px);}
-.action .symbol {font-size:clamp(27px,7vh,42px);line-height:1.12; font-weight:500;}
+/* Compact near-square thumb controls, with Jump directly above Slide. */
+:root { --action-size: clamp(70px,21vh,91px); --right-bottom: max(env(safe-area-inset-bottom),17px); }
+.action {pointer-events:auto;touch-action:none;position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:18px;border:2px solid #bdefff9a;background:linear-gradient(155deg,#273e59d8,#10192de7);box-shadow:inset 0 1px 9px #80baff36,0 4px 16px #0008;color:#f0fbff;font-weight:900;letter-spacing:.11em;font-size:clamp(10px,2.15vh,13px);width:var(--action-size);height:var(--action-size);}
+.action .symbol {font-size:clamp(26px,6.9vh,40px);line-height:1.04;font-weight:500;}
 .action.pressed {transform:scale(.94);background:linear-gradient(160deg,#50868eec,#1f455aed);border-color:#dcffff;}
-.attack {left:max(env(safe-area-inset-left),18px);bottom:max(env(safe-area-inset-bottom),23px);}
-.right-buttons {position:absolute;right:max(env(safe-area-inset-right),19px);top:0;bottom:0;width:110px;}
+.attack {left:max(env(safe-area-inset-left),18px);bottom:var(--right-bottom);}
+.right-buttons {position:absolute;right:max(env(safe-area-inset-right),19px);bottom:0;width:var(--action-size);height:calc(var(--action-size) * 2 + 28px);}
 .right-buttons .action {left:0;}
-.jump {top:27%;}
-.slide {bottom:max(env(safe-area-inset-bottom),19px);}
+.jump {bottom:calc(var(--right-bottom) + var(--action-size) + 14px);}
+.slide {bottom:var(--right-bottom);}
 .modal-wrap {position:absolute;inset:0;z-index:10;display:flex;justify-content:center;align-items:center;background:#050913bb;overflow:auto;padding:max(env(safe-area-inset-top),8px) max(env(safe-area-inset-right),14px) max(env(safe-area-inset-bottom),8px) max(env(safe-area-inset-left),14px);}
 .modal {width:min(650px,85vw);max-height:92vh;overflow:auto;background:linear-gradient(155deg,#1d2e42ed,#0b1427f4);border:1px solid #b0eae255;box-shadow:0 14px 70px #000c,inset 0 2px 15px #5faaa41a;border-radius:20px;padding:clamp(16px,3vh,26px) clamp(20px,4vw,42px);text-align:center;}
 .eyebrow {font-size:clamp(9px,1.7vh,12px);letter-spacing:.28em;color:#9bcec9;font-weight:800;}
@@ -42,12 +46,12 @@ button {cursor:pointer;}
 .mini {margin-top:11px;letter-spacing:.2em;color:#9db9be;font-size:9px;}
 .instructions {font-size:clamp(9px,1.8vh,12px);color:#a3c1c7;margin-top:7px;}
 .compact {width:min(570px,85vw);}
-.results {display:flex;justify-content:space-between;gap:16px;margin:14px 5px;}
+.results {display:flex;justify-content:space-between;gap:10px;margin:14px 5px;}
 .results div {display:flex;flex-direction:column;align-items:center;flex:1;}
 .results small {font-size:10px;letter-spacing:.14em;color:#a8c5cf;}
 .results strong {font-size:clamp(19px,5.1vh,35px);color:#f4ffff;}
 .best-label {min-height:17px;font-size:12px;font-weight:700;color:var(--cyan);}
-@media (max-height:340px) {.modal {padding:10px 22px}.instructions {display:none}.right-buttons .jump {top:25%}.action{height:64px}.top-left {font-size:20px}}
+@media (max-height:340px) { :root { --action-size: 67px; } .modal {padding:10px 22px}.instructions {display:none}.top-left {font-size:20px} .results {margin:6px 3px} }
 @media (orientation:portrait) {#game::after {content:'ROTATE YOUR PHONE FOR THE BEST EXPERIENCE';position:absolute;left:10%;right:10%;top:50%;text-align:center;color:#cdece9;font-size:12px;pointer-events:none;opacity:.8;}}
 
 </style>
@@ -57,7 +61,7 @@ button {cursor:pointer;}
   <div id="hud" class="hidden">
     <div id="hearts" class="top-left" aria-label="Health">♥ ♥ ♥</div>
     <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span></div>
-    <div class="top-right"><span class="soul-icon">✦</span> <span id="souls">0</span></div>
+    <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
     <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
   </div>
   <div id="controls" class="hidden" aria-label="Touch controls">
@@ -71,10 +75,10 @@ button {cursor:pointer;}
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1>GRIM <em>RUN</em></h1>
-      <p>Run through the haunted forest. Cut the brambles, leap the stones, duck the branches, and harvest the lost souls.</p>
+      <p>Slash towering stalks, hop over fallen obstacles, and slide beneath hanging stone. Gather coins — and claim a rare soul every 666 meters.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.1 · FIRST PLAYABLE PROTOTYPE</div>
-      <div class="instructions">⚔ Attack — lower left &nbsp;·&nbsp; ↑ Jump — upper right &nbsp;·&nbsp; ⇥ Slide — lower right</div>
+      <div class="mini">v0.2 · FEEL &amp; READABILITY UPDATE</div>
+      <div class="instructions">⚔ Tap to swing · ↑ Tap to hop / hold to leap · ⇥ Hold to slide</div>
     </div>
   </div>
   <div id="pause-screen" class="modal-wrap hidden">
@@ -83,7 +87,7 @@ button {cursor:pointer;}
   <div id="game-over" class="modal-wrap hidden">
     <div class="modal compact">
       <div class="eyebrow">THE GRIM REAPER HAS FALLEN</div><h2>RUN ENDED</h2>
-      <div class="results"><div><small>DISTANCE</small><strong id="end-distance">0 m</strong></div><div><small>SOULS</small><strong id="end-souls">0</strong></div><div><small>SCORE</small><strong id="end-score">0</strong></div></div>
+      <div class="results"><div><small>DISTANCE</small><strong id="end-distance">0 m</strong></div><div><small>COINS</small><strong id="end-coins">0</strong></div><div><small>SOULS</small><strong id="end-souls">0</strong></div><div><small>SCORE</small><strong id="end-score">0</strong></div></div>
       <div id="best-label" class="best-label"></div>
       <button id="retry-btn" class="primary">RUN AGAIN ↻</button>
       <button id="menu-btn" class="secondary">MAIN MENU</button>
@@ -98,29 +102,36 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.1.0',
+  version: '0.2.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
-  initialSpeed: 282,        // px / second
+  initialSpeed: 282,
   speedGainPerMeter: 0.095,
   maxSpeed: 465,
   pxPerMeter: 12,
-  jumpVelocity: -610,
+  jumpVelocity: -610,            // full hold keeps v0.1 jump ceiling
   gravity: 1550,
-  attackDurationMs: 220,
+  jumpCutVelocity: -310,         // release early for a shorter hop
+  jumpCutWindowMs: 190,
+  attackDurationMs: 260,
+  attackActiveStart: 0.20,       // portion of swing where scythe cuts
+  attackActiveEnd: 0.79,
   attackCooldownMs: 405,
   slideMaxMs: 850,
   slideMinMs: 150,
+  slideClearancePx: 35,          // hitbox reaches from ceiling to this height above floor
   damageInvulnerabilityMs: 1100,
   startingHP: 3,
+  coinScore: 5,
   soulScore: 50,
+  soulEveryMeters: 666,
   minEncounterGapSeconds: 1.40,
   firstEncounterX: 1000
 });
 
 </script>
   <script>
-// Pure deterministic helpers. No Phaser dependency; exercised by Node tests.
+// Deterministic, engine-independent game rules. Pure helpers are exercised by Node tests.
 (function (scope) {
   'use strict';
   function makeRng(seed) {
@@ -133,15 +144,19 @@ window.GRIM_CONFIG = Object.freeze({
     };
   }
   function overlaps(a, b) { return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; }
-  function score(distance, souls, soulScore) { return Math.max(0, Math.floor(distance)) + Math.max(0, souls) * soulScore; }
-  function obstacle(type, x, groundY) {
+  function score(distance, souls, soulScore, coins = 0, coinScore = 5) {
+    return Math.max(0, Math.floor(distance)) + Math.max(0, souls) * soulScore + Math.max(0, coins) * coinScore;
+  }
+  function obstacle(type, x, groundY, variant = 0, clearance = 35) {
+    // Tall obstacles cannot be jumped over; hanging obstacles extend above the camera.
+    // All visual variants of a class share exactly the same collision dimensions.
     const dims = {
-      rock: { width: 54, height: 48, yOffset: -48 },
-      branch: { width: 90, height: 49, yOffset: -83 },
-      bramble: { width: 60, height: 83, yOffset: -83 }
+      rock: { width: 54, height: 48, y: groundY - 48 },
+      branch: { width: 74, height: groundY + 2000 - clearance, y: -2000 },
+      bramble: { width: 60, height: Math.max(195, groundY * 0.79), y: groundY - Math.max(195, groundY * 0.79) }
     }[type];
     if (!dims) throw new Error('Unknown obstacle ' + type);
-    return { type, x, y: groundY + dims.yOffset, width: dims.width, height: dims.height, dealtDamage: false, destroyed: false };
+    return { type, x, y: dims.y, width: dims.width, height: dims.height, variant, dealtDamage: false, destroyed: false };
   }
   function collisionBox(reaperX, feetY, sliding) {
     return sliding
@@ -149,18 +164,32 @@ window.GRIM_CONFIG = Object.freeze({
       : { x: reaperX - 20, y: feetY - 79, width: 42, height: 79 };
   }
   function attackBox(reaperX, feetY, rangeBonus = 0) {
-    return { x: reaperX + 7, y: feetY - 112, width: 140 + rangeBonus, height: 107 };
+    return { x: reaperX + 15, y: feetY - 140, width: 126 + rangeBonus, height: 130 };
   }
-  function encounterGap(speed, rng) {
-    return Math.max(410, speed * 1.40) + rng.integer(105, 235);
-  }
+  function encounterGap(speed, rng) { return Math.max(410, speed * 1.40) + rng.integer(105, 235); }
   function chooseEncounter(rng, distanceMeters) {
-    // Intro stretches have gentler variety. All types are survivable with base actions.
-    const pool = distanceMeters < 80 ? ['rock','bramble','rock','branch','souls'] :
-      ['rock','bramble','branch','souls','rock','branch','bramble'];
+    const pool = distanceMeters < 80 ? ['rock','bramble','rock','branch','coins'] :
+      ['rock','bramble','branch','coins','rock','branch','bramble'];
     return rng.choose(pool);
   }
-  scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox, encounterGap, chooseEncounter };
+  function milestoneX(startX, soulNumber, meters = 666, pxPerMeter = 12) {
+    return startX + soulNumber * meters * pxPerMeter;
+  }
+  function isMilestoneSafe(x, startX, meters = 666, pxPerMeter = 12, radius = 245) {
+    const period = meters * pxPerMeter;
+    const mod = ((x - startX) % period + period) % period;
+    return Math.min(mod, period-mod) > radius;
+  }
+  function cutJumpVelocity(velocityY, elapsedMs, isHeld, cutSpeed = -310, windowMs = 190) {
+    return !isHeld && elapsedMs <= windowMs && velocityY < cutSpeed ? cutSpeed : velocityY;
+  }
+  function attackActive(remainingMs, durationMs = 260, start = .20, end = .79) {
+    if (remainingMs <= 0) return false;
+    const progress = 1 - remainingMs / durationMs;
+    return progress >= start && progress <= end;
+  }
+  scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
+    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, cutJumpVelocity, attackActive };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
@@ -172,12 +201,10 @@ window.GRIM_CONFIG = Object.freeze({
   class GrimUI {
     constructor(actions) {
       this.actions = actions;
-      this.lastHearts = -1;
-      this.lastDistance = -1;
-      this.lastSouls = -1;
       this.activePointers = new Map();
+      this.heldKeys = new Set();
       this.bindAction('attack-btn', 'attack', () => actions.attack());
-      this.bindAction('jump-btn', 'jump', () => actions.jump());
+      this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
       el('start-btn').addEventListener('click', () => actions.start());
       el('retry-btn').addEventListener('click', () => actions.start());
@@ -186,8 +213,9 @@ window.GRIM_CONFIG = Object.freeze({
       el('resume-btn').addEventListener('click', () => actions.resume());
       el('quit-btn').addEventListener('click', () => actions.menu());
       document.addEventListener('keydown', event => {
-        if (event.repeat) return;
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','Escape','KeyP'].includes(event.code)) event.preventDefault();
+        if (event.repeat || this.heldKeys.has(event.code)) return;
+        this.heldKeys.add(event.code);
         switch(event.code) {
           case 'Space': case 'ArrowUp': case 'KeyJ': actions.jump(); break;
           case 'KeyA': actions.attack(); break;
@@ -196,14 +224,21 @@ window.GRIM_CONFIG = Object.freeze({
           case 'Enter': if (!el('menu').classList.contains('hidden') || !el('game-over').classList.contains('hidden')) actions.start(); break;
         }
       });
-      document.addEventListener('keyup', event => { if (event.code === 'ArrowDown' || event.code === 'KeyS') actions.slideEnd(); });
-      window.addEventListener('blur', () => { actions.slideEnd(); actions.autoPause(); });
+      document.addEventListener('keyup', event => {
+        this.heldKeys.delete(event.code);
+        if (['Space','ArrowUp','KeyJ'].includes(event.code)) actions.jumpEnd();
+        if (event.code === 'ArrowDown' || event.code === 'KeyS') actions.slideEnd();
+      });
+      window.addEventListener('blur', () => {
+        this.releaseAll(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
+      });
       document.addEventListener('contextmenu', event => event.preventDefault());
     }
     bindAction(id, name, downAction, upAction) {
       const node = el(id);
       node.addEventListener('pointerdown', event => {
         event.preventDefault();
+        if (this.activePointers.has(event.pointerId)) return;
         try { node.setPointerCapture(event.pointerId); } catch (_) {}
         this.activePointers.set(event.pointerId, name);
         node.classList.add('pressed');
@@ -212,10 +247,14 @@ window.GRIM_CONFIG = Object.freeze({
       const end = event => {
         if (this.activePointers.get(event.pointerId) !== name) return;
         this.activePointers.delete(event.pointerId);
-        node.classList.remove('pressed');
+        node.classList.toggle('pressed', Array.from(this.activePointers.values()).includes(name));
         if (upAction) upAction();
       };
       ['pointerup','pointercancel','lostpointercapture'].forEach(type => node.addEventListener(type, end));
+    }
+    releaseAll() {
+      this.activePointers.clear(); this.heldKeys.clear();
+      for (const id of ['attack-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
       show('menu', mode === 'menu');
@@ -223,19 +262,19 @@ window.GRIM_CONFIG = Object.freeze({
       show('pause-screen', mode === 'paused');
       show('controls', mode === 'playing');
       show('hud', mode === 'playing' || mode === 'paused');
-      for (const id of ['attack-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
-      this.activePointers.clear();
+      this.releaseAll();
     }
-    update(hp, distance, souls, score) {
-      const dist = Math.floor(distance);
-      if (hp !== this.lastHearts) { el('hearts').textContent = '♥ '.repeat(Math.max(0, hp)).trim() + ' ♡'.repeat(Math.max(0, 3-hp)); this.lastHearts = hp; }
-      if (dist !== this.lastDistance) { el('distance').textContent = dist.toLocaleString(); this.lastDistance = dist; }
-      if (souls !== this.lastSouls) { el('souls').textContent = souls.toLocaleString(); this.lastSouls = souls; }
+    update(hp, distance, souls, coins, score) {
+      el('hearts').textContent = '♥ '.repeat(Math.max(0,hp)).trim() + ' ♡'.repeat(Math.max(0,3-hp));
+      el('distance').textContent = Math.floor(distance).toLocaleString();
+      el('souls').textContent = souls.toLocaleString();
+      el('coins').textContent = coins.toLocaleString();
       el('score').textContent = score.toLocaleString();
     }
-    gameOver(distance, souls, score, best) {
+    gameOver(distance, souls, coins, score, best) {
       el('end-distance').textContent = Math.floor(distance).toLocaleString() + ' m';
       el('end-souls').textContent = String(souls);
+      el('end-coins').textContent = String(coins);
       el('end-score').textContent = score.toLocaleString();
       el('best-label').textContent = best ? '✦ NEW PERSONAL BEST ✦' : '';
       this.setMode('dead');
@@ -252,7 +291,7 @@ window.GRIM_CONFIG = Object.freeze({
   const Core = scope.GRIM_CORE;
   const SKY = [0x0b1021,0x101b31,0x1c2942,0x29384b];
   const CYAN = 0x8cebe7;
-  const GOLD = 0xddebb5;
+  const GOLD = 0xffcf68;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
   class GameScene extends Phaser.Scene {
@@ -271,19 +310,24 @@ window.GRIM_CONFIG = Object.freeze({
       this.elapsed = 0;
       this.frame = 0;
       this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, invulMs:0,
-        attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false };
+        attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0 };
       this.obstacles = [];
       this.souls = [];
+      this.coins = [];
+      this.tips = [];
+      this.tipped = new Set();
       this.particles = [];
       this.speed = C.initialSpeed;
       this.rng = Core.makeRng(42);
       this.nextEncounterX = C.firstEncounterX;
       this.soulCount = 0;
+      this.coinCount = 0;
+      this.nextSoulNumber = 1;
       this.distance = 0;
       this.points = 0;
       this.ui = new GrimUI({
         start: () => this.startRun(), menu: () => this.goToMenu(),
-        attack: () => this.attack(), jump: () => this.jump(),
+        attack: () => this.attack(), jump: () => this.jump(), jumpEnd: () => this.jumpEnd(),
         slideStart: () => this.startSlide(), slideEnd: () => this.endSlide(),
         pause: () => this.togglePause(), resume: () => this.resume(), autoPause: () => this.autoPause()
       });
@@ -298,7 +342,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.height = size.height;
       this.groundY = Math.round(this.height*C.groundRatio);
       const shift = this.groundY - oldGround;
-      for (const ob of this.obstacles) ob.y += shift;
+      for (const ob of this.obstacles) {
+        const next=Core.obstacle(ob.type,ob.x,this.groundY,ob.variant,C.slideClearancePx);
+        ob.y=next.y;ob.height=next.height;
+      }
+      for (const tip of this.tips) { tip.baseY += shift; tip.label.y += shift; }
       this.drawScene();
     }
     get feetY() { return this.groundY + this.player.offsetY; }
@@ -310,23 +358,29 @@ window.GRIM_CONFIG = Object.freeze({
       this.rng = Core.makeRng(this.seed);
       this.state = 'playing';
       this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, invulMs:0,
-        attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false};
+        attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0};
       this.startX = this.player.x;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
+      this.nextSoulNumber = 1;
+      for (const tip of this.tips) tip.label.destroy();
+      this.tips = [];
+      this.tipped = new Set();
       this.elapsed = 0;
       this.obstacles = [];
       this.souls = [];
+      this.coins = [];
       this.particles = [];
       this.soulCount = 0;
+      this.coinCount = 0;
       this.distance = 0;
       this.points = 0;
       this.ui.setMode('playing');
-      this.ui.update(this.player.hp, 0, 0, 0);
+      this.ui.update(this.player.hp, 0, 0, 0, 0);
     }
-    goToMenu() { this.state = 'menu'; this.player.sliding=false; this.player.holdSlide=false; this.ui.setMode('menu'); }
+    goToMenu() { this.state = 'menu'; this.player.sliding=false; this.player.holdSlide=false; this.player.jumpHeld=false; this.ui.setMode('menu'); }
     togglePause() {
-      if (this.state === 'playing') { this.state = 'paused'; this.player.holdSlide=false; this.ui.setMode('paused'); }
+      if (this.state === 'playing') { this.state = 'paused'; this.player.holdSlide=false; this.player.jumpHeld=false; this.ui.setMode('paused'); }
       else if (this.state === 'paused') this.resume();
     }
     autoPause() { if (this.state === 'playing') this.togglePause(); }
@@ -335,16 +389,24 @@ window.GRIM_CONFIG = Object.freeze({
       if (this.state !== 'playing' || !this.onGround) return;
       this.player.offsetY = -1;
       this.player.velocityY = C.jumpVelocity;
+      this.player.jumpHeld=true;
+      this.player.jumpAgeMs=0;
       this.player.sliding=false;
       this.player.holdSlide=false;
       this.puff(this.player.x, this.groundY-6,0x9bb7bf,5);
+    }
+    jumpEnd() {
+      const p=this.player;
+      if (!p.jumpHeld) return;
+      p.jumpHeld=false;
+      if (p.velocityY < 0) p.velocityY = Core.cutJumpVelocity(p.velocityY,p.jumpAgeMs,false,C.jumpCutVelocity,C.jumpCutWindowMs);
     }
     attack() {
       const p = this.player;
       if (this.state!=='playing' || p.attackCooldownMs > 0 || p.sliding) return;
       p.attackMs = C.attackDurationMs;
       p.attackCooldownMs = C.attackCooldownMs;
-      this.cutNearby();
+      // Damage is applied only during the visible scythe swing, in update().
     }
     startSlide() {
       const p=this.player;
@@ -359,57 +421,94 @@ window.GRIM_CONFIG = Object.freeze({
       for (const ob of this.obstacles) {
         if (ob.type !== 'bramble' || ob.destroyed || !Core.overlaps(box, ob)) continue;
         ob.destroyed=true;
-        this.soulCount++;
-        this.puff(ob.x+ob.width/2,ob.y+30,CYAN,14);
-        this.puff(ob.x+ob.width/2,ob.y+45,0x9bc3a2,9);
+        this.coinCount += 2;
+        this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12);
+        this.puff(ob.x+ob.width/2,this.groundY-45,0x9bc3a2,13);
       }
     }
+    makeTip(type,ob) {
+      if (this.tipped.has(type)) return;
+      this.tipped.add(type);
+      const title={rock:'JUMP ↑',branch:'SLIDE ↓',bramble:'ATTACK ⚔'}[type];
+      if(!title) return;
+      const label=this.add.text(ob.x+ob.width/2,this.groundY-145,title,{
+        fontFamily:'system-ui,Arial,sans-serif',fontSize:'20px',fontStyle:'900',
+        color:'#e2fff7',stroke:'#09101c',strokeThickness:6,align:'center'
+      }).setOrigin(.5).setDepth(35);
+      label.setShadow(0,2,'#081017',5,true,true);
+      this.tips.push({label,atX:ob.x,baseY:this.groundY-145});
+    }
     placeEncounter(type, x) {
-      if (type === 'souls') {
-        for (let i=0;i<3;i++) this.souls.push({x:x+i*63, offset:-46-(i%2)*18,kind:'free',taken:false});
+      if (type === 'coins') {
+        for (let i=0;i<3;i++) this.coins.push({x:x+i*54,offset:-51-(i%2)*17,kind:'free',taken:false});
       } else {
-        const ob=Core.obstacle(type,x,this.groundY);
+        const ob=Core.obstacle(type,x,this.groundY,this.rng.integer(0,5),C.slideClearancePx);
         this.obstacles.push(ob);
-        if (type === 'rock') this.souls.push({x:x+ob.width/2,offset:-146,kind:'air',taken:false});
-        if (type === 'branch') this.souls.push({x:x+ob.width/2,offset:-17,kind:'low',taken:false});
+        this.makeTip(type,ob);
+        if(type === 'rock') {
+          this.coins.push({x:x+ob.width/2,offset:-146,kind:'air',taken:false});
+        } else if (type === 'branch') {
+          this.coins.push({x:x+ob.width/2,offset:-19,kind:'low',taken:false});
+        }
+        // Attack obstacles pay out two coins when chopped, rather than awarding souls.
       }
     }
     spawnAhead() {
-      while (this.nextEncounterX < this.player.x + Math.max(950,this.width*1.26)) {
+      const ahead=this.player.x+Math.max(950,this.width*1.26);
+      while (this.nextEncounterX < ahead) {
         const type=Core.chooseEncounter(this.rng,this.distance);
-        this.placeEncounter(type,this.nextEncounterX);
+        if(Core.isMilestoneSafe(this.nextEncounterX,this.startX,C.soulEveryMeters,C.pxPerMeter,245)) {
+          this.placeEncounter(type,this.nextEncounterX);
+        }
         this.nextEncounterX += Core.encounterGap(this.speed,this.rng);
+      }
+      while(Core.milestoneX(this.startX,this.nextSoulNumber,C.soulEveryMeters,C.pxPerMeter) < ahead) {
+        const x=Core.milestoneX(this.startX,this.nextSoulNumber,C.soulEveryMeters,C.pxPerMeter);
+        this.souls.push({x,offset:-145,kind:'milestone',taken:false,number:this.nextSoulNumber});
+        this.nextSoulNumber++;
       }
     }
     update(_,deltaMs) {
       if (this.state === 'playing') {
         // Cap large frame steps after browser interruptions to avoid tunneling through hazards.
-        const dt = clamp(deltaMs,0,34)/1000;
+        const frameMs = clamp(deltaMs,0,34);
+        const dt = frameMs/1000;
         const p=this.player;
         this.elapsed += dt;
         p.x += this.speed*dt;
         this.distance = (p.x-this.startX)/C.pxPerMeter;
         this.speed = Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
-        p.invulMs = Math.max(0,p.invulMs-deltaMs);
-        p.attackMs = Math.max(0,p.attackMs-deltaMs);
-        p.attackCooldownMs = Math.max(0,p.attackCooldownMs-deltaMs);
+        p.invulMs = Math.max(0,p.invulMs-frameMs);
+        p.attackMs = Math.max(0,p.attackMs-frameMs);
+        p.attackCooldownMs = Math.max(0,p.attackCooldownMs-frameMs);
+        if (!this.onGround) {
+          p.jumpAgeMs+=frameMs;
+          p.velocityY=Core.cutJumpVelocity(p.velocityY,p.jumpAgeMs,p.jumpHeld,C.jumpCutVelocity,C.jumpCutWindowMs);
+        }
         if (!this.onGround || p.velocityY < 0) {
           p.offsetY += p.velocityY*dt;
           p.velocityY += C.gravity*dt;
-          if (p.offsetY >= 0) {p.offsetY=0;p.velocityY=0;this.puff(p.x,this.groundY,0x9badb7,3);}
+          if (p.offsetY >= 0) {p.offsetY=0;p.velocityY=0;p.jumpHeld=false;this.puff(p.x,this.groundY,0x9badb7,3);}
         }
         if (p.sliding) {
-          p.slideMs += deltaMs;
+          p.slideMs += frameMs;
           if (p.slideMs >= C.slideMaxMs || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
         }
         this.spawnAhead();
-        if (p.attackMs > 0) this.cutNearby();
-        this.checkSouls();
+        if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
+        this.checkCollectibles();
         this.checkHazards();
         this.obstacles = this.obstacles.filter(ob => !ob.destroyed && ob.x + ob.width > p.x - this.width);
         this.souls = this.souls.filter(s => !s.taken && s.x > p.x-this.width);
-        this.points = Core.score(this.distance,this.soulCount,C.soulScore);
-        this.ui.update(p.hp,this.distance,this.soulCount,this.points);
+        this.coins = this.coins.filter(s => !s.taken && s.x > p.x-this.width);
+        for(const tip of this.tips){
+          tip.label.y=tip.baseY+Math.sin(this.elapsed*4)*3;
+          tip.label.setAlpha(clamp((tip.atX-p.x+95)/140,0,1));
+          if (tip.atX < p.x-180) tip.label.destroy();
+        }
+        this.tips=this.tips.filter(t=>t.atX>=p.x-180);
+        this.points = Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
+        this.ui.update(p.hp,this.distance,this.soulCount,this.coinCount,this.points);
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
       }
@@ -418,15 +517,23 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameras.main.setScroll(this.cameraX,0);
       this.drawScene();
     }
-    checkSouls() {
+    checkCollectibles() {
       const p=this.player;
       const centerY=this.feetY-(p.sliding?16:43);
-      for (const soul of this.souls) {
-        if (soul.taken || (soul.kind==='low' && !p.sliding)) continue;
+      for (const coin of this.coins) {
+        if (coin.taken || (coin.kind==='low' && !p.sliding)) continue;
+        const y=this.groundY+coin.offset;
+        if(Math.abs(p.x-coin.x)<34 && Math.abs(centerY-y)<41) {
+          coin.taken=true;this.coinCount++;
+          this.puff(coin.x,y,GOLD,5);
+        }
+      }
+      for(const soul of this.souls){
+        if(soul.taken) continue;
         const y=this.groundY+soul.offset;
-        if (Math.abs(p.x-soul.x)<35 && Math.abs(centerY-y)<43) {
+        if(Math.abs(p.x-soul.x)<34 && Math.abs(centerY-y)<41) {
           soul.taken=true;this.soulCount++;
-          this.puff(soul.x,y,CYAN,9);
+          this.puff(soul.x,y,CYAN,23);
         }
       }
     }
@@ -446,14 +553,14 @@ window.GRIM_CONFIG = Object.freeze({
     }
     die() {
       this.state='dead';
-      this.points=Core.score(this.distance,this.soulCount,C.soulScore);
+      this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
       let best=false;
       try {
-        const key='grim-run-v01-best';
+        const key='grim-run-v02-best';
         const old=Number(localStorage.getItem(key)||0);
         if (this.points>old) {localStorage.setItem(key,String(this.points));best=true;}
       } catch (_) { /* Storage may be denied in private mode. The run remains playable. */ }
-      this.ui.gameOver(this.distance,this.soulCount,this.points,best);
+      this.ui.gameOver(this.distance,this.soulCount,this.coinCount,this.points,best);
     }
     puff(x,y,color,count) {
       for (let i=0;i<count;i++) {
@@ -485,6 +592,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(let i=0;i<3;i++){g.fillStyle(0x7dabc0,.027+i*.008);g.fillRect(0,gy-34+i*16,w,23);}
       this.drawTrees(g,.43,144,gy*.66,0x101e2b);
       this.drawGround();
+      for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
       for(const soul of this.souls) if (!soul.taken) this.drawSoul(soul);
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
       this.drawParticles();
@@ -492,90 +600,205 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawForeground();
     }
     drawTrees(g,factor,spacing,maxTreeHeight,color) {
+      // Keep v0.1's layer spacing and parallax, but vary trunks, crowns and branch structure.
       const offset=this.cameraX*factor;
       const first=Math.floor(offset/spacing)-1;
       const last=first+Math.ceil(this.width/spacing)+3;
       for(let n=first;n<last;n++) {
         const x=n*spacing-offset;
-        const variability=(Math.sin(n*16.7)+1)/2;
-        const crown=this.groundY-14;
-        const tall=maxTreeHeight*(.6+.5*variability);
-        const thickness=9+(n%3+3)%3*4;
-        g.fillStyle(color,1);
-        g.fillRect(x-thickness/2,crown-tall,thickness,tall+23);
-        g.lineStyle(Math.max(3,thickness*.45),color,1);
-        g.lineBetween(x,crown-tall*.63,x-spacing*.27,crown-tall*.84);
-        g.lineBetween(x,crown-tall*.58,x+spacing*.31,crown-tall*.9);
-        g.lineBetween(x,crown-tall*.38,x-spacing*.26,crown-tall*.53);
-        if((n%5+5)%5===0) {
-          g.fillStyle(color,.85);g.fillEllipse(x,crown-tall*.94,25,35);
+        const mod=(Math.sin(n*62.17+factor*57)+1)/2;
+        const kind=((n*7+Math.round(factor*100))%5+5)%5;
+        const ground=this.groundY-12;
+        const height=maxTreeHeight*(.67+.46*mod);
+        const thick=7+Math.floor(mod*9);
+        const crownY=ground-height;
+        g.fillStyle(color,.97);g.fillRect(x-thick*.5,crownY,thick,height+23);
+        // Roots at the base and a forked trunk for some trees.
+        g.lineStyle(Math.max(3,thick*.45),color,.95);
+        g.lineBetween(x,ground-12,x-spacing*(kind%2?.12:.21),ground+8);
+        g.lineBetween(x,ground-12,x+spacing*(kind%2?.24:.12),ground+11);
+        const branches=kind===3?5:3;
+        for(let k=0;k<branches;k++){
+          const h=.29+k*.135+(mod-.5)*.06;
+          const y=ground-height*h;
+          const side=k%2===0?-1:1;
+          const far=spacing*(.2+.095*mod)*(k===0?1.1:.89);
+          g.lineStyle(Math.max(2,thick*.5-k*.6),color,.94);
+          g.lineBetween(x,y,x+side*far,y-height*(.14+.06*mod));
+          g.lineStyle(2,color,.78);
+          g.lineBetween(x+side*far*.7,y-height*.1,x+side*far*1.1,y-height*.21);
+        }
+        if(kind===0 || kind===4){
+          g.fillStyle(color,.91);
+          g.fillEllipse(x-7,crownY+12,25+mod*18,26+mod*24);
+          g.fillEllipse(x+10,crownY+8,27,19+mod*23);
+          g.fillEllipse(x,crownY-1,19+mod*13,32);
+        } else if(kind===2){
+          g.lineStyle(3,color,.9);g.lineBetween(x,crownY+19,x-14,crownY-8);
+          g.lineBetween(x-12,crownY-6,x-26,crownY-18);
+        }
+        if(kind===1 && factor>.2){
+          // A sparse trailing vine in the near tree layer.
+          g.lineStyle(1.4,0x385451,.5);
+          g.lineBetween(x+7,crownY+height*.35,x+12,crownY+height*.65);
         }
       }
     }
     drawGround() {
-      const g=this.world;
-      g.clear();
-      const left=this.cameraX-12;
-      g.fillStyle(0x111c25);g.fillRect(left,this.groundY,this.width+25,this.height-this.groundY+5);
-      g.fillStyle(0x23343a);g.fillRect(left,this.groundY-3,this.width+25,5);
-      g.lineStyle(2,0x42605a,.45);
-      const first=Math.floor(left/80)*80;
-      for(let x=first;x<left+this.width+90;x+=80) {
-        const j=(Math.sin(x*.47)+1)*10;
-        g.lineBetween(x+j,this.groundY+12,x+j+20,this.groundY+18);
-        g.lineBetween(x+j+19,this.groundY+18,x+j+26,this.groundY+14);
-        if((Math.floor(x/80)%4+4)%4===0){
-          g.lineStyle(2,0x34584b,.48);
-          g.lineBetween(x,this.groundY-2,x-7,this.groundY-17);
-          g.lineBetween(x-3,this.groundY-9,x+5,this.groundY-16);
+      const g=this.world;g.clear();
+      const left=this.cameraX-12,ground=this.groundY;
+      g.fillStyle(0x0d1923);g.fillRect(left,ground,this.width+25,this.height-ground+8);
+      g.fillStyle(0x263c3b);g.fillRect(left,ground-4,this.width+25,7);
+      g.fillStyle(0x52685b,.28);g.fillRect(left,ground+5,this.width+25,8);
+      const first=Math.floor(left/49)*49;
+      for(let x=first;x<left+this.width+75;x+=49){
+        const n=Math.floor(x/49);
+        const wave=(Math.sin(n*9.67)+1)/2;
+        // Differently sized pebbles, rootlets, moss, occasional fungi.
+        g.fillStyle(n%3===0?0x42565c:0x364951,.55);
+        g.fillEllipse(x+wave*24,ground+15+wave*16,9+wave*9,3+wave*4);
+        g.lineStyle(2,0x3d5c4e,.55);
+        g.lineBetween(x+7,ground+1,x+10+wave*8,ground-7-wave*7);
+        if(n%5===0){
+          g.lineStyle(2,0x46564e,.6);
+          g.lineBetween(x-16,ground+19,x-2,ground+11);
+          g.lineBetween(x-2,ground+11,x+13,ground+20);
+          g.lineBetween(x+13,ground+20,x+24,ground+15);
+        }
+        if(n%9===0){
+          g.fillStyle(0x67776b,.7);g.fillEllipse(x+9,ground-5,13,7);
+          g.fillStyle(0xb0bd9b,.28);g.fillCircle(x+10,ground-6,2);
         }
       }
-      // Horizon silhouettes and small gravestones, decoration only.
-      const firstStone=Math.floor(left/460)*460;
-      for(let x=firstStone;x<left+this.width+400;x+=460){
-        g.fillStyle(0x182531,.8);g.fillRoundedRect(x+150,this.groundY-31,17,31,7);
-        g.fillStyle(0x1d313a,.7);g.fillRect(x+151,this.groundY-1,22,4);
+      const firstStone=Math.floor(left/450)*450;
+      for(let x=firstStone;x<left+this.width+450;x+=450){
+        const variant=(Math.floor(x/450)%3+3)%3;
+        g.fillStyle(variant===1?0x22323b:0x1c2b33,.85);
+        if(variant===0)g.fillRoundedRect(x+150,ground-31,17,31,7);
+        else if(variant===1){g.fillRect(x+151,ground-37,9,35);g.fillRect(x+145,ground-28,21,7);}
+        else {g.fillTriangle(x+145,ground-1,x+157,ground-33,x+176,ground-1);}
+        g.fillStyle(0x1d313a,.7);g.fillRect(x+145,ground-2,34,4);
       }
+    }
+    drawCoin(c) {
+      const g=this.world;
+      const y=this.groundY+c.offset;
+      const pulse=1+Math.sin(this.frame*.11+c.x*.014)*.08;
+      g.fillStyle(0xffd064,.10);g.fillCircle(c.x,y,17*pulse);
+      g.fillStyle(0x9a622b,.95);g.fillEllipse(c.x,y,17*pulse,19*pulse);
+      g.fillStyle(GOLD);g.fillEllipse(c.x,y,14*pulse,17*pulse);
+      g.lineStyle(1.7,0xfff0b8,.95);g.strokeEllipse(c.x,y,10*pulse,13*pulse);
+      g.fillStyle(0xfff3ca,.93);g.fillCircle(c.x-2,y-3,2);
     }
     drawSoul(s) {
       const g=this.world;
       const y=this.groundY+s.offset;
-      const pulse=1+Math.sin(this.frame*.075+s.x)*.14;
-      g.fillStyle(0x8cebe7,.08);g.fillCircle(s.x,y,22*pulse);
-      g.fillStyle(0x81e5df,.18);g.fillCircle(s.x,y,14*pulse);
-      g.fillStyle(0xcafbf0,.92);g.fillEllipse(s.x,y,12*pulse,17*pulse);
-      g.fillStyle(0xe7fff8,.9);g.fillCircle(s.x-2,y-3,2.1);
-      g.lineStyle(1.5,0x89f5e3,.65);
-      g.lineBetween(s.x,y+7,s.x+4*Math.sin(this.frame*.08),y+19);
+      const pulse=1+Math.sin(this.frame*.065+s.x*.03)*.10;
+      const radius=32*pulse;
+      g.fillStyle(0x60f3e3,.07);g.fillCircle(s.x,y,radius+18);
+      g.fillStyle(0x80fff2,.15);g.fillCircle(s.x,y,radius);
+      g.lineStyle(2.2,0xa7fff1,.72);g.strokeCircle(s.x,y,20*pulse);
+      g.fillStyle(0xc2fff3,.94);g.fillEllipse(s.x,y-1,16*pulse,23*pulse);
+      g.fillStyle(0xe7ffff,.9);g.fillCircle(s.x-4,y-5,3);
+      g.fillStyle(0xe7ffff,.8);g.fillCircle(s.x+4,y-5,3);
+      g.lineStyle(2,0x85f5e5,.75);
+      g.lineBetween(s.x,y+9,s.x+7*Math.sin(this.frame*.09),y+26);
+      for(let i=0;i<6;i++){
+        const t=this.elapsed*1.3+i*Math.PI/3;
+        g.fillStyle(0xc9fff6,.5);g.fillCircle(s.x+Math.cos(t)*radius,y+Math.sin(t)*radius,2.3);
+      }
+      // Rare souls glow visibly more than ordinary coins.
     }
     drawObstacle(o) {
-      const g=this.world;
-      if(o.type==='rock') {
-        g.fillStyle(0x354754);g.fillPoints([
-          {x:o.x-4,y:o.y+o.height},{x:o.x+3,y:o.y+18},{x:o.x+18,y:o.y+3},{x:o.x+39,y:o.y+7},
-          {x:o.x+o.width+4,y:o.y+o.height},{x:o.x-4,y:o.y+o.height}],true);
-        g.fillStyle(0x556878,.7);g.fillTriangle(o.x+3,o.y+18,o.x+18,o.y+5,o.x+25,o.y+20);
-        g.lineStyle(2,0x1e2d3c,.9);g.lineBetween(o.x+30,o.y+14,o.x+42,o.y+28);
-      } else if(o.type==='branch') {
-        g.fillStyle(0x4b392f);g.fillRoundedRect(o.x,o.y,o.width,o.height,8);
-        g.fillStyle(0x604936,.7);g.fillRoundedRect(o.x+4,o.y+5,o.width-8,12,6);
-        g.lineStyle(4,0x2c292b);g.lineBetween(o.x+o.width*.4,o.y+o.height,o.x+o.width*.3,o.y+o.height+9);
-        g.lineStyle(3,0x6d8d67,.7);g.lineBetween(o.x+19,o.y+2,o.x+18,o.y+o.height+7);
-        g.lineBetween(o.x+72,o.y+o.height-8,o.x+80,o.y+o.height+12);
-        g.lineStyle(2,0x2a261f,.6);g.lineBetween(o.x+11,o.y+24,o.x+66,o.y+25);
-      } else {
-        g.fillStyle(0x293c34);
-        g.fillPoints([
-          {x:o.x,y:this.groundY},{x:o.x+2,y:o.y+29},{x:o.x+13,y:o.y+42},
-          {x:o.x+15,y:o.y+2},{x:o.x+27,y:o.y+34},{x:o.x+39,y:o.y+7},
-          {x:o.x+43,y:o.y+38},{x:o.x+55,y:o.y+16},{x:o.x+60,y:this.groundY}
-        ],true);
-        g.lineStyle(3,0x60715a);g.lineBetween(o.x+13,this.groundY,o.x+20,o.y+11);
-        g.lineBetween(o.x+29,this.groundY,o.x+40,o.y+14);
-        g.lineStyle(2,0x72946a);g.lineBetween(o.x+11,o.y+47,o.x+2,o.y+39);
-        g.lineBetween(o.x+45,o.y+45,o.x+56,o.y+31);
-        this.drawSoul({x:o.x+o.width/2,offset:o.y-this.groundY+31});
+      const g=this.world, x=o.x, ground=this.groundY;
+      const v=o.variant%6;
+      if(o.type==='rock'){
+        const bottom=o.y+o.height;
+        if(v===1 || v===4){ // Tree stumps with a wood-grain cut surface.
+          g.fillStyle(0x372d2b);g.fillRoundedRect(x+4,o.y+13,o.width-8,35,5);
+          g.fillStyle(0x786044);g.fillEllipse(x+o.width/2,o.y+14,o.width-7,17);
+          g.fillStyle(0xaa865a,.92);g.fillEllipse(x+o.width/2,o.y+14,o.width-18,11);
+          g.lineStyle(2,0x513e32,.8);g.strokeEllipse(x+o.width/2,o.y+14,o.width-23,8);
+          g.lineStyle(2,0x283e35);g.lineBetween(x+6,bottom-9,x+1,bottom);
+        }else if(v===2 || v===5){ // Fallen logs, viewed at the cut end.
+          g.fillStyle(0x322c31);g.fillRoundedRect(x+1,o.y+23,o.width-1,25,8);
+          g.fillStyle(0x594737);g.fillRoundedRect(x+5,o.y+21,o.width-11,15,6);
+          g.fillStyle(0xa17c55);g.fillEllipse(x+10,o.y+32,18,24);
+          g.fillStyle(0x75593f);g.fillEllipse(x+10,o.y+32,10,15);
+          g.lineStyle(2,0x907657,.8);g.lineBetween(x+19,o.y+26,x+o.width-4,o.y+28);
+        }else { // Pointed and rounded boulders, different silhouettes.
+          g.fillStyle(v===3?0x404e5c:0x364552);
+          g.fillPoints([{x:x,y:bottom},{x:x+4,y:o.y+20},{x:x+18,y:o.y+3},
+            {x:x+37,y:o.y+(v===3?1:8)},{x:x+o.width,y:bottom}],true);
+          g.fillStyle(0x738494,.63);g.fillTriangle(x+6,o.y+21,x+19,o.y+6,x+29,o.y+22);
+          g.lineStyle(2,0x202e38,.9);g.lineBetween(x+30,o.y+14,x+43,o.y+26);
+          g.fillStyle(0x81988f,.37);g.fillEllipse(x+13,bottom-5,17,6);
+        }
+        return;
       }
+      if(o.type==='branch'){
+        const tip=ground-C.slideClearancePx;
+        const pillar=v%2===0;
+        if(pillar){
+          g.fillStyle(0x272e3d);g.fillRect(x,0,o.width,tip-6);
+          g.fillStyle(0x394555);g.fillRect(x+5,0,o.width-15,tip-11);
+          g.fillStyle(0x586172,.65);g.fillRect(x+11,0,7,tip-11);
+          g.fillStyle(0x212e39);g.fillRect(x+o.width-15,0,10,tip-11);
+          g.fillStyle(0x515665);g.fillRoundedRect(x-3,tip-19,o.width+5,19,3);
+          g.lineStyle(3,0x84909c,.35);g.lineBetween(x+12,tip-40,x+25,tip-60);
+          g.lineBetween(x+25,tip-60,x+34,tip-53);
+          for(let j=1;j<4;j++){
+            g.lineStyle(2,0x1d2531,.6);g.lineBetween(x+5,j*tip/4,x+o.width-8,j*tip/4+4);
+          }
+        }else{
+          // Jagged stalactite formation continues to the ceiling; never jumpable.
+          g.fillStyle(0x293d47);
+          g.fillPoints([{x:x-1,y:0},{x:x+o.width+1,y:0},
+            {x:x+o.width-4,y:tip-18},{x:x+o.width*.65,y:tip-4},
+            {x:x+o.width*.48,y:tip},{x:x+o.width*.2,y:tip-7},{x:x+4,y:tip-17}],true);
+          g.fillStyle(0x425864,.85);
+          g.fillPoints([{x:x+11,y:0},{x:x+o.width*.53,y:0},
+            {x:x+o.width*.63,y:tip-17},{x:x+o.width*.4,y:tip-4},{x:x+22,y:tip-25}],true);
+          g.lineStyle(3,0x66808a,.44);g.lineBetween(x+22,8,x+30,tip-41);
+          g.lineStyle(2,0x162a34,.7);g.lineBetween(x+o.width-15,tip-85,x+o.width-25,tip-29);
+        }
+        return;
+      }
+      // All cuttable variants are deliberately tall and show a slender slashable trunk.
+      const top=o.y,hh=o.height,mid=x+o.width/2;
+      if(v===0 || v===3){ // Green bamboo stand.
+        for(let i=0;i<4;i++){
+          const bx=x+9+i*13,h=hh*(.78+.065*(i%3));
+          g.fillStyle(i%2?0x567f54:0x47724f,.96);g.fillRoundedRect(bx,ground-h,10,h,3);
+          g.lineStyle(1.6,0xc2c98d,.56);
+          for(let j=1;j<5;j++)g.lineBetween(bx+1,ground-h+j*h/5,bx+9,ground-h+j*h/5);
+          g.lineStyle(2,0x82946e,.74);
+          g.lineBetween(bx+4,ground-h*.54,bx+(i%2?-13:20),ground-h*.71);
+          g.lineBetween(bx+4,ground-h*.7,bx+(i%2?24:-12),ground-h*.8);
+        }
+      }else if(v===1 || v===4){ // Corn, tassels, and long slim leaves.
+        for(let i=0;i<3;i++){
+          const bx=x+14+i*15,h=hh*(.81+.045*i);
+          g.lineStyle(5,0x63885a);g.lineBetween(bx,ground,bx,ground-h);
+          g.fillStyle(0x739653,.93);
+          g.fillTriangle(bx,ground-h*.55,bx-15,ground-h*.73,bx-3,ground-h*.67);
+          g.fillTriangle(bx,ground-h*.35,bx+15,ground-h*.57,bx+3,ground-h*.48);
+          g.fillStyle(0xd2ac57,.96);g.fillRoundedRect(bx+1,ground-h*.66,8,25,4);
+          g.lineStyle(2,0xb6ac73,.85);g.lineBetween(bx,ground-h,bx-7,ground-h-7);
+          g.lineBetween(bx,ground-h,bx+7,ground-h-5);
+        }
+      }else { // Young sapling with a narrow trunk and leafy crown.
+        g.lineStyle(11,0x604d3e);g.lineBetween(mid,ground,mid,top+18);
+        g.lineStyle(4,0x766047);g.lineBetween(mid,top+hh*.3,x+12,top+hh*.17);
+        g.lineBetween(mid,top+hh*.42,x+48,top+hh*.22);
+        g.fillStyle(0x355c46);g.fillEllipse(mid-12,top+24,34,43);
+        g.fillEllipse(mid+12,top+29,38,44);
+        g.fillStyle(0x4d7b55,.89);g.fillEllipse(mid,top+13,38,37);
+        g.fillStyle(0x72986c,.45);g.fillEllipse(mid+6,top+9,17,16);
+      }
+      // A couple of visible gold coins show the payoff from cutting this object.
+      g.fillStyle(GOLD,.94);g.fillCircle(mid-6,ground-24,5);
+      g.fillCircle(mid+8,ground-17,4);
     }
     drawParticles() {
       const g=this.fx;g.clear();
@@ -583,46 +806,97 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawReaper() {
       const g=this.actor;g.clear();
-      const p=this.player;
-      const x=p.x,y=this.feetY;
+      const p=this.player,x=p.x,feet=this.feetY;
       const moving=this.state==='playing';
-      const bounce=moving&&!p.sliding&&this.onGround?Math.sin(this.elapsed*22)*2.3:0;
-      const cloakColor=0x202437,shadowColor=0x111727;
-      g.fillStyle(0x000000,.31);g.fillEllipse(x,this.groundY+3,p.sliding?81:46,11);
-      if(p.invulMs>0 && Math.floor(this.frame/5)%2===0) g.setAlpha(.45);
-      if(p.sliding) {
-        g.fillStyle(shadowColor);g.fillEllipse(x-5,y-13,68,29);
-        g.fillStyle(cloakColor);g.fillRoundedRect(x-34,y-28,64,24,11);
-        g.fillStyle(0x0a0d19);g.fillCircle(x+20,y-22,15);
-        g.fillStyle(CYAN);g.fillCircle(x+26,y-22,3);
-        g.lineStyle(4,0x87919a);g.lineBetween(x+10,y-20,x+69,y-17);
-        g.lineStyle(4,0xc4d6d3);g.beginPath();g.moveTo(x+67,y-17);g.lineTo(x+81,y-28);g.lineTo(x+73,y-3);g.strokePath();
-        g.fillStyle(0x83b6bf,.22);g.fillEllipse(x-36,y-6,30,8);
-      } else {
-        const ry=y+bounce;
-        const step=moving&&this.onGround?Math.sin(this.elapsed*20)*8:0;
-        g.lineStyle(7,0x151a2b);g.lineBetween(x-8,ry-11,x-13-step,ry+1);
-        g.lineBetween(x+7,ry-11,x+14+step,ry+1);
-        g.fillStyle(shadowColor);g.fillPoints([
-          {x:x-17,y:ry-58},{x:x+12,y:ry-59},{x:x+24,y:ry-3},{x:x+5,y:ry-12},{x:x-5,y:ry-4},{x:x-25,y:ry-6}
-        ],true);
-        g.fillStyle(cloakColor);g.fillPoints([
-          {x:x-17,y:ry-65},{x:x+12,y:ry-64},{x:x+16,y:ry-27},{x:x+24,y:ry-7},
-          {x:x+1,y:ry-15},{x:x-9,y:ry-8},{x:x-23,y:ry-12}
-        ],true);
-        g.fillStyle(0x101322);g.fillCircle(x-3,ry-69,22);
-        g.fillStyle(0x2b3045);g.fillEllipse(x-2,ry-82,40,15);
-        g.fillStyle(0x070c17);g.fillEllipse(x+4,ry-66,26,25);
-        g.fillStyle(CYAN);g.fillCircle(x+6,ry-68,2.6);g.fillCircle(x+15,ry-68,2.6);
-        g.lineStyle(3,0x4c5662,.8);g.lineBetween(x+10,ry-54,x+25,ry-43);
-        const swinging=p.attackMs>0;
-        if(swinging) {
-          g.lineStyle(5,0x89786c);g.lineBetween(x+4,ry-43,x+102,ry-59);
-          g.lineStyle(5,0xe2f2e8);g.beginPath();g.moveTo(x+102,ry-59);g.lineTo(x+128,ry-90);g.lineTo(x+143,ry-93);g.lineTo(x+139,ry-58);g.strokePath();
-          g.lineStyle(7,CYAN,.4);g.beginPath();g.arc(x+23,ry-53,114,5.55,6.20);g.strokePath();
-        } else {
-          g.lineStyle(5,0x85776c);g.lineBetween(x+15,ry-36,x+55,ry-103);
-          g.lineStyle(5,0xe0eadf);g.beginPath();g.moveTo(x+55,ry-103);g.lineTo(x+41,ry-128);g.lineTo(x+68,ry-118);g.lineTo(x+79,ry-99);g.strokePath();
+      const running=moving&&this.onGround&&!p.sliding;
+      const cycle=this.elapsed*18;
+      const bounce=running?Math.sin(cycle*2)*1.8:0;
+      const y=feet+bounce;
+      const robe=0x21283d,shadow=0x111626,trim=0x4f5a68;
+      g.fillStyle(0x00000b,.28);g.fillEllipse(x,this.groundY+3,p.sliding?82:57,11);
+      if(p.invulMs>0 && Math.floor(this.frame/5)%2===0) g.setAlpha(.42);
+      if(p.sliding){
+        // Low forward crouch: actual sprite fits within the 29px slide collision gap.
+        const dust=Math.sin(this.elapsed*38)*3;
+        g.fillStyle(0x1b2435);g.fillEllipse(x-10,feet-11,65,23);
+        g.fillStyle(robe);g.fillPoints([
+          {x:x-49,y:feet-5},{x:x-31,y:feet-23},{x:x+9,y:feet-26},
+          {x:x+27,y:feet-13},{x:x+12,y:feet-2}],true);
+        g.fillStyle(shadow);g.fillEllipse(x+16,feet-21,21,17);
+        g.fillStyle(0x313c51);g.fillEllipse(x+13,feet-26,27,8);
+        g.fillStyle(0x090e1b);g.fillEllipse(x+20,feet-20,16,12);
+        g.fillStyle(CYAN);g.fillCircle(x+25,feet-20,2.4);
+        g.lineStyle(4,0x818c9c);g.lineBetween(x-5,feet-7,x+56,feet-14);
+        g.lineStyle(3,0xe7efde);g.lineBetween(x+56,feet-14,x+72,feet-28);
+        g.lineBetween(x+72,feet-28,x+67,feet-8);
+        g.fillStyle(0x7da6a4,.3);g.fillEllipse(x-43+dust,feet-3,23,5);
+      }else{
+        const jump=!this.onGround;
+        const swing=Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd);
+        // Animated legs include knees, shin flex and alternating feet.
+        for(let leg=0;leg<2;leg++){
+          const phase=cycle+leg*Math.PI;
+          const stride=jump?(leg?10:-12):Math.sin(phase)*13;
+          const kneeY=jump?y-22:y-18+Math.max(0,Math.cos(phase))*5;
+          const kneeX=x+(leg?2:-6)+stride*.57;
+          const footX=jump?kneeX+(leg?-6:14):x+stride*1.35+(leg?5:-2);
+          const footY=jump?y-8+(leg?6:-11):y-Math.max(0,Math.cos(phase))*7;
+          g.lineStyle(7,leg?0x121a2c:0x172034);
+          g.lineBetween(x+(leg?6:-8),y-28,kneeX,kneeY);
+          g.lineStyle(6,0x192133);g.lineBetween(kneeX,kneeY,footX,footY);
+          g.lineStyle(5,0x263347);g.lineBetween(footX-4,footY,footX+7,footY);
+        }
+        const flutter=running?Math.sin(cycle)*4:2*Math.sin(this.elapsed*5);
+        // Three layered fabric tails, trailing from the shoulders.
+        g.fillStyle(0x101727);
+        g.fillPoints([{x:x-18,y:y-54},{x:x+10,y:y-54},{x:x+21,y:y-13},
+          {x:x+3,y:y-6+flutter*.4},{x:x-13,y:y-14},{x:x-31-flutter,y:y-7}],true);
+        g.fillStyle(0x2a3145);
+        g.fillPoints([{x:x-20,y:y-56},{x:x+7,y:y-58},{x:x+18,y:y-25},
+          {x:x+14,y:y-13},{x:x-2,y:y-22},{x:x-24-flutter,y:y-8},{x:x-15,y:y-34}],true);
+        g.fillStyle(robe);
+        g.fillPoints([{x:x-16,y:y-61},{x:x+15,y:y-57},{x:x+14,y:y-28},
+          {x:x+24,y:y-13},{x:x+3,y:y-17},{x:x-20-flutter*.6,y:y-11}],true);
+        g.lineStyle(2,trim,.48);g.lineBetween(x-12,y-52,x-13-flutter*.2,y-17);
+        // Hood, outer cowl, skeletal mask and eerie eyes.
+        g.fillStyle(0x0c1424);g.fillEllipse(x-3,y-67,41,45);
+        g.fillStyle(0x343f55);g.fillEllipse(x-8,y-81,37,12);
+        g.fillStyle(0x242d42);g.fillTriangle(x-25,y-81,x-11,y-95,x+14,y-80);
+        g.fillStyle(0x060d19);g.fillEllipse(x+6,y-66,28,30);
+        g.fillStyle(0xa1aaa9,.92);g.fillEllipse(x+10,y-57,13,12);
+        g.fillStyle(0x0a1520);g.fillEllipse(x+15,y-54,6,4);
+        g.fillStyle(CYAN);g.fillEllipse(x+5,y-68,6,3.6);g.fillEllipse(x+16,y-69,6,3.6);
+        g.fillStyle(0xe1fff6,.9);g.fillCircle(x+15,y-69,1);
+        // Back arm swings opposite the stride.
+        g.lineStyle(6,0x202a3d);g.lineBetween(x-11,y-47,x-19+(jump?-4:Math.sin(cycle)*6),y-33);
+        const gripX=x+14,gripY=y-43;
+        if(p.attackMs>0){
+          const progress=1-p.attackMs/C.attackDurationMs;
+          const angle=-2.6+progress*2.5;
+          const endX=gripX+Math.cos(angle)*85,endY=gripY+Math.sin(angle)*85;
+          const bladeAngle=angle+1.1;
+          const tipX=endX+Math.cos(bladeAngle)*42,tipY=endY+Math.sin(bladeAngle)*42;
+          g.lineStyle(6,0x2e364b);g.lineBetween(x+7,y-51,gripX,gripY);
+          g.lineStyle(6,0x8d7060);g.lineBetween(gripX,gripY,endX,endY);
+          g.lineStyle(2,0xc5b79c,.9);g.lineBetween(gripX+2,gripY-3,endX-2,endY-2);
+          g.lineStyle(6,0x9caeaf);g.lineBetween(endX,endY,tipX,tipY);
+          g.lineStyle(4,0xe4f6ed);g.beginPath();g.moveTo(endX-5,endY+3);
+          g.lineTo(tipX+Math.cos(bladeAngle+.36)*11,tipY+Math.sin(bladeAngle+.36)*11);
+          g.lineTo(tipX,tipY);g.strokePath();
+          if(swing){
+            g.lineStyle(8,0x66e6da,.15);g.beginPath();g.arc(x+9,y-45,106,4.25,6.2);g.strokePath();
+            g.lineStyle(3,0xbef9ef,.8);g.beginPath();g.arc(x+9,y-45,104,4.38,6.13);g.strokePath();
+          }
+        }else{
+          // Resting scythe is clearly behind / above the shoulder, not held out as an attack.
+          const baseX=x-8,baseY=y-31,endX=x+30,endY=y-115;
+          g.lineStyle(5,0x927968);g.lineBetween(baseX,baseY,endX,endY);
+          g.lineStyle(2,0xb7a28d,.7);g.lineBetween(baseX+2,baseY-3,endX+1,endY);
+          g.fillStyle(0x899ea1);g.fillPoints([
+            {x:endX-3,y:endY+6},{x:endX+10,y:endY-3},
+            {x:endX+38,y:endY-2},{x:endX+45,y:endY+14},{x:endX+22,y:endY+3}],true);
+          g.lineStyle(2,0xe7f7ed);g.lineBetween(endX+38,endY-1,endX+44,endY+14);
+          g.lineStyle(5,0x283247);g.lineBetween(x+6,y-50,x+19,y-43);
         }
       }
       g.setAlpha(1);
