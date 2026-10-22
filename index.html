@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.4</title>
+  <title>GRIM RUN — v0.4.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -83,6 +83,12 @@ button {cursor:pointer;}
 /* v0.4: short, unobtrusive feedback when a chasm costs health. */
 .fall-notice{position:absolute;top:37%;left:50%;transform:translateX(-50%);z-index:9;pointer-events:none;color:#ffc9d2;font-size:clamp(17px,4.5vh,27px);font-weight:1000;letter-spacing:.14em;text-shadow:0 0 18px #8d183f,0 2px 8px #000;text-align:center;white-space:nowrap;}
 
+/* v0.4.1 portal cutscene; freezes gameplay before the next 500m reward. */
+.portal-overlay{position:absolute;inset:0;z-index:21;pointer-events:none;background:radial-gradient(ellipse at center,#443b81d9 0%,#070a19f5 75%);display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:12px;color:#e4fff9;}
+.portal-rune{font-size:clamp(35px,13vh,85px);color:#9bf7ec;text-shadow:0 0 37px #bba4ff;margin-bottom:5px;}
+.portal-title{font-size:clamp(20px,5.5vh,44px);font-weight:1000;letter-spacing:.08em;text-shadow:0 0 28px #8265eb;}
+.portal-subtitle{font-size:clamp(10px,2.2vh,16px);letter-spacing:.24em;color:#a6c5d2;font-weight:900;margin-top:9px;}
+
 </style>
 </head>
 <body>
@@ -93,6 +99,7 @@ button {cursor:pointer;}
     <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
     <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
   </div>
+  <div id="portal-overlay" class="portal-overlay hidden"><div class="portal-rune">✦</div><div class="portal-title">DESCENT INTO THE UNDERWORLD</div><div class="portal-subtitle">THE GATE HAS OPENED</div></div>
   <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
@@ -105,9 +112,9 @@ button {cursor:pointer;}
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1>GRIM <em>RUN</em></h1>
-      <p>Run through haunted hills, leap across chasms, slash towering stalks, and slide beneath hanging stone. Collect rare souls every 666 meters and choose a supernatural power every 500 meters.</p>
+      <p>Climb beyond the forest into mountains and stars. At 5,000m enter the Underworld, descend into Hell, and reach the final gate at 6,666m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.4 · ELEVATION & ABYSS</div>
+      <div class="mini">v0.4.1 · ASCENT & UNDERWORLD</div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
   </div>
@@ -128,7 +135,7 @@ button {cursor:pointer;}
   </div>
   <div id="game-over" class="modal-wrap hidden">
     <div class="modal compact">
-      <div class="eyebrow">THE GRIM REAPER HAS FALLEN</div><h2>RUN ENDED</h2>
+      <div class="eyebrow" id="end-eyebrow">THE GRIM REAPER HAS FALLEN</div><h2 id="end-title">RUN ENDED</h2>
       <div class="results"><div><small>DISTANCE</small><strong id="end-distance">0 m</strong></div><div><small>COINS</small><strong id="end-coins">0</strong></div><div><small>SOULS</small><strong id="end-souls">0</strong></div><div><small>SCORE</small><strong id="end-score">0</strong></div></div>
       <div id="end-build" class="end-build"></div>
       <div id="best-label" class="best-label"></div>
@@ -145,7 +152,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.4',
+  version: '0.4.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -376,142 +383,174 @@ window.GRIM_CONFIG = Object.freeze({
 
 </script>
   <script>
-// Grim Run v0.4 — seeded, piecewise-linear world terrain and authored-safe gaps.
-// All coordinates are world pixels; y grows downward. No Phaser dependency.
+// Grim Run v0.4.1 — deterministic, elevation-aware terrain with a portal to the Underworld.
+// Coordinates are world pixels (larger y = lower altitude). No Phaser dependency.
 (function(scope){
   'use strict';
-  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-  function makeTerrain(seed, baseY, startX=200, pxPerMeter=12) {
-    let rngState=(seed>>>0)^0x51a5a5d7;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const smooth=t=>t*t*(3-2*t);
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  // Elevation milestones are cumulative heights measured relative to the initial ground.
+  const SURFACE_PROFILE=[[0,0],[1000,-45],[2000,-430],[3000,-850],[4000,-1270],[5000,-1510]];
+  const CAVERN_PROFILE=[[5000,115],[5300,230],[6000,720],[6666,1020],[6900,1020]];
+  function interpolateProfile(points,m){
+    if(m<=points[0][0])return points[0][1];
+    for(let i=1;i<points.length;i++)if(m<=points[i][0]){
+      const a=points[i-1],b=points[i];
+      return lerp(a[1],b[1],smooth((m-a[0])/(b[0]-a[0])));
+    }
+    return points[points.length-1][1];
+  }
+  function makeTerrain(seed,baseY,startX=200,pxPerMeter=12){
+    let rngState=((seed>>>0)^0x51a5a5d7)>>>0;
     function random(){rngState=(Math.imul(1664525,rngState)+1013904223)>>>0;return rngState/4294967296;}
-    const segments=[], sequences=[];
-    let cursor=startX-2600, elevation=baseY, groupsMade=0;
-    let nextGapMeters=766; // Exactly 100 meters after the first 666m soul opportunity.
-    let lastSeqEnd=cursor;
-    const add=(end,yEnd,kind='ground',group=-1)=>{
-      if(end<=cursor)throw new Error('Terrain segments must advance');
+    // Position-based seeded variation, so run layout does not depend on camera calls.
+    const phase1=random()*Math.PI*2,phase2=random()*Math.PI*2,phase3=random()*Math.PI*2;
+    const segments=[],sequences=[];
+    const portalX=startX+5000*pxPerMeter;
+    const finishX=startX+6666*pxPerMeter;
+    let cursor=startX-2600,elevation=baseY,groupsMade=0,nextGapMeters=766;
+    const meters=x=>(x-startX)/pxPerMeter;
+    const isCavern=x=>x>=portalX;
+    function profileAt(x){
+      const m=Math.max(0,meters(x));
+      const cavern=isCavern(x);
+      const trend=interpolateProfile(cavern?CAVERN_PROFILE:SURFACE_PROFILE,m);
+      const amplitude=cavern?clamp(75+(m-5000)*.038,75,140):
+        m<1000?28:clamp(65+(m-1000)*.027,65,160);
+      const waves=Math.sin(x/500+phase1)*.49+Math.sin(x/1130+phase2)*.31+
+        Math.sin(x/240+phase3)*.20;
+      const firstKmBlend=clamp((m-80)/180,0,1);
+      return baseY+trend+amplitude*waves*firstKmBlend;
+    }
+    function add(end,yEnd,kind='ground',group=-1){
+      if(end<=cursor)throw Error('Terrain segment must advance');
       segments.push({start:cursor,end,y0:elevation,y1:yEnd,kind,group});
       cursor=end;elevation=yEnd;
-    };
-    // Estimate the length of the sequence so it can be kept away from fixed rewards.
-    function plan(groupNumber){
-      const multi=groupNumber>=2 ? (groupNumber>=6?3:2) : 1;
-      const gapWidth=groupNumber===0?88:Math.min(145,94+groupNumber*5);
-      const widths=Array.from({length:multi},(_,i)=>gapWidth+(i%2)*8);
-      const platforms=multi-1;
-      const length=widths.reduce((a,b)=>a+b,0)+platforms*340;
-      return {widths,platforms,length};
     }
-    function chooseNextPosition(previousMeters, groupNumber){
-      let attempt=previousMeters;
-      const p=plan(groupNumber);
-      const trailMeters=(p.length+330)/pxPerMeter;
-      for(let i=0;i<250;i++,attempt+=5){
-        let blocked=false;
-        for(let k=Math.max(1,Math.floor((attempt-100)/500));k<Math.ceil((attempt+trailMeters+120)/500);k++){
-          const milestone=k*500;
-          if(attempt < milestone+95 && attempt+trailMeters > milestone-22){blocked=true;break;}
-        }
-        if(blocked)continue;
-        for(let k=Math.max(1,Math.floor((attempt-90)/666));k<Math.ceil((attempt+trailMeters+90)/666);k++){
-          const milestone=k*666;
-          if(attempt < milestone+42 && attempt+trailMeters > milestone-25){blocked=true;break;}
-        }
-        if(!blocked)return attempt;
+    function plan(group){
+      // First encounter introduces one easy gap; by ~1200m, sequences use three gaps.
+      const count=group===0?1:group===1?2:3;
+      const gapWidth=group===0?88:Math.min(162,98+Math.sqrt(group)*10);
+      const widths=Array.from({length:count},(_,i)=>Math.round(gapWidth+(i%2)*7));
+      const platformWidth=Math.max(280,350-Math.min(group,14)*4);
+      return {widths,platformWidth,length:widths.reduce((a,b)=>a+b,0)+(count-1)*platformWidth};
+    }
+    function allowedAt(m,group){
+      const p=plan(group),lengthMeters=(p.length+350)/pxPerMeter;
+      if(m>6650)return false;
+      // Never let a sequence cross the teleporter or the finish.
+      if(m<5000 && m+lengthMeters>4930)return false;
+      if(m>=5000 && m<5105)return false;
+      if(m+lengthMeters>6630)return false;
+      for(let k=Math.max(1,Math.floor((m-110)/500));k<=Math.ceil((m+lengthMeters+110)/500);k++){
+        const milestone=k*500;
+        if(m<milestone+85 && m+lengthMeters>milestone-24)return false;
       }
-      throw new Error('Unable to place a safe platforming section');
+      for(let k=Math.max(1,Math.floor((m-100)/666));k<=Math.ceil((m+lengthMeters+100)/666);k++){
+        const milestone=k*666;
+        if(m<milestone+40 && m+lengthMeters>milestone-24)return false;
+      }
+      return true;
+    }
+    function nextPosition(proposed,group){
+      let m=proposed;
+      for(let i=0;i<400;i++,m+=5){
+        if(m>=4930 && m<5105)m=5105;
+        if(allowedAt(m,group))return m;
+      }
+      return Infinity; // Near the 6,666m finish, leave safe ground.
     }
     function addHillsUntil(target){
-      while(cursor<target-0.0001){
-        const remaining=target-cursor;
-        // The first 100 meters are flat; leave a flat approach to each abyss.
+      while(cursor<target-.01){
+        const remain=target-cursor;
         if(cursor<startX+100*pxPerMeter){
-          add(Math.min(target,startX+100*pxPerMeter),elevation);
-          continue;
+          const end=Math.min(target,startX+100*pxPerMeter);add(end,baseY);continue;
         }
-        if(remaining<=385){add(target,elevation);continue;}
-        const width=Math.min(remaining-380,250+random()*220);
-        const delta=(random()-.5)*85;
-        const endY=clamp(elevation+delta,baseY-80,baseY+60);
-        add(cursor+width,endY);
-        if(random()>.43 && cursor<target-400) add(Math.min(cursor+170,target-380),elevation);
+        if(remain<=350){add(target,elevation);continue;} // Safe, flat takeoff before each gap.
+        const width=Math.min(remain-350,300+random()*230);
+        if(width<1){add(target,elevation);continue;}
+        const end=cursor+width;
+        let targetY=profileAt(end);
+        // Avoid sheer slopes that are unreadable at auto-run speed; remaining climb accumulates.
+        targetY=clamp(targetY,elevation-width*.33,elevation+width*.33);
+        add(end,targetY);
       }
       if(cursor<target)add(target,elevation);
     }
-    function addSequence(groupNumber){
-      const sequenceStart=cursor;
-      const desc=plan(groupNumber);
-      const initialY=elevation;
-      desc.widths.forEach((width,i)=>{
-        const gapStart=cursor;
-        add(cursor+width,elevation,'gap',groupNumber);
-        // Reachable step-up/down at a landing. The first abyss stays at equal elevation.
-        const raise=groupNumber===0?0:clamp(Math.round((random()-.5)*65),-30,30);
-        elevation=clamp(elevation+raise,baseY-78,baseY+65);
-        if(i<desc.widths.length-1){
-          add(cursor+340,elevation,'platform',groupNumber);
-        }
+    function addSequence(group){
+      const initialY=elevation,start=cursor,p=plan(group);
+      p.widths.forEach((width,i)=>{
+        add(cursor+width,elevation,'gap',group);
+        const vertical=group===0?0:clamp((random()-.5)*(55+Math.min(group,8)*5),-42,42);
+        elevation+=vertical;
+        if(i<p.widths.length-1)add(cursor+p.platformWidth,elevation,'platform',group);
       });
       const endX=cursor;
-      sequences.push({id:groupNumber,startX:sequenceStart,endX,respawnX:endX+170,initialY});
-      // Long, level landing/respawn runway. This is outside the multi-platform sequence.
+      sequences.push({id:group,startX:start,endX,respawnX:endX+170,initialY});
       add(cursor+420,elevation,'ground');
-      lastSeqEnd=endX;
     }
-    function advance(minX){
-      while(cursor<minX){
-        const gapX=startX+nextGapMeters*pxPerMeter;
-        if(cursor<gapX){addHillsUntil(Math.min(minX,gapX));}
-        if(cursor>=gapX-0.0001){
-          addSequence(groupsMade);
-          groupsMade++;
-          const nominal=nextGapMeters+Math.max(280,420-groupsMade*14);
-          nextGapMeters=chooseNextPosition(nominal,groupsMade);
-        }
+    function makePortalBoundary(){
+      // Player is teleported at 5,000m: the terrain jumps discontinuously to cave depth.
+      // This section is solid but never traversed on foot.
+      if(cursor<portalX)addHillsUntil(portalX);
+      if(cursor===portalX){
+        add(cursor+200,elevation,'portal');
+        elevation=profileAt(cursor);
+        add(cursor+480,elevation,'ground'); // Clear landing runway after teleport.
       }
     }
+    function advance(minX){
+      const bound=Math.min(minX,finishX+1000);
+      let watchdog=0;
+      while(cursor<bound && watchdog++<20000){
+        if(cursor>=portalX-0.01 && cursor<portalX+200){makePortalBoundary();continue;}
+        if(cursor<portalX && cursor+1>=portalX){makePortalBoundary();continue;}
+        const nextX=startX+nextGapMeters*pxPerMeter;
+        // Handle portal ahead of any scheduled gap.
+        if(cursor<portalX && (nextX>=portalX || cursor>nextX)){
+          addHillsUntil(Math.min(bound,portalX));continue;
+        }
+        if(nextX>cursor+.01 && nextX<finishX && ((nextX<portalX)===(cursor<portalX))){
+          addHillsUntil(Math.min(bound,nextX,cursor<portalX?portalX:Infinity));
+        } else if(Math.abs(cursor-nextX)<.01 && nextGapMeters<6620 && allowedAt(nextGapMeters,groupsMade)){
+          addSequence(groupsMade);groupsMade++;
+          let nominal;
+          if(groupsMade===1)nominal=940;
+          else if(groupsMade===2)nominal=1170;
+          else nominal=nextGapMeters+Math.max(195,260-Math.min(groupsMade,15)*4);
+          nextGapMeters=nextPosition(nominal,groupsMade);
+        } else {
+          addHillsUntil(Math.min(bound,cursor+900, cursor<portalX?portalX:finishX+1000));
+        }
+        if(!Number.isFinite(nextGapMeters))nextGapMeters=Infinity;
+      }
+      if(watchdog>=20000)throw Error('Terrain generator failed to advance '+JSON.stringify({cursor,bound,nextGapMeters,groupsMade,portalX}));
+    }
     function findSection(x){
-      if(x>cursor)advance(x+900);
+      if(x>=cursor)advance(x+900);
       let lo=0,hi=segments.length-1;
-      while(lo<=hi){const i=(lo+hi)>>1,s=segments[i];if(x<s.start)hi=i-1;else if(x>=s.end)lo=i+1;else return s;}
+      while(lo<=hi){const mid=(lo+hi)>>1,s=segments[mid];if(x<s.start)hi=mid-1;else if(x>=s.end)lo=mid+1;else return s;}
       return null;
     }
-    function groundAt(x){
-      const s=findSection(x);
-      if(!s || s.kind==='gap')return null;
-      return s.y0+(s.y1-s.y0)*(x-s.start)/(s.end-s.start);
-    }
-    function anchorAt(x){
-      const y=groundAt(x);
-      if(y!==null)return y;
-      const s=findSection(x);
-      return s?s.y0:elevation;
-    }
-    function groupNear(x){
-      advance(x+1600);
-      return sequences.find(s=>x>=s.startX-100 && x<=s.endX+320)||null;
-    }
+    function groundAt(x){const s=findSection(x);if(!s||s.kind==='gap')return null;return lerp(s.y0,s.y1,(x-s.start)/(s.end-s.start));}
+    function anchorAt(x){const y=groundAt(x);if(y!==null)return y;const s=findSection(x);return s?s.y0:elevation;}
+    function groupNear(x){advance(x+1100);return sequences.find(s=>x>=s.startX-100&&x<=s.endX+320)||null;}
     function canPlace(x,width=200){
       advance(x+Math.max(650,width+20));
-      // No unfair hazards on approach, on platforms, or immediately after a chasm.
-      if(sequences.some(s=>x+width>s.startX-340 && x<s.endX+310))return false;
-      const a=groundAt(x), b=groundAt(x+width);
-      return a!==null && b!==null && Math.abs(a-b)<=33;
+      if(Math.abs(x-portalX)<1050||x>finishX-500)return false;
+      if(sequences.some(s=>x+width>s.startX-340&&x<s.endX+310))return false;
+      const a=groundAt(x),b=groundAt(x+width);
+      return a!==null&&b!==null&&Math.abs(a-b)<=34;
     }
-    function visibleSections(from,to){
-      advance(to+60);
-      return segments.filter(s=>s.end>=from && s.start<=to);
-    }
-    function shiftY(dy){
-      elevation+=dy;
-      for(const s of segments){s.y0+=dy;s.y1+=dy;}
-      for(const group of sequences)group.initialY+=dy;
-    }
+    function visibleSections(from,to){advance(to+60);return segments.filter(s=>s.end>=from&&s.start<=to);}
+    function shiftY(dy){elevation+=dy;baseY+=dy;for(const s of segments){s.y0+=dy;s.y1+=dy;}for(const seq of sequences)seq.initialY+=dy;}
     advance(startX+2500);
-    return {segments,sequences,groundAt,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,
-      get firstGapX(){return startX+766*pxPerMeter;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
+    return {segments,sequences,groundAt,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
+      get firstGapX(){return startX+766*pxPerMeter;},get portalX(){return portalX;},get portalExitX(){return portalX+310;},
+      get finishX(){return finishX;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
   }
-  scope.GRIM_TERRAIN={makeTerrain};
+  scope.GRIM_TERRAIN={makeTerrain,SURFACE_PROFILE,CAVERN_PROFILE};
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
@@ -581,12 +620,13 @@ window.GRIM_CONFIG = Object.freeze({
     }
     setMode(mode) {
       show('countdown-overlay', mode === 'countdown');
+      if(mode!=='portal')show('portal-overlay',false);
       show('menu', mode === 'menu');
       show('game-over', mode === 'dead');
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
       show('controls', mode === 'playing');
-      show('hud', mode === 'playing' || mode === 'paused' || mode === 'upgrade' || mode === 'countdown');
+      show('hud', mode === 'playing' || mode === 'paused' || mode === 'upgrade' || mode === 'countdown' || mode === 'portal');
       this.releaseAll();
     }
     updateCountdown(seconds) {
@@ -601,6 +641,7 @@ window.GRIM_CONFIG = Object.freeze({
     hideCountdown() { show('countdown-overlay', false); }
     showTimeSlow(on) { show('time-status', on); }
     showFallNotice(on) { show('fall-notice', on); }
+    showPortal(on) { show('portal-overlay',on); }
     offerRewards(offers,meters) {
       this.selecting = false;
       el('reward-distance').textContent = Math.floor(meters).toLocaleString();
@@ -642,7 +683,9 @@ window.GRIM_CONFIG = Object.freeze({
       const text=powerSummary.map(x=>`${x.name} ${x.level}`).join(' · ');
       if(el('power-strip').textContent!==text) el('power-strip').textContent=text;
     }
-    gameOver(distance, souls, coins, score, best, summary=[]) {
+    gameOver(distance, souls, coins, score, best, summary=[],victory=false) {
+      el('end-eyebrow').textContent=victory?'THE SOULS RETURN TO THE UNDERWORLD':'THE GRIM REAPER HAS FALLEN';
+      el('end-title').textContent=victory?'THE GATE IS REACHED':'RUN ENDED';
       el('end-distance').textContent = Math.floor(distance).toLocaleString() + ' m';
       el('end-souls').textContent = String(souls);
       el('end-coins').textContent = String(coins);
@@ -678,6 +721,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY = 0;
       this.fallFeedbackMs=0;
       this.fallCount=0;
+      this.hasTeleported=false;this.portalMs=0;
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -745,8 +789,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
-      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;
-      if(this.ui)this.ui.showFallNotice(false);
+      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.hasTeleported=false;this.portalMs=0;
+      if(this.ui){this.ui.showFallNotice(false);this.ui.showPortal(false);}
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
@@ -777,7 +821,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.setMode('menu');
+      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
@@ -961,7 +1005,18 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     update(_,deltaMs) {
-      if(this.state==='countdown'){
+      if(this.state==='portal'){
+        this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
+        if(this.portalMs===0){
+          this.ui.showPortal(false);
+          this.state='playing';
+          // The teleport is at a 500m reward milestone, so offer that reward
+          // before the ordinary 3-second countdown resumes the action.
+          if(this.distance>=this.nextUpgradeDistance)this.triggerUpgrade();
+          else this.beginCountdown();
+        }
+      }
+      else if(this.state==='countdown'){
         // World, obstacles, player and ability timers remain completely frozen.
         this.countdownMs=Math.max(0,this.countdownMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.countdownMs>0)this.ui.updateCountdown(this.countdownMs/1000);
@@ -1015,14 +1070,22 @@ window.GRIM_CONFIG = Object.freeze({
             this.puff(p.x,p.y,0x9badb7,3);
           }
         }
-        // Falling below a platform is always rescued after the COMPLETE gap sequence.
-        if(!p.grounded && p.y>this.groundY+C.abyssFallDepthPx){
+        // Falling relative to the *local terrain* matters at altitude / in caves.
+        if(!p.grounded && p.y>this.terrain.anchorAt(p.x)+C.abyssFallDepthPx){
           this.rescueFromAbyss();
           if(this.state!=='playing'){this.drawScene();return;}
         }
         if (p.sliding) {
           p.slideMs += frameMs;
           if (p.slideMs >= C.slideMaxMs || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
+        }
+        // Portal traversal happens BEFORE hazards and rewards at the 5,000m threshold.
+        if(!this.hasTeleported && this.distance>=5000){
+          this.enterUnderworld();this.drawScene();return;
+        }
+        // Run completion is a separate victory condition, never ordinary death.
+        if(this.hasTeleported && this.distance>=6666){
+          this.completeRun();this.drawScene();return;
         }
         this.spawnAhead();
         if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
@@ -1050,8 +1113,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.frame++;
       this.cameraX = this.player.x - this.width*C.reaperXRatio;
       const anchor=this.terrain.anchorAt(this.player.x);
-      const target=clamp(anchor-this.groundY,-155,155);
-      this.cameraY+=(target-this.cameraY)*.075;
+      // Full vertical tracking is essential: a 1,500px climb must visibly leave
+      // the treeline behind. A small dead zone avoids camera jitter on short hills.
+      const target=anchor-this.groundY;
+      const delta=target-this.cameraY;
+      if(Math.abs(delta)>8)this.cameraY+=delta*(this.state==='portal'?.28:.115);
       this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.drawScene();
     }
@@ -1103,10 +1169,47 @@ window.GRIM_CONFIG = Object.freeze({
       this.obstacles=this.obstacles.filter(ob=>ob.x<p.x-160||ob.x>p.x+260);
       for(const tip of this.tips){if(tip.atX>p.x-200&&tip.atX<p.x+270)tip.label.destroy();}
       this.tips=this.tips.filter(t=>t.atX<=p.x-200||t.atX>=p.x+270);
-      this.cameraY=clamp(p.y-this.groundY,-150,150);
+      this.cameraY=p.y-this.groundY;
       this.fallFeedbackMs=1550;this.ui.showFallNotice(true);
       this.puff(p.x,p.y-40,0xe57b9a,20);
       if(p.hp<=0)this.die();
+    }
+    enterUnderworld(){
+      const p=this.player;
+      this.hasTeleported=true;
+      this.portalMs=1450;
+      this.state='portal';
+      p.x=this.terrain.portalExitX;
+      this.terrain.advance(p.x+1400);
+      p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
+      p.grounded=true;p.velocityY=0;p.coyoteMs=0;p.jumpsUsed=0;
+      p.sliding=false;p.holdSlide=false;p.airTuck=false;p.jumpHeld=false;
+      p.slideReleaseBufferMs=0;p.attackMs=0;p.invulMs=Math.max(1200,p.invulMs);
+      this.cameraX=p.x-this.width*C.reaperXRatio;
+      this.cameraY=p.y-this.groundY;
+      this.distance=(p.x-this.startX)/C.pxPerMeter;
+      this.nextEncounterX=Math.max(this.nextEncounterX,p.x+1050);
+      this.obstacles=this.obstacles.filter(o=>o.x>p.x+250);
+      this.ui.setMode('portal');
+      this.ui.showPortal(true);
+      this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
+      this.puff(p.x,p.y-50,0xa6abff,26);
+    }
+    completeRun(){
+      const p=this.player;
+      p.x=this.terrain.finishX;
+      this.distance=6666;
+      p.y=this.terrain.anchorAt(p.x);
+      p.velocityY=0;p.grounded=true;
+      this.state='won';
+      this.countdownMs=0;
+      this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
+      this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
+      let best=false;
+      try{const key='grim-run-v03-best';const old=Number(localStorage.getItem(key)||0);
+        if(this.points>old){localStorage.setItem(key,String(this.points));best=true;}}
+      catch(_){}
+      this.ui.gameOver(this.distance,this.soulCount,this.coinCount,this.points,best,this.powerManager.summary(),true);
     }
     die() {
       this.state='dead';this.countdownMs=0;this.goFlashMs=0;
@@ -1118,7 +1221,7 @@ window.GRIM_CONFIG = Object.freeze({
         const old=Number(localStorage.getItem(key)||0);
         if (this.points>old) {localStorage.setItem(key,String(this.points));best=true;}
       } catch (_) { /* Storage may be denied in private mode. The run remains playable. */ }
-      this.ui.gameOver(this.distance,this.soulCount,this.coinCount,this.points,best,this.powerManager.summary());
+      this.ui.gameOver(this.distance,this.soulCount,this.coinCount,this.points,best,this.powerManager.summary(),false);
     }
     puff(x,y,color,count) {
       for (let i=0;i<count;i++) {
@@ -1132,30 +1235,123 @@ window.GRIM_CONFIG = Object.freeze({
       if (!this.bg) return;
       const w=this.width,h=this.height,gy=this.groundY,g=this.bg;
       g.clear();
-      // Fixed screen-space sky gradient bands.
-      SKY.forEach((color,index)=>{g.fillStyle(color);g.fillRect(0,(h/4)*index,w,h/4+1);});
-      const moonX=w*.74,moonY=h*.19;
-      g.fillStyle(0x6899b3,.05);g.fillCircle(moonX,moonY,77);
-      g.fillStyle(0x88b8cc,.07);g.fillCircle(moonX,moonY,56);
-      g.fillStyle(0xccded7,.71);g.fillCircle(moonX,moonY,27);
-      g.fillStyle(0xa2bdc0,.3);g.fillCircle(moonX+8,moonY-7,5);
-      for(let i=0;i<35;i++) {
-        const x=((i*191+73) % Math.max(w,1));
-        const y=((i*83+31)%Math.max(gy*.69,1));
-        g.fillStyle(i%4===0?0xaadddc:0xcaddeb,.20+((i%3)*.13));g.fillCircle(x,y,i%6===0?1.6:.8);
-      }
-      this.drawTrees(g,.09,130,gy*.38,0x1d3144);
-      this.drawTrees(g,.22,110,gy*.54,0x15283a);
-      // Mist band just behind the playable corridor.
-      for(let i=0;i<3;i++){g.fillStyle(0x7dabc0,.027+i*.008);g.fillRect(0,gy-34+i*16,w,23);}
-      this.drawTrees(g,.43,144,gy*.66,0x101e2b);
+      this.drawAtmosphere(g,w,h,gy);
       this.drawGround();
+      this.drawPortals();
       for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
       for(const soul of this.souls) if (!soul.taken) this.drawSoul(soul);
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
       this.drawParticles();
       this.drawReaper();
       this.drawForeground();
+    }
+    drawAtmosphere(g,w,h,gy){
+      const m=this.distance,underworld=this.hasTeleported;
+      const blend=(a,b,t)=>{
+        const v=clamp(t,0,1),r0=(a>>16)&255,g0=(a>>8)&255,b0=a&255;
+        const r1=(b>>16)&255,g1=(b>>8)&255,b1=b&255;
+        return ((Math.round(r0+(r1-r0)*v)<<16)|(Math.round(g0+(g1-g0)*v)<<8)|Math.round(b0+(b1-b0)*v));
+      };
+      if(!underworld){
+        const mountain=clamp((m-880)/1150,0,1),stars=clamp((m-2580)/1350,0,1);
+        const high=blend(0x0c1c30,0x040718,stars);
+        for(let band=0;band<6;band++){
+          const color=blend(SKY[Math.min(3,Math.floor(band*4/6))],high,.23+mountain*.4+stars*.3);
+          g.fillStyle(color);g.fillRect(0,h*band/6,w,h/6+1);
+        }
+        const moonX=w*.74,moonY=h*.19;
+        g.fillStyle(0xb2d1dc,.18*(1-stars*.25));g.fillCircle(moonX,moonY,46);
+        g.fillStyle(0xe1e9e2,.65+stars*.18);g.fillCircle(moonX,moonY,23);
+        // As the world climbs above the tree line, the sky becomes an actual starfield.
+        for(let i=0;i<76;i++){
+          const x=((i*197+73-this.cameraX*.009)%(w+100)+(w+100))%(w+100)-50;
+          const y=((i*131+37) % Math.max(gy*.96,1));
+          g.fillStyle(i%4===0?0xa9ebff:0xe0f3fc,(.12+stars*.76)*(i%3===0?.72:1));
+          g.fillCircle(x,y, i%9===0?2.2:1.15);
+        }
+        // Mountain ranges build naturally as the canopy falls below camera view.
+        if(mountain>0){
+          this.drawMountainLayer(g,w,h,.05,0x29374d,.5*mountain,-90);
+          this.drawMountainLayer(g,w,h,.12,0x1c2d42,.8*mountain,0);
+          this.drawMountainLayer(g,w,h,.22,0x101d31,mountain,90);
+        }
+        const trees=clamp(1-(m-1350)/1100,0,1);
+        if(trees>.005){
+          g.setAlpha(trees);
+          this.drawTrees(g,.09,130,gy*.38,0x1d3144);
+          this.drawTrees(g,.22,110,gy*.54,0x15283a);
+          for(let i=0;i<3;i++){g.fillStyle(0x7dabc0,.027+i*.008);g.fillRect(0,gy-34+i*16,w,23);}
+          this.drawTrees(g,.43,144,gy*.66,0x101e2b);
+          g.setAlpha(1);
+        }
+      }else{
+        const lava=clamp((m-5650)/620,0,1);
+        const c0=blend(0x141c32,0x260b17,lava),c1=blend(0x111729,0x3c1415,lava);
+        for(let i=0;i<6;i++){
+          g.fillStyle(blend(c0,c1,i/5));g.fillRect(0,h*i/6,w,h/6+1);
+        }
+        // Cavern walls and hanging silhouettes scroll at different parallax rates.
+        for(let layer=0;layer<3;layer++){
+          const factor=.10+layer*.09,spacing=130-layer*19,off=this.cameraX*factor;
+          g.fillStyle(blend([0x263247,0x1b2a37,0x121c27][layer],0x4c1f20,lava),.88);
+          for(let n=Math.floor(off/spacing)-2;n<Math.ceil((off+w)/spacing)+2;n++){
+            const x=n*spacing-off,amp=((Math.sin(n*42.7+layer*9)+1)*.5);
+            const y=-15+amp*(55+layer*25);
+            g.fillTriangle(x-30,-2,x+spacing*.8,-2,x+spacing*.38,y+18+amp*78);
+            if(layer===2){g.fillTriangle(x+spacing*.2,-3,x+spacing*.66,-3,x+spacing*.52,y+70);}
+          }
+        }
+        for(let i=0;i<13;i++){
+          const x=((i*191-this.cameraX*.13)%(w+200)+(w+200))%(w+200)-100;
+          const y=h*.23+(Math.sin(i*2.37)*.5+.5)*h*.54;
+          g.fillStyle(blend(0x7c81e8,0xff7129,lava),.09+lava*.09);
+          g.fillCircle(x,y,10+(i%4)*7);
+        }
+        if(lava>.005){
+          // Lava glow slowly overtakes the lowest part of the cavern.
+          for(let i=0;i<6;i++){
+            g.fillStyle(blend(0xa94a2b,0xf44719,i/6),lava*(.035+.02*i));
+            g.fillRect(0,h*(.68+i*.055),w,h*.057+1);
+          }
+          const level=h*(.90-.11*lava);
+          g.fillStyle(0xa62a16,.18+lava*.25);g.fillRect(0,level,w,h-level);
+          g.lineStyle(3,0xff6734,.2+lava*.45);
+          for(let x=-25;x<w+25;x+=25){const y=level+Math.sin(x*.026+this.elapsed*1.1)*4;g.lineBetween(x,y,x+23,y+1);}
+        }
+      }
+    }
+    drawMountainLayer(g,w,h,factor,color,alpha,shift){
+      g.fillStyle(color,alpha);
+      const spacing=160,off=this.cameraX*factor;
+      for(let n=Math.floor(off/spacing)-2;n<Math.ceil((off+w)/spacing)+2;n++){
+        const x=n*spacing-off;
+        const peakY=h*.25+shift+(Math.sin(n*11.7+factor*73)+1)*h*.12-this.cameraY*.03;
+        const low=h+110;
+        g.fillTriangle(x-spacing*.65,low,x+spacing*.52,peakY,x+spacing*1.25,low);
+        if(factor>.10){
+          g.fillStyle(0xa6b8c2,alpha*.36);
+          g.fillTriangle(x+spacing*.52,peakY,x+spacing*.35,peakY+32,x+spacing*.67,peakY+36);
+          g.fillStyle(color,alpha);
+        }
+      }
+    }
+    drawPortals(){
+      const g=this.world;
+      const p=this.terrain.portalX;
+      const exits=[{x:p-12,color:0x9a8fff},{x:this.terrain.portalExitX-60,color:0x6be6c8}];
+      for(const entry of exits){
+        if(Math.abs(entry.x-this.player.x)>this.width*1.5)continue;
+        if(entry.x>p && !this.hasTeleported)continue;
+        const y=this.terrain.groundAt(entry.x)??this.terrain.anchorAt(entry.x);
+        g.fillStyle(entry.color,.08);g.fillEllipse(entry.x,y-83,106,178);
+        g.lineStyle(9,0x313347,.95);g.strokeEllipse(entry.x,y-83,70,140);
+        g.lineStyle(5,entry.color,.92);g.strokeEllipse(entry.x,y-83,59,129);
+        g.fillStyle(entry.color,.22);g.fillEllipse(entry.x,y-83,53,124);
+        for(let k=0;k<6;k++){
+          const angle=k*Math.PI/3+this.elapsed*.36;
+          g.fillStyle(0xd6fffa,.75);g.fillCircle(entry.x+Math.cos(angle)*27,y-83+Math.sin(angle)*62,2.4);
+        }
+      }
     }
     drawTrees(g,factor,spacing,maxTreeHeight,color) {
       // Keep v0.1's layer spacing and parallax, but vary trunks, crowns and branch structure.
@@ -1166,7 +1362,7 @@ window.GRIM_CONFIG = Object.freeze({
         const x=n*spacing-offset;
         const mod=(Math.sin(n*62.17+factor*57)+1)/2;
         const kind=((n*7+Math.round(factor*100))%5+5)%5;
-        const ground=this.groundY-12-this.cameraY*.16;
+        const ground=this.groundY-12-this.cameraY*.72;
         const height=maxTreeHeight*(.67+.46*mod);
         const thick=7+Math.floor(mod*9);
         const crownY=ground-height;
@@ -1205,7 +1401,7 @@ window.GRIM_CONFIG = Object.freeze({
     drawGround(){
       const g=this.world;g.clear();
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
-      const depth=this.groundY+this.height+500;
+      const depth=Math.max(this.groundY+this.height+500,this.cameraY+this.height+1100);
       const sections=this.terrain.visibleSections(left,right);
       // Deep purple void and distant shards make missing terrain immediately legible.
       for(const group of this.terrain.sequences){
