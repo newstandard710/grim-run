@@ -1077,6 +1077,7 @@ window.GRIM_CONFIG = Object.freeze({
   const C = scope.GRIM_CONFIG;
   const Core = scope.GRIM_CORE;
   const Powers = scope.GRIM_POWERS;
+  const Meta = scope.GRIM_META;
   const Terrain = scope.GRIM_TERRAIN;
   const SKY = [0x0b1021,0x101b31,0x1c2942,0x29384b];
   const CYAN = 0x8cebe7;
@@ -1136,14 +1137,37 @@ window.GRIM_CONFIG = Object.freeze({
         pause: () => this.togglePause(), resume: () => this.resume(), autoPause: () => this.autoPause(),
         chooseUpgrade: id => this.chooseUpgrade(id),
         leaveVendor: () => this.leaveVendor(), declineDeal: () => this.declineDeal(), heal: () => this.healFromDevil(),
-        setGodMode: on => this.setGodMode(on)
+        setGodMode: on => this.setGodMode(on),
+        openReliquary: () => this.openReliquary(),
+        closeReliquary: () => this.closeReliquary(),
+        purchaseMeta: id => this.purchaseMeta(id)
       });
+      this.meta=Meta.load();
+      this.totalSouls=this.meta.souls;
       this.ui.setMode('menu');
-      try{this.totalSouls=Math.max(0,Number(localStorage.getItem('grim-run-v05-souls')||0));}catch(_){this.totalSouls=0;}
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.scale.on('resize', this.handleResize, this);
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
       this.drawScene();
+    }
+    openReliquary(){
+      if(this.state!=='menu')return;
+      this.state='reliquary';
+      this.ui.updateReliquary(this.meta);
+      this.ui.setMode('reliquary');
+    }
+    closeReliquary(){
+      if(this.state!=='reliquary')return;
+      this.state='menu';
+      document.getElementById('banked-souls').textContent=String(this.meta.souls);
+      this.ui.setMode('menu');
+    }
+    purchaseMeta(id){
+      if(this.state!=='reliquary')return;
+      const result=Meta.purchase(this.meta,id);
+      this.totalSouls=this.meta.souls;
+      this.ui.updateReliquary(this.meta,result.ok?
+        `${result.entry.name} UPGRADED TO LEVEL ${result.level}!`:result.reason);
     }
     handleResize(size) {
       const previousY=this.groundY;
