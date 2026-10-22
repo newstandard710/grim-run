@@ -886,6 +886,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
       el('start-btn').addEventListener('click', () => actions.start());
+      el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
+      el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
       el('retry-btn').addEventListener('click', () => actions.start());
       el('menu-btn').addEventListener('click', () => actions.menu());
       el('pause-btn').addEventListener('click', () => actions.pause());
@@ -940,6 +942,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('countdown-overlay', mode === 'countdown');
       if(mode!=='portal')show('portal-overlay',false);
       show('menu', mode === 'menu');
+      show('reliquary-screen', mode === 'reliquary');
       show('game-over', mode === 'dead');
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
@@ -1011,6 +1014,36 @@ window.GRIM_CONFIG = Object.freeze({
       if(devil&&healing)action('HEAL +1 HP · 8 GOLD',()=>this.actions.heal(),true,gold<8||hp>=maxHp);
       action('CONTINUE RUN ▶',()=>this.actions.leaveVendor());
       this.setMode('upgrade');
+    }
+    updateReliquary(meta,notice='') {
+      const {DEFINITIONS,COSTS}=window.GRIM_META;
+      el('reliquary-souls').textContent=meta.souls.toLocaleString();
+      const holder=el('reliquary-cards');holder.replaceChildren();
+      for(const item of DEFINITIONS){
+        const level=meta.levels[item.id],nextCost=level<3?COSTS[level]:null;
+        const card=document.createElement('div');card.className='meta-card';
+        const ico=document.createElement('div');ico.className='meta-icon';
+        ico.style.color=item.color;ico.textContent=item.icon;card.appendChild(ico);
+        const title=document.createElement('div');title.className='meta-title';title.textContent=item.name;card.appendChild(title);
+        const rank=document.createElement('div');rank.className='meta-level';rank.textContent=`LEVEL ${level} / 3`;card.appendChild(rank);
+        const dots=document.createElement('div');dots.className='meta-dots';
+        for(let i=0;i<3;i++){const dot=document.createElement('span');dot.className='meta-dot'+(i<level?' filled':'');dots.appendChild(dot);}
+        card.appendChild(dots);
+        const desc=document.createElement('div');desc.className='meta-desc';desc.textContent=item.description;card.appendChild(desc);
+        const effect=document.createElement('div');effect.className='meta-price';
+        if(item.id==='boneheart')effect.textContent=`STARTING HP: ${3+level}${level<3?' → '+(4+level):''}`;
+        else if(item.id==='graveWealth')effect.textContent=`STARTING GOLD: ${item.amounts[level]}${level<3?' → '+item.amounts[level+1]:''}`;
+        else effect.textContent=`JUMP HEIGHT: +${item.amounts[level]}%${level<3?' → +'+item.amounts[level+1]+'%':''}`;
+        card.appendChild(effect);
+        const buy=document.createElement('button');buy.type='button';buy.className='meta-buy';
+        buy.disabled=level>=3||meta.souls<nextCost;
+        buy.textContent=level>=3?'MAX LEVEL':`BUY · ${nextCost} SOULS`;
+        buy.setAttribute('aria-label',level>=3?`${item.name} fully upgraded`:
+          `Purchase ${item.name} level ${level+1} for ${nextCost} Souls`);
+        buy.addEventListener('click',()=>this.actions.purchaseMeta(item.id));
+        card.appendChild(buy);holder.appendChild(card);
+      }
+      el('reliquary-notice').textContent=notice;
     }
     update(hp,maxHp,distance,souls,coins,score,powerSummary=[]) {
       const hearts=el('hearts');
