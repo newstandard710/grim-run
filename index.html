@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.6.2</title>
+  <title>GRIM RUN — v0.7.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -109,6 +109,37 @@ button {cursor:pointer;}
 .reward-card.rarity-legendary .reward-name{color:#ffdea1}
 .reward-rarity{font-size:clamp(9px,1.8vh,12px);letter-spacing:.13em;font-weight:1000;color:#eef4fe}
 .rarity-rare .reward-rarity{color:#8cc1ff}.rarity-legendary .reward-rarity{color:#ffd06c}
+/* v0.7.0 — permanent power shop, responsive in landscape. */
+.meta-wrap {z-index:14;background:#050913e5;}
+.meta-modal {width:min(920px,97vw);max-height:97vh;padding:clamp(9px,2vh,20px) clamp(10px,2.1vw,25px);}
+.meta-modal h2 {font-size:clamp(22px,6.2vh,40px);margin:.07em 0 .13em;}
+.meta-wallet {font-weight:1000;font-size:clamp(12px,3vh,19px);color:#b1fff0;letter-spacing:.13em;}
+.meta-intro {font-size:clamp(10px,2vh,13px);margin:4px auto 10px;max-width:720px;}
+.meta-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,1.4vw,13px);}
+.meta-card {min-width:0;display:flex;flex-direction:column;align-items:center;gap:clamp(4px,1.1vh,9px);padding:clamp(8px,1.8vh,16px) clamp(6px,1.2vw,12px);border:2px solid #7ce2d157;border-radius:13px;background:linear-gradient(165deg,#263e54ee,#121c30fa);text-align:center;}
+.meta-icon {display:flex;align-items:center;justify-content:center;width:clamp(30px,7.5vh,49px);height:clamp(30px,7.5vh,49px);font-size:clamp(21px,5vh,33px);border:1px solid currentColor;border-radius:50%;}
+.meta-title {font-size:clamp(12px,2.5vh,18px);font-weight:950;letter-spacing:.08em;color:#eafff6;}
+.meta-level {font-weight:900;font-size:clamp(10px,2vh,13px);color:#99e8de;}
+.meta-dots {display:flex;gap:5px;justify-content:center;width:100%;}
+.meta-dot {width:min(23%,45px);height:6px;border-radius:4px;background:#456075;}
+.meta-dot.filled {background:#8cebe7;box-shadow:0 0 7px #79fff064;}
+.meta-desc {font-size:clamp(10px,1.9vh,13px);line-height:1.25;color:#cbdce1;min-height:2.4em;}
+.meta-price {font-weight:950;color:#ffdda0;font-size:clamp(11px,2.15vh,14px);}
+.meta-buy {border-radius:10px;background:#8cebe7;border:1px solid #c9fff6;color:#09212a;font-weight:1000;letter-spacing:.06em;font-size:clamp(10px,2vh,14px);padding:8px 10px;width:100%;min-height:34px;margin-top:auto;touch-action:manipulation;}
+.meta-buy:disabled {opacity:.44;cursor:not-allowed;}
+.meta-buy:focus-visible {outline:3px solid #fff;outline-offset:2px;}
+.meta-notice {font-size:clamp(10px,2vh,13px);font-weight:800;min-height:1.6em;color:#b9ffe3;margin:5px 0 2px;}
+.meta-modal #reliquary-back-btn {margin-top:2px;}
+@media (max-height:345px) {
+ .meta-modal {padding:6px 12px;}
+ .meta-intro {margin:2px auto 4px;}
+ .meta-card {gap:3px;padding:5px 7px;}
+ .meta-desc {min-height:0;}
+ .meta-icon {height:28px;width:28px;font-size:20px;}
+ .meta-dots .meta-dot {height:4px;}
+ .meta-buy {padding:4px 6px;min-height:27px;}
+ .meta-modal #reliquary-back-btn {padding:5px 15px;min-height:30px;}
+}
 </style>
 </head>
 <body>
@@ -134,9 +165,21 @@ button {cursor:pointer;}
       <h1>GRIM <em>RUN</em></h1>
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.6.2 · SLIDE COLLISION HOTFIX</div>
+      <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
+      <div class="mini">v0.7.0 · THE UNDERWORLD RELIQUARY</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
+    </div>
+  </div>
+  <div id="reliquary-screen" class="modal-wrap meta-wrap hidden" aria-label="The Underworld Reliquary">
+    <div class="modal meta-modal" role="dialog" aria-modal="true" aria-labelledby="reliquary-title">
+      <div class="eyebrow">POWERS THAT OUTLIVE DEATH</div>
+      <h2 id="reliquary-title">THE RELIQUARY</h2>
+      <div class="meta-wallet"><span class="soul-icon">✦</span> <span id="reliquary-souls">0</span> SOULS AVAILABLE</div>
+      <p class="meta-intro">Spend collected Souls on permanent powers. All bonuses apply at the start of every future run.</p>
+      <div id="reliquary-cards" class="meta-grid"></div>
+      <div id="reliquary-notice" class="meta-notice" aria-live="polite"></div>
+      <button id="reliquary-back-btn" class="primary">← MAIN MENU</button>
     </div>
   </div>
   <div id="upgrade-screen" class="modal-wrap reward-wrap hidden" aria-label="Choose your upgrade">
@@ -177,7 +220,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.6.2',
+  version: '0.7.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -405,6 +448,79 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
+
+  <script>
+// Grim Run v0.7.0 — independent permanent progression and save migration.
+(function(scope){
+  'use strict';
+  const KEY='grim-run-v07-meta',LEGACY='grim-run-v05-souls';
+  const COSTS=Object.freeze([5,10,25]);
+  const DEFINITIONS=Object.freeze([
+    {id:'boneheart',name:'BONEHEART',icon:'♥',color:'#ffc2c9',
+      description:'Start with +1 maximum HP per level. Also begin at full health.',
+      amounts:[0,1,2,3]},
+    {id:'graveWealth',name:'GRAVE WEALTH',icon:'●',color:'#ffdaa0',
+      description:'Start every run with additional spendable gold.',
+      amounts:[0,2,4,6]},
+    {id:'deathsLeap',name:"DEATH'S LEAP",icon:'↑',color:'#c6bbff',
+      description:'Increase the height of your initial jump. Short hops remain possible.',
+      amounts:[0,5,10,15]}
+  ]);
+  const MAX_SOULS=1000000000;
+  function boundedInt(x,min,max){
+    const n=Number(x);
+    return Number.isFinite(n)?Math.min(max,Math.max(min,Math.floor(n))):min;
+  }
+  function normalize(candidate){
+    const obj=candidate&&typeof candidate==='object'?candidate:{};
+    const source=obj.levels&&typeof obj.levels==='object'?obj.levels:{};
+    const levels={};
+    for(const entry of DEFINITIONS)levels[entry.id]=boundedInt(source[entry.id],0,3);
+    return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels};
+  }
+  function load(){
+    try{
+      const raw=localStorage.getItem(KEY);
+      if(raw){
+        const parsed=JSON.parse(raw);
+        if(parsed&&parsed.version===1&&Number.isFinite(Number(parsed.souls)))return normalize(parsed);
+      }
+    }catch(_){}
+    try{return normalize({souls:localStorage.getItem(LEGACY),levels:{}});}catch(_){}
+    return normalize({});
+  }
+  function save(state){
+    // One authoritative JSON save. Mirror old Soul key for downgrade compatibility.
+    try{localStorage.setItem(KEY,JSON.stringify(normalize(state)));}catch(_){}
+    try{localStorage.setItem(LEGACY,String(state.souls));}catch(_){}
+  }
+  function earn(state,amount=1){
+    state.souls=boundedInt(state.souls+boundedInt(amount,0,MAX_SOULS),0,MAX_SOULS);
+    save(state);
+    return state.souls;
+  }
+  function purchase(state,id){
+    const entry=DEFINITIONS.find(d=>d.id===id);
+    if(!entry)return {ok:false,reason:'Unknown upgrade.'};
+    const level=boundedInt(state.levels[id],0,3);
+    if(level>=3)return {ok:false,reason:'This upgrade is already at its maximum level.'};
+    const cost=COSTS[level];
+    if(state.souls<cost)return {ok:false,reason:'Not enough Souls.'};
+    state.souls-=cost;
+    state.levels[id]=level+1;
+    save(state);
+    return {ok:true,entry,level:level+1,cost};
+  }
+  function healthBonus(state){return boundedInt(state.levels.boneheart,0,3);}
+  function startingGold(state){return DEFINITIONS[1].amounts[boundedInt(state.levels.graveWealth,0,3)];}
+  function jumpVelocity(baseVelocity,state){
+    // Jump height is proportional to velocity squared / (2 * gravity).
+    const percent=DEFINITIONS[2].amounts[boundedInt(state.levels.deathsLeap,0,3)];
+    return baseVelocity*Math.sqrt(1+percent/100);
+  }
+  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,normalize,load,save,earn,purchase,healthBonus,startingGold,jumpVelocity};
+})(typeof window!=='undefined'?window:globalThis);
+  </script>
   <script>
 // Grim Run v0.6.0 — data-driven Angel/Devil powers and rarity tiers.
 (function(scope){
