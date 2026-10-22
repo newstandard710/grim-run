@@ -1194,13 +1194,14 @@ window.GRIM_CONFIG = Object.freeze({
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
+      const startingHP=C.startingHP+Meta.healthBonus(this.meta);
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;
       if(this.ui){this.ui.showFallNotice(false);this.ui.showPortal(false);}
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
-      this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
+      this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:startingHP, maxHp:startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
       this.speed = C.initialSpeed;
@@ -1208,7 +1209,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.nextVendorNumber=1;
       this.vendorType=null;this.vendorPhase='deal';
       this.soulPlatform=null;
-      this.totalSouls=0;
+      this.totalSouls=this.meta.souls;
       this.godMode=false;
       for (const tip of this.tips) tip.label.destroy();
       this.tips = [];
@@ -1219,7 +1220,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.coins = [];
       this.particles = [];
       this.soulCount = 0;
-      this.coinCount = 0; // Current spendable gold
+      this.coinCount = Meta.startingGold(this.meta); // Starting gold does not increase collected-gold score
       this.goldCollected = 0; // Lifetime collected this run, for scoring
       this.distance = 0;
       this.points = 0;
@@ -1233,11 +1234,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.souls.push({x:this.startX+C.finalSoulMeters*C.pxPerMeter,baseY:this.soulPlatform[8].y,offset:-100,kind:'optional',taken:false});
       this.populateGold();
       this.populateComboObstacles();
-      try{this.totalSouls=Math.max(0,Number(localStorage.getItem('grim-run-v05-souls')||0));}catch(_){this.totalSouls=0;}
+      this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
       this.ui.showGodMode(false);
-      this.ui.update(this.player.hp, this.player.maxHp,0, 0, 0, 0, []);
+      this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
     }
     goToMenu() {
       this.state = 'menu'; this.pendingOffers=[];
@@ -1272,7 +1273,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(grounded){
         p.jumpsUsed=1;p.sliding=false;p.slideConsumed=false;
         p.y-=1;p.grounded=false;p.onSoulPlatform=false;p.coyoteMs=0;
-        p.velocityY=C.jumpVelocity;
+        p.velocityY=Meta.jumpVelocity(C.jumpVelocity,this.meta);
         p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
         this.puff(p.x,p.y-6,0x9bb7bf,5);
         p.hoverPressKind='ground';
@@ -1430,9 +1431,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     collectSoul(){
       this.soulCount++;
-      this.totalSouls++;
+      this.totalSouls=Meta.earn(this.meta,1);
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
-      try{localStorage.setItem('grim-run-v05-souls',String(this.totalSouls));}catch(_){}
     }
     clearUpgradeCorridor(vendorX){
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
