@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.3.2</title>
+  <title>GRIM RUN — v0.4</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -80,6 +80,9 @@ button {cursor:pointer;}
 .countdown-caption{font-size:clamp(12px,3.1vh,21px);font-weight:900;letter-spacing:.32em;color:#8cebe7;}
 .time-status{font-size:clamp(10px,2vh,14px);letter-spacing:.12em;font-weight:900;color:#a5ecff;text-shadow:0 0 10px #98eff8;}
 
+/* v0.4: short, unobtrusive feedback when a chasm costs health. */
+.fall-notice{position:absolute;top:37%;left:50%;transform:translateX(-50%);z-index:9;pointer-events:none;color:#ffc9d2;font-size:clamp(17px,4.5vh,27px);font-weight:1000;letter-spacing:.14em;text-shadow:0 0 18px #8d183f,0 2px 8px #000;text-align:center;white-space:nowrap;}
+
 </style>
 </head>
 <body>
@@ -90,6 +93,7 @@ button {cursor:pointer;}
     <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
     <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
   </div>
+  <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
     <div class="right-buttons">
@@ -101,9 +105,9 @@ button {cursor:pointer;}
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1>GRIM <em>RUN</em></h1>
-      <p>Slash towering stalks, hop over fallen obstacles, and slide beneath hanging stone. Gather coins, claim a rare soul every 666 meters, and choose a supernatural power every 500 meters.</p>
+      <p>Run through haunted hills, leap across chasms, slash towering stalks, and slide beneath hanging stone. Collect rare souls every 666 meters and choose a supernatural power every 500 meters.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.3.2 · COMBO & BALANCE</div>
+      <div class="mini">v0.4 · ELEVATION & ABYSS</div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
   </div>
@@ -141,7 +145,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.3.2',
+  version: '0.4',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -171,6 +175,9 @@ window.GRIM_CONFIG = Object.freeze({
   resumeCountdownMs: 3000,
   slowCooldownMs: 3300,
   slideReleaseComboMs: 500, // tap JUMP within half a second after releasing SLIDE to latch air tuck
+  coyoteMs: 95,
+  abyssFallDepthPx: 245,
+  abyssRespawnInvulnerabilityMs: 1650,
   firstEncounterX: 1000
 });
 
@@ -272,7 +279,7 @@ window.GRIM_CONFIG = Object.freeze({
 
 </script>
   <script>
-// Grim Run v0.3.2 — engine-agnostic temporary power/reward rules.
+// Grim Run v0.4 — engine-agnostic temporary power/reward rules.
 // No browser, Phaser, UI, or persistence dependencies. Reset for every run.
 (function(scope){
   'use strict';
@@ -283,7 +290,7 @@ window.GRIM_CONFIG = Object.freeze({
     ravenWings: Object.freeze({id:'ravenWings',name:'RAVEN WINGS',action:'JUMP',icon:'✦',color:'#c5b5ff',
       descriptions:['Unlock a second jump in midair.','Your second jump gains more height.','A still stronger second jump.']}),
     deathsDelay: Object.freeze({id:'deathsDelay',name:"DEATH'S DELAY",action:'SLIDE',icon:'◷',color:'#9bdcff',
-      descriptions:['Sliding slows time by 25% for 0.6 seconds.','Slow time by 35% for 0.8 seconds.','Slow time by 45% for 1 second.']})
+      descriptions:['Sliding slows time by 25% for 0.8 seconds.','Slow time by 35% for 1.05 seconds.','Slow time by 45% for 1.3 seconds.']})
   });
   const HEALTH = Object.freeze({id:'vitalEssence',name:'VITAL ESSENCE',action:'HEALTH',icon:'♥',color:'#ffc2c9',
     description:'Increase maximum HP by 1 and heal 1 HP.'});
@@ -299,9 +306,9 @@ window.GRIM_CONFIG = Object.freeze({
   const ATTACK_BONUSES = Object.freeze([0,.20,.35,.50]);
   const SLOW_TIME = Object.freeze([
     Object.freeze({durationMs:0,multiplier:1}),
-    Object.freeze({durationMs:600,multiplier:.75}),
-    Object.freeze({durationMs:800,multiplier:.65}),
-    Object.freeze({durationMs:1000,multiplier:.55})
+    Object.freeze({durationMs:800,multiplier:.75}),
+    Object.freeze({durationMs:1050,multiplier:.65}),
+    Object.freeze({durationMs:1300,multiplier:.55})
   ]);
   const SECOND_JUMP_VELOCITIES = Object.freeze([null,-610,-665,-720]);
   function makePowerManager(){
@@ -365,6 +372,146 @@ window.GRIM_CONFIG = Object.freeze({
     return available.slice(0,count);
   }
   scope.GRIM_POWERS={POWERS,HEALTH,FALLBACKS,POWER_ORDER,HEALTH_CAP,makePowerManager,rewardOffers};
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+  <script>
+// Grim Run v0.4 — seeded, piecewise-linear world terrain and authored-safe gaps.
+// All coordinates are world pixels; y grows downward. No Phaser dependency.
+(function(scope){
+  'use strict';
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  function makeTerrain(seed, baseY, startX=200, pxPerMeter=12) {
+    let rngState=(seed>>>0)^0x51a5a5d7;
+    function random(){rngState=(Math.imul(1664525,rngState)+1013904223)>>>0;return rngState/4294967296;}
+    const segments=[], sequences=[];
+    let cursor=startX-2600, elevation=baseY, groupsMade=0;
+    let nextGapMeters=766; // Exactly 100 meters after the first 666m soul opportunity.
+    let lastSeqEnd=cursor;
+    const add=(end,yEnd,kind='ground',group=-1)=>{
+      if(end<=cursor)throw new Error('Terrain segments must advance');
+      segments.push({start:cursor,end,y0:elevation,y1:yEnd,kind,group});
+      cursor=end;elevation=yEnd;
+    };
+    // Estimate the length of the sequence so it can be kept away from fixed rewards.
+    function plan(groupNumber){
+      const multi=groupNumber>=2 ? (groupNumber>=6?3:2) : 1;
+      const gapWidth=groupNumber===0?88:Math.min(145,94+groupNumber*5);
+      const widths=Array.from({length:multi},(_,i)=>gapWidth+(i%2)*8);
+      const platforms=multi-1;
+      const length=widths.reduce((a,b)=>a+b,0)+platforms*340;
+      return {widths,platforms,length};
+    }
+    function chooseNextPosition(previousMeters, groupNumber){
+      let attempt=previousMeters;
+      const p=plan(groupNumber);
+      const trailMeters=(p.length+330)/pxPerMeter;
+      for(let i=0;i<250;i++,attempt+=5){
+        let blocked=false;
+        for(let k=Math.max(1,Math.floor((attempt-100)/500));k<Math.ceil((attempt+trailMeters+120)/500);k++){
+          const milestone=k*500;
+          if(attempt < milestone+95 && attempt+trailMeters > milestone-22){blocked=true;break;}
+        }
+        if(blocked)continue;
+        for(let k=Math.max(1,Math.floor((attempt-90)/666));k<Math.ceil((attempt+trailMeters+90)/666);k++){
+          const milestone=k*666;
+          if(attempt < milestone+42 && attempt+trailMeters > milestone-25){blocked=true;break;}
+        }
+        if(!blocked)return attempt;
+      }
+      throw new Error('Unable to place a safe platforming section');
+    }
+    function addHillsUntil(target){
+      while(cursor<target-0.0001){
+        const remaining=target-cursor;
+        // The first 100 meters are flat; leave a flat approach to each abyss.
+        if(cursor<startX+100*pxPerMeter){
+          add(Math.min(target,startX+100*pxPerMeter),elevation);
+          continue;
+        }
+        if(remaining<=385){add(target,elevation);continue;}
+        const width=Math.min(remaining-380,250+random()*220);
+        const delta=(random()-.5)*85;
+        const endY=clamp(elevation+delta,baseY-80,baseY+60);
+        add(cursor+width,endY);
+        if(random()>.43 && cursor<target-400) add(Math.min(cursor+170,target-380),elevation);
+      }
+      if(cursor<target)add(target,elevation);
+    }
+    function addSequence(groupNumber){
+      const sequenceStart=cursor;
+      const desc=plan(groupNumber);
+      const initialY=elevation;
+      desc.widths.forEach((width,i)=>{
+        const gapStart=cursor;
+        add(cursor+width,elevation,'gap',groupNumber);
+        // Reachable step-up/down at a landing. The first abyss stays at equal elevation.
+        const raise=groupNumber===0?0:clamp(Math.round((random()-.5)*65),-30,30);
+        elevation=clamp(elevation+raise,baseY-78,baseY+65);
+        if(i<desc.widths.length-1){
+          add(cursor+340,elevation,'platform',groupNumber);
+        }
+      });
+      const endX=cursor;
+      sequences.push({id:groupNumber,startX:sequenceStart,endX,respawnX:endX+170,initialY});
+      // Long, level landing/respawn runway. This is outside the multi-platform sequence.
+      add(cursor+420,elevation,'ground');
+      lastSeqEnd=endX;
+    }
+    function advance(minX){
+      while(cursor<minX){
+        const gapX=startX+nextGapMeters*pxPerMeter;
+        if(cursor<gapX){addHillsUntil(Math.min(minX,gapX));}
+        if(cursor>=gapX-0.0001){
+          addSequence(groupsMade);
+          groupsMade++;
+          const nominal=nextGapMeters+Math.max(280,420-groupsMade*14);
+          nextGapMeters=chooseNextPosition(nominal,groupsMade);
+        }
+      }
+    }
+    function findSection(x){
+      if(x>cursor)advance(x+900);
+      let lo=0,hi=segments.length-1;
+      while(lo<=hi){const i=(lo+hi)>>1,s=segments[i];if(x<s.start)hi=i-1;else if(x>=s.end)lo=i+1;else return s;}
+      return null;
+    }
+    function groundAt(x){
+      const s=findSection(x);
+      if(!s || s.kind==='gap')return null;
+      return s.y0+(s.y1-s.y0)*(x-s.start)/(s.end-s.start);
+    }
+    function anchorAt(x){
+      const y=groundAt(x);
+      if(y!==null)return y;
+      const s=findSection(x);
+      return s?s.y0:elevation;
+    }
+    function groupNear(x){
+      advance(x+1600);
+      return sequences.find(s=>x>=s.startX-100 && x<=s.endX+320)||null;
+    }
+    function canPlace(x,width=200){
+      advance(x+Math.max(650,width+20));
+      // No unfair hazards on approach, on platforms, or immediately after a chasm.
+      if(sequences.some(s=>x+width>s.startX-340 && x<s.endX+310))return false;
+      const a=groundAt(x), b=groundAt(x+width);
+      return a!==null && b!==null && Math.abs(a-b)<=33;
+    }
+    function visibleSections(from,to){
+      advance(to+60);
+      return segments.filter(s=>s.end>=from && s.start<=to);
+    }
+    function shiftY(dy){
+      elevation+=dy;
+      for(const s of segments){s.y0+=dy;s.y1+=dy;}
+      for(const group of sequences)group.initialY+=dy;
+    }
+    advance(startX+2500);
+    return {segments,sequences,groundAt,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,
+      get firstGapX(){return startX+766*pxPerMeter;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
+  }
+  scope.GRIM_TERRAIN={makeTerrain};
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
@@ -453,6 +600,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     hideCountdown() { show('countdown-overlay', false); }
     showTimeSlow(on) { show('time-status', on); }
+    showFallNotice(on) { show('fall-notice', on); }
     offerRewards(offers,meters) {
       this.selecting = false;
       el('reward-distance').textContent = Math.floor(meters).toLocaleString();
@@ -514,6 +662,7 @@ window.GRIM_CONFIG = Object.freeze({
   const C = scope.GRIM_CONFIG;
   const Core = scope.GRIM_CORE;
   const Powers = scope.GRIM_POWERS;
+  const Terrain = scope.GRIM_TERRAIN;
   const SKY = [0x0b1021,0x101b31,0x1c2942,0x29384b];
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
@@ -526,6 +675,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.height = this.scale.height;
       this.groundY = Math.round(this.height * C.groundRatio);
       this.cameraX = 0;
+      this.cameraY = 0;
+      this.fallFeedbackMs=0;
+      this.fallCount=0;
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -536,7 +688,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.goFlashMs = 0;
       this.elapsed = 0;
       this.frame = 0;
-      this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false,airTuck:false,slideReleaseBufferMs:0,jumpsUsed:0,
+      this.player = { x: 200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false,airTuck:false,slideReleaseBufferMs:0,jumpsUsed:0,
         attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0 };
       this.obstacles = [];
       this.souls = [];
@@ -546,6 +698,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.particles = [];
       this.speed = C.initialSpeed;
       this.rng = Core.makeRng(42);
+      this.terrain = Terrain.makeTerrain(42,this.groundY,200,C.pxPerMeter);
       this.nextEncounterX = C.firstEncounterX;
       this.soulCount = 0;
       this.coinCount = 0;
@@ -568,29 +721,35 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawScene();
     }
     handleResize(size) {
-      const oldGround = this.groundY;
-      this.width = size.width;
-      this.height = size.height;
-      this.groundY = Math.round(this.height*C.groundRatio);
-      const shift = this.groundY - oldGround;
-      for (const ob of this.obstacles) {
-        const next=Core.obstacle(ob.type,ob.x,this.groundY,ob.variant,C.slideClearancePx);
+      const previousY=this.groundY;
+      this.width=size.width;this.height=size.height;
+      this.groundY=Math.round(this.height*C.groundRatio);
+      const dy=this.groundY-previousY;
+      this.terrain.shiftY(dy);
+      this.player.y+=dy;
+      this.cameraY+=dy;
+      for(const ob of this.obstacles){
+        const next=Core.obstacle(ob.type,ob.x,this.terrain.anchorAt(ob.x),ob.variant,C.slideClearancePx);
         ob.y=next.y;ob.height=next.height;
       }
-      for (const tip of this.tips) { tip.baseY += shift; tip.label.y += shift; }
+      for(const obj of [...this.coins,...this.souls])obj.baseY+=dy;
+      for(const tip of this.tips){tip.baseY+=dy;tip.label.y+=dy;}
       this.drawScene();
     }
-    get feetY() { return this.groundY + this.player.offsetY; }
-    get onGround() { return this.player.offsetY >= -0.01 && this.player.velocityY >= 0; }
-    get lowProfile() { return this.player.sliding || (!this.onGround && (this.player.holdSlide || this.player.airTuck)); }
+    get feetY(){return this.player.y;}
+    get onGround(){return this.player.grounded;}
+    get lowProfile(){return this.player.sliding || (!this.onGround&&(this.player.holdSlide||this.player.airTuck));}
     startRun() {
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
       this.rng = Core.makeRng(this.seed);
+      this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
+      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;
+      if(this.ui)this.ui.showFallNotice(false);
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
-      this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
+      this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0};
       this.startX = this.player.x;
       this.speed = C.initialSpeed;
@@ -618,7 +777,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.ui.showTimeSlow(false);this.ui.setMode('menu');
+      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
@@ -637,7 +796,7 @@ window.GRIM_CONFIG = Object.freeze({
     jump() {
       if (this.state !== 'playing') return;
       const p=this.player;
-      const grounded=this.onGround;
+      const grounded=this.onGround || p.coyoteMs>0;
       if (!grounded && (p.jumpsUsed!==1 || this.powerManager.level('ravenWings')===0)) return;
       // A tap after releasing Slide latches the tuck for this jump until landing.
       // Holding both buttons at once still works, as does a double-jump combo.
@@ -648,11 +807,13 @@ window.GRIM_CONFIG = Object.freeze({
         p.sliding=false;
         // Jump launches directly out of a slide; tuck is latched independently.
         p.slideConsumed=false;
-        p.offsetY=-1;
+        p.y-=1;
+        p.grounded=false;p.coyoteMs=0;
         p.velocityY=C.jumpVelocity;
-        this.puff(p.x,this.groundY-6,0x9bb7bf,5);
+        this.puff(p.x,this.feetY-6,0x9bb7bf,5);
       } else {
         p.jumpsUsed=2;
+        p.grounded=false;p.coyoteMs=0;
         p.velocityY=this.powerManager.secondJumpVelocity();
         this.puff(p.x-8,this.feetY-32,0xc9bbff,12);
       }
@@ -685,7 +846,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.holdSlide=true;
       if(!p.slideConsumed){
         p.slideConsumed=true;
-        if(this.onGround){p.sliding=true;p.slideMs=0;this.puff(p.x-10,this.groundY-3,0x8790ad,4);}
+        if(this.onGround){p.sliding=true;p.slideMs=0;this.puff(p.x-10,this.feetY-3,0x8790ad,4);}
         // The same button is also an airborne tuck, not a second jump.
         this.activateSlowTime();
       }
@@ -741,7 +902,7 @@ window.GRIM_CONFIG = Object.freeze({
         ob.destroyed=true;
         this.coinCount += 2;
         this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12);
-        this.puff(ob.x+ob.width/2,this.groundY-45,0x9bc3a2,13);
+        this.puff(ob.x+ob.width/2,ob.y+ob.height-45,0x9bc3a2,13);
       }
     }
     makeTip(type,ob) {
@@ -749,43 +910,54 @@ window.GRIM_CONFIG = Object.freeze({
       this.tipped.add(type);
       const title={rock:'JUMP ↑',branch:'SLIDE ↓',bramble:'ATTACK ⚔'}[type];
       if(!title) return;
-      const label=this.add.text(ob.x+ob.width/2,this.groundY-145,title,{
+      const label=this.add.text(ob.x+ob.width/2,this.terrain.anchorAt(ob.x)-145,title,{
         fontFamily:'system-ui,Arial,sans-serif',fontSize:'20px',fontStyle:'900',
         color:'#e2fff7',stroke:'#09101c',strokeThickness:6,align:'center'
       }).setOrigin(.5).setDepth(35);
       label.setShadow(0,2,'#081017',5,true,true);
-      this.tips.push({label,atX:ob.x,baseY:this.groundY-145});
+      this.tips.push({label,atX:ob.x,baseY:this.terrain.anchorAt(ob.x)-145});
     }
-    placeEncounter(type, x) {
-      if (type === 'coins') {
-        // Spacing and height now follow the full jump's flight path at current speed.
-        this.coins.push(...Core.fullJumpCoinArc(x,this.speed,C.jumpVelocity,C.gravity));
-      } else {
-        const ob=Core.obstacle(type,x,this.groundY,this.rng.integer(0,5),C.slideClearancePx);
-        this.obstacles.push(ob);
-        this.makeTip(type,ob);
-        if(type === 'rock') {
-          this.coins.push({x:x+ob.width/2,offset:-146,kind:'air',taken:false});
-        } else if (type === 'branch') {
-          this.coins.push({x:x+ob.width/2,offset:-19,kind:'low',taken:false});
-        }
-        // Attack obstacles pay out two coins when chopped, rather than awarding souls.
+    placeEncounter(type,x){
+      const surface=this.terrain.groundAt(x);
+      if(surface===null)return;
+      if(type==='coins'){
+        this.coins.push(...Core.fullJumpCoinArc(x,this.speed,C.jumpVelocity,C.gravity)
+          .map(coin=>({...coin,baseY:surface})));
+      }else{
+        const ob=Core.obstacle(type,x,surface,this.rng.integer(0,5),C.slideClearancePx);
+        this.obstacles.push(ob);this.makeTip(type,ob);
+        if(type==='rock')this.coins.push({x:x+ob.width/2,baseY:surface,offset:-146,kind:'air',taken:false});
+        else if(type==='branch')this.coins.push({x:x+ob.width/2,baseY:surface,offset:-19,kind:'low',taken:false});
       }
     }
-    spawnAhead() {
+    spawnAhead(){
       const ahead=this.player.x+Math.max(950,this.width*1.26);
-      while (this.nextEncounterX < ahead) {
+      this.terrain.advance(ahead+700);
+      while(this.nextEncounterX<ahead){
+        const x=this.nextEncounterX;
         const type=Core.chooseEncounter(this.rng,this.distance);
-        if(Core.isMilestoneSafe(this.nextEncounterX,this.startX,C.soulEveryMeters,C.pxPerMeter,245) &&
-          Core.isUpgradeSafe(this.nextEncounterX,this.startX,C.upgradeEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters)) {
-          this.placeEncounter(type,this.nextEncounterX);
+        const width=type==='coins'?Math.max(330,this.speed*.75):100;
+        if(this.terrain.canPlace(x,width) &&
+           Core.isMilestoneSafe(x,this.startX,C.soulEveryMeters,C.pxPerMeter,245) &&
+           Core.isUpgradeSafe(x,this.startX,C.upgradeEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters)){
+          this.placeEncounter(type,x);
         }
-        this.nextEncounterX += Core.encounterGap(this.speed,this.rng);
+        this.nextEncounterX+=Core.encounterGap(this.speed,this.rng);
       }
-      while(Core.milestoneX(this.startX,this.nextSoulNumber,C.soulEveryMeters,C.pxPerMeter) < ahead) {
+      while(Core.milestoneX(this.startX,this.nextSoulNumber,C.soulEveryMeters,C.pxPerMeter)<ahead){
         const x=Core.milestoneX(this.startX,this.nextSoulNumber,C.soulEveryMeters,C.pxPerMeter);
-        this.souls.push({x,offset:-145,kind:'milestone',taken:false,number:this.nextSoulNumber});
+        this.souls.push({x,baseY:this.terrain.anchorAt(x),offset:-145,kind:'milestone',taken:false,number:this.nextSoulNumber});
         this.nextSoulNumber++;
+      }
+      if(!this.tipped.has('abyss') && this.terrain.firstGapX-395<ahead){
+        this.tipped.add('abyss');
+        const x=this.terrain.firstGapX-360;
+        const y=this.terrain.anchorAt(x)-150;
+        const label=this.add.text(x,y,'JUMP THE ABYSS ↑',{fontFamily:'system-ui,Arial,sans-serif',
+          fontSize:'20px',fontStyle:'900',color:'#b9fff1',stroke:'#061521',strokeThickness:6,align:'center'})
+          .setOrigin(.5).setDepth(35);
+        label.setShadow(0,2,'#061521',5,true,true);
+        this.tips.push({label,atX:x,baseY:y});
       }
     }
     update(_,deltaMs) {
@@ -819,18 +991,34 @@ window.GRIM_CONFIG = Object.freeze({
         p.invulMs = Math.max(0,p.invulMs-frameMs);
         p.attackMs = Math.max(0,p.attackMs-frameMs);
         p.attackCooldownMs = Math.max(0,p.attackCooldownMs-frameMs);
-        if (!this.onGround) {
+        if(!p.grounded){
           p.jumpAgeMs+=frameMs;
+          p.coyoteMs=Math.max(0,p.coyoteMs-frameMs);
           p.velocityY=Core.cutJumpVelocity(p.velocityY,p.jumpAgeMs,p.jumpHeld,C.jumpCutVelocity,C.jumpCutWindowMs);
         }
-        if (!this.onGround || p.velocityY < 0) {
-          p.offsetY += p.velocityY*dt;
-          p.velocityY += C.gravity*dt;
-          if (p.offsetY >= 0) {
-            p.offsetY=0;p.velocityY=0;p.jumpHeld=false;p.jumpsUsed=0;p.airTuck=false;
-            if(p.holdSlide){p.sliding=true;p.slideMs=0;p.slideConsumed=true;}
-            this.puff(p.x,this.groundY,0x9badb7,3);
+        const localGround=this.terrain.groundAt(p.x);
+        if(p.grounded){
+          if(localGround===null){
+            p.grounded=false;p.coyoteMs=C.coyoteMs;p.velocityY=0;
+          }else{
+            p.y=localGround;p.velocityY=0;
           }
+        }
+        if(!p.grounded){
+          const priorY=p.y;
+          p.y+=p.velocityY*dt;
+          p.velocityY+=C.gravity*dt;
+          if(localGround!==null && p.velocityY>=0 && priorY<=localGround && p.y>=localGround){
+            p.y=localGround;p.velocityY=0;p.grounded=true;p.coyoteMs=0;
+            p.jumpHeld=false;p.jumpsUsed=0;p.airTuck=false;
+            if(p.holdSlide){p.sliding=true;p.slideMs=0;p.slideConsumed=true;}
+            this.puff(p.x,p.y,0x9badb7,3);
+          }
+        }
+        // Falling below a platform is always rescued after the COMPLETE gap sequence.
+        if(!p.grounded && p.y>this.groundY+C.abyssFallDepthPx){
+          this.rescueFromAbyss();
+          if(this.state!=='playing'){this.drawScene();return;}
         }
         if (p.sliding) {
           p.slideMs += frameMs;
@@ -855,9 +1043,16 @@ window.GRIM_CONFIG = Object.freeze({
         this.particles=this.particles.filter(part=>part.life>0);
         if(this.distance>=this.nextUpgradeDistance) this.triggerUpgrade();
       }
+      if(this.fallFeedbackMs>0){
+        this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
+        if(this.fallFeedbackMs===0)this.ui.showFallNotice(false);
+      }
       this.frame++;
       this.cameraX = this.player.x - this.width*C.reaperXRatio;
-      this.cameras.main.setScroll(this.cameraX,0);
+      const anchor=this.terrain.anchorAt(this.player.x);
+      const target=clamp(anchor-this.groundY,-155,155);
+      this.cameraY+=(target-this.cameraY)*.075;
+      this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.drawScene();
     }
     checkCollectibles() {
@@ -865,7 +1060,7 @@ window.GRIM_CONFIG = Object.freeze({
       const centerY=this.feetY-(this.lowProfile?16:43);
       for (const coin of this.coins) {
         if (coin.taken || (coin.kind==='low' && !this.lowProfile)) continue;
-        const y=this.groundY+coin.offset;
+        const y=coin.baseY+coin.offset;
         if(Math.abs(p.x-coin.x)<34 && Math.abs(centerY-y)<41) {
           coin.taken=true;this.coinCount++;
           this.puff(coin.x,y,GOLD,5);
@@ -873,7 +1068,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       for(const soul of this.souls){
         if(soul.taken) continue;
-        const y=this.groundY+soul.offset;
+        const y=soul.baseY+soul.offset;
         if(Math.abs(p.x-soul.x)<34 && Math.abs(centerY-y)<41) {
           soul.taken=true;this.soulCount++;
           this.puff(soul.x,y,CYAN,23);
@@ -894,9 +1089,28 @@ window.GRIM_CONFIG = Object.freeze({
         break;
       }
     }
+    rescueFromAbyss(){
+      const p=this.player;
+      const group=this.terrain.groupNear(p.x) || [...this.terrain.sequences].reverse().find(s=>s.startX<p.x);
+      if(!group){p.y=this.terrain.anchorAt(p.x);p.grounded=true;return;}
+      p.hp--;this.fallCount++;
+      p.x=group.respawnX;
+      this.terrain.advance(p.x+800);
+      p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
+      p.grounded=true;p.coyoteMs=0;p.velocityY=0;p.jumpsUsed=0;
+      p.jumpHeld=false;p.holdSlide=false;p.sliding=false;p.airTuck=false;p.slideReleaseBufferMs=0;
+      p.attackMs=0;p.invulMs=C.abyssRespawnInvulnerabilityMs;
+      this.obstacles=this.obstacles.filter(ob=>ob.x<p.x-160||ob.x>p.x+260);
+      for(const tip of this.tips){if(tip.atX>p.x-200&&tip.atX<p.x+270)tip.label.destroy();}
+      this.tips=this.tips.filter(t=>t.atX<=p.x-200||t.atX>=p.x+270);
+      this.cameraY=clamp(p.y-this.groundY,-150,150);
+      this.fallFeedbackMs=1550;this.ui.showFallNotice(true);
+      this.puff(p.x,p.y-40,0xe57b9a,20);
+      if(p.hp<=0)this.die();
+    }
     die() {
       this.state='dead';this.countdownMs=0;this.goFlashMs=0;
-      this.ui.hideCountdown();this.ui.showTimeSlow(false);
+      this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
       let best=false;
       try {
@@ -952,7 +1166,7 @@ window.GRIM_CONFIG = Object.freeze({
         const x=n*spacing-offset;
         const mod=(Math.sin(n*62.17+factor*57)+1)/2;
         const kind=((n*7+Math.round(factor*100))%5+5)%5;
-        const ground=this.groundY-12;
+        const ground=this.groundY-12-this.cameraY*.16;
         const height=maxTreeHeight*(.67+.46*mod);
         const thick=7+Math.floor(mod*9);
         const crownY=ground-height;
@@ -988,45 +1202,68 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
     }
-    drawGround() {
+    drawGround(){
       const g=this.world;g.clear();
-      const left=this.cameraX-12,ground=this.groundY;
-      g.fillStyle(0x0d1923);g.fillRect(left,ground,this.width+25,this.height-ground+8);
-      g.fillStyle(0x263c3b);g.fillRect(left,ground-4,this.width+25,7);
-      g.fillStyle(0x52685b,.28);g.fillRect(left,ground+5,this.width+25,8);
-      const first=Math.floor(left/49)*49;
-      for(let x=first;x<left+this.width+75;x+=49){
-        const n=Math.floor(x/49);
-        const wave=(Math.sin(n*9.67)+1)/2;
-        // Differently sized pebbles, rootlets, moss, occasional fungi.
-        g.fillStyle(n%3===0?0x42565c:0x364951,.55);
-        g.fillEllipse(x+wave*24,ground+15+wave*16,9+wave*9,3+wave*4);
-        g.lineStyle(2,0x3d5c4e,.55);
-        g.lineBetween(x+7,ground+1,x+10+wave*8,ground-7-wave*7);
-        if(n%5===0){
-          g.lineStyle(2,0x46564e,.6);
-          g.lineBetween(x-16,ground+19,x-2,ground+11);
-          g.lineBetween(x-2,ground+11,x+13,ground+20);
-          g.lineBetween(x+13,ground+20,x+24,ground+15);
-        }
-        if(n%9===0){
-          g.fillStyle(0x67776b,.7);g.fillEllipse(x+9,ground-5,13,7);
-          g.fillStyle(0xb0bd9b,.28);g.fillCircle(x+10,ground-6,2);
+      const left=this.cameraX-140,right=this.cameraX+this.width+170;
+      const depth=this.groundY+this.height+500;
+      const sections=this.terrain.visibleSections(left,right);
+      // Deep purple void and distant shards make missing terrain immediately legible.
+      for(const group of this.terrain.sequences){
+        if(group.endX<left||group.startX>right)continue;
+        g.fillStyle(0x190c2a,.58);g.fillRect(group.startX,this.groundY+36,group.endX-group.startX,depth);
+        for(let i=0;i<5;i++){
+          const x=group.startX+i*73+13;
+          if(x>group.endX)break;
+          g.fillStyle(i%2?0x7d4a87:0x51325e,.14);
+          g.fillTriangle(x,depth,x+18,depth-150-(i*17)%85,x+39,depth);
         }
       }
-      const firstStone=Math.floor(left/450)*450;
-      for(let x=firstStone;x<left+this.width+450;x+=450){
-        const variant=(Math.floor(x/450)%3+3)%3;
-        g.fillStyle(variant===1?0x22323b:0x1c2b33,.85);
-        if(variant===0)g.fillRoundedRect(x+150,ground-31,17,31,7);
-        else if(variant===1){g.fillRect(x+151,ground-37,9,35);g.fillRect(x+145,ground-28,21,7);}
-        else {g.fillTriangle(x+145,ground-1,x+157,ground-33,x+176,ground-1);}
-        g.fillStyle(0x1d313a,.7);g.fillRect(x+145,ground-2,34,4);
+      for(const section of sections){
+        if(section.kind==='gap')continue;
+        const from=Math.max(left,section.start),to=Math.min(right,section.end);
+        if(to<=from)continue;
+        const h0=this.terrain.groundAt(from),h1=this.terrain.groundAt(to-0.001);
+        g.fillStyle(section.kind==='platform'?0x172832:0x111e28);
+        const underside=section.kind==='platform'?Math.max(h0,h1)+68:depth;
+        g.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
+        if(section.kind==='platform'){
+          g.lineStyle(3,0x4e6272,.55);g.lineBetween(from+5,underside-3,to-5,underside-3);
+        }
+        g.lineStyle(section.kind==='platform'?8:7,section.kind==='platform'?0x688b82:0x365a55,.95);
+        g.lineBetween(from,h0-2,to,h1-2);
+        g.lineStyle(3,0x859c78,.48);g.lineBetween(from,h0+4,to,h1+4);
+        // Descending cliff face at the lip of each gap, and roots hanging from earth.
+        const isCliff=sections.some(t=>t.kind==='gap'&&(Math.abs(t.start-section.end)<.02||Math.abs(t.end-section.start)<.02));
+        if(isCliff){
+          const x=Math.abs(section.end-to)<.01?section.end:section.start;
+          const y=this.terrain.anchorAt(x+.01)||h0;
+          g.lineStyle(5,0x527076,.68);g.lineBetween(x,y+7,x,y+115);
+          g.lineStyle(2,0x8ba79b,.65);g.lineBetween(x+7,y+23,x+7,y+66);
+        }
+        const tilesStart=Math.ceil(from/59)*59;
+        for(let x=tilesStart;x<to-6;x+=59){
+          const y=this.terrain.groundAt(x);
+          if(y===null)continue;
+          const r=(Math.sin(Math.floor(x/59)*12.8)+1)*.5;
+          g.fillStyle(0x47605e,.34);g.fillEllipse(x+10,y+18+r*11,9+r*6,4);
+          g.lineStyle(2,0x577365,.38);g.lineBetween(x+8,y,x+11,y-8-r*5);
+          if((Math.floor(x/59)%8)===0){g.fillStyle(0x6f8a7b,.5);g.fillEllipse(x+3,y-3,13,5);}
+        }
+      }
+      // Alternating planks/chipped stone identify elevated landing platforms.
+      for(const section of sections){
+        if(section.kind!=='platform')continue;
+        const from=Math.max(left,section.start),to=Math.min(right,section.end);
+        g.lineStyle(3,0x99afa0,.4);
+        for(let x=Math.ceil(from/36)*36;x<to;x+=36){
+          const y=this.terrain.groundAt(x);
+          if(y!==null)g.lineBetween(x,y+10,x+3,y+29);
+        }
       }
     }
     drawCoin(c) {
       const g=this.world;
-      const y=this.groundY+c.offset;
+      const y=c.baseY+c.offset;
       const pulse=1+Math.sin(this.frame*.11+c.x*.014)*.08;
       g.fillStyle(0xffd064,.10);g.fillCircle(c.x,y,17*pulse);
       g.fillStyle(0x9a622b,.95);g.fillEllipse(c.x,y,17*pulse,19*pulse);
@@ -1036,7 +1273,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawSoul(s) {
       const g=this.world;
-      const y=this.groundY+s.offset;
+      const y=s.baseY+s.offset;
       const pulse=1+Math.sin(this.frame*.065+s.x*.03)*.10;
       const radius=32*pulse;
       g.fillStyle(0x60f3e3,.07);g.fillCircle(s.x,y,radius+18);
@@ -1054,7 +1291,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Rare souls glow visibly more than ordinary coins.
     }
     drawObstacle(o) {
-      const g=this.world, x=o.x, ground=this.groundY;
+      const g=this.world, x=o.x, ground=this.terrain.anchorAt(o.x);
       const v=o.variant%6;
       if(o.type==='rock'){
         const bottom=o.y+o.height;
@@ -1157,7 +1394,8 @@ window.GRIM_CONFIG = Object.freeze({
       const bounce=running?Math.sin(cycle*2)*1.8:0;
       const y=feet+bounce;
       const robe=0x21283d,shadow=0x111626,trim=0x4f5a68;
-      g.fillStyle(0x00000b,.28);g.fillEllipse(x,this.groundY+3,p.sliding?82:57,11);
+      const shadowY=this.terrain.groundAt(p.x);
+      if(shadowY!==null){g.fillStyle(0x00000b,.28);g.fillEllipse(x,shadowY+3,p.sliding?82:57,11);}
       if(p.invulMs>0 && Math.floor(this.frame/5)%2===0) g.setAlpha(.42);
       if(this.lowProfile){
         // Low forward crouch: actual sprite fits within the 29px slide collision gap.
@@ -1281,6 +1519,9 @@ window.GRIM_CONFIG = Object.freeze({
       g.fillStyle(0x030716,.22);g.fillRect(0,this.height-9,this.width,9);
       if(this.state==='playing' && this.player.slowMs>0){
         g.fillStyle(0x75dfff,.055);g.fillRect(0,0,this.width,this.height);
+      }
+      if(this.fallFeedbackMs>0){
+        g.fillStyle(0xef4969,.085*(this.fallFeedbackMs/1550));g.fillRect(0,0,this.width,this.height);
       }
       if(this.state==='playing' && this.player.invulMs>0) {
         g.fillStyle(0xff5252,.045);g.fillRect(0,0,this.width,this.height);
