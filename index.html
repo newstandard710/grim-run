@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.2</title>
+  <title>GRIM RUN — v0.3</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -54,13 +54,33 @@ button {cursor:pointer;}
 @media (max-height:340px) { :root { --action-size: 67px; } .modal {padding:10px 22px}.instructions {display:none}.top-left {font-size:20px} .results {margin:6px 3px} }
 @media (orientation:portrait) {#game::after {content:'ROTATE YOUR PHONE FOR THE BEST EXPERIENCE';position:absolute;left:10%;right:10%;top:50%;text-align:center;color:#cdece9;font-size:12px;pointer-events:none;opacity:.8;}}
 
+/* v0.3 — compact roguelike reward overlay and acquired-power strip. */
+.power-strip{font-size:clamp(9px,1.85vh,12px);font-weight:800;letter-spacing:.065em;color:#d3ffe9;margin-top:3px;text-shadow:0 2px 5px #020b17;max-width:58vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.reward-wrap{z-index:15;background:#040914e9;}
+.reward-modal{width:min(920px,96vw);max-height:96vh;padding:clamp(10px,2.5vh,19px) clamp(11px,2vw,24px);overflow:auto;}
+.reward-modal h2{font-size:clamp(21px,6.2vh,37px);margin:.06em 0 .12em;}
+.reward-subtitle{color:#9bf5e5;font-size:clamp(10px,2.1vh,14px);font-weight:800;letter-spacing:.18em;margin-bottom:clamp(7px,1.6vh,14px);}
+.reward-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(6px,1.5vw,13px);}
+.reward-card{min-width:0;min-height:clamp(125px,35vh,205px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(4px,1vh,8px);padding:clamp(7px,1.5vh,14px);border:2px solid color-mix(in srgb,var(--card-color) 48%,transparent);border-radius:13px;background:linear-gradient(155deg,#28435bdf,#111c32f2);color:#ecffff;box-shadow:inset 0 0 24px #5b8f9b12,0 5px 17px #0005;text-align:center;touch-action:manipulation;}
+.reward-card:active{transform:scale(.975);background:#263e58;}
+.reward-card:focus-visible{outline:3px solid #ffffff;outline-offset:2px;}
+.reward-card:disabled{opacity:.5;cursor:default;}
+.reward-icon{width:clamp(28px,8vh,48px);height:clamp(28px,8vh,48px);display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid var(--card-color);color:var(--card-color);background:#0611229c;font-size:clamp(20px,5.5vh,34px);font-weight:900;}
+.reward-name{color:#f0fff8;font-size:clamp(11px,2.7vh,18px);letter-spacing:.055em;font-weight:950;line-height:1.04;}
+.reward-action{color:var(--card-color);font-size:clamp(8px,1.65vh,11px);font-weight:900;letter-spacing:.16em;}
+.reward-desc{color:#c9dbe4;font-size:clamp(10px,2.05vh,14px);line-height:1.25;font-weight:500;}
+.reward-level{font-size:clamp(9px,1.8vh,11px);color:#fff2c6;font-weight:800;letter-spacing:.10em;}
+.reward-foot{font-size:clamp(8px,1.6vh,10px);color:#8da9b5;letter-spacing:.15em;margin-top:clamp(6px,1.4vh,12px);font-weight:700;}
+.end-build{font-size:clamp(9px,1.9vh,12px);font-weight:800;color:#b4e4e1;min-height:14px;margin:4px;}
+@media(max-height:325px){.reward-modal{padding:7px 10px}.reward-cards{gap:5px}.reward-card{min-height:120px;padding:5px}.reward-foot{margin-top:5px}.reward-subtitle{margin-bottom:5px}}
+
 </style>
 </head>
 <body>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
     <div id="hearts" class="top-left" aria-label="Health">♥ ♥ ♥</div>
-    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span></div>
+    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div></div>
     <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
     <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
   </div>
@@ -75,10 +95,19 @@ button {cursor:pointer;}
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1>GRIM <em>RUN</em></h1>
-      <p>Slash towering stalks, hop over fallen obstacles, and slide beneath hanging stone. Gather coins — and claim a rare soul every 666 meters.</p>
+      <p>Slash towering stalks, hop over fallen obstacles, and slide beneath hanging stone. Gather coins, claim a rare soul every 666 meters, and choose a supernatural power every 500 meters.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.2 · FEEL &amp; READABILITY UPDATE</div>
+      <div class="mini">v0.3 · THE FIRST POWERS</div>
       <div class="instructions">⚔ Tap to swing · ↑ Tap to hop / hold to leap · ⇥ Hold to slide</div>
+    </div>
+  </div>
+  <div id="upgrade-screen" class="modal-wrap reward-wrap hidden" aria-label="Choose your upgrade">
+    <div class="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="reward-title">
+      <div class="eyebrow">THE UNDERWORLD OFFERS A GIFT</div>
+      <h2 id="reward-title">CHOOSE YOUR POWER</h2>
+      <div class="reward-subtitle"><span id="reward-distance">500</span> METERS · CHOOSE ONE</div>
+      <div id="reward-cards" class="reward-cards" aria-label="Three randomized upgrades"></div>
+      <div class="reward-foot">THE RUN IS PAUSED WHILE YOU CHOOSE</div>
     </div>
   </div>
   <div id="pause-screen" class="modal-wrap hidden">
@@ -88,6 +117,7 @@ button {cursor:pointer;}
     <div class="modal compact">
       <div class="eyebrow">THE GRIM REAPER HAS FALLEN</div><h2>RUN ENDED</h2>
       <div class="results"><div><small>DISTANCE</small><strong id="end-distance">0 m</strong></div><div><small>COINS</small><strong id="end-coins">0</strong></div><div><small>SOULS</small><strong id="end-souls">0</strong></div><div><small>SCORE</small><strong id="end-score">0</strong></div></div>
+      <div id="end-build" class="end-build"></div>
       <div id="best-label" class="best-label"></div>
       <button id="retry-btn" class="primary">RUN AGAIN ↻</button>
       <button id="menu-btn" class="secondary">MAIN MENU</button>
@@ -102,7 +132,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.2.0',
+  version: '0.3.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -125,6 +155,7 @@ window.GRIM_CONFIG = Object.freeze({
   coinScore: 5,
   soulScore: 50,
   soulEveryMeters: 666,
+  upgradeEveryMeters: 500,
   minEncounterGapSeconds: 1.40,
   firstEncounterX: 1000
 });
@@ -194,6 +225,98 @@ window.GRIM_CONFIG = Object.freeze({
 
 </script>
   <script>
+// Grim Run v0.3 — engine-agnostic temporary power/reward rules.
+// No browser, Phaser, UI, or persistence dependencies. Reset for every run.
+(function(scope){
+  'use strict';
+  const POWER_ORDER = ['soulCleave', 'ravenWings', 'shadowForm'];
+  const POWERS = Object.freeze({
+    soulCleave: Object.freeze({id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',
+      descriptions:['Scythe reaches 20% farther.','Scythe reaches 35% farther.','Scythe reaches 50% farther.']}),
+    ravenWings: Object.freeze({id:'ravenWings',name:'RAVEN WINGS',action:'JUMP',icon:'✦',color:'#c5b5ff',
+      descriptions:['Unlock a second jump in midair.','Your second jump gains more height.','A still stronger second jump.']}),
+    shadowForm: Object.freeze({id:'shadowForm',name:'SHADOW FORM',action:'SLIDE',icon:'◈',color:'#a3e6ff',
+      descriptions:['Slide grants 0.3s of spectral safety.','Spectral safety lasts 0.45s.','Spectral safety lasts 0.65s.']})
+  });
+  const HEALTH = Object.freeze({id:'vitalEssence',name:'VITAL ESSENCE',action:'HEALTH',icon:'♥',color:'#ffc2c9',
+    description:'Increase maximum HP by 1 and heal 1 HP.'});
+  // Repeatable fallback options only appear when fewer than 3 normal cards remain.
+  // This keeps choices distinct even after all three powers reach level 3.
+  const FALLBACKS = Object.freeze({
+    soulMend: Object.freeze({id:'soulMend',name:'SOUL MEND',action:'HEALTH',icon:'✚',color:'#e0c9ff',
+      description:'Restore up to 2 HP, or gain 10 coins if already full.'}),
+    coinCache: Object.freeze({id:'coinCache',name:'COIN CACHE',action:'COINS',icon:'●',color:'#ffd987',
+      description:'Receive 20 coins immediately.'})
+  });
+  const HEALTH_CAP = 9;
+  const ATTACK_BONUSES = Object.freeze([0,.20,.35,.50]);
+  const SHADOW_DURATIONS_MS = Object.freeze([0,300,450,650]);
+  const SECOND_JUMP_VELOCITIES = Object.freeze([null,-610,-665,-720]);
+  function makePowerManager(){
+    const levels = Object.fromEntries(POWER_ORDER.map(id=>[id,0]));
+    return {
+      levels,
+      level(id) { return levels[id] || 0; },
+      eligible() {
+        return POWER_ORDER.filter(id=>levels[id]<3).map(id=>{
+          const current=levels[id],p=POWERS[id];
+          return {id,name:p.name,action:p.action,icon:p.icon,color:p.color,description:p.descriptions[current],
+            levelFrom:current,levelTo:current+1,type:'power'};
+        });
+      },
+      attackBonus(){return ATTACK_BONUSES[levels.soulCleave];},
+      secondJumpVelocity(){return SECOND_JUMP_VELOCITIES[levels.ravenWings];},
+      shadowMs(){return SHADOW_DURATIONS_MS[levels.shadowForm];},
+      summary(){return POWER_ORDER.filter(id=>levels[id]>0).map(id=>({id,name:POWERS[id].name,level:levels[id]}));},
+      apply(id,player,addCoins){
+        if(Object.hasOwn(levels,id)){
+          if(levels[id]>=3)return false;
+          levels[id]++;
+          return true;
+        }
+        if(id===HEALTH.id){
+          const atCap=player.maxHp>=HEALTH_CAP;
+          const wasFull=player.hp>=player.maxHp;
+          player.maxHp=Math.min(HEALTH_CAP,player.maxHp+1);
+          player.hp=Math.min(player.maxHp,player.hp+1);
+          if(atCap && wasFull)addCoins(10);
+          return true;
+        }
+        if(id==='soulMend'){
+          if(player.hp>=player.maxHp)addCoins(10);
+          else player.hp=Math.min(player.maxHp,player.hp+2);
+          return true;
+        }
+        if(id==='coinCache'){
+          addCoins(20);
+          return true;
+        }
+        return false;
+      }
+    };
+  }
+  function rewardOffers(manager,player,rng,count=3){
+    const available=manager.eligible();
+    available.push({id:HEALTH.id,name:HEALTH.name,action:HEALTH.action,icon:HEALTH.icon,color:HEALTH.color,
+      description:player.maxHp>=HEALTH_CAP?'Heal 1 HP (or receive 10 coins if already full).':HEALTH.description,
+      type:'health'});
+    // Supplement near endgame instead of offering duplicate cards or max-level powers.
+    if(available.length<count){
+      available.push({...FALLBACKS.soulMend,type:'recovery'});
+      if(available.length<count)available.push({...FALLBACKS.coinCache,type:'coins'});
+    }
+    // Fisher-Yates partial shuffle through seeded RNG.
+    for(let i=available.length-1;i>0;i--){
+      const j=Math.floor(rng.next()*(i+1));
+      [available[i],available[j]]=[available[j],available[i]];
+    }
+    return available.slice(0,count);
+  }
+  scope.GRIM_POWERS={POWERS,HEALTH,FALLBACKS,POWER_ORDER,HEALTH_CAP,makePowerManager,rewardOffers};
+})(typeof window!=='undefined'?window:globalThis);
+
+</script>
+  <script>
 (function(scope) {
   'use strict';
   const el = id => document.getElementById(id);
@@ -203,6 +326,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.actions = actions;
       this.activePointers = new Map();
       this.heldKeys = new Set();
+      this.selecting = false;
       this.bindAction('attack-btn', 'attack', () => actions.attack());
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
@@ -260,23 +384,59 @@ window.GRIM_CONFIG = Object.freeze({
       show('menu', mode === 'menu');
       show('game-over', mode === 'dead');
       show('pause-screen', mode === 'paused');
+      show('upgrade-screen', mode === 'upgrade');
       show('controls', mode === 'playing');
-      show('hud', mode === 'playing' || mode === 'paused');
+      show('hud', mode === 'playing' || mode === 'paused' || mode === 'upgrade');
       this.releaseAll();
     }
-    update(hp, distance, souls, coins, score) {
-      el('hearts').textContent = '♥ '.repeat(Math.max(0,hp)).trim() + ' ♡'.repeat(Math.max(0,3-hp));
+    offerRewards(offers,meters) {
+      this.selecting = false;
+      el('reward-distance').textContent = Math.floor(meters).toLocaleString();
+      const holder = el('reward-cards');
+      holder.replaceChildren();
+      offers.forEach(reward => {
+        const card = document.createElement('button');
+        card.type='button';
+        card.className='reward-card';
+        card.style.setProperty('--card-color',reward.color);
+        const parts=[
+          ['reward-icon',reward.icon],
+          ['reward-action',reward.action],
+          ['reward-name',reward.name],
+          ['reward-desc',reward.description],
+        ];
+        if(reward.type==='power')parts.push(['reward-level',reward.levelFrom===0?'NEW POWER · LEVEL 1':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`]);
+        for(const [cls,value] of parts){
+          const div=document.createElement('span');div.className=cls;div.textContent=value;card.appendChild(div);
+        }
+        card.setAttribute('aria-label',`${reward.name}: ${reward.description}`);
+        card.addEventListener('click',()=>{
+          if(this.selecting) return;
+          this.selecting = true;
+          Array.from(holder.children).forEach(child=>child.disabled=true);
+          this.actions.chooseUpgrade(reward.id);
+        });
+        holder.appendChild(card);
+      });
+      this.setMode('upgrade');
+    }
+    update(hp,maxHp,distance,souls,coins,score,powerSummary=[]) {
+      const hearts=el('hearts');
+      hearts.textContent=maxHp>5 ? `♥ ${hp}/${maxHp}` : '♥ '.repeat(Math.max(0,hp)).trim() + ' ♡'.repeat(Math.max(0,maxHp-hp));
       el('distance').textContent = Math.floor(distance).toLocaleString();
       el('souls').textContent = souls.toLocaleString();
       el('coins').textContent = coins.toLocaleString();
       el('score').textContent = score.toLocaleString();
+      const text=powerSummary.map(x=>`${x.name} ${x.level}`).join(' · ');
+      if(el('power-strip').textContent!==text) el('power-strip').textContent=text;
     }
-    gameOver(distance, souls, coins, score, best) {
+    gameOver(distance, souls, coins, score, best, summary=[]) {
       el('end-distance').textContent = Math.floor(distance).toLocaleString() + ' m';
       el('end-souls').textContent = String(souls);
       el('end-coins').textContent = String(coins);
       el('end-score').textContent = score.toLocaleString();
       el('best-label').textContent = best ? '✦ NEW PERSONAL BEST ✦' : '';
+      el('end-build').textContent = summary.length ? 'BUILD: '+summary.map(x=>`${x.name} Lv${x.level}`).join(' · ') : 'BUILD: NO POWERS';
       this.setMode('dead');
     }
   }
@@ -289,6 +449,7 @@ window.GRIM_CONFIG = Object.freeze({
   'use strict';
   const C = scope.GRIM_CONFIG;
   const Core = scope.GRIM_CORE;
+  const Powers = scope.GRIM_POWERS;
   const SKY = [0x0b1021,0x101b31,0x1c2942,0x29384b];
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
@@ -309,7 +470,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.state = 'menu';
       this.elapsed = 0;
       this.frame = 0;
-      this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, invulMs:0,
+      this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, shadowMs:0,jumpsUsed:0,
         attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0 };
       this.obstacles = [];
       this.souls = [];
@@ -325,11 +486,15 @@ window.GRIM_CONFIG = Object.freeze({
       this.nextSoulNumber = 1;
       this.distance = 0;
       this.points = 0;
+      this.powerManager = Powers.makePowerManager();
+      this.nextUpgradeDistance=C.upgradeEveryMeters;
+      this.pendingOffers=[];
       this.ui = new GrimUI({
         start: () => this.startRun(), menu: () => this.goToMenu(),
         attack: () => this.attack(), jump: () => this.jump(), jumpEnd: () => this.jumpEnd(),
         slideStart: () => this.startSlide(), slideEnd: () => this.endSlide(),
-        pause: () => this.togglePause(), resume: () => this.resume(), autoPause: () => this.autoPause()
+        pause: () => this.togglePause(), resume: () => this.resume(), autoPause: () => this.autoPause(),
+        chooseUpgrade: id => this.chooseUpgrade(id)
       });
       this.ui.setMode('menu');
       this.scale.on('resize', this.handleResize, this);
@@ -357,7 +522,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
       this.rng = Core.makeRng(this.seed);
       this.state = 'playing';
-      this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, invulMs:0,
+      this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, shadowMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0};
       this.startX = this.player.x;
       this.speed = C.initialSpeed;
@@ -375,10 +540,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.coinCount = 0;
       this.distance = 0;
       this.points = 0;
+      this.powerManager = Powers.makePowerManager();
+      this.nextUpgradeDistance=C.upgradeEveryMeters;
+      this.pendingOffers=[];
       this.ui.setMode('playing');
-      this.ui.update(this.player.hp, 0, 0, 0, 0);
+      this.ui.update(this.player.hp, this.player.maxHp,0, 0, 0, 0, []);
     }
-    goToMenu() { this.state = 'menu'; this.player.sliding=false; this.player.holdSlide=false; this.player.jumpHeld=false; this.ui.setMode('menu'); }
+    goToMenu() { this.state = 'menu'; this.pendingOffers=[]; this.player.sliding=false; this.player.holdSlide=false; this.player.jumpHeld=false; this.ui.setMode('menu'); }
     togglePause() {
       if (this.state === 'playing') { this.state = 'paused'; this.player.holdSlide=false; this.player.jumpHeld=false; this.ui.setMode('paused'); }
       else if (this.state === 'paused') this.resume();
@@ -386,14 +554,25 @@ window.GRIM_CONFIG = Object.freeze({
     autoPause() { if (this.state === 'playing') this.togglePause(); }
     resume() { if (this.state === 'paused') { this.state='playing'; this.ui.setMode('playing'); } }
     jump() {
-      if (this.state !== 'playing' || !this.onGround) return;
-      this.player.offsetY = -1;
-      this.player.velocityY = C.jumpVelocity;
-      this.player.jumpHeld=true;
-      this.player.jumpAgeMs=0;
-      this.player.sliding=false;
-      this.player.holdSlide=false;
-      this.puff(this.player.x, this.groundY-6,0x9bb7bf,5);
+      if (this.state !== 'playing') return;
+      const p=this.player;
+      const grounded=this.onGround;
+      if (!grounded && (p.jumpsUsed!==1 || this.powerManager.level('ravenWings')===0)) return;
+      if (grounded) {
+        p.jumpsUsed=1;
+        p.sliding=false;
+        p.holdSlide=false;
+        p.shadowMs=0;
+        p.offsetY=-1;
+        p.velocityY=C.jumpVelocity;
+        this.puff(p.x,this.groundY-6,0x9bb7bf,5);
+      } else {
+        p.jumpsUsed=2;
+        p.velocityY=this.powerManager.secondJumpVelocity();
+        this.puff(p.x-8,this.feetY-32,0xc9bbff,12);
+      }
+      p.jumpHeld=true;
+      p.jumpAgeMs=0;
     }
     jumpEnd() {
       const p=this.player;
@@ -412,12 +591,35 @@ window.GRIM_CONFIG = Object.freeze({
       const p=this.player;
       if (this.state !== 'playing' || !this.onGround || p.sliding) return;
       p.sliding=true;p.holdSlide=true;p.slideMs=0;
+      p.shadowMs=this.powerManager.shadowMs();
       p.attackMs=0;
       this.puff(p.x-10,this.groundY-3,0x8790ad,4);
     }
     endSlide() { this.player.holdSlide=false; }
+    triggerUpgrade(){
+      if(this.state!=='playing' || this.pendingOffers.length) return;
+      const distanceMark=this.nextUpgradeDistance;
+      this.nextUpgradeDistance+=C.upgradeEveryMeters;
+      this.pendingOffers=Powers.rewardOffers(this.powerManager,this.player,this.rng,3);
+      this.player.jumpHeld=false;
+      this.player.holdSlide=false;
+      this.state='upgrade';
+      this.ui.offerRewards(this.pendingOffers,distanceMark);
+    }
+    chooseUpgrade(id){
+      if(this.state!=='upgrade' || !this.pendingOffers.some(option=>option.id===id))return;
+      const applied=this.powerManager.apply(id,this.player,coins=>{this.coinCount+=coins;});
+      if(!applied)return;
+      this.pendingOffers=[];
+      this.state='playing';
+      this.ui.setMode('playing');
+      this.puff(this.player.x,this.feetY-45,id==='vitalEssence'?0xffb5c3:0x9dece7,14);
+      this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
+      this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
+    }
     cutNearby() {
-      const box=Core.attackBox(this.player.x,this.feetY);
+      const bonus=126*this.powerManager.attackBonus();
+      const box=Core.attackBox(this.player.x,this.feetY,bonus);
       for (const ob of this.obstacles) {
         if (ob.type !== 'bramble' || ob.destroyed || !Core.overlaps(box, ob)) continue;
         ob.destroyed=true;
@@ -479,6 +681,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.distance = (p.x-this.startX)/C.pxPerMeter;
         this.speed = Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
         p.invulMs = Math.max(0,p.invulMs-frameMs);
+        p.shadowMs=Math.max(0,p.shadowMs-frameMs);
         p.attackMs = Math.max(0,p.attackMs-frameMs);
         p.attackCooldownMs = Math.max(0,p.attackCooldownMs-frameMs);
         if (!this.onGround) {
@@ -488,11 +691,11 @@ window.GRIM_CONFIG = Object.freeze({
         if (!this.onGround || p.velocityY < 0) {
           p.offsetY += p.velocityY*dt;
           p.velocityY += C.gravity*dt;
-          if (p.offsetY >= 0) {p.offsetY=0;p.velocityY=0;p.jumpHeld=false;this.puff(p.x,this.groundY,0x9badb7,3);}
+          if (p.offsetY >= 0) {p.offsetY=0;p.velocityY=0;p.jumpHeld=false;p.jumpsUsed=0;this.puff(p.x,this.groundY,0x9badb7,3);}
         }
         if (p.sliding) {
           p.slideMs += frameMs;
-          if (p.slideMs >= C.slideMaxMs || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
+          if (p.slideMs >= C.slideMaxMs || (!p.holdSlide && p.slideMs >= C.slideMinMs)) {p.sliding=false;p.shadowMs=0;}
         }
         this.spawnAhead();
         if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
@@ -508,9 +711,10 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.tips=this.tips.filter(t=>t.atX>=p.x-180);
         this.points = Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
-        this.ui.update(p.hp,this.distance,this.soulCount,this.coinCount,this.points);
+        this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
+        if(this.distance>=this.nextUpgradeDistance) this.triggerUpgrade();
       }
       this.frame++;
       this.cameraX = this.player.x - this.width*C.reaperXRatio;
@@ -539,7 +743,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     checkHazards() {
       const p=this.player;
-      if (p.invulMs > 0) return;
+      if (p.invulMs > 0 || (p.sliding && p.shadowMs>0)) return;
       const box=Core.collisionBox(p.x,this.feetY,p.sliding);
       for (const ob of this.obstacles) {
         if (ob.destroyed || ob.dealtDamage || !Core.overlaps(box,ob)) continue;
@@ -556,11 +760,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
       let best=false;
       try {
-        const key='grim-run-v02-best';
+        const key='grim-run-v03-best';
         const old=Number(localStorage.getItem(key)||0);
         if (this.points>old) {localStorage.setItem(key,String(this.points));best=true;}
       } catch (_) { /* Storage may be denied in private mode. The run remains playable. */ }
-      this.ui.gameOver(this.distance,this.soulCount,this.coinCount,this.points,best);
+      this.ui.gameOver(this.distance,this.soulCount,this.coinCount,this.points,best,this.powerManager.summary());
     }
     puff(x,y,color,count) {
       for (let i=0;i<count;i++) {
@@ -830,8 +1034,23 @@ window.GRIM_CONFIG = Object.freeze({
         g.lineStyle(3,0xe7efde);g.lineBetween(x+56,feet-14,x+72,feet-28);
         g.lineBetween(x+72,feet-28,x+67,feet-8);
         g.fillStyle(0x7da6a4,.3);g.fillEllipse(x-43+dust,feet-3,23,5);
+        if(p.shadowMs>0){
+          g.lineStyle(3,0xa8e9ff,.75);g.strokeEllipse(x-8,feet-15,99,34);
+          g.fillStyle(0x8de7ff,.14);g.fillEllipse(x-18,feet-18,85,37);
+          g.fillStyle(0xbbf7ff,.42);g.fillCircle(x-39,feet-24,3);
+        }
       }else{
         const jump=!this.onGround;
+        if(jump && this.powerManager.level('ravenWings')>0){
+          // Spectral raven feathers appear on both aerial jumps after unlocking the power.
+          const wingBeat=Math.sin(this.elapsed*19)*7;
+          g.fillStyle(0x826cbb,.67);
+          g.fillPoints([{x:x-14,y:y-61},{x:x-45,y:y-75-wingBeat},{x:x-63,y:y-109-wingBeat},
+            {x:x-32,y:y-93-wingBeat*.6},{x:x-26,y:y-70}],true);
+          g.fillStyle(0xb7aaff,.46);
+          g.fillPoints([{x:x-16,y:y-60},{x:x-35,y:y-72-wingBeat},{x:x-46,y:y-94-wingBeat},
+            {x:x-23,y:y-79}],true);
+        }
         const swing=Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd);
         // Animated legs include knees, shin flex and alternating feet.
         for(let leg=0;leg<2;leg++){
@@ -873,7 +1092,8 @@ window.GRIM_CONFIG = Object.freeze({
         if(p.attackMs>0){
           const progress=1-p.attackMs/C.attackDurationMs;
           const angle=-2.6+progress*2.5;
-          const endX=gripX+Math.cos(angle)*85,endY=gripY+Math.sin(angle)*85;
+          const reach=85*(1+this.powerManager.attackBonus());
+          const endX=gripX+Math.cos(angle)*reach,endY=gripY+Math.sin(angle)*reach;
           const bladeAngle=angle+1.1;
           const tipX=endX+Math.cos(bladeAngle)*42,tipY=endY+Math.sin(bladeAngle)*42;
           g.lineStyle(6,0x2e364b);g.lineBetween(x+7,y-51,gripX,gripY);
@@ -884,8 +1104,9 @@ window.GRIM_CONFIG = Object.freeze({
           g.lineTo(tipX+Math.cos(bladeAngle+.36)*11,tipY+Math.sin(bladeAngle+.36)*11);
           g.lineTo(tipX,tipY);g.strokePath();
           if(swing){
-            g.lineStyle(8,0x66e6da,.15);g.beginPath();g.arc(x+9,y-45,106,4.25,6.2);g.strokePath();
-            g.lineStyle(3,0xbef9ef,.8);g.beginPath();g.arc(x+9,y-45,104,4.38,6.13);g.strokePath();
+            const arcRadius=106*(1+this.powerManager.attackBonus());
+            g.lineStyle(8,0x66e6da,.15);g.beginPath();g.arc(x+9,y-45,arcRadius,4.25,6.2);g.strokePath();
+            g.lineStyle(3,0xbef9ef,.8);g.beginPath();g.arc(x+9,y-45,arcRadius-2,4.38,6.13);g.strokePath();
           }
         }else{
           // Resting scythe is clearly behind / above the shoulder, not held out as an attack.
