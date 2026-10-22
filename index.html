@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.3</title>
+  <title>GRIM RUN — v0.3.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -74,13 +74,19 @@ button {cursor:pointer;}
 .end-build{font-size:clamp(9px,1.9vh,12px);font-weight:800;color:#b4e4e1;min-height:14px;margin:4px;}
 @media(max-height:325px){.reward-modal{padding:7px 10px}.reward-cards{gap:5px}.reward-card{min-height:120px;padding:5px}.reward-foot{margin-top:5px}.reward-subtitle{margin-bottom:5px}}
 
+/* v0.3.1: readable countdown shows unobstructed frozen game before returning control. */
+.countdown-overlay{position:absolute;inset:0;z-index:25;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#06101c33;text-shadow:0 4px 22px #000,0 0 35px #69f3ec99;}
+.countdown-number{font-size:clamp(70px,25vh,170px);font-weight:1000;line-height:1;color:#edfffb;letter-spacing:.04em;}
+.countdown-caption{font-size:clamp(12px,3.1vh,21px);font-weight:900;letter-spacing:.32em;color:#8cebe7;}
+.time-status{font-size:clamp(10px,2vh,14px);letter-spacing:.12em;font-weight:900;color:#a5ecff;text-shadow:0 0 10px #98eff8;}
+
 </style>
 </head>
 <body>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
     <div id="hearts" class="top-left" aria-label="Health">♥ ♥ ♥</div>
-    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div></div>
+    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div><div id="time-status" class="time-status hidden">◷ TIME SLOWED</div></div>
     <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
     <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
   </div>
@@ -97,7 +103,7 @@ button {cursor:pointer;}
       <h1>GRIM <em>RUN</em></h1>
       <p>Slash towering stalks, hop over fallen obstacles, and slide beneath hanging stone. Gather coins, claim a rare soul every 666 meters, and choose a supernatural power every 500 meters.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.3 · THE FIRST POWERS</div>
+      <div class="mini">v0.3.1 · MOVEMENT & FLOW</div>
       <div class="instructions">⚔ Tap to swing · ↑ Tap to hop / hold to leap · ⇥ Hold to slide</div>
     </div>
   </div>
@@ -109,6 +115,9 @@ button {cursor:pointer;}
       <div id="reward-cards" class="reward-cards" aria-label="Three randomized upgrades"></div>
       <div class="reward-foot">THE RUN IS PAUSED WHILE YOU CHOOSE</div>
     </div>
+  </div>
+  <div id="countdown-overlay" class="countdown-overlay hidden" aria-live="off" aria-label="Resume countdown">
+    <div id="countdown-number" class="countdown-number">3</div><div id="countdown-caption" class="countdown-caption">GET READY</div>
   </div>
   <div id="pause-screen" class="modal-wrap hidden">
     <div class="modal compact"><h2>PAUSED</h2><p>The Underworld can wait.</p><button id="resume-btn" class="primary">RESUME ▶</button><button id="quit-btn" class="secondary">QUIT RUN</button></div>
@@ -132,7 +141,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.3.0',
+  version: '0.3.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -157,6 +166,10 @@ window.GRIM_CONFIG = Object.freeze({
   soulEveryMeters: 666,
   upgradeEveryMeters: 500,
   minEncounterGapSeconds: 1.40,
+  upgradeSafetyBeforePx: 200, // clear last moments before the reward milestone
+  upgradeSafetyAfterMeters: 50, // hazard-free road when gameplay resumes
+  resumeCountdownMs: 3000,
+  slowCooldownMs: 3300,
   firstEncounterX: 1000
 });
 
@@ -194,8 +207,9 @@ window.GRIM_CONFIG = Object.freeze({
       ? { x: reaperX - 27, y: feetY - 29, width: 56, height: 29 }
       : { x: reaperX - 20, y: feetY - 79, width: 42, height: 79 };
   }
-  function attackBox(reaperX, feetY, rangeBonus = 0) {
-    return { x: reaperX + 15, y: feetY - 140, width: 126 + rangeBonus, height: 130 };
+  function attackBox(reaperX, feetY, rangeBonus = 0, lowProfile = false) {
+    return lowProfile ? {x: reaperX + 12, y: feetY - 65, width: 126 + rangeBonus, height: 61}
+      : { x: reaperX + 15, y: feetY - 140, width: 126 + rangeBonus, height: 130 };
   }
   function encounterGap(speed, rng) { return Math.max(410, speed * 1.40) + rng.integer(105, 235); }
   function chooseEncounter(rng, distanceMeters) {
@@ -211,6 +225,13 @@ window.GRIM_CONFIG = Object.freeze({
     const mod = ((x - startX) % period + period) % period;
     return Math.min(mod, period-mod) > radius;
   }
+  function isUpgradeSafe(x, startX, meters = 500, pxPerMeter = 12, beforePx = 200, afterMeters = 50) {
+    const offset = x - startX;
+    const period = meters * pxPerMeter;
+    const candidate = Math.floor((offset + beforePx) / period);
+    if (candidate < 1) return true;
+    return !(offset >= candidate * period - beforePx && offset <= candidate * period + afterMeters * pxPerMeter);
+  }
   function cutJumpVelocity(velocityY, elapsedMs, isHeld, cutSpeed = -310, windowMs = 190) {
     return !isHeld && elapsedMs <= windowMs && velocityY < cutSpeed ? cutSpeed : velocityY;
   }
@@ -220,23 +241,23 @@ window.GRIM_CONFIG = Object.freeze({
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, cutJumpVelocity, attackActive };
+    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, cutJumpVelocity, attackActive };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
   <script>
-// Grim Run v0.3 — engine-agnostic temporary power/reward rules.
+// Grim Run v0.3.1 — engine-agnostic temporary power/reward rules.
 // No browser, Phaser, UI, or persistence dependencies. Reset for every run.
 (function(scope){
   'use strict';
-  const POWER_ORDER = ['soulCleave', 'ravenWings', 'shadowForm'];
+  const POWER_ORDER = ['soulCleave', 'ravenWings', 'deathsDelay'];
   const POWERS = Object.freeze({
     soulCleave: Object.freeze({id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',
       descriptions:['Scythe reaches 20% farther.','Scythe reaches 35% farther.','Scythe reaches 50% farther.']}),
     ravenWings: Object.freeze({id:'ravenWings',name:'RAVEN WINGS',action:'JUMP',icon:'✦',color:'#c5b5ff',
       descriptions:['Unlock a second jump in midair.','Your second jump gains more height.','A still stronger second jump.']}),
-    shadowForm: Object.freeze({id:'shadowForm',name:'SHADOW FORM',action:'SLIDE',icon:'◈',color:'#a3e6ff',
-      descriptions:['Slide grants 0.3s of spectral safety.','Spectral safety lasts 0.45s.','Spectral safety lasts 0.65s.']})
+    deathsDelay: Object.freeze({id:'deathsDelay',name:"DEATH'S DELAY",action:'SLIDE',icon:'◷',color:'#9bdcff',
+      descriptions:['Sliding slows the world by 15% for 0.4 seconds.','Slow time by 25% for 0.5 seconds.','Slow time by 35% for 0.6 seconds.']})
   });
   const HEALTH = Object.freeze({id:'vitalEssence',name:'VITAL ESSENCE',action:'HEALTH',icon:'♥',color:'#ffc2c9',
     description:'Increase maximum HP by 1 and heal 1 HP.'});
@@ -250,7 +271,12 @@ window.GRIM_CONFIG = Object.freeze({
   });
   const HEALTH_CAP = 9;
   const ATTACK_BONUSES = Object.freeze([0,.20,.35,.50]);
-  const SHADOW_DURATIONS_MS = Object.freeze([0,300,450,650]);
+  const SLOW_TIME = Object.freeze([
+    Object.freeze({durationMs:0,multiplier:1}),
+    Object.freeze({durationMs:400,multiplier:.85}),
+    Object.freeze({durationMs:500,multiplier:.75}),
+    Object.freeze({durationMs:600,multiplier:.65})
+  ]);
   const SECOND_JUMP_VELOCITIES = Object.freeze([null,-610,-665,-720]);
   function makePowerManager(){
     const levels = Object.fromEntries(POWER_ORDER.map(id=>[id,0]));
@@ -266,7 +292,7 @@ window.GRIM_CONFIG = Object.freeze({
       },
       attackBonus(){return ATTACK_BONUSES[levels.soulCleave];},
       secondJumpVelocity(){return SECOND_JUMP_VELOCITIES[levels.ravenWings];},
-      shadowMs(){return SHADOW_DURATIONS_MS[levels.shadowForm];},
+      slowEffect(){return SLOW_TIME[levels.deathsDelay];},
       summary(){return POWER_ORDER.filter(id=>levels[id]>0).map(id=>({id,name:POWERS[id].name,level:levels[id]}));},
       apply(id,player,addCoins){
         if(Object.hasOwn(levels,id)){
@@ -381,14 +407,26 @@ window.GRIM_CONFIG = Object.freeze({
       for (const id of ['attack-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
+      show('countdown-overlay', mode === 'countdown');
       show('menu', mode === 'menu');
       show('game-over', mode === 'dead');
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
       show('controls', mode === 'playing');
-      show('hud', mode === 'playing' || mode === 'paused' || mode === 'upgrade');
+      show('hud', mode === 'playing' || mode === 'paused' || mode === 'upgrade' || mode === 'countdown');
       this.releaseAll();
     }
+    updateCountdown(seconds) {
+      el('countdown-number').textContent = String(Math.max(1, Math.ceil(seconds)));
+      el('countdown-caption').textContent = 'GET READY';
+    }
+    showGo() {
+      show('countdown-overlay', true);
+      el('countdown-number').textContent = 'RUN!';
+      el('countdown-caption').textContent = '';
+    }
+    hideCountdown() { show('countdown-overlay', false); }
+    showTimeSlow(on) { show('time-status', on); }
     offerRewards(offers,meters) {
       this.selecting = false;
       el('reward-distance').textContent = Math.floor(meters).toLocaleString();
@@ -468,9 +506,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.actor = this.add.graphics().setDepth(10);
       this.foreground = this.add.graphics().setScrollFactor(0).setDepth(20);
       this.state = 'menu';
+      this.countdownMs = 0;
+      this.goFlashMs = 0;
       this.elapsed = 0;
       this.frame = 0;
-      this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, shadowMs:0,jumpsUsed:0,
+      this.player = { x: 200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false,jumpsUsed:0,
         attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0 };
       this.obstacles = [];
       this.souls = [];
@@ -516,13 +556,15 @@ window.GRIM_CONFIG = Object.freeze({
     }
     get feetY() { return this.groundY + this.player.offsetY; }
     get onGround() { return this.player.offsetY >= -0.01 && this.player.velocityY >= 0; }
+    get lowProfile() { return this.player.sliding || (!this.onGround && this.player.holdSlide); }
     startRun() {
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
       this.rng = Core.makeRng(this.seed);
       this.state = 'playing';
-      this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, shadowMs:0, jumpsUsed:0,
+      this.countdownMs = 0; this.goFlashMs = 0;
+      this.player = {x:200, offsetY:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0};
       this.startX = this.player.x;
       this.speed = C.initialSpeed;
@@ -546,13 +588,26 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.setMode('playing');
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, 0, 0, []);
     }
-    goToMenu() { this.state = 'menu'; this.pendingOffers=[]; this.player.sliding=false; this.player.holdSlide=false; this.player.jumpHeld=false; this.ui.setMode('menu'); }
-    togglePause() {
-      if (this.state === 'playing') { this.state = 'paused'; this.player.holdSlide=false; this.player.jumpHeld=false; this.ui.setMode('paused'); }
-      else if (this.state === 'paused') this.resume();
+    goToMenu() {
+      this.state = 'menu'; this.pendingOffers=[];
+      this.countdownMs=0;this.goFlashMs=0;
+      this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;
+      this.ui.showTimeSlow(false);this.ui.setMode('menu');
     }
-    autoPause() { if (this.state === 'playing') this.togglePause(); }
-    resume() { if (this.state === 'paused') { this.state='playing'; this.ui.setMode('playing'); } }
+    togglePause() {
+      if(this.state==='playing' || this.state==='countdown'){
+        this.state='paused';this.countdownMs=0;this.goFlashMs=0;
+        this.player.holdSlide=false;this.player.jumpHeld=false;this.player.sliding=false;this.player.slideConsumed=false;
+        this.ui.showTimeSlow(false);this.ui.setMode('paused');
+      } else if(this.state==='paused') this.resume();
+    }
+    autoPause() { if(this.state==='playing' || this.state==='countdown') this.togglePause(); }
+    beginCountdown(){
+      this.state='countdown'; this.countdownMs=C.resumeCountdownMs;this.goFlashMs=0;
+      this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;
+      this.ui.setMode('countdown');this.ui.updateCountdown(this.countdownMs/1000);
+    }
+    resume() { if(this.state==='paused') this.beginCountdown(); }
     jump() {
       if (this.state !== 'playing') return;
       const p=this.player;
@@ -561,8 +616,9 @@ window.GRIM_CONFIG = Object.freeze({
       if (grounded) {
         p.jumpsUsed=1;
         p.sliding=false;
-        p.holdSlide=false;
-        p.shadowMs=0;
+        // Holding SLIDE through the jump creates a low-profile aerial tuck.
+        // Preserve holdSlide until the player actually releases the button.
+        p.slideConsumed=false;
         p.offsetY=-1;
         p.velocityY=C.jumpVelocity;
         this.puff(p.x,this.groundY-6,0x9bb7bf,5);
@@ -582,20 +638,33 @@ window.GRIM_CONFIG = Object.freeze({
     }
     attack() {
       const p = this.player;
-      if (this.state!=='playing' || p.attackCooldownMs > 0 || p.sliding) return;
+      if (this.state!=='playing' || p.attackCooldownMs > 0) return;
       p.attackMs = C.attackDurationMs;
       p.attackCooldownMs = C.attackCooldownMs;
       // Damage is applied only during the visible scythe swing, in update().
     }
+    activateSlowTime(){
+      const p=this.player, power=this.powerManager.slowEffect();
+      if(power.durationMs>0 && p.slowCooldownMs<=0){
+        p.slowMs=power.durationMs; p.slowCooldownMs=C.slowCooldownMs;
+        this.puff(p.x,this.feetY-24,0x8bdcf4,8);
+      }
+    }
     startSlide() {
       const p=this.player;
-      if (this.state !== 'playing' || !this.onGround || p.sliding) return;
-      p.sliding=true;p.holdSlide=true;p.slideMs=0;
-      p.shadowMs=this.powerManager.shadowMs();
-      p.attackMs=0;
-      this.puff(p.x-10,this.groundY-3,0x8790ad,4);
+      if(this.state!=='playing' || p.holdSlide) return;
+      p.holdSlide=true;
+      if(!p.slideConsumed){
+        p.slideConsumed=true;
+        if(this.onGround){p.sliding=true;p.slideMs=0;this.puff(p.x-10,this.groundY-3,0x8790ad,4);}
+        // The same button is also an airborne tuck, not a second jump.
+        this.activateSlowTime();
+      }
     }
-    endSlide() { this.player.holdSlide=false; }
+    endSlide() {
+      this.player.holdSlide=false;this.player.slideConsumed=false;
+      // Finish the minimum slide duration on the ground to prevent flicker.
+    }
     triggerUpgrade(){
       if(this.state!=='playing' || this.pendingOffers.length) return;
       const distanceMark=this.nextUpgradeDistance;
@@ -611,15 +680,25 @@ window.GRIM_CONFIG = Object.freeze({
       const applied=this.powerManager.apply(id,this.player,coins=>{this.coinCount+=coins;});
       if(!applied)return;
       this.pendingOffers=[];
-      this.state='playing';
-      this.ui.setMode('playing');
+      this.clearUpgradeCorridor();
+      this.beginCountdown();
       this.puff(this.player.x,this.feetY-45,id==='vitalEssence'?0xffb5c3:0x9dece7,14);
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
+    clearUpgradeCorridor(){
+      // Protect an already-generated slice near the milestone, not just future spawns.
+      const endX=this.startX+(this.nextUpgradeDistance-C.upgradeEveryMeters + C.upgradeSafetyAfterMeters)*C.pxPerMeter;
+      const beginX=this.player.x-C.upgradeSafetyBeforePx-70;
+      this.obstacles=this.obstacles.filter(ob=>ob.x> endX || ob.x+ob.width<beginX);
+      for(const tip of this.tips){
+        if(tip.atX+80>=beginX && tip.atX<=endX)tip.label.destroy();
+      }
+      this.tips=this.tips.filter(t=>t.atX+80<beginX || t.atX>endX);
+    }
     cutNearby() {
       const bonus=126*this.powerManager.attackBonus();
-      const box=Core.attackBox(this.player.x,this.feetY,bonus);
+      const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
       for (const ob of this.obstacles) {
         if (ob.type !== 'bramble' || ob.destroyed || !Core.overlaps(box, ob)) continue;
         ob.destroyed=true;
@@ -659,7 +738,8 @@ window.GRIM_CONFIG = Object.freeze({
       const ahead=this.player.x+Math.max(950,this.width*1.26);
       while (this.nextEncounterX < ahead) {
         const type=Core.chooseEncounter(this.rng,this.distance);
-        if(Core.isMilestoneSafe(this.nextEncounterX,this.startX,C.soulEveryMeters,C.pxPerMeter,245)) {
+        if(Core.isMilestoneSafe(this.nextEncounterX,this.startX,C.soulEveryMeters,C.pxPerMeter,245) &&
+          Core.isUpgradeSafe(this.nextEncounterX,this.startX,C.upgradeEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters)) {
           this.placeEncounter(type,this.nextEncounterX);
         }
         this.nextEncounterX += Core.encounterGap(this.speed,this.rng);
@@ -671,17 +751,33 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     update(_,deltaMs) {
-      if (this.state === 'playing') {
+      if(this.state==='countdown'){
+        // World, obstacles, player and ability timers remain completely frozen.
+        this.countdownMs=Math.max(0,this.countdownMs-Math.min(250,Math.max(0,deltaMs)));
+        if(this.countdownMs>0)this.ui.updateCountdown(this.countdownMs/1000);
+        else {
+          this.state='playing';this.goFlashMs=370;
+          this.ui.setMode('playing');this.ui.showGo();
+        }
+      }
+      else if (this.state === 'playing') {
         // Cap large frame steps after browser interruptions to avoid tunneling through hazards.
         const frameMs = clamp(deltaMs,0,34);
         const dt = frameMs/1000;
         const p=this.player;
         this.elapsed += dt;
-        p.x += this.speed*dt;
+        const worldFactor=p.slowMs>0?this.powerManager.slowEffect().multiplier:1;
+        p.x += this.speed*dt*worldFactor;
+        p.slowMs=Math.max(0,p.slowMs-frameMs);
+        p.slowCooldownMs=Math.max(0,p.slowCooldownMs-frameMs);
+        this.ui.showTimeSlow(p.slowMs>0);
+        if(this.goFlashMs>0){
+          this.goFlashMs=Math.max(0,this.goFlashMs-frameMs);
+          if(this.goFlashMs===0)this.ui.hideCountdown();
+        }
         this.distance = (p.x-this.startX)/C.pxPerMeter;
         this.speed = Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
         p.invulMs = Math.max(0,p.invulMs-frameMs);
-        p.shadowMs=Math.max(0,p.shadowMs-frameMs);
         p.attackMs = Math.max(0,p.attackMs-frameMs);
         p.attackCooldownMs = Math.max(0,p.attackCooldownMs-frameMs);
         if (!this.onGround) {
@@ -691,11 +787,15 @@ window.GRIM_CONFIG = Object.freeze({
         if (!this.onGround || p.velocityY < 0) {
           p.offsetY += p.velocityY*dt;
           p.velocityY += C.gravity*dt;
-          if (p.offsetY >= 0) {p.offsetY=0;p.velocityY=0;p.jumpHeld=false;p.jumpsUsed=0;this.puff(p.x,this.groundY,0x9badb7,3);}
+          if (p.offsetY >= 0) {
+            p.offsetY=0;p.velocityY=0;p.jumpHeld=false;p.jumpsUsed=0;
+            if(p.holdSlide){p.sliding=true;p.slideMs=0;p.slideConsumed=true;}
+            this.puff(p.x,this.groundY,0x9badb7,3);
+          }
         }
         if (p.sliding) {
           p.slideMs += frameMs;
-          if (p.slideMs >= C.slideMaxMs || (!p.holdSlide && p.slideMs >= C.slideMinMs)) {p.sliding=false;p.shadowMs=0;}
+          if (p.slideMs >= C.slideMaxMs || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
         }
         this.spawnAhead();
         if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
@@ -723,9 +823,9 @@ window.GRIM_CONFIG = Object.freeze({
     }
     checkCollectibles() {
       const p=this.player;
-      const centerY=this.feetY-(p.sliding?16:43);
+      const centerY=this.feetY-(this.lowProfile?16:43);
       for (const coin of this.coins) {
-        if (coin.taken || (coin.kind==='low' && !p.sliding)) continue;
+        if (coin.taken || (coin.kind==='low' && !this.lowProfile)) continue;
         const y=this.groundY+coin.offset;
         if(Math.abs(p.x-coin.x)<34 && Math.abs(centerY-y)<41) {
           coin.taken=true;this.coinCount++;
@@ -743,8 +843,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     checkHazards() {
       const p=this.player;
-      if (p.invulMs > 0 || (p.sliding && p.shadowMs>0)) return;
-      const box=Core.collisionBox(p.x,this.feetY,p.sliding);
+      if (p.invulMs > 0) return;
+      const box=Core.collisionBox(p.x,this.feetY,this.lowProfile);
       for (const ob of this.obstacles) {
         if (ob.destroyed || ob.dealtDamage || !Core.overlaps(box,ob)) continue;
         ob.dealtDamage=true;
@@ -756,7 +856,8 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     die() {
-      this.state='dead';
+      this.state='dead';this.countdownMs=0;this.goFlashMs=0;
+      this.ui.hideCountdown();this.ui.showTimeSlow(false);
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.coinCount,C.coinScore);
       let best=false;
       try {
@@ -1019,7 +1120,7 @@ window.GRIM_CONFIG = Object.freeze({
       const robe=0x21283d,shadow=0x111626,trim=0x4f5a68;
       g.fillStyle(0x00000b,.28);g.fillEllipse(x,this.groundY+3,p.sliding?82:57,11);
       if(p.invulMs>0 && Math.floor(this.frame/5)%2===0) g.setAlpha(.42);
-      if(p.sliding){
+      if(this.lowProfile){
         // Low forward crouch: actual sprite fits within the 29px slide collision gap.
         const dust=Math.sin(this.elapsed*38)*3;
         g.fillStyle(0x1b2435);g.fillEllipse(x-10,feet-11,65,23);
@@ -1034,10 +1135,22 @@ window.GRIM_CONFIG = Object.freeze({
         g.lineStyle(3,0xe7efde);g.lineBetween(x+56,feet-14,x+72,feet-28);
         g.lineBetween(x+72,feet-28,x+67,feet-8);
         g.fillStyle(0x7da6a4,.3);g.fillEllipse(x-43+dust,feet-3,23,5);
-        if(p.shadowMs>0){
-          g.lineStyle(3,0xa8e9ff,.75);g.strokeEllipse(x-8,feet-15,99,34);
-          g.fillStyle(0x8de7ff,.14);g.fillEllipse(x-18,feet-18,85,37);
-          g.fillStyle(0xbbf7ff,.42);g.fillCircle(x-39,feet-24,3);
+        if(p.attackMs>0){
+          // Low sweeping slash remains active while sliding or tucking in the air.
+          const progress=1-p.attackMs/C.attackDurationMs;
+          const reach=86*(1+this.powerManager.attackBonus());
+          const a=-1.15+progress*1.5;
+          const tipX=x+25+Math.cos(a)*reach;
+          const tipY=feet-16+Math.sin(a)*28;
+          g.lineStyle(6,0x9b8069);g.lineBetween(x+8,feet-20,tipX,tipY);
+          g.lineStyle(5,0xd9efea);g.lineBetween(tipX,tipY,tipX+22,tipY-24);
+          if(Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)){
+            g.lineStyle(4,0x9ffaf1,.75);g.beginPath();g.arc(x+20,feet-18,reach,5.25,6.2);g.strokePath();
+          }
+        }
+        if(p.slowMs>0){
+          g.lineStyle(2,0xa8e9ff,.7);g.strokeEllipse(x-8,feet-17,101,39);
+          g.fillStyle(0x8de7ff,.1);g.fillEllipse(x-18,feet-18,85,35);
         }
       }else{
         const jump=!this.onGround;
@@ -1127,6 +1240,9 @@ window.GRIM_CONFIG = Object.freeze({
       // Edge fog gives atmosphere without obscuring central hazards.
       g.fillStyle(0x6f9e9c,.025);g.fillRect(0,this.groundY-20,this.width,55);
       g.fillStyle(0x030716,.22);g.fillRect(0,this.height-9,this.width,9);
+      if(this.state==='playing' && this.player.slowMs>0){
+        g.fillStyle(0x75dfff,.055);g.fillRect(0,0,this.width,this.height);
+      }
       if(this.state==='playing' && this.player.invulMs>0) {
         g.fillStyle(0xff5252,.045);g.fillRect(0,0,this.width,this.height);
       }
