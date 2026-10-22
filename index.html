@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.5.1</title>
+  <title>GRIM RUN — v0.6.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -99,7 +99,7 @@ button {cursor:pointer;}
 .reward-wrap.devil .reward-subtitle{color:#ffb39b}
 .vendor-empty{grid-column:1/-1;color:#f5d9c9;text-align:center;padding:clamp(7px,2vh,18px)}
 @media(max-height:325px){.vendor-actions button{min-height:30px;padding:4px 10px}.reward-modal h2{font-size:clamp(16px,4vh,25px)}}
-/* v0.5.1 playtest switch and independently rolled upgrade rarities. */
+/* v0.6.0 — expanded power trees, segmented hover, obstacle combos and damage feedback. */
 .god-mode-setting{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 19px;border:1px solid #a4d6c877;border-radius:12px;background:#192f3fe5;color:#f1f8e4;font-size:clamp(12px,2.8vh,17px);font-weight:900;letter-spacing:.04em;cursor:pointer;touch-action:manipulation}
 .god-mode-setting input{width:20px;height:20px;accent-color:#8cebe7;cursor:pointer}
 .god-mode-desc{font-size:clamp(9px,1.7vh,11px);margin:4px auto 8px}
@@ -132,9 +132,9 @@ button {cursor:pointer;}
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1>GRIM <em>RUN</em></h1>
-      <p>Climb beyond the forest into mountains and stars. Claim an optional Soul at 4,850m, pass through the portal at 5,000m, and reach the final gate at 9,999m.</p>
+      <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
-      <div class="mini">v0.5.1 · MOVEMENT, RARITY & BIOMES</div>
+      <div class="mini">v0.6.0 · POWERS & PERIL</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -177,7 +177,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.5.1',
+  version: '0.6.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -212,8 +212,9 @@ window.GRIM_CONFIG = Object.freeze({
   vendorEveryMeters: 666,
   finishMeters: 9999,
   soulAtMeters: 4856,
+  finalSoulMeters: 9500,
   goldPerInterval: 7,
-  skeletalHoverMs: [0,1000,1500,2000],
+  skeletalHoverMs: [0,700,1050,1400,1750],
   hoverPressDelayMs: 150,
   devilHealPrice: 8
 });
@@ -356,74 +357,80 @@ window.GRIM_CONFIG = Object.freeze({
 
 </script>
   <script>
-// Grim Run v0.4 — engine-agnostic temporary power/reward rules.
-// No browser, Phaser, UI, or persistence dependencies. Reset for every run.
+// Grim Run v0.6.0 — data-driven Angel/Devil powers and rarity tiers.
 (function(scope){
   'use strict';
-  const POWER_ORDER = ['soulCleave', 'ravenWings', 'deathsDelay'];
-  const DEVIL_POWER = Object.freeze({id:'skeletalWings',name:'SKELETAL WINGS',action:'HOVER',icon:'☠',color:'#ffb08e',
-    descriptions:['Hold a midair JUMP to hover at your chosen height for 1 second.','Hover for 1.5 seconds.','Hover for 2 seconds.']});
-  const POWERS = Object.freeze({
-    soulCleave: Object.freeze({id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',
-      descriptions:['Scythe reaches 20% farther.','Scythe reaches 35% farther.','Scythe reaches 50% farther.']}),
-    ravenWings: Object.freeze({id:'ravenWings',name:'RAVEN WINGS',action:'JUMP',icon:'✦',color:'#c5b5ff',
-      descriptions:['Unlock a second jump in midair.','Your second jump gains more height.','A still stronger second jump.']}),
-    deathsDelay: Object.freeze({id:'deathsDelay',name:"DEATH'S DELAY",action:'SLIDE',icon:'◷',color:'#9bdcff',
-      descriptions:['Sliding slows time by 25% for 0.8 seconds.','Slow time by 35% for 1.05 seconds.','Slow time by 45% for 1.3 seconds.']})
+  const MAX_LEVEL=4,HEALTH_CAP=9;
+  const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones'];
+  const DEVIL_ORDER=['skeletalWings','fireproofBoots','lavaWaders'];
+  const POWERS=Object.freeze({
+    soulCleave:{id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',descriptions:[
+      'Scythe reaches 20% farther.','Scythe reaches 35% farther.','Scythe reaches 50% farther.','Scythe reaches 65% farther.']},
+    ravenWings:{id:'ravenWings',name:'RAVEN WINGS',action:'JUMP',icon:'✦',color:'#c5b5ff',descriptions:[
+      'Unlock one extra midair jump.','Your aerial jump gains more height.','A still stronger aerial jump.','Maximum aerial jump height.']},
+    deathsDelay:{id:'deathsDelay',name:"DEATH'S DELAY",action:'SLIDE',icon:'◷',color:'#9bdcff',descriptions:[
+      'Slide slows time by 25% for 0.8s.','Slow time 35% for 1.05s.','Slow time 45% for 1.3s.','Slow time 55% for 1.55s.']},
+    brittleBones:{id:'brittleBones',name:'BRITTLE BONES',action:'DAMAGE',icon:'☠',color:'#e7efff',descriptions:[
+      'When hurt, bone shards clear hazards and fill gaps for 150m.',
+      'When hurt, clear and bridge the next 175m.',
+      'When hurt, clear and bridge the next 200m.',
+      'When hurt, clear and bridge the next 225m.']},
+    skeletalWings:{id:'skeletalWings',name:'SKELETAL WINGS',action:'HOVER',icon:'☠',color:'#ffb08e',descriptions:[
+      'Share 0.70s of hover over an entire flight.','Share 1.05s of hover per flight.',
+      'Share 1.40s of hover per flight.','Share 1.75s of hover per flight.']},
+    fireproofBoots:{id:'fireproofBoots',name:'FIREPROOF BOOTS',action:'FIRE',icon:'♨',color:'#ffb65f',descriptions:[
+      'Negate one fire hit, then recharge for 10 seconds.',
+      'Negate one fire hit; 8-second cooldown.','Negate one fire hit; 6-second cooldown.',
+      'Negate one fire hit; 4-second cooldown.']},
+    lavaWaders:{id:'lavaWaders',name:'LAVA WADERS',action:'LAVA',icon:'♜',color:'#ffa6a0',description:'Lava falls deal 1 HP instead of 2. Permanent passive; no levels.'}
   });
-  const HEALTH = Object.freeze({id:'vitalEssence',name:'VITAL ESSENCE',action:'HEALTH',icon:'♥',color:'#ffc2c9',
-    description:'Increase maximum HP by 1 and heal 1 HP.'});
-  // Repeatable fallback options only appear when fewer than 3 normal cards remain.
-  // This keeps choices distinct even after all three powers reach level 3.
-  const FALLBACKS = Object.freeze({
-    soulMend: Object.freeze({id:'soulMend',name:'SOUL MEND',action:'HEALTH',icon:'✚',color:'#e0c9ff',
-      description:'Restore up to 2 HP.'})
-  });
-  const HEALTH_CAP = 9;
-  const ATTACK_BONUSES = Object.freeze([0,.20,.35,.50]);
-  const SLOW_TIME = Object.freeze([
-    Object.freeze({durationMs:0,multiplier:1}),
-    Object.freeze({durationMs:800,multiplier:.75}),
-    Object.freeze({durationMs:1050,multiplier:.65}),
-    Object.freeze({durationMs:1300,multiplier:.55})
-  ]);
-  const SECOND_JUMP_VELOCITIES = Object.freeze([null,-610,-665,-720]);
+  const DEVIL_POWER=POWERS.skeletalWings;
+  const HEALTH=Object.freeze({id:'vitalEssence',name:'VITAL ESSENCE',action:'HEALTH',icon:'♥',color:'#ffc2c9',description:'Increase maximum HP by 1 and heal 1 HP.'});
+  const FALLBACKS=Object.freeze({soulMend:{id:'soulMend',name:'SOUL MEND',action:'HEALTH',icon:'✚',color:'#e0c9ff',description:'Restore up to 2 HP.'}});
+  const ATTACK_BONUSES=[0,.20,.35,.50,.65];
+  const SLOW_TIME=[{durationMs:0,multiplier:1},{durationMs:800,multiplier:.75},{durationMs:1050,multiplier:.65},
+    {durationMs:1300,multiplier:.55},{durationMs:1550,multiplier:.45}];
+  const SECOND_JUMP_VELOCITIES=[null,-610,-665,-720,-775];
+  const HOVER_MS=[0,700,1050,1400,1750];
+  const FIRE_COOLDOWN_MS=[Infinity,10000,8000,6000,4000];
+  const BRITTLE_METERS=[0,150,175,200,225];
   function makePowerManager(){
-    const levels = Object.fromEntries([...POWER_ORDER,DEVIL_POWER.id].map(id=>[id,0]));
+    const levels=Object.fromEntries([...POWER_ORDER,...DEVIL_ORDER].map(id=>[id,0]));
+    const maxFor=id=>id==='lavaWaders'?1:MAX_LEVEL;
+    function offer(id){
+      const p=POWERS[id],current=levels[id],oneOff=id==='lavaWaders';
+      return {id,name:p.name,action:p.action,icon:p.icon,color:p.color,
+        description:oneOff?p.description:p.descriptions[current],levelFrom:current,levelTo:current+1,
+        type:oneOff?'passive':'power'};
+    }
     return {
-      levels,
-      level(id) { return levels[id] || 0; },
-      eligible() {
-        return POWER_ORDER.filter(id=>levels[id]<3).map(id=>{
-          const current=levels[id],p=POWERS[id];
-          return {id,name:p.name,action:p.action,icon:p.icon,color:p.color,description:p.descriptions[current],
-            levelFrom:current,levelTo:current+1,type:'power'};
-        });
-      },
-      attackBonus(){return ATTACK_BONUSES[levels.soulCleave];},
-      secondJumpVelocity(){return SECOND_JUMP_VELOCITIES[levels.ravenWings];},
-      slowEffect(){return SLOW_TIME[levels.deathsDelay];},
-      skeletalHoverMs(){return [0,1000,1500,2000][levels.skeletalWings];},
-      summary(){return [...POWER_ORDER,DEVIL_POWER.id].filter(id=>levels[id]>0)
-        .map(id=>({id,name:(POWERS[id]||DEVIL_POWER).name,level:levels[id]}));},
+      levels,level:id=>levels[id]||0,maxFor,
+      eligible:()=>POWER_ORDER.filter(id=>levels[id]<maxFor(id)).map(offer),
+      devilEligible:()=>DEVIL_ORDER.filter(id=>levels[id]<maxFor(id)).map(offer),
+      attackBonus:()=>ATTACK_BONUSES[levels.soulCleave],
+      secondJumpVelocity:()=>SECOND_JUMP_VELOCITIES[levels.ravenWings],
+      slowEffect:()=>SLOW_TIME[levels.deathsDelay],
+      skeletalHoverMs:()=>HOVER_MS[levels.skeletalWings],
+      fireCooldownMs:()=>FIRE_COOLDOWN_MS[levels.fireproofBoots],
+      brittleRangeMeters:()=>BRITTLE_METERS[levels.brittleBones],
+      lavaDamage:()=>levels.lavaWaders>0?1:2,
+      summary:()=>[...POWER_ORDER,...DEVIL_ORDER].filter(id=>levels[id]>0)
+        .map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:id==='lavaWaders'})),
       apply(id,player,addCoins,levelsGained=1){
         if(Object.hasOwn(levels,id)){
-          if(levels[id]>=3)return false;
-          levels[id]=Math.min(3,levels[id]+Math.max(1,Math.floor(levelsGained)));
+          if(levels[id]>=maxFor(id))return false;
+          levels[id]=Math.min(maxFor(id),levels[id]+Math.max(1,Math.floor(levelsGained)));
           return true;
         }
         if(id===HEALTH.id){
-          const atCap=player.maxHp>=HEALTH_CAP;
-          // Max HP remains capped at nine.
+          if(player.maxHp>=HEALTH_CAP && player.hp>=player.maxHp)return false;
           player.maxHp=Math.min(HEALTH_CAP,player.maxHp+1);
           player.hp=Math.min(player.maxHp,player.hp+1);
-          // No gold bonus: only the seven physical collectibles in each interval supply gold.
           return true;
         }
         if(id==='soulMend'){
           if(player.hp>=player.maxHp)return false;
-          player.hp=Math.min(player.maxHp,player.hp+2);
-          return true;
+          player.hp=Math.min(player.maxHp,player.hp+2);return true;
         }
         return false;
       }
@@ -434,31 +441,26 @@ window.GRIM_CONFIG = Object.freeze({
     const roll=rng.next();
     const rarity=roll<.03?'legendary':roll<.13?'rare':'common';
     const wanted=rarity==='legendary'?3:rarity==='rare'?2:1;
-    const actual=Math.min(wanted,3-offer.levelFrom);
+    const actual=Math.min(wanted,MAX_LEVEL-offer.levelFrom);
     return {...offer,rarity,levelsGained:actual,levelTo:offer.levelFrom+actual};
+  }
+  function shuffle(options,rng){
+    for(let i=options.length-1;i>0;i--){const j=Math.floor(rng.next()*(i+1));[options[i],options[j]]=[options[j],options[i]];}
+    return options;
   }
   function rewardOffers(manager,player,rng,count=3){
     const available=manager.eligible();
-    if(player.maxHp<HEALTH_CAP || player.hp<player.maxHp)available.push({id:HEALTH.id,name:HEALTH.name,action:HEALTH.action,icon:HEALTH.icon,color:HEALTH.color,
+    if(player.maxHp<HEALTH_CAP||player.hp<player.maxHp)available.push({id:HEALTH.id,name:HEALTH.name,
+      action:HEALTH.action,icon:HEALTH.icon,color:HEALTH.color,
       description:player.maxHp>=HEALTH_CAP?'Heal 1 HP.':HEALTH.description,type:'health'});
-    // Supplement near endgame instead of offering duplicate cards or max-level powers.
-    if(available.length<count){
-      if(player.hp<player.maxHp)available.push({...FALLBACKS.soulMend,type:'recovery'});
-    }
-    // Fisher-Yates partial shuffle through seeded RNG.
-    for(let i=available.length-1;i>0;i--){
-      const j=Math.floor(rng.next()*(i+1));
-      [available[i],available[j]]=[available[j],available[i]];
-    }
-    return available.slice(0,count).map(offer=>addRarity(offer,rng));
+    if(available.length<count && player.hp<player.maxHp)available.push({...FALLBACKS.soulMend,type:'recovery'});
+    return shuffle(available,rng).slice(0,count).map(x=>addRarity(x,rng));
   }
-  function devilOffers(manager,rng){
-    const current=manager.level('skeletalWings');
-    return current>=3?[]:[addRarity({id:DEVIL_POWER.id,name:DEVIL_POWER.name,action:DEVIL_POWER.action,
-      icon:DEVIL_POWER.icon,color:DEVIL_POWER.color,description:DEVIL_POWER.descriptions[current],
-      levelFrom:current,levelTo:current+1,type:'power'},rng)];
+  function devilOffers(manager,rng,count=3){
+    return shuffle(manager.devilEligible(),rng).slice(0,count).map(x=>addRarity(x,rng));
   }
-  scope.GRIM_POWERS={POWERS,HEALTH,FALLBACKS,DEVIL_POWER,POWER_ORDER,HEALTH_CAP,makePowerManager,rewardOffers,devilOffers,addRarity};
+  scope.GRIM_POWERS={POWERS,HEALTH,FALLBACKS,DEVIL_POWER,POWER_ORDER,DEVIL_ORDER,
+    HEALTH_CAP,MAX_LEVEL,makePowerManager,rewardOffers,devilOffers,addRarity};
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
@@ -527,6 +529,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(m>9980)return false;
       // Never let a sequence cross the teleporter or the finish.
       if(m<5000 && m+lengthMeters>4730)return false;
+      if(m<9690 && m+lengthMeters>9320)return false; // second Soul's uninterrupted underpass
       if(m>=5000 && m<5105)return false;
       if(m+lengthMeters>9950)return false;
       // Keep BOTH gaps and their landing platforms out of the 20m approach
@@ -541,15 +544,25 @@ window.GRIM_CONFIG = Object.freeze({
       let m=proposed;
       for(let i=0;i<400;i++,m+=5){
         if(m>=4730 && m<5105)m=5105;
+        if(m>=9320 && m<9690)m=9690;
         if(allowedAt(m,group))return m;
       }
-      return Infinity; // Near the 6,666m finish, leave safe ground.
+      return Infinity; // Near the 9,999m finish, leave safe ground.
     }
     function addHillsUntil(target,prepareTakeoff=false){
       while(cursor<target-.01){
         // Dedicated Soul approach. Descend into a flat UNDERPASS with a one-way
         // upper platform. Avoid random slope spikes through this encounter.
         const currentMeter=meters(cursor);
+        // Long, solid 3–2–1 platform approach in Hell. No procedural gaps here.
+        if(currentMeter<9380 && meters(target)>9380){
+          addHillsUntil(startX+9380*pxPerMeter,true);continue;
+        }
+        if(currentMeter>=9380 && currentMeter<9640){
+          const rampEnd=startX+9410*pxPerMeter,flatEnd=startX+9640*pxPerMeter;
+          if(cursor<rampEnd-.001){const end=Math.min(target,rampEnd);add(end,elevation+(end-cursor)*.18);continue;}
+          const end=Math.min(target,flatEnd);if(end>cursor){add(end,elevation);continue;}
+        }
         if(currentMeter<4770 && meters(target)>4770){
           const x=startX+4770*pxPerMeter;
           addHillsUntil(x,true);continue;
@@ -656,11 +669,26 @@ window.GRIM_CONFIG = Object.freeze({
       return null;
     }
     function groundAt(x){const s=findSection(x);if(!s||s.kind==='gap')return null;return lerp(s.y0,s.y1,(x-s.start)/(s.end-s.start));}
+    function fillGaps(from,to){
+      // Genuine, permanent rubble bridges. Only gaps entirely within the blast get filled.
+      // Endpoints connect to adjacent platforms; gaps elsewhere remain hazardous.
+      let count=0;
+      for(let i=0;i<segments.length;i++){
+        const s=segments[i];
+        if(s.kind!=='gap'||s.start<from-4||s.end>to+4)continue;
+        const prev=segments[i-1],next=segments[i+1];
+        s.kind='rubble';
+        s.y0=prev&&prev.kind!=='gap'?prev.y1:s.y0;
+        s.y1=next&&next.kind!=='gap'?next.y0:s.y0;
+        count++;
+      }
+      return count;
+    }
     function anchorAt(x){const y=groundAt(x);if(y!==null)return y;const s=findSection(x);return s?s.y0:elevation;}
     function groupNear(x){advance(x+1100);return sequences.find(s=>x>=s.startX-100&&x<=s.endX+320)||null;}
     function canPlace(x,width=200){
       advance(x+Math.max(650,width+20));
-      if(Math.abs(x-portalX)<1050||x>finishX-500||Math.abs(meters(x)-4850)<120)return false;
+      if(Math.abs(x-portalX)<1050||x>finishX-500||Math.abs(meters(x)-4850)<120||Math.abs(meters(x)-9500)<165)return false;
       if(sequences.some(s=>x+width>s.startX-340&&x<s.endX+310))return false;
       const a=groundAt(x),b=groundAt(x+width);
       return a!==null&&b!==null&&Math.abs(a-b)<=34;
@@ -670,7 +698,7 @@ window.GRIM_CONFIG = Object.freeze({
     // The full 9,999m world is small enough to generate once. This also
     // makes seeded terrain identical regardless of frame rate or camera calls.
     advance(finishX+1000);
-    return {segments,sequences,groundAt,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
+    return {segments,sequences,groundAt,fillGaps,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
       get firstGapX(){return startX+766*pxPerMeter;},get portalX(){return portalX;},get portalExitX(){return portalX+310;},
       get finishX(){return finishX;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
   }
@@ -787,7 +815,7 @@ window.GRIM_CONFIG = Object.freeze({
           card.type='button';card.className='reward-card rarity-'+(reward.rarity||'common');card.style.setProperty('--card-color',reward.color);
           const parts=[['reward-rarity',reward.rarity==='legendary'?`★ LEGENDARY · +${reward.levelsGained} LEVELS`:reward.rarity==='rare'?`◆ RARE · +${reward.levelsGained} LEVELS`:'COMMON'],['reward-icon',reward.icon],['reward-action',reward.action],
             ['reward-name',reward.name],['reward-desc',reward.description],
-            ['reward-level',reward.levelFrom===undefined?'ONE UPGRADE':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`],
+            ['reward-level',reward.type==='passive'?'PERMANENT PASSIVE':reward.levelFrom===undefined?'ONE UPGRADE':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`],
             ['reward-price',devil?`2 HP · REMAINING ${hp-2} HP`:'5 GOLD']];
           for(const [cls,value] of parts){
             const div=document.createElement('span');div.className=cls;div.textContent=value;card.appendChild(div);
@@ -802,7 +830,7 @@ window.GRIM_CONFIG = Object.freeze({
         });
         if(!offers.length){
           const empty=document.createElement('div');empty.className='vendor-empty';
-          empty.textContent=devil?'Skeletal Wings is already at maximum level.':'All available upgrades are already maxed.';
+          empty.textContent=devil?'All Devil powers already acquired.':'All available upgrades are already maxed.';
           holder.appendChild(empty);
         }
       }else{
@@ -837,7 +865,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('end-coins').textContent = String(coins); // Caller passes 'remaining / collected' string
       el('end-score').textContent = score.toLocaleString();
       el('best-label').textContent = best ? '✦ NEW PERSONAL BEST ✦' : '';
-      el('end-build').textContent = summary.length ? 'BUILD: '+summary.map(x=>`${x.name} Lv${x.level}`).join(' · ') : 'BUILD: NO POWERS';
+      el('end-build').textContent = summary.length ? 'BUILD: '+summary.map(x=>x.oneOff?x.name:`${x.name} Lv${x.level}`).join(' · ') : 'BUILD: NO POWERS';
       this.setMode('dead');
     }
   }
@@ -866,7 +894,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraX = 0;
       this.cameraY = 0;
       this.fallFeedbackMs=0;
-      this.fallCount=0;
+      this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
       this.hasTeleported=false;this.portalMs=0;
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
@@ -879,7 +907,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.elapsed = 0;
       this.frame = 0;
       this.player = { x: 200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false,airTuck:false,slideReleaseBufferMs:0,jumpsUsed:0,
-        attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0,hovering:false,hoverUsed:false,hoverRemainingMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none' };
+        attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0 };
       this.obstacles = [];
       this.souls = [];
       this.coins = [];
@@ -928,6 +956,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.player.y+=dy;
       this.cameraY+=dy;
       for(const ob of this.obstacles){
+        if(ob.type==='tuckGate'||ob.type==='airBramble'){ob.y+=dy;continue;}
         const next=Core.obstacle(ob.type,ob.x,this.terrain.anchorAt(ob.x),ob.variant,C.slideClearancePx,this.height);
         ob.y=next.y;ob.height=next.height;
       }
@@ -945,12 +974,12 @@ window.GRIM_CONFIG = Object.freeze({
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
-      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.hasTeleported=false;this.portalMs=0;
+      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;
       if(this.ui){this.ui.showFallNotice(false);this.ui.showPortal(false);}
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
-        attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverUsed:false,hoverRemainingMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none'};
+        attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
@@ -979,7 +1008,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.nextVendorNumber=1;
       this.soulPlatform=this.makeSoulPlatform();
       this.souls.push({x:this.startX+C.soulAtMeters*C.pxPerMeter,baseY:this.soulPlatform[1].y,offset:-113,kind:'optional',taken:false});
+      this.souls.push({x:this.startX+C.finalSoulMeters*C.pxPerMeter,baseY:this.soulPlatform[8].y,offset:-100,kind:'optional',taken:false});
       this.populateGold();
+      this.populateComboObstacles();
       try{this.totalSouls=Math.max(0,Number(localStorage.getItem('grim-run-v05-souls')||0));}catch(_){this.totalSouls=0;}
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
@@ -1010,11 +1041,9 @@ window.GRIM_CONFIG = Object.freeze({
     jump() {
       if(this.state!=='playing')return;
       const p=this.player;
-      // Coyote time remains a ground jump; a falling player without it may
-      // still make the one Raven Wings air jump even after walking off a ledge.
       const grounded=p.grounded||(p.coyoteMs>0&&!p.airJumpUsed&&p.jumpsUsed===0);
       const airAvailable=this.powerManager.level('ravenWings')>0&&!p.airJumpUsed;
-      const canHover=this.powerManager.skeletalHoverMs()>0&&!p.hoverUsed;
+      const canHover=p.hoverBudgetMs>0&&this.powerManager.level('skeletalWings')>0;
       if(!grounded&&!airAvailable&&!canHover)return;
       if(Core.canAirTuck(p.holdSlide,p.slideReleaseBufferMs))p.airTuck=true;
       p.slideReleaseBufferMs=0;
@@ -1022,29 +1051,28 @@ window.GRIM_CONFIG = Object.freeze({
         p.jumpsUsed=1;p.sliding=false;p.slideConsumed=false;
         p.y-=1;p.grounded=false;p.onSoulPlatform=false;p.coyoteMs=0;
         p.velocityY=C.jumpVelocity;
-        this.puff(p.x,this.feetY-6,0x9bb7bf,5);
-        p.hoverPressKind='ground'; // Initial long press hovers at the apex as before.
+        p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
+        this.puff(p.x,p.y-6,0x9bb7bf,5);
+        p.hoverPressKind='ground';
       }else if(airAvailable){
+        // Option B: first midair press jumps, then a continued hold begins hovering.
         p.airJumpUsed=true;p.jumpsUsed=Math.max(p.jumpsUsed,2);
         p.grounded=false;p.onSoulPlatform=false;p.coyoteMs=0;
         p.velocityY=this.powerManager.secondJumpVelocity();
-        this.puff(p.x-8,this.feetY-32,0xc9bbff,12);
-        p.hoverPressKind='air'; // Option B: jump NOW, hover while held afterward.
-      }else{
-        // With the air jump already used (or no Raven Wings), a new midair
-        // press engages Skeletal Wings immediately at the current altitude.
+        this.puff(p.x-8,p.y-32,0xc9bbff,12);
         p.hoverPressKind='air';
+      }else{
+        p.hoverPressKind='air';
+        p.hovering=canHover;
+        if(canHover){p.velocityY=0;this.puff(p.x-15,p.y-55,0xe1ddd3,7);}
       }
-      const hoverNow=!grounded&&!airAvailable&&canHover;
-      p.hovering=hoverNow;p.hoverRemainingMs=hoverNow?this.powerManager.skeletalHoverMs():0;
-      if(hoverNow){p.hoverUsed=true;p.velocityY=0;this.puff(p.x-15,p.y-55,0xe1ddd3,8);}
       p.jumpHeld=true;p.jumpAgeMs=0;p.hoverHoldMs=0;
     }
     jumpEnd() {
       const p=this.player;
       if(!p.jumpHeld)return;
       p.jumpHeld=false;p.hoverPressKind='none';p.hoverHoldMs=0;
-      if(p.hovering){p.hovering=false;p.hoverRemainingMs=0;p.velocityY=0;}
+      if(p.hovering){p.hovering=false;p.velocityY=0;}
       if(p.velocityY<0)p.velocityY=Core.cutJumpVelocity(p.velocityY,p.jumpAgeMs,false,C.jumpCutVelocity,C.jumpCutWindowMs);
     }
     attack() {
@@ -1083,16 +1111,21 @@ window.GRIM_CONFIG = Object.freeze({
       // An already activated aerial tuck stays latched until landing.
     }
     makeSoulPlatform(){
-      const origin=this.startX,unit=C.pxPerMeter;
-      const floor=this.terrain.groundAt(origin+4840*unit);
-      if(floor===null)throw Error('Soul underpass must remain solid');
-      // A pyramid: two tight lower ledges and one high center ledge.
-      // lower-left -> upper-center is reachable by a single ordinary jump,
-      // but the Soul above the center needs another jump from that platform.
+      const o=this.startX,u=C.pxPerMeter;
+      const floor=this.terrain.groundAt(o+4840*u);
+      const floor2=this.terrain.groundAt(o+9500*u);
+      if(floor===null||floor2===null)throw Error('Both Soul underpasses must be solid');
       return [
-        {id:0,x:origin+4814*unit,y:floor-80,width:210},
-        {id:1,x:origin+4841*unit,y:floor-157,width:188},
-        {id:2,x:origin+4870*unit,y:floor-80,width:202}
+        {id:0,x:o+4814*u,y:floor-80,width:210,biome:'surface'},
+        {id:1,x:o+4841*u,y:floor-157,width:188,biome:'surface'},
+        {id:2,x:o+4870*u,y:floor-80,width:202,biome:'surface'},
+        // Taller optional pyramid in Hell: three low, two middle, one upper.
+        {id:3,x:o+9414*u,y:floor2-78,width:230,biome:'hell'},
+        {id:4,x:o+9450*u,y:floor2-78,width:226,biome:'hell'},
+        {id:5,x:o+9482*u,y:floor2-78,width:218,biome:'hell'},
+        {id:6,x:o+9440*u,y:floor2-154,width:206,biome:'hell'},
+        {id:7,x:o+9471*u,y:floor2-155,width:216,biome:'hell'},
+        {id:8,x:o+9491*u,y:floor2-233,width:230,biome:'hell'}
       ];
     }
     populateGold(){
@@ -1126,9 +1159,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorPhase='deal';
       this.pendingOffers=this.vendorType==='angel'
         ?Powers.rewardOffers(this.powerManager,this.player,this.rng,3)
-        :Powers.devilOffers(this.powerManager,this.rng);
+        :Powers.devilOffers(this.powerManager,this.rng,3);
       const p=this.player;
-      p.jumpHeld=false;p.hovering=false;p.hoverRemainingMs=0;
+      p.jumpHeld=false;p.hovering=false;p.hoverHoldMs=0;p.hoverPressKind='none';
       p.holdSlide=false;p.slideReleaseBufferMs=0;p.airTuck=false;
       this.clearUpgradeCorridor(this.startX+number*C.vendorEveryMeters*C.pxPerMeter);
       this.state='upgrade';
@@ -1145,6 +1178,7 @@ window.GRIM_CONFIG = Object.freeze({
       if((devil&&this.player.hp<=2)||(!devil&&this.coinCount<5))return;
       const offer=this.pendingOffers.find(o=>o.id===id);
       if(!offer||!this.powerManager.apply(id,this.player,()=>{},offer.levelsGained||1))return;
+      if(id==='skeletalWings')this.player.hoverBudgetMs=this.powerManager.skeletalHoverMs();
       if(devil)this.player.hp-=price;
       else this.coinCount-=price;
       this.puff(this.player.x,this.feetY-45,devil?0xff765e:0xffd98e,14);
@@ -1189,7 +1223,7 @@ window.GRIM_CONFIG = Object.freeze({
       const bonus=126*this.powerManager.attackBonus();
       const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
       for (const ob of this.obstacles) {
-        if (ob.type !== 'bramble' || ob.destroyed || !Core.overlaps(box, ob)) continue;
+        if ((ob.type !== 'bramble'&&ob.type!=='airBramble') || ob.destroyed || !Core.overlaps(box, ob)) continue;
         ob.destroyed=true;
         // Cutting removes the obstruction; only placed gold pickups grant currency.
         this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12);
@@ -1199,7 +1233,8 @@ window.GRIM_CONFIG = Object.freeze({
     makeTip(type,ob) {
       if (this.tipped.has(type)) return;
       this.tipped.add(type);
-      const title={rock:'JUMP ↑',fire:'JUMP FIRE ↑',branch:'SLIDE ↓',bramble:'ATTACK ⚔'}[type];
+      const title={rock:'JUMP ↑',fire:'JUMP FIRE ↑',branch:'SLIDE ↓',bramble:'ATTACK ⚔',
+        tuckGate:'JUMP + TUCK',airBramble:'JUMP + ATTACK'}[type];
       if(!title) return;
       const label=this.add.text(ob.x+ob.width/2,this.terrain.anchorAt(ob.x)-145,title,{
         fontFamily:'system-ui,Arial,sans-serif',fontSize:'20px',fontStyle:'900',
@@ -1214,6 +1249,30 @@ window.GRIM_CONFIG = Object.freeze({
       const ob=Core.obstacle(type,x,surface,this.rng.integer(0,5),C.slideClearancePx,this.height);
       this.obstacles.push(ob);this.makeTip(type,ob);
     }
+    populateComboObstacles(){
+      // Place advanced patterns inside existing abyss gaps, never on ordinary flat ground.
+      // Those gaps already demand a jump; the gate additionally demands air tuck / attack.
+      const segments=this.terrain.segments;
+      let last=-100000,used=0;
+      for(const s of segments){
+        if(s.kind!=='gap')continue;
+        const m=(s.start-this.startX)/C.pxPerMeter;
+        if(m<1700||m>9200||m-last<240)continue;
+        if(m>4600&&m<5300)continue;
+        if(Math.abs(m-4850)<140||Math.abs(m-9500)<190)continue;
+        const x=s.start+Math.min(90,(s.end-s.start)*.42);
+        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
+        if(!Core.isUpgradeSafe(x+86,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
+        if(this.coins.some(c=>Math.abs(c.x-x)<80))continue;
+        const type=used%2===0?'tuckGate':'airBramble';
+        const base=s.y0;
+        const ob=type==='tuckGate'
+          ?{type,x,y:base-1600,width:80,height:1448,variant:0,dealtDamage:false,destroyed:false,baseY:base}
+          :{type,x,y:base-215,width:80,height:143,variant:0,dealtDamage:false,destroyed:false,baseY:base};
+        this.obstacles.push(ob);this.makeTip(type,ob);
+        used++;last=m;
+      }
+    }
     spawnAhead(){
       const ahead=this.player.x+Math.max(950,this.width*1.26);
       this.terrain.advance(ahead+700);
@@ -1221,11 +1280,13 @@ window.GRIM_CONFIG = Object.freeze({
         const x=this.nextEncounterX;
         const type=Core.chooseEncounter(this.rng,this.distance);
         const width=type==='branch'?74:type==='bramble'?60:type==='fire'?58:54;
-        if(this.terrain.canPlace(x,width) &&
+        if(x>this.brittleClearUntilX && this.terrain.canPlace(x,width) &&
            Core.isMilestoneSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,245) &&
            Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters) &&
            Core.isUpgradeSafe(x+width,this.startX,C.vendorEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters) &&
            Math.abs((x-this.startX)/C.pxPerMeter-4850)>120 &&
+           Math.abs((x-this.startX)/C.pxPerMeter-9500)>165 &&
+           !this.obstacles.some(o=>(o.type==='tuckGate'||o.type==='airBramble')&&Math.abs(o.x-x)<230) &&
            !this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<125)){
           this.placeEncounter(type,x);
         }
@@ -1285,6 +1346,9 @@ window.GRIM_CONFIG = Object.freeze({
         this.distance = (p.x-this.startX)/C.pxPerMeter;
         this.speed = Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
         p.invulMs = Math.max(0,p.invulMs-frameMs);
+        p.fireproofCooldownMs=Math.max(0,p.fireproofCooldownMs-frameMs);
+        this.damageFlashMs=Math.max(0,this.damageFlashMs-frameMs);
+        this.bonesBlastMs=Math.max(0,this.bonesBlastMs-frameMs);
         p.attackMs = Math.max(0,p.attackMs-frameMs);
         p.attackCooldownMs = Math.max(0,p.attackCooldownMs-frameMs);
         if(!p.grounded){
@@ -1300,25 +1364,26 @@ window.GRIM_CONFIG = Object.freeze({
           if(p.onSoulPlatform!==false){
             if(currentPlatform&&p.x>=currentPlatform.x&&p.x<=currentPlatform.x+currentPlatform.width){
               p.y=currentPlatform.y;p.velocityY=0;
-            }else{p.onSoulPlatform=false;p.grounded=false;p.coyoteMs=0;p.velocityY=0;}
+            }else{p.onSoulPlatform=false;p.grounded=false;p.coyoteMs=0;p.velocityY=0;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();}
           }else if(localGround===null){
-            p.grounded=false;p.coyoteMs=C.coyoteMs;p.velocityY=0;
+            p.grounded=false;p.coyoteMs=C.coyoteMs;p.velocityY=0;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
           }else{p.y=localGround;p.velocityY=0;}
         }
         if(!p.grounded){
           const priorY=p.y;
           if(p.hovering){
-            p.hoverRemainingMs=Math.max(0,p.hoverRemainingMs-frameMs);
-            if(!p.jumpHeld||p.hoverRemainingMs<=0){p.hovering=false;p.velocityY=0;}
+            const spent=Math.min(frameMs,p.hoverBudgetMs);
+            p.hoverBudgetMs=Math.max(0,p.hoverBudgetMs-spent);
+            if(!p.jumpHeld||p.hoverBudgetMs<=0){p.hovering=false;p.velocityY=0;}
           }
           if(!p.hovering){
             const nextVy=p.velocityY+C.gravity*dt;
-            const airHover=p.jumpHeld&&!p.hoverUsed&&this.powerManager.skeletalHoverMs()>0 &&
+            const airHover=p.jumpHeld&&p.hoverBudgetMs>0&&this.powerManager.skeletalHoverMs()>0 &&
               p.hoverPressKind==='air'&&p.hoverHoldMs>=C.hoverPressDelayMs;
-            const apexHover=p.jumpHeld&&!p.hoverUsed&&this.powerManager.skeletalHoverMs()>0 &&
+            const apexHover=p.jumpHeld&&p.hoverBudgetMs>0&&this.powerManager.skeletalHoverMs()>0 &&
               p.hoverPressKind==='ground'&&p.velocityY<0&&nextVy>=0;
             if(airHover||apexHover){
-              p.hovering=true;p.hoverUsed=true;p.hoverRemainingMs=this.powerManager.skeletalHoverMs();
+              p.hovering=true;
               p.velocityY=0;this.puff(p.x-15,p.y-55,0xe1ddd3,8);
             }else{p.y+=p.velocityY*dt;p.velocityY=nextVy;}
           }
@@ -1338,7 +1403,7 @@ window.GRIM_CONFIG = Object.freeze({
           }
           if(p.grounded){
             p.jumpHeld=false;p.jumpAgeMs=0;p.jumpsUsed=0;p.airJumpUsed=false;p.airTuck=false;
-            p.hovering=false;p.hoverUsed=false;p.hoverRemainingMs=0;p.hoverHoldMs=0;p.hoverPressKind='none';
+            p.hovering=false;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
             if(p.holdSlide){p.sliding=true;p.slideMs=0;p.slideConsumed=true;}
             this.puff(p.x,p.y,0x9badb7,3);
           }
@@ -1421,17 +1486,57 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
     }
+    impactFeedback(){
+      this.damageFlashMs=420;
+      this.puff(this.player.x,this.feetY-40,0xff6776,9);
+    }
+    triggerBrittleBones(){
+      const range=this.powerManager.brittleRangeMeters();
+      if(!range)return;
+      const from=this.player.x,to=from+range*C.pxPerMeter;
+      this.brittleClearUntilX=Math.max(this.brittleClearUntilX,to);
+      this.terrain.fillGaps(from-12,to);
+      for(const tip of this.tips){if(tip.atX>=from&&tip.atX<=to)tip.label.destroy();}
+      this.tips=this.tips.filter(tip=>tip.atX<from||tip.atX>to);
+      let knocked=0;
+      for(const ob of this.obstacles){
+        if(ob.destroyed||ob.x+ob.width<from||ob.x>to)continue;
+        if(ob.type==='rock')knocked++;
+        ob.destroyed=true;
+        this.puff(ob.x+ob.width*.5,ob.y+Math.min(40,ob.height*.5),0xcad8e7,7);
+      }
+      // Bone shards sweep across the new rubble bridges in the blast corridor.
+      for(let k=0;k<Math.min(40,14+knocked*4);k++){
+        const x=from+this.rng.next()*Math.min(500,to-from),y=this.terrain.anchorAt(x)-20-this.rng.next()*60;
+        this.puff(x,y,0xe0e8ed,2);
+      }
+      this.bonesBlastMs=850;
+    }
+    takeDamage(amount,kind){
+      // Called only on a new hazard hit / fall, not for purchase costs.
+      this.impactFeedback();
+      if(this.godMode)return false;
+      this.player.hp=Math.max(0,this.player.hp-amount);
+      this.triggerBrittleBones();
+      if(this.player.hp<=0)this.die();
+      return true;
+    }
     checkHazards() {
       const p=this.player;
-      if (p.invulMs > 0) return;
+      if(p.invulMs>0&&!this.godMode)return;
       const box=Core.collisionBox(p.x,this.feetY,this.lowProfile);
-      for (const ob of this.obstacles) {
-        if (ob.destroyed || ob.dealtDamage || !Core.overlaps(box,ob)) continue;
+      for(const ob of this.obstacles){
+        if(ob.destroyed||ob.dealtDamage||!Core.overlaps(box,ob))continue;
         ob.dealtDamage=true;
-        if(!this.godMode)p.hp--;
-        p.invulMs=C.damageInvulnerabilityMs;
-        this.puff(p.x,this.feetY-38,0xff9da8,15);
-        if (p.hp <= 0) this.die();
+        if(ob.type==='fire' && this.powerManager.level('fireproofBoots')>0 && p.fireproofCooldownMs<=0){
+          p.fireproofCooldownMs=this.powerManager.fireCooldownMs();
+          p.invulMs=Math.max(p.invulMs,420);
+          this.puff(p.x,p.y-24,0xffcd7c,16);
+          if(this.godMode)this.impactFeedback();
+        }else{
+          p.invulMs=C.damageInvulnerabilityMs;
+          this.takeDamage(1,ob.type);
+        }
         break;
       }
     }
@@ -1440,12 +1545,15 @@ window.GRIM_CONFIG = Object.freeze({
       const group=this.terrain.groupNear(p.x) || [...this.terrain.sequences].reverse().find(s=>s.startX<p.x);
       if(!group){p.y=this.terrain.anchorAt(p.x);p.grounded=true;return;}
       const hell=this.distance>=8000;
-      if(!this.godMode)p.hp-=hell?2:1;this.fallCount++;
-      document.getElementById('fall-notice').textContent=this.godMode?'GOD MODE · FALL RECOVERED':hell?'LAVA · −2 HP':'ABYSS · −1 HP';
+      const damage=hell?this.powerManager.lavaDamage():1;
+      this.fallCount++;
+      document.getElementById('fall-notice').textContent=this.godMode?'GOD MODE · FALL RECOVERED':
+        hell?`LAVA · −${damage} HP`:'ABYSS · −1 HP';
       p.x=group.respawnX;
+      this.takeDamage(damage,hell?'lava':'abyss');
       this.terrain.advance(p.x+800);
       p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
-      p.grounded=true;p.onSoulPlatform=false;p.coyoteMs=0;p.velocityY=0;p.jumpsUsed=0;p.airJumpUsed=false;p.hovering=false;p.hoverUsed=false;p.hoverRemainingMs=0;p.hoverHoldMs=0;p.hoverPressKind='none';
+      p.grounded=true;p.onSoulPlatform=false;p.coyoteMs=0;p.velocityY=0;p.jumpsUsed=0;p.airJumpUsed=false;p.hovering=false;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
       p.jumpHeld=false;p.holdSlide=false;p.sliding=false;p.airTuck=false;p.slideReleaseBufferMs=0;
       p.attackMs=0;p.invulMs=C.abyssRespawnInvulnerabilityMs;
       this.obstacles=this.obstacles.filter(ob=>ob.x<p.x-160||ob.x>p.x+260);
@@ -1454,7 +1562,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=p.y-this.groundY;
       this.fallFeedbackMs=1550;this.ui.showFallNotice(true);
       this.puff(p.x,p.y-40,0xe57b9a,20);
-      if(p.hp<=0)this.die();
+      // takeDamage() already handled lethal damage and Brittle Bones.
     }
     enterUnderworld(){
       const p=this.player;
@@ -1465,7 +1573,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrain.advance(p.x+1400);
       p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
       p.grounded=true;p.velocityY=0;p.coyoteMs=0;p.jumpsUsed=0;p.airJumpUsed=false;
-      p.sliding=false;p.holdSlide=false;p.airTuck=false;p.jumpHeld=false;p.hovering=false;p.hoverUsed=false;p.hoverRemainingMs=0;
+      p.sliding=false;p.holdSlide=false;p.airTuck=false;p.jumpHeld=false;p.hovering=false;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
       p.slideReleaseBufferMs=0;p.attackMs=0;p.invulMs=Math.max(1200,p.invulMs);
       this.cameraX=p.x-this.width*C.reaperXRatio;
       this.cameraY=p.y-this.groundY;
@@ -1481,7 +1589,7 @@ window.GRIM_CONFIG = Object.freeze({
       const p=this.player;
       p.x=this.terrain.finishX;
       this.distance=C.finishMeters;
-      this.collectSoul(); // Victory awards exactly one additional Soul.
+      // The second Soul is collectible at 9,500m, never automatically awarded on victory.
       p.y=this.terrain.anchorAt(p.x);
       p.velocityY=0;p.grounded=true;
       this.state='won';
@@ -1746,6 +1854,10 @@ window.GRIM_CONFIG = Object.freeze({
         const underside=section.kind==='platform'?Math.max(h0,h1)+68:depth;
         g.fillStyle(body);
         g.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
+        if(section.kind==='rubble'){
+          g.fillStyle(0x77716b,.8);
+          for(let x=from+7;x<to-9;x+=24)g.fillTriangle(x,h0+3,x+12,h0-8-(x%5),x+22,h0+3);
+        }
         if(section.kind==='platform'){
           g.lineStyle(3,detail,.6);g.lineBetween(from+5,underside-3,to-5,underside-3);
         }
@@ -1774,8 +1886,8 @@ window.GRIM_CONFIG = Object.freeze({
       // Lightweight one-way ledges; only top surfaces catch a falling player.
       for(const plat of this.soulPlatform||[]){
         if(plat.x+plat.width<left||plat.x>right)continue;
-        g.fillStyle(0x213840,.93);g.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
-        g.lineStyle(5,0xb4ddca,.99);g.lineBetween(plat.x,plat.y,plat.x+plat.width,plat.y);
+        g.fillStyle(plat.biome==='hell'?0x4a2727:0x213840,.93);g.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
+        g.lineStyle(5,plat.biome==='hell'?0xf4a16b:0xb4ddca,.99);g.lineBetween(plat.x,plat.y,plat.x+plat.width,plat.y);
         g.lineStyle(2,0x6ca99d,.7);
         for(let x=plat.x+20;x<plat.x+plat.width-8;x+=37)g.lineBetween(x,plat.y+6,x+12,plat.y+10);
       }
@@ -1829,6 +1941,25 @@ window.GRIM_CONFIG = Object.freeze({
           g.fillStyle(k%2?0xffa133:0xf54b18,.9);
           g.fillTriangle(bx-7,ground,bx+7,ground,bx+swirl,ground-24-(k%2)*13);
           g.fillStyle(0xffe36a,.72);g.fillTriangle(bx-3,ground,bx+3,ground,bx+swirl*.5,ground-13);
+        }
+        return;
+      }
+      if(o.type==='tuckGate'){
+        // Hanging gate over an abyss: land jump plus tuck needed to fit underneath.
+        const bottom=o.y+o.height;
+        g.fillStyle(0x354252,.95);g.fillRect(x,o.y,o.width,o.height);
+        g.fillStyle(0x6a7885,.8);g.fillRect(x+8,o.y,o.width-16,o.height);
+        g.fillStyle(0x171b2d,.92);g.fillRoundedRect(x-5,bottom-19,o.width+10,19,4);
+        g.lineStyle(3,0xc4a7db,.9);g.lineBetween(x,bottom,x+o.width,bottom);
+        return;
+      }
+      if(o.type==='airBramble'){
+        g.fillStyle(0x493b43,.98);g.fillRoundedRect(x,o.y,o.width,o.height,5);
+        for(let i=0;i<5;i++){
+          const bx=x+10+i*13;
+          g.lineStyle(6,i%2?0x66966e:0x8aa46c,.9);
+          g.lineBetween(bx,o.y+o.height,bx-7,o.y+10);
+          g.fillStyle(0x98b79b,.83);g.fillEllipse(bx+5,o.y+20+(i%3)*15,21,13);
         }
         return;
       }
@@ -2061,6 +2192,12 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
       g.setAlpha(1);
+      if(!p.grounded&&this.powerManager.level('skeletalWings')>0){
+        const total=this.powerManager.skeletalHoverMs();
+        const ratio=Math.max(0,Math.min(1,p.hoverBudgetMs/total));
+        g.fillStyle(0x0d1424,.78);g.fillRoundedRect(x-32,feet-153,64,7,3);
+        if(ratio>0){g.fillStyle(0xd5e2e0,.93);g.fillRoundedRect(x-30,feet-151,60*ratio,3,1.5);}
+      }
     }
     drawForeground() {
       const g=this.foreground;g.clear();
@@ -2072,6 +2209,26 @@ window.GRIM_CONFIG = Object.freeze({
       }
       if(this.fallFeedbackMs>0){
         g.fillStyle(0xef4969,.085*(this.fallFeedbackMs/1550));g.fillRect(0,0,this.width,this.height);
+      }
+      if(this.state==='playing' && this.player.hp<=2){
+        const low=this.player.hp===1?.30:.12;
+        const pulse=this.player.hp===1?(.94+.06*Math.sin(this.elapsed*4)):1;
+        const alpha=low*pulse;
+        const w=this.width,h=this.height;
+        g.fillStyle(0xbf1727,alpha);
+        for(let j=0;j<5;j++){
+          const a=alpha*(1-j/5);
+          g.fillStyle(0xbf1727,a);
+          const thickness=8;
+          g.fillRect(j*thickness,0,thickness,h);
+          g.fillRect(w-(j+1)*thickness,0,thickness,h);
+          g.fillRect(0,j*thickness,w,thickness);
+          g.fillRect(0,h-(j+1)*thickness,w,thickness);
+        }
+      }
+      if(this.damageFlashMs>0){
+        const a=.27*Math.pow(this.damageFlashMs/420,1.8);
+        g.fillStyle(0xff202c,a);g.fillRect(0,0,this.width,this.height);
       }
       if(this.state==='playing' && this.player.invulMs>0) {
         g.fillStyle(0xff5252,.045);g.fillRect(0,0,this.width,this.height);
