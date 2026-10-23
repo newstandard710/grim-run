@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.8.1</title>
+  <title>GRIM RUN — v0.8.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -141,6 +141,14 @@ button {cursor:pointer;}
  .meta-modal #reliquary-back-btn {padding:5px 15px;min-height:30px;}
 }
 .gun-status{font-size:clamp(9px,1.7vh,12px);color:#ffd9a7;letter-spacing:.1em;text-shadow:0 0 9px #ffd08775;margin-top:3px;}
+.revive-wrap{z-index:23;background:#100912ed;}
+.revive-modal{border-color:#e8b4ae8f;box-shadow:0 0 40px #ab283b38,0 12px 60px #000b;}
+.revive-modal h2{color:#ffe2d8;font-size:clamp(22px,6vh,37px);}
+.revive-hearts{font-size:clamp(24px,7vh,45px);color:#ec9aaa;letter-spacing:.25em;margin:4px auto;}
+.revive-wallet{font-size:clamp(12px,2.3vh,16px);color:#abeee1;font-weight:900;margin:3px;}
+.revive-cost{font-size:clamp(10px,2vh,13px);color:#f6d5a1;font-weight:850;margin-bottom:8px;}
+.revive-modal button:disabled{opacity:.44;cursor:not-allowed;}
+@media(max-height:345px){.revive-modal{padding:10px 18px}.revive-modal p{margin:1px auto 3px}.revive-modal h2{margin:1px auto}.revive-hearts{font-size:24px;margin:1px}.revive-cost{margin:1px auto}}
 </style>
 </head>
 <body>
@@ -167,7 +175,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.8.1 · ENCOUNTER RELIABILITY</div>
+      <div class="mini">v0.8.2 · SOULS AND BONE</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -202,6 +210,18 @@ button {cursor:pointer;}
       <p class="god-mode-desc">Playtest only. Hazards cannot take HP; Devil deals still cost HP.</p>
       <button id="resume-btn" class="primary">RESUME ▶</button><button id="quit-btn" class="secondary">QUIT RUN</button></div>
   </div>
+  <div id="revive-screen" class="modal-wrap revive-wrap hidden" aria-label="Resurrection offer">
+    <div class="modal compact revive-modal" role="dialog" aria-modal="true" aria-labelledby="revive-title">
+      <div class="eyebrow">DEATH IS NOT THE END</div>
+      <h2 id="revive-title">ONE MORE CHANCE</h2>
+      <p>Restore your body by offering three Souls to the Underworld.</p>
+      <div class="revive-hearts">♥ ♥ ♥</div>
+      <div class="revive-wallet" id="revive-wallet">SOULS AVAILABLE: 0</div>
+      <div class="revive-cost">COST: ✦ 3 SOULS · ONCE PER RUN</div>
+      <button id="revive-yes-btn" class="primary">REVIVE · 3 SOULS</button>
+      <button id="revive-no-btn" class="secondary">ACCEPT DEATH</button>
+    </div>
+  </div>
   <div id="game-over" class="modal-wrap hidden">
     <div class="modal compact">
       <div class="eyebrow" id="end-eyebrow">THE GRIM REAPER HAS FALLEN</div><h2 id="end-title">RUN ENDED</h2>
@@ -221,7 +241,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.8.1',
+  version: '0.8.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -470,7 +490,10 @@ window.GRIM_CONFIG = Object.freeze({
       amounts:[0,2,4,6]},
     {id:'deathsLeap',name:"DEATH'S LEAP",icon:'↑',color:'#c6bbff',
       description:'Increase the height of your initial jump. Short hops remain possible.',
-      amounts:[0,5,10,15]}
+      amounts:[0,5,10,15]},
+    {id:'graveGlide',name:'GRAVE GLIDE',icon:'⇥',color:'#a4eccc',
+      description:'Increase maximum slide duration in every run.',
+      amounts:[0,150,300,450]}
   ]);
   const MAX_SOULS=1000000000;
   function boundedInt(x,min,max){
@@ -517,6 +540,14 @@ window.GRIM_CONFIG = Object.freeze({
     save(state);
     return {ok:true,entry,level:level+1,cost};
   }
+  function spendSouls(state,amount){
+    const cost=boundedInt(amount,1,MAX_SOULS);
+    if(state.souls<cost)return false;
+    state.souls-=cost;save(state);return true;
+  }
+  function slideDuration(baseMs,state){
+    return baseMs+DEFINITIONS[3].amounts[boundedInt(state.levels.graveGlide,0,3)];
+  }
   function healthBonus(state){return boundedInt(state.levels.boneheart,0,3);}
   function startingGold(state){return DEFINITIONS[1].amounts[boundedInt(state.levels.graveWealth,0,3)];}
   function jumpVelocity(baseVelocity,state){
@@ -524,7 +555,7 @@ window.GRIM_CONFIG = Object.freeze({
     const percent=DEFINITIONS[2].amounts[boundedInt(state.levels.deathsLeap,0,3)];
     return baseVelocity*Math.sqrt(1+percent/100);
   }
-  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,normalize,load,save,earn,purchase,healthBonus,startingGold,jumpVelocity};
+  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,normalize,load,save,earn,spendSouls,purchase,slideDuration,healthBonus,startingGold,jumpVelocity};
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <script>
@@ -915,6 +946,8 @@ window.GRIM_CONFIG = Object.freeze({
       el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
       el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
       el('retry-btn').addEventListener('click', () => actions.start());
+      el('revive-yes-btn').addEventListener('click', () => actions.revive());
+      el('revive-no-btn').addEventListener('click', () => actions.declineRevive());
       el('menu-btn').addEventListener('click', () => actions.menu());
       el('pause-btn').addEventListener('click', () => actions.pause());
       el('resume-btn').addEventListener('click', () => actions.resume());
@@ -970,6 +1003,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('menu', mode === 'menu');
       show('reliquary-screen', mode === 'reliquary');
       show('game-over', mode === 'dead');
+      show('revive-screen', mode === 'revive');
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
       show('controls', mode === 'playing');
@@ -1060,7 +1094,8 @@ window.GRIM_CONFIG = Object.freeze({
         const effect=document.createElement('div');effect.className='meta-price';
         if(item.id==='boneheart')effect.textContent=`STARTING HP: ${3+level}${level<3?' → '+(4+level):''}`;
         else if(item.id==='graveWealth')effect.textContent=`STARTING GOLD: ${item.amounts[level]}${level<3?' → '+item.amounts[level+1]:''}`;
-        else effect.textContent=`JUMP HEIGHT: +${item.amounts[level]}%${level<3?' → +'+item.amounts[level+1]+'%':''}`;
+        else if(item.id==='deathsLeap')effect.textContent=`JUMP HEIGHT: +${item.amounts[level]}%${level<3?' → +'+item.amounts[level+1]+'%':''}`;
+        else effect.textContent=`SLIDE LIMIT: ${((850+item.amounts[level])/1000).toFixed(2)}s${level<3?' → '+((850+item.amounts[level+1])/1000).toFixed(2)+'s':''}`;
         card.appendChild(effect);
         const buy=document.createElement('button');buy.type='button';buy.className='meta-buy';
         buy.disabled=level>=3||meta.souls<nextCost;
@@ -1081,6 +1116,11 @@ window.GRIM_CONFIG = Object.freeze({
       el('score').textContent = score.toLocaleString();
       const text=powerSummary.map(x=>`${x.name} ${x.level}`).join(' · ');
       if(el('power-strip').textContent!==text) el('power-strip').textContent=text;
+    }
+    offerRevive(balance,earned){
+      el('revive-wallet').textContent=`SOULS AVAILABLE: ${balance} · EARNED THIS RUN: ${earned}`;
+      el('revive-yes-btn').disabled=balance<3;
+      this.setMode('revive');
     }
     gameOver(distance, souls, coins, score, best, summary=[],victory=false) {
       el('end-eyebrow').textContent=victory?'THE SOULS RETURN TO THE UNDERWORLD':'THE GRIM REAPER HAS FALLEN';
@@ -1191,6 +1231,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrain = Terrain.makeTerrain(42,this.groundY,200,C.pxPerMeter);
       this.nextEncounterX = C.firstEncounterX;
       this.soulCount = 0;
+      this.runSoulsAvailable=0;this.reviveUsed=false;
       this.coinCount = 0; // Current spendable gold
       this.goldCollected = 0; // Lifetime collected this run, for scoring
       this.nextVendorNumber=1;
@@ -1213,7 +1254,9 @@ window.GRIM_CONFIG = Object.freeze({
         setGodMode: on => this.setGodMode(on),
         openReliquary: () => this.openReliquary(),
         closeReliquary: () => this.closeReliquary(),
-        purchaseMeta: id => this.purchaseMeta(id)
+        purchaseMeta: id => this.purchaseMeta(id),
+        revive: () => this.revive(),
+        declineRevive: () => this.declineRevive()
       });
       this.meta=Meta.load();
       this.totalSouls=this.meta.souls;
@@ -1304,6 +1347,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.coins = [];
       this.particles = [];
       this.soulCount = 0;
+      this.runSoulsAvailable=0;this.reviveUsed=false;
       this.coinCount = Meta.startingGold(this.meta); // Starting gold does not increase collected-gold score
       this.goldCollected = 0; // Lifetime collected this run, for scoring
       this.distance = 0;
@@ -1517,6 +1561,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     collectSoul(){
       this.soulCount++;
+      this.runSoulsAvailable++;
       this.totalSouls=Meta.earn(this.meta,1);
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
     }
@@ -1851,7 +1896,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         if (p.sliding) {
           p.slideMs += frameMs;
-          if (p.slideMs >= C.slideMaxMs || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
+          if (p.slideMs >= Meta.slideDuration(C.slideMaxMs,this.meta) || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
         }
         // Portal traversal happens BEFORE hazards and rewards at the 5,000m threshold.
         if(!this.hasTeleported && this.distance>=5000){
@@ -2241,17 +2286,70 @@ window.GRIM_CONFIG = Object.freeze({
       catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
     }
-    die() {
+    die(){
+      this.countdownMs=0;this.goFlashMs=0;
+      this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
+      if(!this.reviveUsed){
+        this.state='revive';
+        this.ui.offerRevive(this.meta.souls,this.runSoulsAvailable);
+      }else this.finishDeath();
+    }
+    revive(){
+      if(this.state!=='revive'||this.reviveUsed||this.meta.souls<3)return false;
+      // The wallet is banked immediately on collection; keep the specific
+      // current-run allocation for accounting while making just one durable debit.
+      const spentFromRun=Math.min(3,this.runSoulsAvailable);
+      if(!Meta.spendSouls(this.meta,3))return false;
+      this.runSoulsAvailable-=spentFromRun;
+      this.lastRevivePayment={currentRun:spentFromRun,priorRuns:3-spentFromRun};
+      this.reviveUsed=true;
+      this.totalSouls=this.meta.souls;
+      document.getElementById('banked-souls').textContent=String(this.totalSouls);
+      const p=this.player;
+      p.maxHp=3;p.hp=3;
+      // Move to immediately solid ground if death occurred inside a chasm.
+      if(this.terrain.groundAt(p.x)===null){
+        const group=this.terrain.groupNear(p.x);
+        p.x=group?group.respawnX:p.x+220;
+      }
+      p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
+      p.grounded=true;p.onSoulPlatform=false;p.velocityY=0;p.coyoteMs=0;
+      p.invulMs=2300;p.fireproofCooldownMs=Math.max(0,p.fireproofCooldownMs);
+      p.sliding=false;p.holdSlide=false;p.slideConsumed=false;p.airTuck=false;
+      p.jumpHeld=false;p.airJumpUsed=false;p.jumpsUsed=0;p.hovering=false;
+      p.hoverHoldMs=0;p.hoverPressKind='none';p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
+      p.attackMs=0;p.attackCooldownMs=0;p.slideReleaseBufferMs=0;
+      this.bullets=[];this.fireballs=[];this.chainArcs=[];
+      // Clear only the immediate revive landing/launch area, not world spawns.
+      const left=p.x-110,right=p.x+360;
+      this.obstacles=this.obstacles.filter(ob=>ob.x>right||ob.x+ob.width<left);
+      this.enemies=this.enemies.filter(e=>e.x<left-40||e.x>right+40);
+      for(const tip of this.tips){
+        if(tip.atX>=left-80&&tip.atX<=right)tip.label.destroy();
+      }
+      this.tips=this.tips.filter(t=>t.atX<left-80||t.atX>right);
+      this.distance=(p.x-this.startX)/C.pxPerMeter;
+      this.cameraX=p.x-this.width*C.reaperXRatio;
+      this.cameraY=p.y-this.groundY;
+      this.refreshHud();
+      this.beginCountdown(); // Unobstructed 3-second restart.
+      return true;
+    }
+    declineRevive(){
+      if(this.state!=='revive')return;
+      this.finishDeath();
+    }
+    finishDeath(){
       this.state='dead';this.countdownMs=0;this.goFlashMs=0;
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       let best=false;
-      try {
-        const key='grim-run-v03-best';
-        const old=Number(localStorage.getItem(key)||0);
-        if (this.points>old) {localStorage.setItem(key,String(this.points));best=true;}
-      } catch (_) { /* Storage may be denied in private mode. The run remains playable. */ }
-      this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),false);
+      try{
+        const key='grim-run-v03-best',old=Number(localStorage.getItem(key)||0);
+        if(this.points>old){localStorage.setItem(key,String(this.points));best=true;}
+      }catch(_){}
+      this.ui.gameOver(this.distance,this.soulCount,
+        `${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),false);
     }
     puff(x,y,color,count) {
       for (let i=0;i<count;i++) {
