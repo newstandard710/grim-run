@@ -97,7 +97,6 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const staticReview=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
-    const run=v.reaperPoseSprites.run_02,meta=window.GRIM_VISUALS.ILLUSTRATED.reaper.run_02;
     s.player.sliding=true;v.render();
     const slide=v.reaperPoseSprites.slide,sm=window.GRIM_VISUALS.ILLUSTRATED.reaper.slide;
     const slideState={visible:slide.visible,
@@ -113,10 +112,16 @@ const server=http.createServer((req,res)=>{
     s.player.attackMs=0;
     s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:1,phase:0,dead:false}];
     s.elapsed=0;v.render();
-    const firstRun=run.texture.key,firstBat=v.batPool[0].texture.key;
+    const firstRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+      name.startsWith('run_')&&sprite.visible)?.[0];
+    const firstBat=v.batPool[0].texture.key;
     s.elapsed=.12;v.render();
-    return {runVisible:run.visible,runKey:run.texture.key,
-      runGroundError:Math.abs(run.y+meta.anchor[1]*meta.scale-s.feetY),
+    const currentRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+      name.startsWith('run_')&&sprite.visible)?.[0];
+    const currentRunSprite=v.reaperPoseSprites[currentRun];
+    const currentMeta=window.GRIM_VISUALS.ILLUSTRATED.reaper[currentRun];
+    return {runVisible:currentRunSprite.visible,runKey:currentRun,
+      runGroundError:Math.abs(currentRunSprite.y+currentMeta.anchor[1]*currentMeta.scale-s.feetY),
       slideVisible:slideState.visible,slideGroundError:slideState.groundError,
       slideArtHeight:slideState.artHeight,batVisible:v.batPool[0].visible,
       batKey:v.batPool[0].texture.key,firstRun,firstBat,attackState};
