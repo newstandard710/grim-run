@@ -16,7 +16,7 @@ w.window=w;vm.createContext(w);
 for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 const C=w.GRIM_CONFIG,P=w.GRIM_POWERS,Core=w.GRIM_CORE;
-assert.equal(C.version,'0.9.0');
+assert.equal(C.version,'0.9.1');
 assert.ok(P.POWER_ORDER.includes('deathsReversal'),'Rewind must be Angel vendor power');
 const m=P.makePowerManager();
 for(const [lvl,seconds,cooldown] of [[1,5,60000],[2,6,55000],[3,7,50000],[4,8,45000]]){
@@ -34,6 +34,13 @@ function game(seed=78){
  return s;
 }
 const step=(s,n,d=34)=>{for(let i=0;i<n;i++)s.update(0,d)};
+function finishPlayback(scene){
+  assert.equal(scene.state,'rewinding','The real snapshot sequence should animate first');
+  let frames=0;
+  while(scene.state==='rewinding'&&frames++<100)scene.update(0,34);
+  assert.equal(scene.state,'playing','Rewind animation must finish');
+  return frames*34;
+}
 
 const inactive=game(82);
 step(inactive,20);
@@ -50,12 +57,19 @@ step(g,265);
 assert.ok(g.rewindFrames.length>60,'Rolling snapshot history gathered');
 const oldX=g.player.x,oldHP=g.player.hp;
 assert.equal(g.rewind(),true,'Rewind activation');
+assert.equal(g.state,'rewinding','Rewind must not teleport instantly');
+const visualDuration=finishPlayback(g);
+assert.ok(visualDuration>2500&&visualDuration<3000,'Eight seconds plays backward at 3x speed');
 assert.ok(g.player.x<oldX-1400,'Rewind moved Reaper back several seconds');
 assert.equal(g.player.hp,oldHP,'Rewind restores HP');
-assert.equal(g.rewindCooldownMs,45000,'Cooldown at fully upgraded level');
-assert.equal(g.rewind(),false,'Cannot chain rewind during cooldown');
+assert.equal(g.rewindCooldownMs,0,'God Mode has no cooldown');
+assert.equal(g.rewind(),false,'Still requires full new history after use');
 assert.ok(g.rewindFrames.length<=2,'Old future timeline discarded');
-step(g,10);assert.ok(g.rewindCooldownMs<45000&&g.rewindCooldownMs>44000);
+step(g,10);assert.equal(g.rewindCooldownMs,0);
+step(g,255);
+assert.equal(g.rewind(),true,'God Mode can rewind again after accumulating new eight-second history');
+finishPlayback(g);
+assert.equal(g.rewindCooldownMs,0);
 g.setGodMode(false);
 assert.equal(g.rewindLevel(),0);
 assert.equal(g.powerManager.level('deathsReversal'),0);
@@ -69,6 +83,8 @@ p.player.hp=8;p.player.maxHp=8;
 p.captureRewind();step(p,165);
 assert.ok(p.rewindClockMs>=5000);
 assert.equal(p.rewind(),true);
+const level1Duration=finishPlayback(p);
+assert.ok(level1Duration>1550&&level1Duration<1900,'Five-second history animates at 3x');
 assert.equal(p.rewindCooldownMs,60000,'Level 1 starts 60s cooldown');
 assert.ok(p.player.x<p.startX+100*12,'Level 1 moved time back roughly 5 seconds');
 const cool=p.rewindCooldownMs;
@@ -91,6 +107,7 @@ entities.enemies=[];entities.obstacles=[];entities.bullets=[];entities.fireballs
 entities.player.hp=1;entities.coinCount=0;entities.goldCollected=2;
 entities.rewindClockMs=5100;entities.captureRewind();
 assert.equal(entities.rewind(),true);
+finishPlayback(entities);
 assert.equal(entities.player.hp,3,'Health restored in snapshot');
 assert.equal(entities.coinCount,8,'Gold returned to earlier value');
 assert.equal(entities.goldCollected,10,'Score-related collected gold restored');
@@ -110,6 +127,7 @@ terrain.triggerBrittleBones();
 assert.equal(section.kind,'rubble','Brittle Bones built a bridge');
 terrain.rewindClockMs=5200;terrain.captureRewind();
 assert.equal(terrain.rewind(),true);
+finishPlayback(terrain);
 assert.equal(section.kind,original.kind,'Rewind removes bridge built afterward');
 assert.equal(section.y0,original.y0);
 assert.equal(section.y1,original.y1);
@@ -135,4 +153,4 @@ assert.equal(barriers.state,'chest');
 barriers.finishChest();
 assert.equal(barriers.state,'playing');assert.equal(barriers.rewind(),false);
 
-console.log('PASS v0.9.0: Angel tiers, God Mode level-4 override, snapshot rewind, non-rewindable cooldown, referenced projectiles, Brittle Bones terrain rollback, Soul/vendor/portal boundaries.');
+console.log('PASS v0.9.1: Angel tiers, God Mode level-4 override, snapshot rewind, non-rewindable cooldown, referenced projectiles, Brittle Bones terrain rollback, Soul/vendor/portal boundaries.');
