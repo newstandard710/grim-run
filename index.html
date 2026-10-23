@@ -1601,7 +1601,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(ground===null)continue;
         const flying=Combat.enemyIsFlying({kind});
         const y=ground-(flying?161:kind==='crawler'?21:34);
-        this.enemies.push({kind,x,y,homeY:y,hp:kind==='skeletalBat'?2:1,
+        this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
           phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
           warningMs:0,fireMs:kind==='imp'?430+this.rng.integer(0,350):0,
           lastScytheSwing:-1,contactDone:false});
