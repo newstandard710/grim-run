@@ -138,6 +138,51 @@ const server=http.createServer((req,res)=>{
     'Scythe attack art stays the same apparent height as idle');
   assert.equal(staticReview.batVisible,true);assert.equal(staticReview.firstBat,'gr_ill_bat_raised');
   assert.equal(staticReview.batKey,'gr_ill_bat_midstroke','Bat wings visibly advance during flight');
+  // New transparent PNG pose set is available only through its static review
+  // path; verify the shared anchors/scales in actual Phaser without changing
+  // the v0.10.4 default or introducing an animation cycle.
+  await page.goto(origin+'/?art=review-v2&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.waitForFunction(()=>{
+    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    return v?.loaded===true&&v.reviewV2===true;
+  },null,{timeout:45000});
+  const reviewV2Loaded=await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],v=s.visuals;
+    const visuals=window.GRIM_VISUALS;
+    return {ready:v.reaperReady&&v.batReady,reviewV2:v.reviewV2,
+      reaperPoses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length,
+      textures:Object.values(visuals.V2_REAPER).every(m=>s.textures.exists(m.key))&&
+        Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
+      failures:v.failedAssets};
+  });
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:10,bats:12,
+    textures:true,failures:[]});
+  await page.click('#start-btn');
+  await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
+  const v2Anchors=await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_REAPER;
+    s.player.sliding=true;v.render();
+    const slide=v.reaperPoseSprites.slide;
+    const slideGround=Math.abs(slide.y+m.slide.anchor[1]*m.slide.scale-s.feetY);
+    const slideHeight=651*m.slide.scale;
+    s.player.sliding=false;s.player.attackMs=120;v.render();
+    const attack=v.reaperPoseSprites.scythe_attack;
+    const attackGround=Math.abs(attack.y+m.scythe_attack.anchor[1]*m.scythe_attack.scale-s.feetY);
+    s.player.attackMs=0;s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];v.render();
+    const flying=v.batPool[0];const flightKey=flying.texture.key;
+    s.enemies[0].mode='dive';v.render();
+    return {slideVisible:slide.visible,slideGround,slideHeight,attackVisible:attack.visible,
+      attackGround,attackScale:attack.scale,runScale:m.run.scale,
+      batVisible:flying.visible,flightKey,diveKey:flying.texture.key};
+  });
+  assert.equal(v2Anchors.slideVisible,true);assert.ok(v2Anchors.slideGround<.1);
+  assert.ok(v2Anchors.slideHeight>40&&v2Anchors.slideHeight<45,
+    'v2 slide artwork keeps a compact silhouette near the unchanged 48px clearance');
+  assert.equal(v2Anchors.attackVisible,true);assert.ok(v2Anchors.attackGround<.1);
+  assert.equal(v2Anchors.attackScale,v2Anchors.runScale,
+    'v2 scythe pose uses the same apparent scale as the running pose');
+  assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.flightKey,'gr_v2_bat_neutral');
+  assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:30000});
@@ -180,7 +225,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: illustrated v0.10.4 default, run/flap cycles, slide profile, procedural fallback, legacy atlas and God Mode tools.');
+  console.log('PASS actual Chromium: v0.10.4 default, static v2 art preview anchors/scales, run/flap cycles, slide profile, procedural fallback, legacy atlas and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

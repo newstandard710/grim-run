@@ -9,6 +9,12 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
 
+## Character art review v2 (opt-in, not a release)
+
+- Open `index.html?art=review-v2` to inspect the new transparent pose set in the actual Phaser scene at its shared game scale and anchors.
+- This static review mode leaves the current default, `?art=procedural` fallback, collisions, and gameplay unchanged. It intentionally uses a single Reaper run pose and a single Bat flight pose; the new motion cycles are still a separate art task.
+- The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
+
 ## v0.10.4: Sprite Motion Polish
 
 - The illustrated Reaper now cycles through four distinct running poses, and Cavern Bats use a four-pose wing flap while flying. Jump, fall and hurt artwork is preserved.
