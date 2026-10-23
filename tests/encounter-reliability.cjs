@@ -31,7 +31,7 @@ for(const [,attributes,source] of scripts){
 }
 const C=sandbox.GRIM_CONFIG,Core=sandbox.GRIM_CORE,Terrain=sandbox.GRIM_TERRAIN;
 const Powers=sandbox.GRIM_POWERS,Combat=sandbox.GRIM_COMBAT,GameScene=sandbox.GrimGameScene;
-assert.equal(C.version,'0.8.2');
+assert.equal(C.version,'0.8.3');
 
 for(let k=1;k<=14;k++){
   const x=200+k*666*C.pxPerMeter;
@@ -45,11 +45,12 @@ for(let seed=1;seed<=300;seed++){
   const scene=new GameScene();
   Object.assign(scene,{
     seed,startX:200,rng:Core.makeRng(seed),
-    terrain:Terrain.makeTerrain(seed,339,200,C.pxPerMeter),width:950,height:430,
+    terrain:Terrain.makeTerrain(seed,339,200,C.pxPerMeter),width:950,height:430,cameraY:0,speed:C.maxSpeed,distance:5000,
     coins:[],obstacles:[],enemies:[],soulPlatform:null,tips:[],
     encounterTelemetry:{attempts:0,spawned:0,dropped:0,rejectedVendor:0,
       rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,kills:0,byKind:{}},
-    hasTeleported:true,nextEnemySpawnX:200+5070*C.pxPerMeter,nextSnapSpawnX:200+3260*C.pxPerMeter,
+    hasTeleported:true,nextEnemySpawnX:200+5070*C.pxPerMeter,
+    nextGroundSpawnX:200+5140*C.pxPerMeter,nextSnapSpawnX:200+3260*C.pxPerMeter,
     player:{x:200+5000*C.pxPerMeter},
     makeTip(){}
   });
@@ -61,14 +62,18 @@ for(let seed=1;seed<=300;seed++){
   assert.ok(tucks.length>=2&&tucks.length<=3,'Seed '+seed+' got '+tucks.length+' tuck gates');
   assert.ok(tucks.every(o=>!Core.intersectsVendorCorridor(o.x,o.width,scene.startX,666,12)),
     'Tuck gate overlaps post-vendor corridor');
-  for(let m=5070;m<9830;m+=55){
+  for(let m=5000;m<9880;m+=8){
     scene.player.x=scene.startX+m*C.pxPerMeter;
+    scene.distance=m;
+    scene.cameraY=scene.terrain.anchorAt(scene.player.x)-scene.height*.79;
     scene.spawnCombatAhead(scene.player.x+1170);
   }
   const stats=scene.encounterTelemetry;
-  assert.ok(stats.spawned>=25,'Too few enemies at seed '+seed+': '+stats.spawned);
-  assert.ok(stats.byKind.bat>0&&stats.byKind.skeletalBat>0,
-    'Seed '+seed+' missing one of the two flying enemy variants');
+  assert.ok(stats.spawned>=55,'Too few enemies at seed '+seed+': '+stats.spawned);
+  assert.ok(stats.byKind.bat>=12&&stats.byKind.skeletalBat>=12,
+    'Seed '+seed+' missing meaningful bat encounters');
+  assert.ok((stats.byKind.crawler||0)>=8&&stats.byKind.imp>=2,
+    'Seed '+seed+' missing guaranteed ground encounter density');
   assert.ok(scene.enemies.every(e=>!Core.intersectsVendorCorridor(e.x-23,46,scene.startX,666,12)),
     'Enemy intersects a vendor safe corridor');
   totals.push(stats.spawned);
@@ -98,7 +103,7 @@ scene.takeDamage(1,'rock');
 assert.equal(scene.player.hp,2,'Normal damage should still deduct one heart');
 
 function graphic(){return node();}
-const visibility=[];
+const visibility=[],byTypeReports=[];
 for(const seed of [1,7,42,99,314]){
   sandbox.location.search='?seed='+seed;
   const world=new GameScene();
@@ -116,12 +121,42 @@ for(const seed of [1,7,42,99,314]){
   assert.equal(world.state,'chest','Portal now transitions to chest acquisition');
   world.finishChest();
   assert.equal(world.state,'playing','Chest can be skipped');
+  const appeared=new Map(),margins=[];
+  const createEnemy=world.trySpawnCombat.bind(world);
+  world.trySpawnCombat=(x,kind)=>{
+    const success=createEnemy(x,kind);
+    if(success){
+      const enemy=world.enemies[world.enemies.length-1];
+      const edge=world.player.x+world.width*(1-C.reaperXRatio);
+      margins.push(edge-enemy.x);
+      appeared.set(enemy,{kind,seen:false,visibleMs:0});
+    }
+    return success;
+  };
   let frames=0;
   while(world.state!=='won'&&frames<6000){
     if(world.state==='upgrade')world.leaveVendor();
     assert.notEqual(world.state,'dead','Unexpected death in God Mode: seed '+seed);
     world.update(0,34);frames++;
+    for(const [enemy,entry] of appeared){
+      if(enemy.everVisible){entry.seen=true;entry.visibleMs=Math.max(entry.visibleMs,enemy.visibleMs||0);}
+    }
   }
+  const report={};
+  for(const kind of ['bat','skeletalBat','crawler','imp']){
+    const records=[...appeared.values()].filter(e=>e.kind===kind);
+    report[kind]={spawned:records.length,seen:records.filter(e=>e.seen).length,
+      visible2s:records.filter(e=>e.visibleMs>=2000).length};
+  }
+  assert.ok(margins.every(x=>x>=40&&x<=190),
+    'Enemy entered too close to player or outside visible right edge: seed '+seed);
+  assert.ok(report.bat.seen>=13&&report.skeletalBat.seen>=10,
+    'Too few bats actually reached the visible gameplay area: seed '+seed);
+  assert.ok(report.crawler.seen>=9&&report.imp.seen>=2,
+    'Ground enemies never reached visible gameplay: seed '+seed);
+  assert.ok(report.bat.visible2s+report.skeletalBat.visible2s>=15,
+    'Bats crossed screen too quickly: seed '+seed);
+  byTypeReports.push(report);
   assert.equal(world.state,'won','Full run must reach 9,999m: seed '+seed);
   assert.ok(world.encounterTelemetry.enteredView>=15,
     'Enemies spawned but did not enter viewport: seed '+seed);
@@ -130,7 +165,8 @@ for(const seed of [1,7,42,99,314]){
   visibility.push(world.encounterTelemetry.visibleFor650ms);
 }
 console.log('Full-run encounter visibility: '+visibility.join(', '));
+console.log('On-screen bat, skeletal, crawler and imp encounters: '+JSON.stringify(byTypeReports));
 
-console.log('v0.8.2 PASS: 300 seeded worlds; air-tuck gate counts '+JSON.stringify(counts)+
+console.log('v0.8.3 PASS: 300 seeded worlds; air-tuck gate counts '+JSON.stringify(counts)+
   '; enemy spawns '+Math.min(...totals)+'–'+Math.max(...totals)+
   '; 50m vendor rules, visibility gate, and God Mode damage effects.');
