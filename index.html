@@ -1598,7 +1598,9 @@ window.GRIM_CONFIG = Object.freeze({
         // Flying creatures can appear above uneven ground, but never above a chasm.
         // Ground enemies require flat solid floor to avoid climbing into the terrain.
         const ground=this.terrain.groundAt(x);
-        if(ground===null||(!flying&&!this.terrain.canPlace(x,90)))continue;
+        if(ground===null)continue;
+        if(!flying&&(this.terrain.groundAt(x-70)===null||
+          this.terrain.groundAt(x+38)===null))continue;
         if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<(flying?140:195)&&
           (!flying||o.type==='tuckGate'||o.type==='airBramble')))continue;
         if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<(flying?145:185)))continue;
