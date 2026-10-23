@@ -1,0 +1,36 @@
+name: Grim Run Regression
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  game-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate all 5 gameplay and artwork suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test_file in tests/*.cjs; do
+            echo "== Testing ${test_file} =="
+            node "${test_file}"
+          done
+      - name: Validate original SVG sprite atlases
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          for filename in sorted(Path('assets').rglob('*.svg')):
+              root=ET.parse(filename).getroot()
+              assert root.tag.endswith('svg'), filename
+              print('VALID SVG:', filename)
+          PY
