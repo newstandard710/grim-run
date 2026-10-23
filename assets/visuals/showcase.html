@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Grim Run — Reaper Reborn Art Lab</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,Arial,sans-serif;background:#070d18;color:#e9f7f4}
+*{box-sizing:border-box}body{margin:0;padding:24px 14px 44px;min-height:100vh;background:
+ radial-gradient(ellipse at 56% 28%,#25435666,transparent 64%),
+ linear-gradient(170deg,#07101f,#0d1021 70%,#160f22)}
+main{max-width:1100px;margin:auto}.eyebrow{color:#a8fcf0;letter-spacing:.2em;font-size:12px;font-weight:900}
+h1{font-family:Georgia,serif;font-size:clamp(30px,5vw,56px);margin:8px 0 4px;color:#e6ebdc}
+p{color:#b9cad3;line-height:1.55}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.card{position:relative;border:1px solid #719b9c88;border-radius:17px;background:#131d30da;
+ min-height:292px;padding:15px;overflow:hidden;box-shadow:0 12px 35px #0007}
+.card h2{font-family:Georgia,serif;font-size:20px;margin:0}
+.scene{position:relative;height:210px;margin:3px -10px 4px;border-bottom:5px solid #576b65;background:
+ radial-gradient(ellipse at 62% 63%,#2b506544,transparent 75%),
+ repeating-linear-gradient(126deg,transparent 0 45px,#5f8fa911 47px 50px,transparent 54px 116px)}
+#reaper,#bat{position:absolute;background-repeat:no-repeat;image-rendering:auto}
+#reaper{bottom:-2px;left:48%;width:192px;height:192px;background-image:url('../characters/reaper/reaper-sheet.svg');
+ background-size:768px 768px;transform:translateX(-50%) scale(1);transform-origin:bottom center}
+#bat{top:38px;left:50%;width:160px;height:128px;background-image:url('../enemies/cavern-bat/bat-sheet.svg');
+ background-size:640px 256px;transform:translateX(-50%) scale(.92)}
+.controls{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0 0}
+button{border:1px solid #7fbfc388;border-radius:7px;background:#223650;color:#e0fff7;font-size:12px;font-weight:800;padding:9px 12px;cursor:pointer}
+button.active{background:#8cebe7;color:#09202a}button:hover{border-color:#bffff3}
+details{margin-top:20px;border-top:1px solid #5b83925e;padding-top:12px}summary{cursor:pointer;color:#d9f9ee;font-weight:800}
+pre{white-space:pre-wrap;color:#b5c1d4;font-size:12px}
+footer{font-size:12px;color:#7f9aaf;margin-top:22px}
+@media(max-width:630px){body{padding:18px 9px}.grid{grid-template-columns:1fr}.card{min-height:280px}.scene{height:200px}}
+</style></head><body><main>
+<div class="eyebrow">GRIM RUN · ORIGINAL GAME ART</div>
+<h1>The Reaper Reborn</h1>
+<p>v0.10.0 visual foundation showcase. These are the actual vector frame atlases used by the game, not concept art or mock-ups. Choose a pose to check silhouette, costume continuity and phone-scale readability.</p>
+<div class="grid">
+<section class="card"><h2>The Little Harbinger</h2><div class="scene"><div id="reaper"></div></div><div class="controls" id="reaperControls"></div></section>
+<section class="card"><h2>Cavern Bat</h2><div class="scene"><div id="bat"></div></div><div class="controls" id="batControls"></div></section>
+</div>
+<details><summary>Art pipeline and frame mapping</summary><pre>Reaper: 768 × 768 SVG atlas · 16 frames (192 × 192 each).
+Cavern Bat: 640 × 256 SVG atlas · 8 frames (160 × 128 each).
+Both are rasterized once at asset load, then animated as Phaser sprite textures.
+Art failure? The original procedural game art remains as a fallback.
+All animations are visual-only: player and enemy collision geometry is unchanged.</pre></details>
+<footer>Grim Run © Project development · Macabre Storybook Fantasy</footer>
+</main>
+<script>
+'use strict';
+const sequences={
+  reaper:{Idle:[0,1],Run:[2,3,4,5,15],Jump:[6],Fall:[7],Slide:[8],Scythe:[9,10],Crossbow:[11],Hit:[12],Death:[13],Hover:[14]},
+  bat:{Flight:[0,1,2,3,2,1],Dive:[4,5],Hit:[6],Death:[7]}
+};
+let active={reaper:'Run',bat:'Flight'};
+function use(name,sequence){
+  active[name]=sequence;
+  document.querySelectorAll('#'+name+'Controls button').forEach(b=>b.classList.toggle('active',b.textContent===sequence));
+}
+function mount(name){
+  for(const label of Object.keys(sequences[name])){
+    const b=document.createElement('button');b.textContent=label;
+    b.onclick=()=>use(name,label);document.getElementById(name+'Controls').appendChild(b);
+  }
+  use(name,active[name]);
+}
+mount('reaper');mount('bat');
+let tick=0;
+setInterval(()=>{
+ for(const name of ['reaper','bat']){
+  const tiles=sequences[name][active[name]],frame=tiles[Math.floor(tick/2)%tiles.length];
+  const frameWidth=name==='reaper'?192:160,frameHeight=name==='reaper'?192:128;
+  const columns=4;
+  document.getElementById(name).style.backgroundPosition=
+   (-frame%columns*frameWidth)+'px '+(-Math.floor(frame/columns)*frameHeight)+'px';
+ }
+ tick++;
+},95);
+</script></body></html>
