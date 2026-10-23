@@ -2142,7 +2142,7 @@ window.GRIM_CONFIG = Object.freeze({
           const dip=e.mode==='dive'?144*Math.sin(Math.min(1,e.timer/1.35)*Math.PI):0;
           e.y=e.homeY+Math.sin(this.elapsed*4.2+e.phase)*10+dip;
         }else if(e.kind==='crawler'){
-          const newX=e.x+dt*this.speed*.24;
+          const newX=e.x+dt*this.speed*.49;
           const floor=this.terrain.groundAt(newX);
           // A moving crawler stops at a drop; never silently evaporates.
           // That leaves it present for the player to shoot or scythe.
@@ -2150,6 +2150,11 @@ window.GRIM_CONFIG = Object.freeze({
             e.x=newX;e.homeY=floor-20;e.y=e.homeY;
           }
         }else if(e.kind==='imp'){
+          // Retreating, ground-hugging imps stay readable for more than a
+          // fleeting obstacle-sized instant and can launch a telegraphed bolt.
+          const newX=e.x+dt*this.speed*.43;
+          const nextGround=this.terrain.groundAt(newX);
+          if(nextGround!==null)e.x=newX;
           const ground=this.terrain.groundAt(e.x);
           if(ground!==null){e.homeY=ground-30;e.y=e.homeY;}
           if(ahead>90&&ahead<600){
@@ -2971,17 +2976,21 @@ window.GRIM_CONFIG = Object.freeze({
           }
           if(skeletal&&e.hp===1){g.fillStyle(0xffcf76,.68);g.fillCircle(x,y+13,3);}
         }else if(e.kind==='crawler'){
-          g.fillStyle(0x52626c);g.fillEllipse(x,y,41,30);
-          g.fillStyle(0x98a9b1,.91);g.fillEllipse(x+5,y-8,27,16);
-          g.lineStyle(3,0xc6d3d4,.82);
+          g.fillStyle(0xa8e1d6,.14);g.fillEllipse(x,y-2,60,48);
+          g.lineStyle(3,0xeff6e6,.9);g.strokeEllipse(x,y-2,43,32);
+          g.fillStyle(0xa9babf);g.fillEllipse(x,y,41,30);
+          g.fillStyle(0xecf4e7,.97);g.fillEllipse(x+5,y-8,27,16);
+          g.lineStyle(3,0xe4fbf1,.96);
           for(const side of [-1,1]){
             g.lineBetween(x+side*12,y+8,x+side*23,y+20);
             g.lineBetween(x+side*3,y+11,x+side*17,y+22);
           }
-          g.fillStyle(0xeb9ac4);g.fillCircle(x-10,y-5,2.4);
+          g.fillStyle(0xfe8390);g.fillCircle(x-10,y-5,3.6);
         }else if(e.kind==='imp'){
-          g.fillStyle(0x7f3634);g.fillEllipse(x,y,36,44);
-          g.fillStyle(0xbc6448);g.fillTriangle(x-17,y-15,x-18,y-33,x-3,y-20);
+          g.fillStyle(0xffb76a,.16);g.fillEllipse(x,y-4,60,65);
+          g.lineStyle(3,0xffc583,.92);g.strokeEllipse(x,y,39,47);
+          g.fillStyle(0x9d4735);g.fillEllipse(x,y,36,44);
+          g.fillStyle(0xe4815a);g.fillTriangle(x-17,y-15,x-18,y-33,x-3,y-20);
           g.fillTriangle(x+7,y-20,x+20,y-33,x+18,y-10);
           g.fillStyle(0xffd48a);g.fillCircle(x-6,y-7,3);g.fillCircle(x+7,y-7,3);
           if(e.warningMs>0){
