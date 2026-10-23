@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.7.0</title>
+  <title>GRIM RUN — v0.8.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -140,17 +140,18 @@ button {cursor:pointer;}
  .meta-buy {padding:4px 6px;min-height:27px;}
  .meta-modal #reliquary-back-btn {padding:5px 15px;min-height:30px;}
 }
+.gun-status{font-size:clamp(9px,1.7vh,12px);color:#ffd9a7;letter-spacing:.1em;text-shadow:0 0 9px #ffd08775;margin-top:3px;}
 </style>
 </head>
 <body>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
     <div id="hearts" class="top-left" aria-label="Health">♥ ♥ ♥</div>
-    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div><div id="time-status" class="time-status hidden">◷ TIME SLOWED</div><div id="god-mode-status" class="god-mode-status hidden">♜ GOD MODE</div></div>
+    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div><div id="time-status" class="time-status hidden">◷ TIME SLOWED</div><div id="god-mode-status" class="god-mode-status hidden">♜ GOD MODE</div><div id="gun-status" class="gun-status hidden">✹ SOULCASTER</div></div>
     <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
     <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
   </div>
-  <div id="portal-overlay" class="portal-overlay hidden"><div class="portal-rune">✦</div><div class="portal-title">DESCENT INTO THE UNDERWORLD</div><div class="portal-subtitle">THE GATE HAS OPENED</div></div>
+  <div id="portal-overlay" class="portal-overlay hidden"><div class="portal-rune">✦</div><div class="portal-title">DESCENT INTO THE UNDERWORLD</div><div class="portal-subtitle">SOULCASTER ACQUIRED · AUTOMATIC FIRE</div></div>
   <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
@@ -166,7 +167,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.7.0 · THE UNDERWORLD RELIQUARY</div>
+      <div class="mini">v0.8.0 · THE SOULCASTER</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -220,7 +221,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.7.0',
+  version: '0.8.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -527,7 +528,7 @@ window.GRIM_CONFIG = Object.freeze({
   'use strict';
   const MAX_LEVEL=4,HEALTH_CAP=9;
   const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones'];
-  const DEVIL_ORDER=['skeletalWings','fireproofBoots','lavaWaders'];
+  const DEVIL_ORDER=['skeletalWings','infernalBoots','rapidFire','powerShot','chainShot'];
   const POWERS=Object.freeze({
     soulCleave:{id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',descriptions:[
       'Scythe reaches 20% farther.','Scythe reaches 35% farther.','Scythe reaches 50% farther.','Scythe reaches 65% farther.']},
@@ -543,11 +544,21 @@ window.GRIM_CONFIG = Object.freeze({
     skeletalWings:{id:'skeletalWings',name:'SKELETAL WINGS',action:'HOVER',icon:'☠',color:'#ffb08e',descriptions:[
       'Share 0.70s of hover over an entire flight.','Share 1.05s of hover per flight.',
       'Share 1.40s of hover per flight.','Share 1.75s of hover per flight.']},
-    fireproofBoots:{id:'fireproofBoots',name:'FIREPROOF BOOTS',action:'FIRE',icon:'♨',color:'#ffb65f',descriptions:[
-      'Negate one fire hit, then recharge for 10 seconds.',
-      'Negate one fire hit; 8-second cooldown.','Negate one fire hit; 6-second cooldown.',
-      'Negate one fire hit; 4-second cooldown.']},
-    lavaWaders:{id:'lavaWaders',name:'LAVA WADERS',action:'LAVA',icon:'♜',color:'#ffa6a0',description:'Lava falls deal 1 HP instead of 2. Permanent passive; no levels.'}
+    infernalBoots:{id:'infernalBoots',name:'INFERNAL BOOTS',action:'FIRE / LAVA',icon:'♨',color:'#ffb65f',descriptions:[
+      'Lava falls deal 1 less HP; block a fire hit every 10 seconds.',
+      'Lava protection stays; fire shield recharges in 8 seconds.',
+      'Lava protection stays; fire shield recharges in 6 seconds.',
+      'Lava protection stays; fire shield recharges in 4 seconds.']},
+    rapidFire:{id:'rapidFire',name:'RAPID FIRE',action:'GUN',icon:'➤',color:'#b2ecff',descriptions:[
+      'Soulcaster fires every 0.85 seconds.','Soulcaster fires every 0.70 seconds.',
+      'Soulcaster fires every 0.55 seconds.']},
+    powerShot:{id:'powerShot',name:'POWER SHOT',action:'GUN',icon:'✹',color:'#ffca84',descriptions:[
+      'Soulcaster projectiles deal 2 damage.',
+      'When no enemy is in range, Soulcaster shoots cuttable obstacles.',
+      'Every 10 seconds, clear visible obstacles and damage flying enemies in a blast.']},
+    chainShot:{id:'chainShot',name:'CHAIN SHOT',action:'GUN',icon:'ϟ',color:'#d9c0ff',descriptions:[
+      'Each gun hit chains to one nearby flying enemy.',
+      'Chain to two nearby flying enemies.','Chain to three nearby flying enemies.']}
   });
   const DEVIL_POWER=POWERS.skeletalWings;
   const HEALTH=Object.freeze({id:'vitalEssence',name:'VITAL ESSENCE',action:'HEALTH',icon:'♥',color:'#ffc2c9',description:'Increase maximum HP by 1 and heal 1 HP.'});
@@ -561,12 +572,11 @@ window.GRIM_CONFIG = Object.freeze({
   const BRITTLE_METERS=[0,150,175,200,225];
   function makePowerManager(){
     const levels=Object.fromEntries([...POWER_ORDER,...DEVIL_ORDER].map(id=>[id,0]));
-    const maxFor=id=>id==='lavaWaders'?1:MAX_LEVEL;
+    const maxFor=id=>['rapidFire','powerShot','chainShot'].includes(id)?3:MAX_LEVEL;
     function offer(id){
-      const p=POWERS[id],current=levels[id],oneOff=id==='lavaWaders';
+      const p=POWERS[id],current=levels[id];
       return {id,name:p.name,action:p.action,icon:p.icon,color:p.color,
-        description:oneOff?p.description:p.descriptions[current],levelFrom:current,levelTo:current+1,
-        type:oneOff?'passive':'power'};
+        description:p.descriptions[current],levelFrom:current,levelTo:current+1,type:'power'};
     }
     return {
       levels,level:id=>levels[id]||0,maxFor,
@@ -576,11 +586,11 @@ window.GRIM_CONFIG = Object.freeze({
       secondJumpVelocity:()=>SECOND_JUMP_VELOCITIES[levels.ravenWings],
       slowEffect:()=>SLOW_TIME[levels.deathsDelay],
       skeletalHoverMs:()=>HOVER_MS[levels.skeletalWings],
-      fireCooldownMs:()=>FIRE_COOLDOWN_MS[levels.fireproofBoots],
+      fireCooldownMs:()=>FIRE_COOLDOWN_MS[levels.infernalBoots],
       brittleRangeMeters:()=>BRITTLE_METERS[levels.brittleBones],
-      lavaDamage:()=>levels.lavaWaders>0?1:2,
+      lavaDamage:()=>levels.infernalBoots>0?1:2,
       summary:()=>[...POWER_ORDER,...DEVIL_ORDER].filter(id=>levels[id]>0)
-        .map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:id==='lavaWaders'})),
+        .map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:false})),
       apply(id,player,addCoins,levelsGained=1){
         if(Object.hasOwn(levels,id)){
           if(levels[id]>=maxFor(id))return false;
@@ -621,11 +631,20 @@ window.GRIM_CONFIG = Object.freeze({
     if(available.length<count && player.hp<player.maxHp)available.push({...FALLBACKS.soulMend,type:'recovery'});
     return shuffle(available,rng).slice(0,count).map(x=>addRarity(x,rng));
   }
+  const GUN_IDS=['rapidFire','powerShot','chainShot'];
+  function devilPrice(offer){
+    return (offer.id==='skeletalWings'||offer.id==='infernalBoots') && offer.levelFrom===0?2:1;
+  }
   function devilOffers(manager,rng,count=3){
-    return shuffle(manager.devilEligible(),rng).slice(0,count).map(x=>addRarity(x,rng));
+    const all=manager.devilEligible();
+    const guns=shuffle(all.filter(x=>GUN_IDS.includes(x.id)),rng);
+    const guaranteed=guns.length?guns.slice(0,1):[];
+    const remaining=shuffle(all.filter(x=>!guaranteed.some(y=>y.id===x.id)),rng);
+    // Devil vendor purchases always grant just one level (never rarity bonuses).
+    return [...guaranteed,...remaining].slice(0,count).map(x=>({...x,rarity:'common',levelsGained:1,levelTo:x.levelFrom+1}));
   }
   scope.GRIM_POWERS={POWERS,HEALTH,FALLBACKS,DEVIL_POWER,POWER_ORDER,DEVIL_ORDER,
-    HEALTH_CAP,MAX_LEVEL,makePowerManager,rewardOffers,devilOffers,addRarity};
+    GUN_IDS,devilPrice,HEALTH_CAP,MAX_LEVEL,makePowerManager,rewardOffers,devilOffers,addRarity};
 })(typeof window!=='undefined'?window:globalThis);
 
 </script>
@@ -964,6 +983,7 @@ window.GRIM_CONFIG = Object.freeze({
     showFallNotice(on) { show('fall-notice', on); }
     showPortal(on) { show('portal-overlay',on); }
     showGodMode(on) { el('god-mode-checkbox').checked=on; show('god-mode-status',on); }
+    showGun(on){show('gun-status',on);}
     offerVendor(offers,type,phase,meters,hp,maxHp,gold) {
       this.selecting=false;
       const devil=type==='devil', healing=phase==='heal';
@@ -978,18 +998,18 @@ window.GRIM_CONFIG = Object.freeze({
       holder.style.justifyContent=offers.length===1?'center':'';
       if(!healing){
         offers.forEach(reward=>{
-          const cost=devil?2:5, affordable=devil?hp>cost:gold>=cost;
+          const cost=devil?window.GRIM_POWERS.devilPrice(reward):5, affordable=devil?hp>cost:gold>=cost;
           const card=document.createElement('button');
           card.type='button';card.className='reward-card rarity-'+(reward.rarity||'common');card.style.setProperty('--card-color',reward.color);
           const parts=[['reward-rarity',reward.rarity==='legendary'?`★ LEGENDARY · +${reward.levelsGained} LEVELS`:reward.rarity==='rare'?`◆ RARE · +${reward.levelsGained} LEVELS`:'COMMON'],['reward-icon',reward.icon],['reward-action',reward.action],
             ['reward-name',reward.name],['reward-desc',reward.description],
             ['reward-level',reward.type==='passive'?'PERMANENT PASSIVE':reward.levelFrom===undefined?'ONE UPGRADE':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`],
-            ['reward-price',devil?`2 HP · REMAINING ${hp-2} HP`:'5 GOLD']];
+            ['reward-price',devil?`${cost} HP · REMAINING ${hp-cost} HP`:'5 GOLD']];
           for(const [cls,value] of parts){
             const div=document.createElement('span');div.className=cls;div.textContent=value;card.appendChild(div);
           }
           card.disabled=!affordable;
-          card.setAttribute('aria-label',`${reward.rarity||'common'} ${reward.name}, level ${reward.levelTo||1}: ${reward.description}. Cost ${devil?'2 health':'5 gold'}`);
+          card.setAttribute('aria-label',`${reward.rarity||'common'} ${reward.name}, level ${reward.levelTo||1}: ${reward.description}. Cost ${devil?cost+' health':'5 gold'}`);
           card.addEventListener('click',()=>{
             if(this.selecting||card.disabled)return;
             this.selecting=true;this.actions.chooseUpgrade(reward.id);
@@ -1072,12 +1092,49 @@ window.GRIM_CONFIG = Object.freeze({
 
 </script>
   <script>
+// Grim Run v0.8.0 — pure combat configuration and targeting.
+(function(scope){
+  'use strict';
+  const SHOT_MS=Object.freeze([1000,850,700,550]);
+  const FLYERS=Object.freeze(['bat','skeletalBat']);
+  const CUTTABLE=Object.freeze(['bramble','airBramble','snappingBramble']);
+  const enemyIsFlying=e=>FLYERS.includes(e.kind);
+  const cuttable=o=>CUTTABLE.includes(o.type);
+  const hpCost=(id,level)=>((id==='skeletalWings'||id==='infernalBoots')&&level===0?2:1);
+  function nearest(items,originX){
+    return items.slice().sort((a,b)=>Math.abs(a.x-originX)-Math.abs(b.x-originX))[0]||null;
+  }
+  function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel){
+    const visible=e=>!e.dead&&e.x>Math.max(playerX+38,screenLeft)&&e.x<screenRight-25;
+    const flyers=enemies.filter(e=>visible(e)&&enemyIsFlying(e));
+    if(flyers.length)return {kind:'enemy',ref:nearest(flyers,playerX)};
+    const grounded=enemies.filter(e=>visible(e)&&!enemyIsFlying(e));
+    if(grounded.length)return {kind:'enemy',ref:nearest(grounded,playerX)};
+    if(powerLevel>=2){
+      const cut=obstacles.filter(o=>!o.destroyed&&cuttable(o)&&visible({x:o.x,dead:false}));
+      if(cut.length)return {kind:'obstacle',ref:nearest(cut,playerX)};
+    }
+    return null;
+  }
+  function snappingHeight(phase){return 46+32*(.5+.5*Math.sin(phase));}
+  function rectFor(e){
+    const bat=enemyIsFlying(e);
+    return {x:e.x-(bat?23:19),y:e.y-(bat?19:22),width:bat?46:38,height:bat?38:42};
+  }
+  function flightVisible(e,playerX,width){
+    return enemyIsFlying(e)&&!e.dead&&e.x>=playerX-width*.32&&e.x<=playerX+width*.68;
+  }
+  scope.GRIM_COMBAT={SHOT_MS,FLYERS,CUTTABLE,enemyIsFlying,cuttable,hpCost,pickTarget,snappingHeight,rectFor,flightVisible};
+})(typeof window!=='undefined'?window:globalThis);
+  </script>
+  <script>
 (function(scope) {
   'use strict';
   const C = scope.GRIM_CONFIG;
   const Core = scope.GRIM_CORE;
   const Powers = scope.GRIM_POWERS;
   const Meta = scope.GRIM_META;
+  const Combat = scope.GRIM_COMBAT;
   const Terrain = scope.GRIM_TERRAIN;
   const SKY = [0x0b1021,0x101b31,0x1c2942,0x29384b];
   const CYAN = 0x8cebe7;
@@ -1095,6 +1152,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.fallFeedbackMs=0;
       this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
       this.hasTeleported=false;this.portalMs=0;
+      this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
+      this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
+      this.nextEnemySpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -1175,10 +1235,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.groundY=Math.round(this.height*C.groundRatio);
       const dy=this.groundY-previousY;
       this.terrain.shiftY(dy);
+      for(const enemy of this.enemies){enemy.y+=dy;enemy.homeY+=dy;}
+      for(const bullet of this.bullets)bullet.y+=dy;
+      for(const ball of this.fireballs)ball.y+=dy;
+      for(const arc of this.chainArcs){arc.y1+=dy;arc.y2+=dy;}
       this.player.y+=dy;
       this.cameraY+=dy;
       for(const ob of this.obstacles){
-        if(ob.type==='tuckGate'||ob.type==='airBramble'){ob.y+=dy;continue;}
+        if(ob.type==='tuckGate'||ob.type==='airBramble'||ob.type==='snappingBramble'){ob.y+=dy;continue;}
         const next=Core.obstacle(ob.type,ob.x,this.terrain.anchorAt(ob.x),ob.variant,C.slideClearancePx,this.height);
         ob.y=next.y;ob.height=next.height;
       }
@@ -1198,12 +1262,16 @@ window.GRIM_CONFIG = Object.freeze({
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;
+      this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
+      this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
       if(this.ui){this.ui.showFallNotice(false);this.ui.showPortal(false);}
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:startingHP, maxHp:startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
+      this.nextEnemySpawnX=this.startX+5240*C.pxPerMeter;
+      this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
       this.nextVendorNumber=1;
@@ -1237,14 +1305,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
-      this.ui.showGodMode(false);
+      this.ui.showGodMode(false);this.ui.showGun(false);
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
     }
     goToMenu() {
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.setMode('menu');
+      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
@@ -1303,6 +1371,7 @@ window.GRIM_CONFIG = Object.freeze({
       if (this.state!=='playing' || p.attackCooldownMs > 0) return;
       p.attackMs = C.attackDurationMs;
       p.attackCooldownMs = C.attackCooldownMs;
+      this.swingSequence++;
       // Damage is applied only during the visible scythe swing, in update().
     }
     activateSlowTime(){
@@ -1397,9 +1466,10 @@ window.GRIM_CONFIG = Object.freeze({
     }
     chooseUpgrade(id){
       if(this.state!=='upgrade'||this.vendorPhase!=='deal'||!this.pendingOffers.some(o=>o.id===id))return;
-      const devil=this.vendorType==='devil',price=devil?2:5;
-      if((devil&&this.player.hp<=2)||(!devil&&this.coinCount<5))return;
+      const devil=this.vendorType==='devil';
       const offer=this.pendingOffers.find(o=>o.id===id);
+      const price=devil?Powers.devilPrice(offer):5;
+      if((devil&&this.player.hp<=price)||(!devil&&this.coinCount<price))return;
       if(!offer||!this.powerManager.apply(id,this.player,()=>{},offer.levelsGained||1))return;
       if(id==='skeletalWings')this.player.hoverBudgetMs=this.powerManager.skeletalHoverMs();
       if(devil)this.player.hp-=price;
@@ -1438,6 +1508,8 @@ window.GRIM_CONFIG = Object.freeze({
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
       const beginX=vendorX-C.upgradeSafetyBeforePx-90;
       this.obstacles=this.obstacles.filter(ob=>ob.x>endX||ob.x+ob.width<beginX);
+      this.enemies=this.enemies.filter(e=>e.x<beginX-30||e.x>endX+30);
+      this.fireballs=this.fireballs.filter(b=>b.x<beginX-30||b.x>endX+30);
       for(const tip of this.tips)if(tip.atX+80>=beginX&&tip.atX<=endX)tip.label.destroy();
       this.tips=this.tips.filter(t=>t.atX+80<beginX||t.atX>endX);
     }
@@ -1445,11 +1517,24 @@ window.GRIM_CONFIG = Object.freeze({
       const bonus=126*this.powerManager.attackBonus();
       const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
       for (const ob of this.obstacles) {
-        if ((ob.type !== 'bramble'&&ob.type!=='airBramble') || ob.destroyed || !Core.overlaps(box, ob)) continue;
+        if (!Combat.cuttable(ob) || ob.destroyed || !Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob)) continue;
         ob.destroyed=true;
         // Cutting removes the obstruction; only placed gold pickups grant currency.
         this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12);
         this.puff(ob.x+ob.width/2,ob.y+ob.height-45,0x9bc3a2,13);
+      }
+      // The same scythe cuts attacking enemies and deflects approaching fireballs.
+      for(const e of this.enemies){
+        if(e.dead||e.lastScytheSwing===this.swingSequence)continue;
+        if(!Core.overlaps(box,Combat.rectFor(e)))continue;
+        e.lastScytheSwing=this.swingSequence;
+        this.hitEnemy(e,1,false);
+      }
+      for(const ball of this.fireballs){
+        if(ball.reflected||ball.dead)continue;
+        if(!Core.overlaps(box,{x:ball.x-9,y:ball.y-9,width:18,height:18}))continue;
+        ball.reflected=true;ball.ageMs=0;
+        this.puff(ball.x,ball.y,0x9aefff,9);
       }
     }
     makeTip(type,ob) {
@@ -1497,6 +1582,55 @@ window.GRIM_CONFIG = Object.freeze({
         used++;last=m;
       }
     }
+
+    spawnCombatAhead(ahead){
+      // Spawn moving enemies only after acquiring the Soulcaster at the portal.
+      while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
+        const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
+        this.nextEnemySpawnX+=(m>=8000?53+this.rng.integer(0,30):84+this.rng.integer(0,43))*C.pxPerMeter;
+        if(m<5190||m>C.finishMeters-150)continue;
+        if(Math.abs(m-9500)<185)continue;
+        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,470,85))continue;
+        const choice=this.rng.next();
+        const kind=m>=8000?(choice<.64?'skeletalBat':choice<.82?'imp':'crawler'):
+          m>=6500?(choice<.77?'bat':'crawler'):'bat';
+        const flying=Combat.enemyIsFlying({kind});
+        // Flying creatures can appear above uneven ground, but never above a chasm.
+        // Ground enemies require flat solid floor to avoid climbing into the terrain.
+        const ground=this.terrain.groundAt(x);
+        if(ground===null)continue;
+        if(!flying&&(this.terrain.groundAt(x-70)===null||
+          this.terrain.groundAt(x+38)===null))continue;
+        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<(flying?140:195)&&
+          (!flying||o.type==='tuckGate'||o.type==='airBramble')))continue;
+        if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<(flying?145:185)))continue;
+        const y=ground-(flying?161:kind==='crawler'?21:34);
+        this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
+          phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
+          warningMs:0,fireMs:kind==='imp'?430+this.rng.integer(0,350):0,
+          lastScytheSwing:-1,contactDone:false});
+      }
+      // Telegraphed extending thorns above the tree line: cut them or time the run.
+      while(this.nextSnapSpawnX<ahead){
+        const x=this.nextSnapSpawnX,m=(x-this.startX)/C.pxPerMeter;
+        this.nextSnapSpawnX+=(175+this.rng.integer(0,75))*C.pxPerMeter;
+        if(m<3000||m>4630)continue; // Preserve the mountain Soul approach.
+        const nearGround=this.terrain.groundAt(x),farGround=this.terrain.groundAt(x+62);
+        if(nearGround===null||farGround===null||Math.abs(nearGround-farGround)>105)continue;
+        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,65))continue;
+        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<220))continue;
+        if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
+        const ground=this.terrain.groundAt(x),height=62;
+        if(ground===null)continue;
+        this.obstacles.push({type:'snappingBramble',x,y:ground-height,width:62,height,
+          variant:this.rng.integer(0,5),dealtDamage:false,destroyed:false});
+      }
+    }
+    snappingBox(ob){
+      const ground=this.terrain.anchorAt(ob.x);
+      const height=Combat.snappingHeight(this.elapsed*5.1+ob.variant*1.7);
+      return {...ob,y:ground-height,height};
+    }
     spawnAhead(){
       const ahead=this.player.x+Math.max(950,this.width*1.26);
       this.terrain.advance(ahead+700);
@@ -1516,6 +1650,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.nextEncounterX+=Core.encounterGap(this.speed,this.rng)*(this.distance>=5000?.72:1);
       }
+      this.spawnCombatAhead(ahead);
       if(!this.tipped.has('abyss') && this.terrain.firstGapX-395<ahead){
         this.tipped.add('abyss');
         const x=this.terrain.firstGapX-360;
@@ -1656,6 +1791,8 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.spawnAhead();
         if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
+        this.updateCombat(frameMs,dt);
+        if(this.state!=='playing'){this.drawScene();return;}
         this.checkCollectibles();
         if(this.state==='upgrade'){this.drawScene();return;}
         this.checkHazards();
@@ -1687,6 +1824,168 @@ window.GRIM_CONFIG = Object.freeze({
       if(Math.abs(delta)>8)this.cameraY+=delta*(this.state==='portal'?.28:.115);
       this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.drawScene();
+    }
+
+    hitEnemy(enemy,damage,fromGun=false){
+      if(enemy.dead)return;
+      enemy.hp-=damage;
+      this.puff(enemy.x,enemy.y,enemy.kind==='skeletalBat'?0xe5d6cb:0x9edbf2,6);
+      if(enemy.hp<=0){
+        enemy.dead=true;
+        this.puff(enemy.x,enemy.y,enemy.kind==='imp'?0xff874e:0xc5f1fc,12);
+      }
+    }
+    fireSoulcaster(target){
+      const p=this.player,originX=p.x+29,originY=p.y-58;
+      this.bullets.push({x:originX,y:originY,ref:target.ref,kind:target.kind,
+        damage:this.powerManager.level('powerShot')>=1?2:1,ageMs:0,dead:false});
+      this.puff(originX,originY,0xffe2a2,4);
+    }
+    blastSoulcaster(){
+      const left=this.player.x-this.width*C.reaperXRatio,right=left+this.width;
+      const targets=this.obstacles.filter(o=>!o.destroyed&&o.x+o.width>=left&&o.x<=right);
+      const bats=this.enemies.filter(e=>Combat.flightVisible(e,this.player.x,this.width));
+      if(!targets.length&&!bats.length)return false;
+      for(const ob of targets){
+        ob.destroyed=true;this.puff(ob.x+ob.width/2,Math.max(ob.y,ob.y+ob.height-30),0xffd38e,5);
+      }
+      for(const bat of bats)this.hitEnemy(bat,2,true);
+      this.puff(this.player.x+80,this.feetY-90,0xffbd77,24);
+      this.blastFlashMs=420;
+      this.blastCooldownMs=10000;
+      return true;
+    }
+    chainOnHit(first,damage){
+      const count=this.powerManager.level('chainShot');
+      if(count<=0)return;
+      const left=this.player.x-this.width*C.reaperXRatio,right=left+this.width;
+      let origin=first,remaining=count,visited=new Set([first]);
+      while(remaining-->0){
+        const valid=this.enemies.filter(e=>Combat.enemyIsFlying(e)&&!e.dead&&!visited.has(e)&&
+          e.x>=left&&e.x<=right&&Math.hypot(e.x-origin.x,e.y-origin.y)<540);
+        if(!valid.length)break;
+        valid.sort((a,b)=>Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y));
+        const next=valid[0];
+        this.chainArcs.push({x1:origin.x,y1:origin.y,x2:next.x,y2:next.y,lifeMs:250});
+        this.hitEnemy(next,damage,true);visited.add(next);origin=next;
+      }
+    }
+    updateCombat(frameMs,dt){
+      if(!this.gunUnlocked)return;
+      const p=this.player;
+      const left=p.x-this.width*C.reaperXRatio,right=left+this.width;
+      this.gunCooldownMs=Math.max(0,this.gunCooldownMs-frameMs);
+      this.blastCooldownMs=Math.max(0,this.blastCooldownMs-frameMs);
+      this.blastFlashMs=Math.max(0,(this.blastFlashMs||0)-frameMs);
+      for(const arc of this.chainArcs)arc.lifeMs-=frameMs;
+      this.chainArcs=this.chainArcs.filter(a=>a.lifeMs>0);
+      // Bats wind up their dive so a player can react before they descend.
+      for(const e of this.enemies){
+        if(e.dead)continue;
+        const ahead=e.x-p.x;
+        if(Combat.enemyIsFlying(e)){
+          e.x-=dt*(e.kind==='skeletalBat'?65:42);
+          const ground=this.terrain.anchorAt(e.x);
+          e.homeY=ground-(e.kind==='skeletalBat'?170:155);
+          if(e.mode==='glide'&&ahead<700&&ahead>80){e.mode='telegraph';e.timer=0;}
+          if(e.mode==='telegraph'){
+            e.timer+=dt;
+            if(e.timer>=.42){e.mode='dive';e.timer=0;}
+          }else if(e.mode==='dive'){
+            e.timer+=dt;
+            if(e.timer>=.95){e.mode='recover';e.timer=0;}
+          }else if(e.mode==='recover'){
+            e.timer+=dt;
+            if(e.timer>=.55){e.mode='done';e.timer=0;}
+          }
+          let dip=0;
+          if(e.mode==='dive')dip=122*Math.sin(Math.min(1,e.timer/.95)*Math.PI);
+          if(e.mode==='recover')dip=0;
+          e.y=e.homeY+Math.sin(this.elapsed*5.5+e.phase)*14+dip;
+        }else if(e.kind==='crawler'){
+          const newX=e.x-dt*54;
+          const floor=this.terrain.groundAt(newX);
+          if(floor===null){e.dead=true;continue;}
+          e.x=newX;e.homeY=floor-20;e.y=e.homeY;
+        }else if(e.kind==='imp'){
+          const ground=this.terrain.groundAt(e.x);
+          if(ground!==null){e.homeY=ground-30;e.y=e.homeY;}
+          if(ahead>90&&ahead<600){
+            if(e.warningMs>0){
+              e.warningMs-=frameMs;
+              if(e.warningMs<=0){
+                const dx=p.x-e.x,dy=p.y-45-(e.y-11),distance=Math.max(1,Math.hypot(dx,dy));
+                this.fireballs.push({x:e.x-12,y:e.y-11,vx:dx/distance*300,vy:dy/distance*300,
+                  owner:e,reflected:false,dead:false,ageMs:0});
+                e.fireMs=3000;
+              }
+            }else{
+              e.fireMs-=frameMs;
+              if(e.fireMs<=0)e.warningMs=470;
+            }
+          }
+        }
+      }
+      // Shots visibly travel toward moving targets; no fourth control button.
+      if(this.gunCooldownMs<=0){
+        const target=Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,this.powerManager.level('powerShot'));
+        if(target){
+          this.fireSoulcaster(target);
+          this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
+        }
+      }
+      for(const b of this.bullets){
+        if(b.dead)continue;
+        b.ageMs+=frameMs;
+        if(b.ageMs>1550||b.ref.dead||b.ref.destroyed){b.dead=true;continue;}
+        const tx=b.kind==='enemy'?b.ref.x:b.ref.x+b.ref.width/2;
+        const ty=b.kind==='enemy'?b.ref.y:b.ref.y+Math.min(b.ref.height/2,45);
+        const dx=tx-b.x,dy=ty-b.y,distance=Math.hypot(dx,dy);
+        const step=1550*dt;
+        if(distance<=Math.max(21,step)){
+          b.x=tx;b.y=ty;b.dead=true;
+          if(b.kind==='enemy'){this.hitEnemy(b.ref,b.damage,true);this.chainOnHit(b.ref,b.damage);}
+          else {b.ref.destroyed=true;this.puff(tx,ty,0xffd79e,12);}
+        }else {b.x+=dx/distance*step;b.y+=dy/distance*step;}
+      }
+      for(const ball of this.fireballs){
+        if(ball.dead)continue;
+        ball.ageMs+=frameMs;
+        if(ball.reflected){
+          const owner=ball.owner;
+          if(owner&&!owner.dead){
+            const dx=owner.x-ball.x,dy=owner.y-ball.y,distance=Math.hypot(dx,dy);
+            const step=580*dt;
+            if(distance<=Math.max(23,step)){this.hitEnemy(owner,2,false);ball.dead=true;continue;}
+            ball.x+=dx/distance*step;ball.y+=dy/distance*step;
+          }else ball.x+=520*dt;
+        }else {
+          ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;
+          if(Core.overlaps(Core.collisionBox(p.x,p.y,this.lowProfile),
+            {x:ball.x-9,y:ball.y-9,width:18,height:18})){
+            ball.dead=true;
+            if(p.invulMs<=0&&!this.blockFireHit()){
+              p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,'fireball');
+            }
+          }
+        }
+        if(ball.ageMs>4000||ball.x<left-130||ball.x>right+180)ball.dead=true;
+        if(this.state!=='playing')break;
+      }
+      if(this.state!=='playing')return;
+      if(this.powerManager.level('powerShot')>=3&&this.blastCooldownMs<=0)this.blastSoulcaster();
+      if(p.invulMs<=0){
+        const body=Core.collisionBox(p.x,p.y,this.lowProfile);
+        for(const e of this.enemies){
+          if(e.dead||e.contactDone||!Core.overlaps(body,Combat.rectFor(e)))continue;
+          e.contactDone=true;e.dead=true;
+          p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,e.kind);
+          break;
+        }
+      }
+      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-125&&e.x<right+600);
+      this.bullets=this.bullets.filter(b=>!b.dead);
+      this.fireballs=this.fireballs.filter(b=>!b.dead);
     }
     checkCollectibles() {
       const p=this.player;
@@ -1736,6 +2035,14 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.bonesBlastMs=850;
     }
+    blockFireHit(){
+      const p=this.player;
+      if(this.powerManager.level('infernalBoots')<=0||p.fireproofCooldownMs>0)return false;
+      p.fireproofCooldownMs=this.powerManager.fireCooldownMs();
+      p.invulMs=Math.max(p.invulMs,420);
+      this.puff(p.x,p.y-30,0xffcf7c,15);
+      return true;
+    }
     takeDamage(amount,kind){
       // Called only on a new hazard hit / fall, not for purchase costs.
       this.impactFeedback();
@@ -1760,13 +2067,10 @@ window.GRIM_CONFIG = Object.freeze({
             p.y>=localSlideGround-14 && p.y<=localSlideGround+24));
         const hit=ob.type==='branch'
           ? Core.branchHits(box,ob,this.terrain.groundAt.bind(this.terrain),C.slideClearancePx,nearGroundSlide)
-          : Core.overlaps(box,ob);
+          : Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob);
         if(!hit)continue;
         ob.dealtDamage=true;
-        if(ob.type==='fire' && this.powerManager.level('fireproofBoots')>0 && p.fireproofCooldownMs<=0){
-          p.fireproofCooldownMs=this.powerManager.fireCooldownMs();
-          p.invulMs=Math.max(p.invulMs,420);
-          this.puff(p.x,p.y-24,0xffcd7c,16);
+        if(ob.type==='fire' && this.blockFireHit()){
           if(this.godMode)this.impactFeedback();
         }else{
           p.invulMs=C.damageInvulnerabilityMs;
@@ -1792,6 +2096,8 @@ window.GRIM_CONFIG = Object.freeze({
       p.jumpHeld=false;p.holdSlide=false;p.sliding=false;p.airTuck=false;p.slideReleaseBufferMs=0;
       p.attackMs=0;p.invulMs=C.abyssRespawnInvulnerabilityMs;
       this.obstacles=this.obstacles.filter(ob=>ob.x<p.x-160||ob.x>p.x+260);
+      this.enemies=this.enemies.filter(e=>e.x<p.x-230||e.x>p.x+450);
+      this.fireballs=this.fireballs.filter(b=>b.x<p.x-230||b.x>p.x+450);
       for(const tip of this.tips){if(tip.atX>p.x-200&&tip.atX<p.x+270)tip.label.destroy();}
       this.tips=this.tips.filter(t=>t.atX<=p.x-200||t.atX>=p.x+270);
       this.cameraY=p.y-this.groundY;
@@ -1802,6 +2108,8 @@ window.GRIM_CONFIG = Object.freeze({
     enterUnderworld(){
       const p=this.player;
       this.hasTeleported=true;
+      this.gunUnlocked=true;this.gunCooldownMs=400;this.blastCooldownMs=0;
+      this.ui.showGun(true);
       this.portalMs=1450;
       this.state='portal';
       p.x=this.terrain.portalExitX;
@@ -1815,6 +2123,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.distance=(p.x-this.startX)/C.pxPerMeter;
       this.nextEncounterX=Math.max(this.nextEncounterX,p.x+1050);
       this.obstacles=this.obstacles.filter(o=>o.x>p.x+250);
+      this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
       this.ui.setMode('portal');
       this.ui.showPortal(true);
       this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
@@ -1868,6 +2177,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
       for(const soul of this.souls) if (!soul.taken) this.drawSoul(soul);
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
+      this.drawCombat();
       this.drawParticles();
       this.drawReaper();
       this.drawForeground();
@@ -2168,6 +2478,21 @@ window.GRIM_CONFIG = Object.freeze({
     drawObstacle(o) {
       const g=this.world, x=o.x, ground=this.terrain.anchorAt(o.x);
       const v=o.variant%6;
+      if(o.type==='snappingBramble'){
+        const b=this.snappingBox(o),top=b.y;
+        const t=this.elapsed*5.1+o.variant*1.7;
+        g.fillStyle(0x283323,.95);g.fillEllipse(x+31,ground-5,67,15);
+        for(let k=0;k<5;k++){
+          const stem=x+9+k*11;
+          g.lineStyle(5,0x64835a,.94);
+          g.lineBetween(stem,ground-4,stem+Math.sin(t+k)*7,top+10+(k%2)*9);
+          g.fillStyle(0xa5bfa0,.9);
+          g.fillTriangle(stem-8,top+22+(k%2)*10,stem+9,top+22+(k%2)*10,
+            stem+3,top+(k%2)*10);
+        }
+        g.fillStyle(0xdd6f88,.76);g.fillCircle(x+31,top+18,4);
+        return;
+      }
       if(o.type==='fire'){
         const t=this.elapsed*9+x*.012;
         g.fillStyle(0x9b250e,.85);g.fillEllipse(x+o.width/2,ground-3,o.width+11,11);
@@ -2299,6 +2624,69 @@ window.GRIM_CONFIG = Object.freeze({
         g.fillStyle(0x72986c,.45);g.fillEllipse(mid+6,top+9,17,16);
       }
       // No gold from cutting obstacles: currency comes only from placed pickups.
+    }
+
+    drawCombat(){
+      const g=this.world;
+      for(const e of this.enemies){
+        if(e.dead)continue;
+        const x=e.x,y=e.y,t=this.elapsed*13+e.phase;
+        if(Combat.enemyIsFlying(e)){
+          const skeletal=e.kind==='skeletalBat',wing=Math.sin(t)*13;
+          g.fillStyle(skeletal?0xcbd5d4:0x413e60,.95);
+          g.fillTriangle(x-9,y-2,x-40,y-24-wing,x-24,y+18-wing*.2);
+          g.fillTriangle(x+9,y-2,x+40,y-24-wing,x+24,y+18-wing*.2);
+          g.fillStyle(skeletal?0xadbeb9:0x24273e);g.fillEllipse(x,y,26,31);
+          if(skeletal){
+            g.lineStyle(3,0xf0e2c8,.89);g.lineBetween(x-17,y-8,x-33,y-22-wing);
+            g.lineBetween(x+17,y-8,x+33,y-22-wing);
+            g.fillStyle(0xf1e8db);g.fillTriangle(x-5,y+8,x,y+20,x+5,y+8);
+          }
+          g.fillStyle(skeletal?0xff8158:0xe4a0ec);
+          g.fillCircle(x-5,y-4,3.2);g.fillCircle(x+5,y-4,3.2);
+          if(e.mode==='telegraph'){
+            g.lineStyle(2,0xffc77c,.80);g.strokeCircle(x,y,35);
+          }
+          if(skeletal&&e.hp===1){g.fillStyle(0xffcf76,.68);g.fillCircle(x,y+13,3);}
+        }else if(e.kind==='crawler'){
+          g.fillStyle(0x52626c);g.fillEllipse(x,y,41,30);
+          g.fillStyle(0x98a9b1,.91);g.fillEllipse(x+5,y-8,27,16);
+          g.lineStyle(3,0xc6d3d4,.82);
+          for(const side of [-1,1]){
+            g.lineBetween(x+side*12,y+8,x+side*23,y+20);
+            g.lineBetween(x+side*3,y+11,x+side*17,y+22);
+          }
+          g.fillStyle(0xeb9ac4);g.fillCircle(x-10,y-5,2.4);
+        }else if(e.kind==='imp'){
+          g.fillStyle(0x7f3634);g.fillEllipse(x,y,36,44);
+          g.fillStyle(0xbc6448);g.fillTriangle(x-17,y-15,x-18,y-33,x-3,y-20);
+          g.fillTriangle(x+7,y-20,x+20,y-33,x+18,y-10);
+          g.fillStyle(0xffd48a);g.fillCircle(x-6,y-7,3);g.fillCircle(x+7,y-7,3);
+          if(e.warningMs>0){
+            g.lineStyle(2,0xff9c50,.85);
+            g.strokeCircle(x,y,27+4*Math.sin(this.elapsed*24));
+            g.fillStyle(0xffb46e,.6);g.fillCircle(x-17,y-9,7);
+          }
+        }
+      }
+      // Fast bright bolts are visually distinct from slow, deflectable fireballs.
+      for(const b of this.bullets){
+        const dx=b.x-this.player.x,dy=b.y-(this.player.y-58);
+        const len=Math.max(1,Math.hypot(dx,dy));
+        g.lineStyle(3,0xbefaff,.9);g.lineBetween(b.x,b.y,b.x-dx/len*17,b.y-dy/len*17);
+        g.fillStyle(b.damage===2?0xffd18a:0xb2fff2,.96);g.fillCircle(b.x,b.y,5);
+      }
+      for(const ball of this.fireballs){
+        g.fillStyle(ball.reflected?0x71ffff:0xff7a37,.21);g.fillCircle(ball.x,ball.y,16);
+        g.fillStyle(ball.reflected?0xb4ffff:0xffb358,.96);g.fillCircle(ball.x,ball.y,8);
+        g.fillStyle(0xffffff,.85);g.fillCircle(ball.x-2,ball.y-2,2.5);
+      }
+      for(const arc of this.chainArcs){
+        g.lineStyle(5,0xd7bbff,.85*arc.lifeMs/250);
+        g.lineBetween(arc.x1,arc.y1,arc.x2,arc.y2);
+        g.fillStyle(0xe4cfff,.8*arc.lifeMs/250);
+        g.fillCircle(arc.x2,arc.y2,5);
+      }
     }
     drawParticles() {
       const g=this.fx;g.clear();
@@ -2441,6 +2829,11 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
       g.setAlpha(1);
+      if(this.gunUnlocked){
+        g.fillStyle(0x8e968c,.92);g.fillRoundedRect(x+13,feet-51,24,9,2);
+        g.fillStyle(0xe8c98f,.85);g.fillRect(x+28,feet-49,18,5);
+        g.fillStyle(0x314053,.95);g.fillRect(x+14,feet-45,7,15);
+      }
       if(!p.grounded&&this.powerManager.level('skeletalWings')>0){
         const total=this.powerManager.skeletalHoverMs();
         const ratio=Math.max(0,Math.min(1,p.hoverBudgetMs/total));
@@ -2474,6 +2867,10 @@ window.GRIM_CONFIG = Object.freeze({
           g.fillRect(0,j*thickness,w,thickness);
           g.fillRect(0,h-(j+1)*thickness,w,thickness);
         }
+      }
+      if(this.blastFlashMs>0){
+        g.fillStyle(0xf6d78b,.19*(this.blastFlashMs/420));
+        g.fillRect(0,0,this.width,this.height);
       }
       if(this.damageFlashMs>0){
         const a=.27*Math.pow(this.damageFlashMs/420,1.8);
