@@ -165,6 +165,14 @@ button {cursor:pointer;}
 .rewind-cd{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;
  background:#17152bd9;color:#efdfff;font-size:clamp(12px,3vh,20px);font-weight:950;letter-spacing:0}
 .rewind.recharging{border-color:#7c7598c7}
+.rewind-playback{position:absolute;inset:0;z-index:8;pointer-events:none;
+ display:flex;justify-content:center;align-items:flex-start;padding-top:clamp(8px,2vh,16px);
+ background:radial-gradient(ellipse at 50% 50%,#9d60df0d,#5722a038 85%);
+ box-shadow:inset 0 0 55px #bb7bff8b;mix-blend-mode:screen}
+.rewind-playback span{font-size:clamp(10px,2.4vh,17px);font-weight:1000;
+ letter-spacing:.22em;color:#e8d6ff;text-shadow:0 1px 7px #160521,0 0 12px #a982ff;
+ animation:rewindShimmer .23s ease-in-out infinite alternate}
+@keyframes rewindShimmer{from{opacity:.58}to{opacity:1}}
 .rewind-flash{position:absolute;inset:0;z-index:8;pointer-events:none;
  background:repeating-linear-gradient(-23deg,#b993ff12 0,#b993ff12 12px,transparent 12px,transparent 28px);
  box-shadow:inset 0 0 160px #ae87f8bb;animation:rewindPulse .55s ease-out forwards}
@@ -231,6 +239,9 @@ button {cursor:pointer;}
     <button id="chest-continue-btn" class="primary" aria-label="Continue from weapon acquisition">CONTINUE ▶</button>
   </div>
   <div id="rewind-flash" class="rewind-flash hidden" aria-hidden="true"></div>
+  <div id="rewind-playback" class="rewind-playback hidden" aria-hidden="true">
+    <span>◀◀ TIME REVERSES ◀◀</span>
+  </div>
   <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
@@ -1171,8 +1182,8 @@ window.GRIM_CONFIG = Object.freeze({
       show('chest-screen', mode === 'chest');
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
-      show('controls', mode === 'playing');
-      show('hud', mode === 'playing' || mode === 'paused' || mode === 'upgrade' || mode === 'countdown' || mode === 'portal');
+      show('controls',mode==='playing');
+      show('hud', mode==='playing'||mode==='paused'||mode==='upgrade'||mode==='countdown'||mode==='portal'||mode==='rewinding');
       this.releaseAll();
     }
     updateCountdown(seconds) {
@@ -1211,6 +1222,7 @@ window.GRIM_CONFIG = Object.freeze({
         'Rewind recharging':!ready?'Rewind history charging':'Rewind '+requiredMs/1000+' seconds');
     }
     rewindFlash(on){show('rewind-flash',on);}
+    showRewindPlayback(on){show('rewind-playback',on);}
     offerVendor(offers,type,phase,meters,hp,maxHp,gold) {
       this.selecting=false;
       const devil=type==='devil', healing=phase==='heal';
@@ -1570,7 +1582,7 @@ window.GRIM_CONFIG = Object.freeze({
       const actual=this.rewindFrames.length?
         this.rewindClockMs-this.rewindFrames[0].at:0;
       const ready=duration>0&&actual>=duration;
-      this.ui.showRewind(this.rewindLevel(),this.rewindCooldownMs||0,
+      this.ui.showRewind(this.rewindLevel(),this.godMode?0:(this.rewindCooldownMs||0),
         ready,actual,duration);
     }
     saveTerrainOriginal(from,to){
@@ -1642,14 +1654,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.rewindFlashMs===0)this.ui.rewindFlash(false);
       this.updateRewindButton();
     }
-    rewind(){
-      if(this.state!=='playing'||this.rewindLevel()<=0||this.rewindCooldownMs>0)return false;
-      const duration=this.rewindLengthMs();
-      if(!this.rewindFrames.length||this.rewindClockMs-this.rewindFrames[0].at<duration)return false;
-      const target=this.rewindClockMs-duration;
-      // Choose latest saved state AT OR BEFORE requested rewind time.
-      const saved=[...this.rewindFrames].reverse().find(s=>s.at<=target);
-      if(!saved)return false;
+    applyRewindSnapshot(saved){
       const copy=a=>a.map(o=>({...o}));
       this.player={...saved.player};
       // Don't leave touch controls held after teleporting the player back.
@@ -1692,13 +1697,53 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showFallNotice(false);
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,
         this.soulCount,this.coinCount,this.points,this.powerManager.summary());
-      // An entire new timeline: do not allow immediate re-use of old snapshots,
-      // and NEVER restore Rewind's own cooldown.
-      this.rewindCooldownMs=this.rewindRechargeMs();
-      this.resetRewindHistory();
+    }
+    playRewindFrame(frameMs){
+      const clip=this.rewindPlayback;
+      if(this.state!=='rewinding'||!clip)return;
+      clip.elapsedMs+=frameMs;
+      const fraction=Math.min(1,clip.elapsedMs/clip.durationMs);
+      const index=Math.min(clip.frames.length-1,Math.floor(fraction*(clip.frames.length-1)));
+      if(index!==clip.lastIndex){
+        clip.lastIndex=index;
+        this.applyRewindSnapshot(clip.frames[index]);
+      }
+      if(fraction>=1){
+        this.applyRewindSnapshot(clip.target);
+        this.rewindPlayback=null;
+        this.state='playing';
+        // God Mode skips the recharge timer but still needs a fresh full
+        // eight-second timeline after each rewind.
+        this.rewindCooldownMs=this.godMode?0:this.rewindRechargeMs();
+        this.resetRewindHistory();this.captureRewind();
+        this.ui.showRewindPlayback(false);
+        this.ui.setMode('playing');
+        this.updateRewindButton();
+        this.rewindFlashMs=550;this.ui.rewindFlash(true);
+        this.puff(this.player.x,this.player.y-55,0xd5a8ff,20);
+      }
+    }
+    rewind(){
+      if(this.state!=='playing'||this.rewindLevel()<=0||
+        (!this.godMode&&this.rewindCooldownMs>0))return false;
+      const duration=this.rewindLengthMs();
+      if(!this.rewindFrames.length||
+        this.rewindClockMs-this.rewindFrames[0].at<duration)return false;
+      // Capture the exact live frame for smooth entry into reverse playback.
       this.captureRewind();
-      this.rewindFlashMs=550;this.ui.rewindFlash(true);
-      this.puff(this.player.x,this.player.y-55,0xd5a8ff,20);
+      const target=this.rewindClockMs-duration;
+      const saved=[...this.rewindFrames].reverse().find(s=>s.at<=target);
+      if(!saved)return false;
+      const frames=this.rewindFrames.filter(s=>s.at>=saved.at).reverse();
+      // 3x normal speed: 5s in ~1.7s, 8s in ~2.7s.
+      this.rewindPlayback={frames,target,elapsedMs:0,
+        durationMs:Math.max(180,(this.rewindClockMs-saved.at)/3),
+        lastIndex:-1};
+      this.rewindPlayback.target=saved;
+      this.state='rewinding';
+      this.ui.setMode('rewinding');
+      this.ui.showRewindPlayback(true);
+      this.ui.rewindFlash(false);
       return true;
     }
     startRun() {
@@ -1761,7 +1806,7 @@ window.GRIM_CONFIG = Object.freeze({
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
       this.ui.showGodMode(false);this.ui.showGun(false);
-      this.ui.rewindFlash(false);this.captureRewind();this.updateRewindButton();
+      this.ui.rewindFlash(false);this.ui.showRewindPlayback(false);this.captureRewind();this.updateRewindButton();
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
     }
     goToMenu() {
@@ -1770,7 +1815,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
       this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);
       this.rewindFrames=[];this.rewindFlashMs=0;
-      this.ui.rewindFlash(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
+      this.ui.rewindFlash(false);this.ui.showRewindPlayback(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
@@ -2219,7 +2264,8 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     update(_,deltaMs) {
-      if(this.state==='portal'){
+      if(this.state==='rewinding')this.playRewindFrame(Math.min(250,Math.max(0,deltaMs)));
+      else if(this.state==='portal'){
         this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.portalMs===0)this.startChest();
       }
