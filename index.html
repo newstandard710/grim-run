@@ -1092,6 +1092,42 @@ window.GRIM_CONFIG = Object.freeze({
 
 </script>
   <script>
+// Grim Run v0.8.0 — pure combat configuration and targeting.
+(function(scope){
+  'use strict';
+  const SHOT_MS=Object.freeze([1000,850,700,550]);
+  const FLYERS=Object.freeze(['bat','skeletalBat']);
+  const CUTTABLE=Object.freeze(['bramble','airBramble','snappingBramble']);
+  const enemyIsFlying=e=>FLYERS.includes(e.kind);
+  const cuttable=o=>CUTTABLE.includes(o.type);
+  const hpCost=(id,level)=>((id==='skeletalWings'||id==='infernalBoots')&&level===0?2:1);
+  function nearest(items,originX){
+    return items.slice().sort((a,b)=>Math.abs(a.x-originX)-Math.abs(b.x-originX))[0]||null;
+  }
+  function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel){
+    const visible=e=>!e.dead&&e.x>Math.max(playerX+38,screenLeft)&&e.x<screenRight-25;
+    const flyers=enemies.filter(e=>visible(e)&&enemyIsFlying(e));
+    if(flyers.length)return {kind:'enemy',ref:nearest(flyers,playerX)};
+    const grounded=enemies.filter(e=>visible(e)&&!enemyIsFlying(e));
+    if(grounded.length)return {kind:'enemy',ref:nearest(grounded,playerX)};
+    if(powerLevel>=2){
+      const cut=obstacles.filter(o=>!o.destroyed&&cuttable(o)&&visible({x:o.x,dead:false}));
+      if(cut.length)return {kind:'obstacle',ref:nearest(cut,playerX)};
+    }
+    return null;
+  }
+  function snappingHeight(phase){return 46+32*(.5+.5*Math.sin(phase));}
+  function rectFor(e){
+    const bat=enemyIsFlying(e);
+    return {x:e.x-(bat?23:19),y:e.y-(bat?19:22),width:bat?46:38,height:bat?38:42};
+  }
+  function flightVisible(e,playerX,width){
+    return enemyIsFlying(e)&&!e.dead&&e.x>=playerX-width*.32&&e.x<=playerX+width*.68;
+  }
+  scope.GRIM_COMBAT={SHOT_MS,FLYERS,CUTTABLE,enemyIsFlying,cuttable,hpCost,pickTarget,snappingHeight,rectFor,flightVisible};
+})(typeof window!=='undefined'?window:globalThis);
+  </script>
+  <script>
 (function(scope) {
   'use strict';
   const C = scope.GRIM_CONFIG;
