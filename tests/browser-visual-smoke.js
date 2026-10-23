@@ -31,7 +31,7 @@ const server=http.createServer((req,res)=>{
   const page=await browser.newPage({viewport:{width:1400,height:750}});
   const errors=[];
   page.on('pageerror',e=>errors.push(String(e)));
-  await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(origin+'/?art=experimental&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>{
    const s=window.grimRun?.scene?.scenes?.[0];
    return s?.visuals?.loaded===true;
@@ -80,8 +80,9 @@ const server=http.createServer((req,res)=>{
   assert.equal(playing.spriteX,playing.playerX,'Player sprite must follow collision origin');
   assert.ok(Math.abs(playing.spriteY-playing.footY)<=13);
   assert.deepEqual(errors,[],'Browser console errors');
-  // Art off should still run using procedural art without false ready flags.
-  await page.goto(origin+'/?art=off&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  // Default game currently uses procedural fallback while painted art is reviewed.
+  // The previous SVGs remain available as opt-in experimental art.
+  await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:30000});
   const fallback=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0];
@@ -89,7 +90,40 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(fallback.reaperReady,false);
   assert.equal(fallback.batReady,false);
-  console.log('PASS actual Chromium: illustrated sprites visible, pixel data nonblank, and art=off fallback preserved.');
+  await page.click('#start-btn');
+  await page.click('#pause-btn');
+  await page.locator('#god-mode-checkbox').check();
+  await page.waitForFunction(()=>{
+    const s=window.grimRun.scene.scenes[0];
+    return s.godMode===true;
+  });
+  await page.evaluate(()=>{
+    const picker=document.getElementById('god-teleport-range');
+    picker.value='5000';picker.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  await page.click('#god-teleport-confirm-open');
+  assert.equal(await page.locator('#teleport-confirm').isVisible(),true);
+  await page.click('#teleport-confirm-yes');
+  const location=await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0];
+    return {meters:s.distance,state:s.state,underworld:s.hasTeleported,
+      gun:s.gunUnlocked,countdownMs:s.countdownMs,teleportUsed:s.teleportUsed};
+  });
+  assert.equal(location.state,'playing');
+  assert.ok(location.meters>=5000&&location.meters<5100);
+  assert.equal(location.underworld,true);
+  assert.equal(location.gun,true);
+  assert.equal(location.countdownMs,0);
+  assert.equal(location.teleportUsed,true);
+  await page.click('#practice-slow-btn');
+  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),true);
+  await page.click('#practice-slow-btn');
+  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
+  await page.click('#pause-btn');
+  await page.locator('#god-mode-checkbox').uncheck();
+  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
+  assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
+  console.log('PASS actual Chromium: legacy sprite opt-in, safe procedural fallback, God Mode 5000m teleport and practice slow toggling.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
