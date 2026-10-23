@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.0
+/* Grim Run — Macabre Storybook visual system, v0.10.1
  * Data-driven 16-pose Reaper + 8-pose Cavern Bat SVG atlases, rasterized
  * once by Phaser, with stable deterministic frame selection.
  * NO movement, collision, currency or gameplay changes.
@@ -74,25 +74,62 @@
         if(typeof s.load.off==='function')s.load.off('loaderror',fail);
         if(s.textures.exists('gr_reaper_sheet_source')&&!errors.has('gr_reaper_sheet_source')){
           try{
-            const tex=s.textures.get('gr_reaper_sheet_source');
-            s.textures.addSpriteSheet('gr_reaper_frames',tex,
+            const sourceTexture=s.textures.get('gr_reaper_sheet_source');
+            const sourceImage=sourceTexture.getSourceImage();
+            // Phaser 3.90 expects an image/canvas source when adding a new
+            // sprite-sheet key, NOT a Phaser Texture (unless key is '').
+            // Passing the Texture previously yielded the tiny green missing-
+            // texture square, while incorrectly disabling the old drawing.
+            if(!sourceImage||!sourceImage.width||!sourceImage.height)
+              throw new Error('SVG image was not rasterized');
+            const sheet=s.textures.addSpriteSheet('gr_reaper_frames',sourceImage,
               {frameWidth:192,frameHeight:192,endFrame:15});
-            this.reaper=s.add.sprite(0,0,'gr_reaper_frames',0)
+            if(!sheet||!s.textures.exists('gr_reaper_frames')||
+                !sheet.has(0)||!sheet.has(8)||!sheet.has(15))
+              throw new Error('Reaper sprite sheet has missing animation frames');
+            const sprite=s.add.sprite(0,0,'gr_reaper_frames',0)
               .setOrigin(.5,1).setScale(.74).setDepth(12).setVisible(false);
+            if(!sprite.texture||sprite.texture.key!=='gr_reaper_frames'||
+               !sprite.frame||sprite.frame.name==='__MISSING'){
+              sprite.destroy();
+              throw new Error('Reaper resolved to Phaser missing texture');
+            }
+            this.reaper=sprite;
             this.reaperReady=true;
-          }catch(e){this.failedAssets.push('Reaper texture: '+String(e));}
+          }catch(e){
+            if(this.reaper){this.reaper.destroy();this.reaper=null;}
+            this.reaperReady=false;
+            this.failedAssets.push('Reaper texture: '+String(e));
+          }
         }else this.failedAssets.push('Reaper SVG unavailable');
         if(s.textures.exists('gr_bat_sheet_source')&&!errors.has('gr_bat_sheet_source')){
           try{
-            const tex=s.textures.get('gr_bat_sheet_source');
-            s.textures.addSpriteSheet('gr_bat_frames',tex,
+            const sourceTexture=s.textures.get('gr_bat_sheet_source');
+            const sourceImage=sourceTexture.getSourceImage();
+            if(!sourceImage||!sourceImage.width||!sourceImage.height)
+              throw new Error('Bat SVG image was not rasterized');
+            const sheet=s.textures.addSpriteSheet('gr_bat_frames',sourceImage,
               {frameWidth:160,frameHeight:128,endFrame:7});
+            if(!sheet||!s.textures.exists('gr_bat_frames')||
+               !sheet.has(0)||!sheet.has(4)||!sheet.has(7))
+              throw new Error('Bat sprite sheet has missing animation frames');
             for(let i=0;i<12;i++){
-              this.batPool.push(s.add.sprite(0,0,'gr_bat_frames',0)
-                .setScale(.66).setDepth(9).setVisible(false));
+              const sprite=s.add.sprite(0,0,'gr_bat_frames',0)
+                .setScale(.66).setDepth(9).setVisible(false);
+              if(!sprite.texture||sprite.texture.key!=='gr_bat_frames'||
+                !sprite.frame||sprite.frame.name==='__MISSING'){
+                sprite.destroy();
+                throw new Error('Bat resolved to Phaser missing texture');
+              }
+              this.batPool.push(sprite);
             }
             this.batReady=true;
-          }catch(e){this.failedAssets.push('Bat texture: '+String(e));}
+          }catch(e){
+            for(const sprite of this.batPool)sprite.destroy();
+            this.batPool=[];
+            this.batReady=false;
+            this.failedAssets.push('Bat texture: '+String(e));
+          }
         }else this.failedAssets.push('Bat SVG unavailable');
         this.loaded=true;
       };
