@@ -1119,9 +1119,12 @@ window.GRIM_CONFIG = Object.freeze({
   }
   function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel){
     const visible=e=>!e.dead&&e.x>Math.max(playerX+38,screenLeft)&&e.x<screenRight-25;
-    const flyers=enemies.filter(e=>visible(e)&&enemyIsFlying(e));
+    // Let creatures be perceptible on-screen for at least 0.65s before auto-fire.
+    // Without this, one-HP bats can die before their first swoop is noticed.
+    const eligible=e=>visible(e)&&(e.visibleMs||0)>=650;
+    const flyers=enemies.filter(e=>eligible(e)&&enemyIsFlying(e));
     if(flyers.length)return {kind:'enemy',ref:nearest(flyers,playerX)};
-    const grounded=enemies.filter(e=>visible(e)&&!enemyIsFlying(e));
+    const grounded=enemies.filter(e=>eligible(e)&&!enemyIsFlying(e));
     if(grounded.length)return {kind:'enemy',ref:nearest(grounded,playerX)};
     if(powerLevel>=2){
       const cut=obstacles.filter(o=>!o.destroyed&&cuttable(o)&&visible({x:o.x,dead:false}));
@@ -1912,6 +1915,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.puff(enemy.x,enemy.y,enemy.kind==='skeletalBat'?0xe5d6cb:0x9edbf2,6);
       if(enemy.hp<=0){
         enemy.dead=true;
+        if(this.encounterTelemetry)this.encounterTelemetry.kills++;
         this.puff(enemy.x,enemy.y,enemy.kind==='imp'?0xff874e:0xc5f1fc,12);
       }
     }
@@ -1963,6 +1967,18 @@ window.GRIM_CONFIG = Object.freeze({
       for(const e of this.enemies){
         if(e.dead)continue;
         const ahead=e.x-p.x;
+        const visibleNow=e.x>p.x+30&&e.x<right-25;
+        if(visibleNow){
+          e.visibleMs=(e.visibleMs||0)+frameMs;
+          if(!e.everVisible){
+            e.everVisible=true;
+            if(this.encounterTelemetry)this.encounterTelemetry.enteredView++;
+          }
+          if(e.visibleMs>=650&&!e.visiblyEngaged){
+            e.visiblyEngaged=true;
+            if(this.encounterTelemetry)this.encounterTelemetry.visibleFor650ms++;
+          }
+        }
         if(Combat.enemyIsFlying(e)){
           e.x-=dt*(e.kind==='skeletalBat'?65:42);
           const ground=this.terrain.anchorAt(e.x);
@@ -2063,9 +2079,12 @@ window.GRIM_CONFIG = Object.freeze({
           break;
         }
       }
-      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-125&&e.x<right+600);
+      // Moving threats cannot enter the guaranteed post-vendor safe corridor.
+      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-125&&e.x<right+600&&
+        !Core.intersectsVendorCorridor(e.x-22,44,this.startX,C.vendorEveryMeters,C.pxPerMeter));
       this.bullets=this.bullets.filter(b=>!b.dead);
-      this.fireballs=this.fireballs.filter(b=>!b.dead);
+      this.fireballs=this.fireballs.filter(b=>!b.dead&&
+        !Core.intersectsVendorCorridor(b.x-9,18,this.startX,C.vendorEveryMeters,C.pxPerMeter));
     }
     checkCollectibles() {
       const p=this.player;
@@ -2126,9 +2145,11 @@ window.GRIM_CONFIG = Object.freeze({
     takeDamage(amount,kind){
       // Called only on a new hazard hit / fall, not for purchase costs.
       this.impactFeedback();
+      // God Mode prevents HP loss and death, not the on-damage effects.
+      // This retains reliable test feedback for Brittle Bones and future powers.
+      this.triggerBrittleBones();
       if(this.godMode)return false;
       this.player.hp=Math.max(0,this.player.hp-amount);
-      this.triggerBrittleBones();
       if(this.player.hp<=0)this.die();
       return true;
     }
