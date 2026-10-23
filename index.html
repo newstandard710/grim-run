@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.8.0</title>
+  <title>GRIM RUN — v0.8.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -167,7 +167,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.8.0 · THE SOULCASTER</div>
+      <div class="mini">v0.8.1 · ENCOUNTER RELIABILITY</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -221,7 +221,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.8.0',
+  version: '0.8.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -244,7 +244,6 @@ window.GRIM_CONFIG = Object.freeze({
   coinScore: 5,
   soulScore: 50,
   minEncounterGapSeconds: 1.40,
-  upgradeSafetyBeforePx: 260, // clear a safe approach before vendor
   upgradeSafetyAfterMeters: 50, // hazard-free ground after vendor
   resumeCountdownMs: 3000,
   slowCooldownMs: 3300,
@@ -342,17 +341,22 @@ window.GRIM_CONFIG = Object.freeze({
   function milestoneX(startX, soulNumber, meters = 666, pxPerMeter = 12) {
     return startX + soulNumber * meters * pxPerMeter;
   }
-  function isMilestoneSafe(x, startX, meters = 666, pxPerMeter = 12, radius = 245) {
-    const period = meters * pxPerMeter;
-    const mod = ((x - startX) % period + period) % period;
-    return Math.min(mod, period-mod) > radius;
+  // One universal spawn exclusion: the 50m corridor AFTER each vendor.
+  // Retain old optional arguments solely for backward compatibility; they no longer
+  // create independent pre-vendor or oversized post-vendor restrictions.
+  function intersectsVendorCorridor(x, width, startX, meters = 666, pxPerMeter = 12) {
+    const a=(x-startX)/pxPerMeter, b=(x+Math.max(0,width)-startX)/pxPerMeter;
+    for(let k=Math.max(1,Math.floor(a/meters)-1);k<=Math.min(14,Math.floor(b/meters)+1);k++){
+      if(b>k*meters && a<k*meters+50)return true;
+    }
+    return false;
   }
-  function isUpgradeSafe(x, startX, meters = 666, pxPerMeter = 12, beforePx = 260, afterMeters = 50) {
-    const offset = x - startX;
-    const period = meters * pxPerMeter;
-    const candidate = Math.floor((offset + beforePx) / period);
-    if (candidate < 1) return true;
-    return !(offset >= candidate * period - beforePx && offset <= candidate * period + afterMeters * pxPerMeter);
+  function isUpgradeSafe(x,startX,meters=666,pxPerMeter=12,_beforePx=0,_afterMeters=50){
+    return !intersectsVendorCorridor(x,0,startX,meters,pxPerMeter);
+  }
+  // Protect physical Soul platform footprints, not a broad meter-radius.
+  function overlapsSoulPlatform(x,width,platforms,padding=25){
+    return (platforms||[]).some(p=>x+width>p.x-padding && x<p.x+p.width+padding);
   }
   // Positions three coins along an unmodified FULL jump. Fractions of total flight
   // time (12%, 50%, 88%) yield a broad arc at every supported run speed.
@@ -444,7 +448,8 @@ window.GRIM_CONFIG = Object.freeze({
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
+    encounterGap, chooseEncounter, milestoneX, isUpgradeSafe, intersectsVendorCorridor, overlapsSoulPlatform,
+    fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
     slideCeilingBottomAt, branchHits };
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -716,11 +721,11 @@ window.GRIM_CONFIG = Object.freeze({
       if(m<9690 && m+lengthMeters>9320)return false; // second Soul's uninterrupted underpass
       if(m>=5000 && m<5105)return false;
       if(m+lengthMeters>9950)return false;
-      // Keep BOTH gaps and their landing platforms out of the 20m approach
-      // and the first 50m after each 666m soul, whether collected or missed.
-      for(let k=Math.max(1,Math.floor((m-75)/666));k<=Math.ceil((m+lengthMeters+75)/666);k++){
-        const milestone=k*666;
-        if(milestone<=9324 && m<milestone+50 && m+lengthMeters>milestone-20)return false;
+      // No pre-vendor exclusion. Gap groups cannot intersect the 50m
+      // post-vendor safe corridor; the sequence includes its landing runway.
+      for(let k=1;k<=14;k++){
+        const vendor=k*666;
+        if(m<vendor+50&&m+lengthMeters>vendor)return false;
       }
       return true;
     }
@@ -872,8 +877,10 @@ window.GRIM_CONFIG = Object.freeze({
     function groupNear(x){advance(x+1100);return sequences.find(s=>x>=s.startX-100&&x<=s.endX+320)||null;}
     function canPlace(x,width=200){
       advance(x+Math.max(650,width+20));
-      if(Math.abs(x-portalX)<1050||x>finishX-500||Math.abs(meters(x)-4850)<120||Math.abs(meters(x)-9500)<165)return false;
-      if(sequences.some(s=>x+width>s.startX-340&&x<s.endX+310))return false;
+      if(x+width>finishX)return false;
+      // Prevent obstacles hanging into the unsupported edge of a gap group.
+      // This is geometry clearance only, never a generic milestone exclusion.
+      if(sequences.some(s=>x+width>s.startX-85&&x<s.endX+75))return false;
       const a=groundAt(x),b=groundAt(x+width);
       return a!==null&&b!==null&&Math.abs(a-b)<=34;
     }
@@ -1106,9 +1113,12 @@ window.GRIM_CONFIG = Object.freeze({
   }
   function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel){
     const visible=e=>!e.dead&&e.x>Math.max(playerX+38,screenLeft)&&e.x<screenRight-25;
-    const flyers=enemies.filter(e=>visible(e)&&enemyIsFlying(e));
+    // Let creatures be perceptible on-screen for at least 0.65s before auto-fire.
+    // Without this, one-HP bats can die before their first swoop is noticed.
+    const eligible=e=>visible(e)&&(e.visibleMs||0)>=650;
+    const flyers=enemies.filter(e=>eligible(e)&&enemyIsFlying(e));
     if(flyers.length)return {kind:'enemy',ref:nearest(flyers,playerX)};
-    const grounded=enemies.filter(e=>visible(e)&&!enemyIsFlying(e));
+    const grounded=enemies.filter(e=>eligible(e)&&!enemyIsFlying(e));
     if(grounded.length)return {kind:'enemy',ref:nearest(grounded,playerX)};
     if(powerLevel>=2){
       const cut=obstacles.filter(o=>!o.destroyed&&cuttable(o)&&visible({x:o.x,dead:false}));
@@ -1155,6 +1165,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
       this.nextEnemySpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
+      this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
+        rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
+        kills:0,byKind:{}};
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -1264,13 +1277,16 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
+      this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
+        rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
+        kills:0,byKind:{}};
       if(this.ui){this.ui.showFallNotice(false);this.ui.showPortal(false);}
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:startingHP, maxHp:startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
-      this.nextEnemySpawnX=this.startX+5240*C.pxPerMeter;
+      this.nextEnemySpawnX=this.startX+5070*C.pxPerMeter;
       this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
@@ -1506,10 +1522,10 @@ window.GRIM_CONFIG = Object.freeze({
     }
     clearUpgradeCorridor(vendorX){
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
-      const beginX=vendorX-C.upgradeSafetyBeforePx-90;
+      const beginX=vendorX;
       this.obstacles=this.obstacles.filter(ob=>ob.x>endX||ob.x+ob.width<beginX);
-      this.enemies=this.enemies.filter(e=>e.x<beginX-30||e.x>endX+30);
-      this.fireballs=this.fireballs.filter(b=>b.x<beginX-30||b.x>endX+30);
+      this.enemies=this.enemies.filter(e=>e.x+25<beginX||e.x-25>endX);
+      this.fireballs=this.fireballs.filter(b=>b.x+9<beginX||b.x-9>endX);
       for(const tip of this.tips)if(tip.atX+80>=beginX&&tip.atX<=endX)tip.label.destroy();
       this.tips=this.tips.filter(t=>t.atX+80<beginX||t.atX>endX);
     }
@@ -1557,58 +1573,120 @@ window.GRIM_CONFIG = Object.freeze({
       this.obstacles.push(ob);this.makeTip(type,ob);
     }
     populateComboObstacles(){
-      // Place combo patterns inside existing abyss gaps, never on ordinary flat ground.
-      // Air tuck gates start at 7,000m; jump-attack challenges may appear earlier.
-      const segments=this.terrain.segments;
-      let last=-100000,used=0,lateUsed=0;
-      for(const s of segments){
-        if(s.kind!=='gap')continue;
-        const m=(s.start-this.startX)/C.pxPerMeter;
-        if(m<1700||m>9200||m-last<240)continue;
-        if(m>4600&&m<5300)continue;
-        if(Math.abs(m-4850)<140||Math.abs(m-9500)<190)continue;
-        const x=s.start+Math.min(90,(s.end-s.start)*.42);
-        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
-        if(!Core.isUpgradeSafe(x+86,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
-        if(this.coins.some(c=>Math.abs(c.x-x)<80))continue;
-        // Jump + attack may appear earlier. Air tuck is reserved for the
-        // high-difficulty stretch beginning at 7,000m.
-        const type=m>=7000 && (lateUsed++%2===0)?'tuckGate':'airBramble';
-        const base=s.y0;
-        const ob=type==='tuckGate'
-          ?{type,x,y:base-1600,width:80,height:1433,variant:0,dealtDamage:false,destroyed:false,baseY:base}
-          :{type,x,y:base-215,width:80,height:143,variant:0,dealtDamage:false,destroyed:false,baseY:base};
-        this.obstacles.push(ob);this.makeTip(type,ob);
-        used++;last=m;
+      // Explicit encounter allocation. Old alternating gap logic sometimes
+      // produced only one tuck gate for a whole 9,999m run.
+      const eligible=[];
+      for(const section of this.terrain.segments){
+        if(section.kind!=='gap')continue;
+        const meters=(section.start-this.startX)/C.pxPerMeter;
+        if(meters<1700||meters>9300)continue;
+        const x=section.start+Math.min(90,(section.end-section.start)*.42);
+        if(Core.intersectsVendorCorridor(x,80,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
+        if(Core.overlapsSoulPlatform(x,80,this.soulPlatform,30))continue;
+        if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<80))continue;
+        eligible.push({section,meters,x});
+      }
+      const tucks=eligible.filter(c=>c.meters>=7000&&c.meters<=9250);
+      const target=2+((this.seed>>>0)%2);
+      const selected=[];
+      // Spread required tuck obstacles across later Underworld terrain.
+      for(let i=0;i<target;i++){
+        const desired=7100+(i+.5)*2050/target;
+        const choices=tucks.filter(c=>!selected.some(s=>Math.abs(s.meters-c.meters)<340));
+        choices.sort((a,b)=>Math.abs(a.meters-desired)-Math.abs(b.meters-desired));
+        if(choices.length)selected.push(choices[0]);
+      }
+      // Fill any shortfall from other valid late gap segments.
+      for(const candidate of tucks){
+        if(selected.length>=target)break;
+        if(!selected.some(s=>Math.abs(s.meters-candidate.meters)<250))selected.push(candidate);
+      }
+      this.tuckGateTarget=target;this.tuckGatePlaced=selected.length;
+      const chosen=new Set(selected.map(s=>s.section));
+      for(const c of selected){
+        const base=c.section.y0;
+        const ob={type:'tuckGate',x:c.x,y:base-1600,width:80,height:1433,
+          variant:0,dealtDamage:false,destroyed:false,baseY:base};
+        this.obstacles.push(ob);this.makeTip('tuckGate',ob);
+      }
+      // Retain jump-and-attack variations without consuming required tuck slots.
+      let lastAttack=-100000;
+      for(const c of eligible){
+        if(chosen.has(c.section)||c.meters-lastAttack<310)continue;
+        if(selected.some(s=>Math.abs(s.meters-c.meters)<125))continue;
+        if(c.meters<7000 || (this.rng.next()<.36)){
+          const base=c.section.y0;
+          const ob={type:'airBramble',x:c.x,y:base-215,width:80,height:143,
+            variant:0,dealtDamage:false,destroyed:false,baseY:base};
+          this.obstacles.push(ob);this.makeTip('airBramble',ob);
+          lastAttack=c.meters;
+        }
       }
     }
 
+    trySpawnCombat(x,kind){
+      const stats=this.encounterTelemetry;
+      const flying=Combat.enemyIsFlying({kind});
+      const width=flying?46:42;
+      if(Core.intersectsVendorCorridor(x-width/2,width,this.startX,C.vendorEveryMeters,C.pxPerMeter)){
+        stats.rejectedVendor++;return false;
+      }
+      // Protect actual pickup-platform geometry, not hundreds of meters nearby.
+      if(Core.overlapsSoulPlatform(x-width/2,width,this.soulPlatform,35)){
+        stats.rejectedGeometry++;return false;
+      }
+      const ground=this.terrain.groundAt(x);
+      if(ground===null){stats.rejectedGeometry++;return false;}
+      if(!flying){
+        const left=this.terrain.groundAt(x-38),right=this.terrain.groundAt(x+45);
+        if(left===null||right===null||Math.abs(left-ground)>80||Math.abs(right-ground)>80){
+          stats.rejectedGeometry++;return false;
+        }
+      }
+      if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x+o.width/2-x)<(flying?105:125)&&
+          (!flying||['branch','airBramble','tuckGate'].includes(o.type)))){
+        stats.rejectedOverlap++;return false;
+      }
+      if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<220)){
+        stats.rejectedOverlap++;return false;
+      }
+      const y=ground-(flying?161:kind==='crawler'?21:34);
+      this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
+        phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
+        visibleMs:0,everVisible:false,lastScytheSwing:-1,contactDone:false,
+        warningMs:0,fireMs:kind==='imp'?430+this.rng.integer(0,350):0});
+      stats.spawned++;
+      stats.byKind[kind]=(stats.byKind[kind]||0)+1;
+      return true;
+    }
     spawnCombatAhead(ahead){
-      // Spawn moving enemies only after acquiring the Soulcaster at the portal.
+      // Try several alternative positions for each encounter instead of
+      // discarding it when the original candidate happens to land in a gap.
       while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
         const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
-        this.nextEnemySpawnX+=(m>=8000?53+this.rng.integer(0,30):84+this.rng.integer(0,43))*C.pxPerMeter;
-        if(m<5190||m>C.finishMeters-150)continue;
-        if(Math.abs(m-9500)<185)continue;
-        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,470,85))continue;
+        this.nextEnemySpawnX+=(m>=8000?68+this.rng.integer(0,24):94+this.rng.integer(0,38))*C.pxPerMeter;
+        if(m<5000||m>C.finishMeters-10)continue;
+        this.encounterTelemetry.attempts++;
         const choice=this.rng.next();
-        const kind=m>=8000?(choice<.64?'skeletalBat':choice<.82?'imp':'crawler'):
-          m>=6500?(choice<.77?'bat':'crawler'):'bat';
-        const flying=Combat.enemyIsFlying({kind});
-        // Flying creatures can appear above uneven ground, but never above a chasm.
-        // Ground enemies require flat solid floor to avoid climbing into the terrain.
-        const ground=this.terrain.groundAt(x);
-        if(ground===null)continue;
-        if(!flying&&(this.terrain.groundAt(x-70)===null||
-          this.terrain.groundAt(x+38)===null))continue;
-        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<(flying?140:195)&&
-          (!flying||o.type==='tuckGate'||o.type==='airBramble')))continue;
-        if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<(flying?145:185)))continue;
-        const y=ground-(flying?161:kind==='crawler'?21:34);
-        this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
-          phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
-          warningMs:0,fireMs:kind==='imp'?430+this.rng.integer(0,350):0,
-          lastScytheSwing:-1,contactDone:false});
+        const kind=m>=8000?(choice<.54?'skeletalBat':choice<.79?'imp':'crawler'):
+          m>=6500?(choice<.73?'bat':'crawler'):'bat';
+        let placed=false;
+        for(let attempt=0;attempt<10&&!placed;attempt++){
+          const candidate=x+attempt*11*C.pxPerMeter;
+          if(candidate>this.terrain.finishX-65)break;
+          placed=this.trySpawnCombat(candidate,kind);
+        }
+        // At a tricky chasm or slope, retry as a flyer before dropping a
+        // ground encounter completely. This keeps the biome populated.
+        if(!placed&&!Combat.enemyIsFlying({kind})){
+          const bat=m>=8000?'skeletalBat':'bat';
+          for(let attempt=0;attempt<10&&!placed;attempt++){
+            const candidate=x+attempt*11*C.pxPerMeter;
+            if(candidate>this.terrain.finishX-65)break;
+            placed=this.trySpawnCombat(candidate,bat);
+          }
+        }
+        if(!placed)this.encounterTelemetry.dropped++;
       }
       // Telegraphed extending thorns above the tree line: cut them or time the run.
       while(this.nextSnapSpawnX<ahead){
@@ -1617,7 +1695,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(m<3000||m>4630)continue; // Preserve the mountain Soul approach.
         const nearGround=this.terrain.groundAt(x),farGround=this.terrain.groundAt(x+62);
         if(nearGround===null||farGround===null||Math.abs(nearGround-farGround)>105)continue;
-        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,65))continue;
+        if(Core.intersectsVendorCorridor(x,62,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
         if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<220))continue;
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
         const ground=this.terrain.groundAt(x),height=62;
@@ -1639,13 +1717,12 @@ window.GRIM_CONFIG = Object.freeze({
         const type=Core.chooseEncounter(this.rng,this.distance);
         const width=type==='branch'?74:type==='bramble'?60:type==='fire'?58:54;
         if(x>this.brittleClearUntilX && this.terrain.canPlace(x,width) &&
-           Core.isMilestoneSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,245) &&
-           Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters) &&
-           Core.isUpgradeSafe(x+width,this.startX,C.vendorEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters) &&
-           Math.abs((x-this.startX)/C.pxPerMeter-4850)>120 &&
-           Math.abs((x-this.startX)/C.pxPerMeter-9500)>165 &&
-           !this.obstacles.some(o=>(o.type==='tuckGate'||o.type==='airBramble')&&Math.abs(o.x-x)<230) &&
-           !this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<125)){
+           !Core.intersectsVendorCorridor(x,width,this.startX,C.vendorEveryMeters,C.pxPerMeter) &&
+           !Core.overlapsSoulPlatform(x,width,this.soulPlatform,30) &&
+           Math.abs(x-this.terrain.portalX)>95 &&
+           x+width<this.terrain.finishX-80 &&
+           !this.obstacles.some(o=>!o.destroyed&&x<o.x+o.width+90&&x+width>o.x-90) &&
+           !this.coins.some(c=>!c.taken&&c.x>x-40&&c.x<x+width+40)){
           this.placeEncounter(type,x);
         }
         this.nextEncounterX+=Core.encounterGap(this.speed,this.rng)*(this.distance>=5000?.72:1);
@@ -1832,6 +1909,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.puff(enemy.x,enemy.y,enemy.kind==='skeletalBat'?0xe5d6cb:0x9edbf2,6);
       if(enemy.hp<=0){
         enemy.dead=true;
+        if(this.encounterTelemetry)this.encounterTelemetry.kills++;
         this.puff(enemy.x,enemy.y,enemy.kind==='imp'?0xff874e:0xc5f1fc,12);
       }
     }
@@ -1883,6 +1961,18 @@ window.GRIM_CONFIG = Object.freeze({
       for(const e of this.enemies){
         if(e.dead)continue;
         const ahead=e.x-p.x;
+        const visibleNow=e.x>p.x+30&&e.x<right-25;
+        if(visibleNow){
+          e.visibleMs=(e.visibleMs||0)+frameMs;
+          if(!e.everVisible){
+            e.everVisible=true;
+            if(this.encounterTelemetry)this.encounterTelemetry.enteredView++;
+          }
+          if(e.visibleMs>=650&&!e.visiblyEngaged){
+            e.visiblyEngaged=true;
+            if(this.encounterTelemetry)this.encounterTelemetry.visibleFor650ms++;
+          }
+        }
         if(Combat.enemyIsFlying(e)){
           e.x-=dt*(e.kind==='skeletalBat'?65:42);
           const ground=this.terrain.anchorAt(e.x);
@@ -1983,9 +2073,12 @@ window.GRIM_CONFIG = Object.freeze({
           break;
         }
       }
-      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-125&&e.x<right+600);
+      // Moving threats cannot enter the guaranteed post-vendor safe corridor.
+      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-125&&e.x<right+600&&
+        !Core.intersectsVendorCorridor(e.x-22,44,this.startX,C.vendorEveryMeters,C.pxPerMeter));
       this.bullets=this.bullets.filter(b=>!b.dead);
-      this.fireballs=this.fireballs.filter(b=>!b.dead);
+      this.fireballs=this.fireballs.filter(b=>!b.dead&&
+        !Core.intersectsVendorCorridor(b.x-9,18,this.startX,C.vendorEveryMeters,C.pxPerMeter));
     }
     checkCollectibles() {
       const p=this.player;
@@ -2046,9 +2139,11 @@ window.GRIM_CONFIG = Object.freeze({
     takeDamage(amount,kind){
       // Called only on a new hazard hit / fall, not for purchase costs.
       this.impactFeedback();
+      // God Mode prevents HP loss and death, not the on-damage effects.
+      // This retains reliable test feedback for Brittle Bones and future powers.
+      this.triggerBrittleBones();
       if(this.godMode)return false;
       this.player.hp=Math.max(0,this.player.hp-amount);
-      this.triggerBrittleBones();
       if(this.player.hp<=0)this.die();
       return true;
     }

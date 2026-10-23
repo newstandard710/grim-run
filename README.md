@@ -2,11 +2,21 @@
 
 A mobile-first, landscape side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable HTML: v0.8.0 — The Soulcaster / Combat Expansion**
+**Current playable HTML: v0.8.1 — Encounter Reliability Patch**
 
 - [Play source (`index.html`)](index.html)
 - [Development status, milestones and phone playtest checklist](PROJECT_STATUS.md)
-- [v0.7.0 backup branch](https://github.com/newstandard710/grim-run/tree/backup/v0.7.0)
+- [Previous v0.8.0 build](https://github.com/newstandard710/grim-run/tree/backup/v0.8.0)
+
+## v0.8.1 reliability improvements
+
+- Guarantees **2–3 air-tuck gates** across full runs, starting after 7,000m.
+- Fixes underpopulated Underworld sections with placement retries and more readable bat entrances.
+- Removes obsolete spawn buffers; the universal fixed exclusion is **the first 50m after each vendor**, with additional checks only for physically unsafe or impassable placements.
+- God Mode now activates effects such as Brittle Bones when struck, without losing HP.
+- Reproducible encounter tests: `node tests/encounter-reliability.cjs`, including 300 seeded generation checks and five simulated portal-to-finish runs.
+
+This patch **retains automatic Soulcaster firing**. The confirmed manual bone-crossbow button, item chest scene, revival, and permanent slide upgrade are planned for v0.8.2, followed by rewind in v0.9.0.
 
 ## Gameplay
 
@@ -38,4 +48,4 @@ Use the **Reliquary** on the main menu to spend Souls on permanent power. Each t
 
 Open `index.html` in a modern browser with Internet access (Phaser 3.90.0 is loaded from the pinned CDN), or serve the repository with GitHub Pages. Landscape Android browser is the primary target.
 
-The game is not yet packaged as a native APK. **v0.8.0 passed static JavaScript validation and mocked-graphics runtime tests; live mobile playtesting is still needed.** See [PROJECT_STATUS.md](PROJECT_STATUS.md) for full checklists.
+The game is not yet packaged as a native APK. **v0.8.1 passed seeded encounter-generation and mocked-graphics full-run tests; live mobile playtesting is still needed.** See [PROJECT_STATUS.md](PROJECT_STATUS.md) for full checklists.
