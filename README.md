@@ -32,14 +32,14 @@ Survive hazards, vendors and combat across procedural terrain to the 5,000m Unde
 
 ## Running and testing
 
-Open \`index.html\` with an internet connection for the Phaser 3.90.0 CDN dependency, or serve it with GitHub Pages. This is not yet a packaged Android APK.
+Open `index.html` with an internet connection for the Phaser 3.90.0 CDN dependency, or serve it with GitHub Pages. This is not yet a packaged Android APK.
 
 Regression checks (Node.js, no dependencies):
 
-\`\`\`sh
+```sh
 node tests/encounter-reliability.cjs
 node tests/survival-crossbow.cjs
-\`\`\`
+```
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
