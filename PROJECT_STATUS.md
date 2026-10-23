@@ -1,10 +1,57 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.8.3 — *Enemy Encounter Rework*  
+**Release:** v0.9.0 — *Death's Reversal*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0 and a single HTML file  
 **Source:** `main/index.html` once promoted to main  
-**Rollback:** `backup/v0.8.2` (previous user-playtested build); earlier backups remain intact.  
-**Verification:** Source syntax, 300-seed procedural and five full-run encounter-visibility tests, plus previous Soul revival, Grave Glide and crossbow tests. **Live Android playtesting pending.**
+**Rollback:** `backup/v0.8.3` (last confirmed successful user-playtested build); earlier backups remain intact.  
+**Verification:** Rewind-specific world and currency regression checks, 300-seed encounter generation, five simulated full runs, Soul revival and manual crossbow tests. **Live Android playtesting pending.**
+
+## v0.9.0 — Death's Reversal
+
+The new Angel vendor upgrade **Death's Reversal** adds a context-sensitive REWIND button on the upper-left side of the screen (desktop: **R**). No rewinding is possible until enough same-segment history has accumulated. Rewind is an instant temporal jump with a brief violet screen effect.
+
+| Level | Rewind duration | Cooldown |
+|---|---:|---:|
+| 1 | 5 seconds | 60 seconds |
+| 2 | 6 seconds | 55 seconds |
+| 3 | 7 seconds | 50 seconds |
+| 4 | 8 seconds | 45 seconds |
+
+Each upgrade has 4 levels like the other Angel upgrades, including existing Angel rarity bonuses. The ability is temporary for the run (not a permanent Reliquary power).
+
+**God Mode:** Temporarily grants the functional level-4 Rewind even without owning the power. Turning God Mode off restores the actual acquired level (or hides the ability if not owned). Rewind's cooldown remains intact.
+
+### Rewind scope
+
+- Rolling, approximately 100ms-interval snapshots store eight-plus seconds of player and world history. Snapshots are only captured when Rewind is owned or God Mode enables it, reducing unnecessary memory load.
+- Restores player position, HP/max HP, jump/slide/hover physics, immunity, scythe and crossbow timers; in-game elapsed time, moving enemies, obstacles, bolts, fireballs, gold pickups, available gold, run score, spawn cursors and RNG state.
+- Projectile targets and fireball owners are re-linked to the correct restored enemy. Brittle Bones bridges are removed or restored by tracking original terrain section geometry. Permanent seeded terrain generation remains untouched.
+- Rewind's **own cooldown is never included** in rewind snapshots; it is set on use and cannot be rewound or reset by leaving a vendor or toggling God Mode.
+- **Irreversible barriers:** Snapshot history resets at Angel/Devil vendor entry, purchase/healing, and exit; banked Soul collection; Underworld portal and chest interaction; death, revival and victory. Rewind cannot cross those boundaries and so cannot duplicate Souls or refund a purchase.
+- No cooldowns or world mechanics advance while vendor/pause/chest/countdown screens are active. Rotating/resizing a phone clears previous snapshots to avoid inconsistent screen-coordinate restores.
+- UI shows a countdown until enough history is recorded, then shows the recharge countdown after use.
+
+### v0.9.0 Android playtest
+
+- [ ] Obtain Death's Reversal from an Angel vendor; upper-left REWIND button appears without covering HP or other controls.
+- [ ] Try the default 5-second rewind and all upgrade levels if possible; world and Reaper move back together.
+- [ ] Rewind after receiving damage and verify previous HP and enemies/obstacles are restored.
+- [ ] Rewind after launching a crossbow bolt or after an Ember Imp fireball; projectiles restore without crashes.
+- [ ] Trigger Brittle Bones over a chasm then rewind: rubble bridge should revert to its previous form.
+- [ ] Confirm 60/55/50/45-second cooldown and that tapping repeatedly cannot rewind repeatedly.
+- [ ] Confirm newly banked Souls cannot be duplicated, and vendor upgrades cannot be refunded through rewind.
+- [ ] Portal/chest, Soul, revive/death, and vendor visits block reaching earlier checkpoints.
+- [ ] God Mode grants temporary level 4 and disabling it restores the earned level.
+- [ ] After rewind, ground collisions, jumps, sliding, bats, crawlers, imps, Soul revival and finish gate remain functional.
+- [ ] Check landscape FPS, controls, battery impact and visual effect on the phone.
+
+### Test suites
+
+- `node tests/rewind.cjs`: levels and cooldowns, God Mode temporary override, a full rewind, health/gold restoration, linked projectile references, real terrain bridge rollback, and Soul/vendor/portal boundaries.
+- `node tests/encounter-reliability.cjs`: 300 seeded worlds, encounter visibility and five full runs.
+- `node tests/survival-crossbow.cjs`: legacy Soul saves, Grave Glide, revival accounting, chest animation state and manual crossbow targeting.
+
+**QA limitation:** These are deterministic in-process and mocked-graphics simulations, not measurements of Android Phaser rendering. Actual phone playtesting remains essential.
 
 ## v0.8.3 — Enemy Encounter Rework
 
@@ -100,16 +147,15 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 - [ ] Check both pre- and post-portal deaths and deaths from lava/abyss, fireball and contact damage.
 - [ ] The full 9,999m game remains finishable.
 
-## Next agreed release
+## Next steps
 
-**v0.9.0 — Death's Reversal:** new Angel vendor power with a dedicated upper-left Rewind button. Level 1 rewinds 5 seconds on a 60-second cooldown; levels 2–4 give 6/7/8 seconds on 55/50/45-second cooldowns. In God Mode the fully upgraded rewind is available temporarily. Requires bounded, accurate world-state snapshots and irreversible boundaries at Soul collection, vendors and portal changes.
-
-Later: visual/audio polish, encounter difficulty balancing, mobile optimization, offline dependency bundling, native Android packaging.
+Android v0.9.0 playtest first. After feedback, prioritize encounter balance and game presentation (art, animations, sound, UI feel), then mobile optimization, offline dependency bundling and native Android packaging.
 
 ## Source and backups
 
 - `main/index.html`: published game after merge.
-- `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
-- `backup/v0.8.2`: prior playable version.
+- `tests/rewind.cjs`, `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
+- `backup/v0.8.3`: last successful playtest version.
+- `backup/v0.8.2`: earlier version.
 - `backup/v0.8.1`: previous rollback stable version.
 - `backup/v0.8.0`, `backup/v0.7.0`, `backup/v0.6.2`: older baselines.
