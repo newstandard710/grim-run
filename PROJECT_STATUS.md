@@ -1,10 +1,40 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.8.2 — *Souls and Bone*  
+**Release:** v0.8.3 — *Enemy Encounter Rework*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0 and a single HTML file  
 **Source:** `main/index.html` once promoted to main  
-**Rollback:** `backup/v0.8.1` (last user-playtested stable version)  
-**Verification:** Source syntax, 300-seed procedural regression checks, five simulated full runs, and dedicated v0.8.2 survival/weapon tests passed. **Live Android playtesting pending.**
+**Rollback:** `backup/v0.8.2` (previous user-playtested build); earlier backups remain intact.  
+**Verification:** Source syntax, 300-seed procedural and five full-run encounter-visibility tests, plus previous Soul revival, Grave Glide and crossbow tests. **Live Android playtesting pending.**
+
+## v0.8.3 — Enemy Encounter Rework
+
+**Reason for patch:** The prior placement loop counted creatures successfully spawned even when retry positions were so far ahead that the cleanup code deleted them before they reached the screen. Ground and bat encounter chances were also combined, so crawling/imp enemies were not reliably experienced. Bats moved backward in world coordinates and thus appeared to rush at the player faster than terrain.
+
+### Changes
+
+- **Right-edge entrance:** Enemies now appear approximately 48–150px inside the *rightmost visible portion* of the landscape display. No off-screen world-coordinate placement retries. Spawning is based on current player progress.
+- **Separate deterministic encounter cadence:** Ordinary bats throughout the caves and skeletal bats in late Hell trigger every **55–78m** of progression, with retry on unsafe placement. Crawler/Imp encounters have an **independent 115–165m** progression interval, not a random competing choice with bats. Late Hell ground encounters split between crawlers and 2-HP Ember Imps.
+- **Slower bats:** They advance in world coordinates at **60% of the Reaper's running speed**, so they cross the screen at ~40% of approaching terrain speed. Their warning lasts **0.85 seconds** and their dive is **1.35 seconds**, with motion clamped into the camera view vertically.
+- **Ground movement:** Bone Crawlers and Ember Imps move away through world space more slowly than the player, providing a longer reaction window. Crawlers stop at a ledge rather than disappearing when the next terrain sample is missing.
+- **Visual clarity:** Lighter bone highlights/contours on crawlers and stronger ember outline/glow on imps.
+- **Safety:** Preserves the exact first 50m after vendor spawn exclusion, collision geometry checks, the Soul platforms, existing scythe/crossbow attacks and run saves. No Rewind functionality is included.
+
+### Validation and instrumented encounter visibility
+
+- **300 procedural seeds:** 150 with 2 air-tuck gates and 150 with 3; separate bat and ground placement frequency asserted; every placed enemy checked against 50m vendor corridors.
+- **Five full-length simulated runs, graphics mocked:** All reached 9,999m. Bat entry, Skeleton Bat entry, Crawler and Imp **visible** counts measured separately. Typical run: ~20+ cavern bats, ~20+ skeletal bats, ~14–19 crawlers, ~6–10 imps. Most bats remained onscreen for at least 2 seconds (when unobstructed). These are simulations, *not* measured phone sessions.
+- Existing `tests/survival-crossbow.cjs` still verifies the v0.8.2 Soul revival, permanent slide bonus, chest acquisition and manual-fire functionality.
+
+### v0.8.3 phone playtest priorities
+
+- [ ] Bats appear from the **far-right visible edge**, not immediately above the Reaper.
+- [ ] Bats move across screen distinctly **slower than terrain**, allowing 2–3 seconds to fire.
+- [ ] Bat arrivals are frequent throughout 5,000–9,999m; skeletal variants after the lava transition.
+- [ ] Bone Crawlers visibly traverse the ground in the caves.
+- [ ] Ember Imps are visible in late Hell, telegraph fireballs and remain hittable.
+- [ ] Enemies don't vanish unexpectedly before reaching the player.
+- [ ] No enemies/obstacles spawn in 0–50m after vendors; Souls and traversability remain intact.
+- [ ] Bone Crossbow manual aiming/firing, the chest scene, Soul revival and Grave Glide remain unchanged.
 
 ## Game foundations
 
@@ -55,7 +85,7 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 **Limitations:** This validates logic but not real Phaser GPU drawing, touch precision, visual fit at each Android screen size, phone frame rate, or real user difficulty. User phone QA remains the release acceptance step.
 
-## Phone playtest checklist for v0.8.2
+## v0.8.2 historical playtest checklist
 
 - [ ] Main menu says v0.8.2; existing Souls and permanent upgrades are intact.
 - [ ] Reliquary displays four upgrade trees without scrolling/cutting off buttons in landscape.
@@ -80,5 +110,6 @@ Later: visual/audio polish, encounter difficulty balancing, mobile optimization,
 
 - `main/index.html`: published game after merge.
 - `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
-- `backup/v0.8.1`: rollback stable version.
+- `backup/v0.8.2`: prior playable version.
+- `backup/v0.8.1`: previous rollback stable version.
 - `backup/v0.8.0`, `backup/v0.7.0`, `backup/v0.6.2`: older baselines.
