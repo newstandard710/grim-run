@@ -2192,9 +2192,13 @@ window.GRIM_CONFIG = Object.freeze({
     collectSoul(){
       this.resetRewindHistory(); // Banked currency can never be time-reversed.
       this.soulCount++;
-      this.runSoulsAvailable++;
-      this.totalSouls=Meta.earn(this.meta,1);
-      document.getElementById('banked-souls').textContent=String(this.totalSouls);
+      // Teleport-assisted testing can examine Soul pickup visuals without
+      // generating permanent currency by repeatedly jumping to 9500m.
+      if(!this.teleportUsed){
+        this.runSoulsAvailable++;
+        this.totalSouls=Meta.earn(this.meta,1);
+        document.getElementById('banked-souls').textContent=String(this.totalSouls);
+      }
     }
     clearUpgradeCorridor(vendorX){
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
