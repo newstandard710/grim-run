@@ -1134,6 +1134,7 @@ window.GRIM_CONFIG = Object.freeze({
   const Core = scope.GRIM_CORE;
   const Powers = scope.GRIM_POWERS;
   const Meta = scope.GRIM_META;
+  const Combat = scope.GRIM_COMBAT;
   const Terrain = scope.GRIM_TERRAIN;
   const SKY = [0x0b1021,0x101b31,0x1c2942,0x29384b];
   const CYAN = 0x8cebe7;
@@ -1151,6 +1152,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.fallFeedbackMs=0;
       this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
       this.hasTeleported=false;this.portalMs=0;
+      this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
+      this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
+      this.nextEnemySpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -1231,10 +1235,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.groundY=Math.round(this.height*C.groundRatio);
       const dy=this.groundY-previousY;
       this.terrain.shiftY(dy);
+      for(const enemy of this.enemies){enemy.y+=dy;enemy.homeY+=dy;}
+      for(const bullet of this.bullets)bullet.y+=dy;
+      for(const ball of this.fireballs)ball.y+=dy;
+      for(const arc of this.chainArcs){arc.y1+=dy;arc.y2+=dy;}
       this.player.y+=dy;
       this.cameraY+=dy;
       for(const ob of this.obstacles){
-        if(ob.type==='tuckGate'||ob.type==='airBramble'){ob.y+=dy;continue;}
+        if(ob.type==='tuckGate'||ob.type==='airBramble'||ob.type==='snappingBramble'){ob.y+=dy;continue;}
         const next=Core.obstacle(ob.type,ob.x,this.terrain.anchorAt(ob.x),ob.variant,C.slideClearancePx,this.height);
         ob.y=next.y;ob.height=next.height;
       }
@@ -1254,12 +1262,16 @@ window.GRIM_CONFIG = Object.freeze({
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;
+      this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
+      this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
       if(this.ui){this.ui.showFallNotice(false);this.ui.showPortal(false);}
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:startingHP, maxHp:startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
+      this.nextEnemySpawnX=this.startX+5240*C.pxPerMeter;
+      this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
       this.nextVendorNumber=1;
@@ -1293,14 +1305,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
-      this.ui.showGodMode(false);
+      this.ui.showGodMode(false);this.ui.showGun(false);
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
     }
     goToMenu() {
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.setMode('menu');
+      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
@@ -1359,6 +1371,7 @@ window.GRIM_CONFIG = Object.freeze({
       if (this.state!=='playing' || p.attackCooldownMs > 0) return;
       p.attackMs = C.attackDurationMs;
       p.attackCooldownMs = C.attackCooldownMs;
+      this.swingSequence++;
       // Damage is applied only during the visible scythe swing, in update().
     }
     activateSlowTime(){
@@ -1495,6 +1508,8 @@ window.GRIM_CONFIG = Object.freeze({
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
       const beginX=vendorX-C.upgradeSafetyBeforePx-90;
       this.obstacles=this.obstacles.filter(ob=>ob.x>endX||ob.x+ob.width<beginX);
+      this.enemies=this.enemies.filter(e=>e.x<beginX-30||e.x>endX+30);
+      this.fireballs=this.fireballs.filter(b=>b.x<beginX-30||b.x>endX+30);
       for(const tip of this.tips)if(tip.atX+80>=beginX&&tip.atX<=endX)tip.label.destroy();
       this.tips=this.tips.filter(t=>t.atX+80<beginX||t.atX>endX);
     }
@@ -1849,6 +1864,8 @@ window.GRIM_CONFIG = Object.freeze({
       p.jumpHeld=false;p.holdSlide=false;p.sliding=false;p.airTuck=false;p.slideReleaseBufferMs=0;
       p.attackMs=0;p.invulMs=C.abyssRespawnInvulnerabilityMs;
       this.obstacles=this.obstacles.filter(ob=>ob.x<p.x-160||ob.x>p.x+260);
+      this.enemies=this.enemies.filter(e=>e.x<p.x-230||e.x>p.x+450);
+      this.fireballs=this.fireballs.filter(b=>b.x<p.x-230||b.x>p.x+450);
       for(const tip of this.tips){if(tip.atX>p.x-200&&tip.atX<p.x+270)tip.label.destroy();}
       this.tips=this.tips.filter(t=>t.atX<=p.x-200||t.atX>=p.x+270);
       this.cameraY=p.y-this.groundY;
@@ -1859,6 +1876,8 @@ window.GRIM_CONFIG = Object.freeze({
     enterUnderworld(){
       const p=this.player;
       this.hasTeleported=true;
+      this.gunUnlocked=true;this.gunCooldownMs=400;this.blastCooldownMs=0;
+      this.ui.showGun(true);
       this.portalMs=1450;
       this.state='portal';
       p.x=this.terrain.portalExitX;
@@ -1872,6 +1891,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.distance=(p.x-this.startX)/C.pxPerMeter;
       this.nextEncounterX=Math.max(this.nextEncounterX,p.x+1050);
       this.obstacles=this.obstacles.filter(o=>o.x>p.x+250);
+      this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
       this.ui.setMode('portal');
       this.ui.showPortal(true);
       this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
