@@ -1,10 +1,51 @@
 # Grim Run — Project Status & Roadmap
 
 **Updated:** October 22, 2026  
-**Development build:** v0.8.0 — *The Soulcaster / Combat Expansion*  
-**Target:** Android landscape browser prototype (Phaser 3.90.0; single HTML).  
-**Release stage:** Code implemented, syntax + mocked-runtime simulation verified. **Real-phone playtesting pending.**  
-**Rollback:** `backup/v0.7.0` preserves last user-tested version; `backup/v0.6.2` preserves older baseline.
+**Current build:** v0.8.1 — *Encounter Reliability Patch*  
+**Target:** Android landscape web game (Phaser 3.90.0; single HTML).  
+**QA status:** Static syntax/integrity checks, 300-seed generation tests and five simulated full-game runs passed. **Actual phone playtest remains essential.**  
+**Rollback:** `backup/v0.8.0` preserves the prior release. Earlier backups include `backup/v0.7.0`.
+
+## v0.8.1 — Encounter Reliability Patch
+
+This deliberately focused patch leaves v0.8.0's basic weapon, controls, powers and permanent save scheme unchanged.
+
+### Changes
+
+- **Unified spawn safety:** The only general distance exclusion for newly placed hazards and enemies is the **0–50m region after each 666m vendor**. Removed the redundant 245px milestone filter, 260px pre-vendor exclusion, variable 60m/65m/85m exclusions, and broad random obstacle bans centered on the Soul locations. Actual physical collisions, gap-clearance, the chest/portal and finish geometry, and one-way Soul platform footprints remain protected as necessary.
+- **Air tuck:** Each generated run selects **2 or 3** valid air-tuck gates beyond 7,000m, spaced over the late section, with jump-attack patterns independently generated.
+- **Enemy encounters:** Rejected random placements are retried at alternative suitable ground locations; ground creatures can fall back to the appropriate flying variant if a location is unusable. First bat encounter now begins soon after the portal, not 190m later. Additional telemetry records attempts, placements, rejected reasons, entering the view, visibility duration, and kills.
+- **On-screen readability:** Auto-targeting now requires an enemy to have been visibly present for at least **650ms**, letting bats and other threats be noticed before a one-hit automatic shot eliminates them.
+- **God Mode:** HP remains unchanged and death is prevented, but real damage events still trigger `on-damage` effects such as Brittle Bones alongside existing hit feedback.
+
+### Checks
+
+- `node tests/encounter-reliability.cjs` is a dependency-free regression suite stored in GitHub.
+- **300 procedural seeds:** 150 runs with 2 gates; 150 with 3 gates. Enemy placement generated 48–52 creatures per tested run. Every placement tested against the exact vendor corridor.
+- **Five simulated portal-to-finish runs:** all reached 9,999m in the mocked graphical environment and recorded 20, 22, 24, 25, and 23 encounters visible at least 650ms.
+- Script parsing, Soul wallet preservation and damage/flight spawn invariants checked.
+- A real phone is required to confirm actual visual appearance, smoothness, collisions, readability, encounter balance, and that enemies are fun rather than overwhelming.
+
+### v0.8.1 phone playtest priorities
+
+- [ ] Confirm the menu reports v0.8.1.
+- [ ] Across a run, encounter 2–3 air-tuck gates after their previous introduction point.
+- [ ] Enter Underworld at 5,000m and see early cavern bats, not an empty cavern.
+- [ ] Later, encounter skeletal bats, ground crawlers and fireball-casting Ember Imps.
+- [ ] Enemies remain visible long enough to recognize and respond; auto-fire still prioritizes airborne targets.
+- [ ] No enemy or obstacle spawns in the first 50m after a vendor.
+- [ ] Obstacles may appear normally before vendors; no unfair overlap combinations.
+- [ ] Soul platforms remain accessible, both Souls collectible, and the 9,999m finish available.
+- [ ] In God Mode, Brittle Bones still clears hazards/bridges terrain when a hit occurs without losing health.
+- [ ] Existing Reliquary balance, upgrades, auto-fire, Devil HP prices, portal, terrain collision and mobile controls remain unchanged.
+
+### Agreed next releases (not in v0.8.1)
+
+- **v0.8.2 — Survival & Presentation:** One revive per run for 3 banked Souls (current run earned Souls spent first), revived at max 3 HP and fully healed with a 3-second resume timer; new permanent maximum-slide-duration Reliquary tree, 5/10/25 Souls for +0.15/+0.30/+0.45 seconds; reskin Soulcaster as bone crossbow, **manually fired** using a new button above the scythe; short skippable chest-acquisition animation at the Underworld portal.
+- **v0.9.0 — Rewind:** Angel ability with 5/6/7/8-second rewinds across levels 1–4 and 60/55/50/45-second cooldowns, dedicated upper-left button, safe time-state snapshot restore. God Mode temporarily unlocks level 4 for testing.
+- Continue presentation, optimization, balance and Android release preparation in later phases.
+
+---
 
 ## Core premise
 
