@@ -1417,6 +1417,148 @@ window.GRIM_CONFIG = Object.freeze({
     get feetY(){return this.player.y;}
     get onGround(){return this.player.grounded;}
     get lowProfile(){return this.player.sliding || (!this.onGround&&(this.player.holdSlide||this.player.airTuck));}
+    rewindLevel(){
+      // God Mode is a temporary level-4 test override, never a real purchase.
+      return this.godMode?4:this.powerManager.level('deathsReversal');
+    }
+    rewindLengthMs(){return this.rewindLevel()?1000*(4+this.rewindLevel()):0;}
+    rewindRechargeMs(){return this.rewindLevel()?65000-5000*this.rewindLevel():0;}
+    resetRewindHistory(){
+      // Irreversible checkpoint: no crossing vendor transactions, banked Souls,
+      // portal changes, or revival. The cooldown deliberately is NOT reset.
+      this.rewindFrames=[];this.rewindClockMs=0;this.rewindSampleMs=0;
+      this.updateRewindButton();
+    }
+    updateRewindButton(){
+      if(!this.ui)return;
+      const duration=this.rewindLengthMs();
+      const actual=this.rewindFrames.length?
+        this.rewindClockMs-this.rewindFrames[0].at:0;
+      const ready=duration>0&&actual>=duration;
+      this.ui.showRewind(this.rewindLevel(),this.rewindCooldownMs||0,
+        ready,actual,duration);
+    }
+    saveTerrainOriginal(from,to){
+      // Brittle Bones permanently turns gaps into bridges. Preserve each
+      // section's original geometry once so rewinding can undo that change.
+      if(!this.rewindTerrainBase)this.rewindTerrainBase=new Map();
+      for(let i=0;i<this.terrain.segments.length;i++){
+        const s=this.terrain.segments[i];
+        if(s.kind!=='gap'||s.start<from-4||s.end>to+4||
+          this.rewindTerrainBase.has(i))continue;
+        this.rewindTerrainBase.set(i,{kind:s.kind,y0:s.y0,y1:s.y1});
+      }
+    }
+    captureRewind(){
+      if(this.state!=='playing')return;
+      if(!this.rewindFrames)this.rewindFrames=[];
+      const enemies=this.enemies.map(e=>({...e}));
+      const obstacles=this.obstacles.map(o=>({...o}));
+      const bullets=this.bullets.map(b=>{
+        const {ref,...data}=b;
+        return {...data,refEnemy:this.enemies.indexOf(ref),refObstacle:this.obstacles.indexOf(ref)};
+      });
+      const fireballs=this.fireballs.map(b=>{
+        const {owner,...data}=b;
+        return {...data,ownerEnemy:this.enemies.indexOf(owner)};
+      });
+      const rubble=[];
+      for(const [index] of this.rewindTerrainBase||[]){
+        const s=this.terrain.segments[index];
+        if(s&&s.kind!=='gap')rubble.push({index,kind:s.kind,y0:s.y0,y1:s.y1});
+      }
+      this.rewindFrames.push({
+        at:this.rewindClockMs,
+        player:{...this.player},
+        speed:this.speed,distance:this.distance,elapsed:this.elapsed,frame:this.frame,
+        cameraX:this.cameraX,cameraY:this.cameraY,
+        nextEncounterX:this.nextEncounterX,nextEnemySpawnX:this.nextEnemySpawnX,
+        nextGroundSpawnX:this.nextGroundSpawnX,nextSnapSpawnX:this.nextSnapSpawnX,
+        gunCooldownMs:this.gunCooldownMs,blastCooldownMs:this.blastCooldownMs,
+        blastFlashMs:this.blastFlashMs||0,
+        damageFlashMs:this.damageFlashMs,bonesBlastMs:this.bonesBlastMs,
+        brittleClearUntilX:this.brittleClearUntilX,
+        fallFeedbackMs:this.fallFeedbackMs,goFlashMs:this.goFlashMs,
+        swingSequence:this.swingSequence,
+        coinCount:this.coinCount,goldCollected:this.goldCollected,points:this.points,
+        enemies,obstacles,bullets,fireballs,
+        coins:this.coins.map(o=>({...o})),souls:this.souls.map(o=>({...o})),
+        rubble,rngState:this.rng.state
+      });
+      // 8 seconds max rewind plus one sample, at about 10 samples / second.
+      const cutoff=this.rewindClockMs-8400;
+      while(this.rewindFrames.length>2&&this.rewindFrames[1].at<cutoff)
+        this.rewindFrames.shift();
+    }
+    tickRewind(frameMs){
+      this.rewindCooldownMs=Math.max(0,(this.rewindCooldownMs||0)-frameMs);
+      this.rewindClockMs+=frameMs;this.rewindSampleMs+=frameMs;
+      if(this.rewindSampleMs>=100){
+        this.rewindSampleMs=0;this.captureRewind();
+      }
+      this.rewindFlashMs=Math.max(0,(this.rewindFlashMs||0)-frameMs);
+      if(this.rewindFlashMs===0)this.ui.rewindFlash(false);
+      this.updateRewindButton();
+    }
+    rewind(){
+      if(this.state!=='playing'||this.rewindLevel()<=0||this.rewindCooldownMs>0)return false;
+      const duration=this.rewindLengthMs();
+      if(!this.rewindFrames.length||this.rewindClockMs-this.rewindFrames[0].at<duration)return false;
+      const target=this.rewindClockMs-duration;
+      // Choose latest saved state AT OR BEFORE requested rewind time.
+      const saved=[...this.rewindFrames].reverse().find(s=>s.at<=target);
+      if(!saved)return false;
+      const copy=a=>a.map(o=>({...o}));
+      this.player={...saved.player};
+      // Don't leave touch controls held after teleporting the player back.
+      this.player.jumpHeld=false;this.player.holdSlide=false;
+      this.player.slideConsumed=false;
+      this.speed=saved.speed;this.distance=saved.distance;this.elapsed=saved.elapsed;
+      this.frame=saved.frame;this.cameraX=saved.cameraX;this.cameraY=saved.cameraY;
+      this.nextEncounterX=saved.nextEncounterX;this.nextEnemySpawnX=saved.nextEnemySpawnX;
+      this.nextGroundSpawnX=saved.nextGroundSpawnX;this.nextSnapSpawnX=saved.nextSnapSpawnX;
+      this.gunCooldownMs=saved.gunCooldownMs;this.blastCooldownMs=saved.blastCooldownMs;
+      this.blastFlashMs=saved.blastFlashMs;
+      this.damageFlashMs=saved.damageFlashMs;this.bonesBlastMs=saved.bonesBlastMs;
+      this.brittleClearUntilX=saved.brittleClearUntilX;
+      this.fallFeedbackMs=saved.fallFeedbackMs;this.goFlashMs=0;
+      this.swingSequence=saved.swingSequence;
+      this.coinCount=saved.coinCount;this.goldCollected=saved.goldCollected;this.points=saved.points;
+      this.enemies=copy(saved.enemies);this.obstacles=copy(saved.obstacles);
+      this.bullets=saved.bullets.map(b=>{
+        const {refEnemy,refObstacle,...data}=b;
+        return {...data,ref:refEnemy>=0?this.enemies[refEnemy]:
+          refObstacle>=0?this.obstacles[refObstacle]:null};
+      });
+      this.fireballs=saved.fireballs.map(b=>{
+        const {ownerEnemy,...data}=b;
+        return {...data,owner:ownerEnemy>=0?this.enemies[ownerEnemy]:null};
+      });
+      this.coins=copy(saved.coins);this.souls=copy(saved.souls);
+      // Restore exactly the rubble bridges that existed in the earlier frame,
+      // without altering immutable procedural terrain/gap geometry.
+      const rubble=new Map(saved.rubble.map(x=>[x.index,x]));
+      for(const [index,original] of this.rewindTerrainBase){
+        const to=rubble.get(index)||original,s=this.terrain.segments[index];
+        if(s){s.kind=to.kind;s.y0=to.y0;s.y1=to.y1;}
+      }
+      this.rng.setState(saved.rngState);
+      this.particles=[];this.chainArcs=[];
+      this.cameras.main.setScroll(this.cameraX,this.cameraY);
+      this.ui.showTimeSlow(this.player.slowMs>0);
+      this.ui.showGunCooldown(this.gunCooldownMs);
+      this.ui.showFallNotice(false);
+      this.ui.update(this.player.hp,this.player.maxHp,this.distance,
+        this.soulCount,this.coinCount,this.points,this.powerManager.summary());
+      // An entire new timeline: do not allow immediate re-use of old snapshots,
+      // and NEVER restore Rewind's own cooldown.
+      this.rewindCooldownMs=this.rewindRechargeMs();
+      this.resetRewindHistory();
+      this.captureRewind();
+      this.rewindFlashMs=550;this.ui.rewindFlash(true);
+      this.puff(this.player.x,this.player.y-55,0xd5a8ff,20);
+      return true;
+    }
     startRun() {
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
@@ -1427,6 +1569,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
+      this.rewindFrames=[];this.rewindTerrainBase=new Map();
+      this.rewindClockMs=0;this.rewindSampleMs=0;
+      this.rewindCooldownMs=0;this.rewindFlashMs=0;
       this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
         rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
         kills:0,byKind:{}};
@@ -1474,13 +1619,15 @@ window.GRIM_CONFIG = Object.freeze({
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
       this.ui.showGodMode(false);this.ui.showGun(false);
+      this.ui.rewindFlash(false);this.captureRewind();this.updateRewindButton();
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
     }
     goToMenu() {
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);this.ui.setMode('menu');
+      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);
+      this.ui.rewindFlash(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
@@ -1490,7 +1637,7 @@ window.GRIM_CONFIG = Object.freeze({
       } else if(this.state==='paused') this.resume();
     }
     autoPause() { if(this.state==='playing' || this.state==='countdown') this.togglePause(); }
-    setGodMode(on){ this.godMode=Boolean(on);this.ui.showGodMode(this.godMode); }
+    setGodMode(on){this.godMode=Boolean(on);this.ui.showGodMode(this.godMode);this.updateRewindButton();}
     beginCountdown(){
       this.state='countdown'; this.countdownMs=C.resumeCountdownMs;this.goFlashMs=0;
       this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
