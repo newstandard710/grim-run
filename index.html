@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.8.2</title>
+  <title>GRIM RUN — v0.8.3</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -230,7 +230,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.8.2 · SOULS AND BONE</div>
+      <div class="mini">v0.8.3 · ENEMY REWORK</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -296,7 +296,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.8.2',
+  version: '0.8.3',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1272,7 +1272,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
-      this.nextEnemySpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
+      this.nextEnemySpawnX=0;this.nextGroundSpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
       this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
         rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
         kills:0,byKind:{}};
@@ -1400,6 +1400,7 @@ window.GRIM_CONFIG = Object.freeze({
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
       this.nextEnemySpawnX=this.startX+5070*C.pxPerMeter;
+      this.nextGroundSpawnX=this.startX+5140*C.pxPerMeter;
       this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
@@ -1762,10 +1763,16 @@ window.GRIM_CONFIG = Object.freeze({
           (!flying||['branch','airBramble','tuckGate'].includes(o.type)))){
         stats.rejectedOverlap++;return false;
       }
-      if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<220)){
+      // Enemies occupy different vertical lanes. Keep ground and air encounters
+      // independent, rather than rejecting ground creatures because a bat exists.
+      if(this.enemies.some(e=>!e.dead&&
+        Combat.enemyIsFlying(e)===flying&&Math.abs(e.x-x)<(flying?175:235))){
         stats.rejectedOverlap++;return false;
       }
-      const y=ground-(flying?161:kind==='crawler'?21:34);
+      const idealY=ground-(flying?161:kind==='crawler'?21:34);
+      // Keep flying creatures actually inside the camera view at entrance.
+      const y=flying?Math.max(this.cameraY+75,
+        Math.min(this.cameraY+this.height-90,idealY)):idealY;
       this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
         phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
         visibleMs:0,everVisible:false,lastScytheSwing:-1,contactDone:false,
@@ -1775,33 +1782,48 @@ window.GRIM_CONFIG = Object.freeze({
       return true;
     }
     spawnCombatAhead(ahead){
-      // Try several alternative positions for each encounter instead of
-      // discarding it when the original candidate happens to land in a gap.
-      while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
-        const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
-        this.nextEnemySpawnX+=(m>=8000?68+this.rng.integer(0,24):94+this.rng.integer(0,38))*C.pxPerMeter;
-        if(m<5000||m>C.finishMeters-10)continue;
-        this.encounterTelemetry.attempts++;
-        const choice=this.rng.next();
-        const kind=m>=8000?(choice<.54?'skeletalBat':choice<.79?'imp':'crawler'):
-          m>=6500?(choice<.73?'bat':'crawler'):'bat';
-        let placed=false;
-        for(let attempt=0;attempt<10&&!placed;attempt++){
-          const candidate=x+attempt*11*C.pxPerMeter;
-          if(candidate>this.terrain.finishX-65)break;
-          placed=this.trySpawnCombat(candidate,kind);
-        }
-        // At a tricky chasm or slope, retry as a flyer before dropping a
-        // ground encounter completely. This keeps the biome populated.
-        if(!placed&&!Combat.enemyIsFlying({kind})){
-          const bat=m>=8000?'skeletalBat':'bat';
-          for(let attempt=0;attempt<10&&!placed;attempt++){
-            const candidate=x+attempt*11*C.pxPerMeter;
-            if(candidate>this.terrain.finishX-65)break;
-            placed=this.trySpawnCombat(candidate,bat);
+      if(this.hasTeleported){
+        const p=this.player;
+        // World-placement retries used to create enemies a whole screen away,
+        // after which a pruning rule removed them before they were ever visible.
+        // Trigger encounters from PLAYER progress instead. Spawn in the actual
+        // rightmost visible 45px, not at a distant unrendered world coordinate.
+        const right=p.x+this.width*(1-C.reaperXRatio);
+        const entrance=right-48;
+        if(p.x>=this.nextEnemySpawnX){
+          const kind=this.distance>=8000?'skeletalBat':'bat';
+          this.encounterTelemetry.attempts++;
+          let placed=false;
+          for(const dx of [0,-25,-50,-75]){
+            if(this.trySpawnCombat(entrance+dx,kind)){placed=true;break;}
+          }
+          if(placed){
+            // Much denser bat presence: roughly every 55–78m, with flyers
+            // moving across the screen slower than approaching terrain.
+            const spacing=55+this.rng.integer(0,23);
+            this.nextEnemySpawnX=p.x+spacing*C.pxPerMeter;
+          }else{
+            this.nextEnemySpawnX=p.x+12*C.pxPerMeter;
+            this.encounterTelemetry.dropped++;
           }
         }
-        if(!placed)this.encounterTelemetry.dropped++;
+        if(p.x>=this.nextGroundSpawnX){
+          const kind=this.distance>=8000?
+            (this.rng.next()<.58?'imp':'crawler'):'crawler';
+          this.encounterTelemetry.attempts++;
+          let placed=false;
+          for(const dx of [0,-32,-64,-96,-128]){
+            if(this.trySpawnCombat(entrance+dx,kind)){placed=true;break;}
+          }
+          if(placed){
+            // Ground enemy schedule is guaranteed independently of bat rolls.
+            // Earlier builds could randomly replace every crawler with a bat.
+            this.nextGroundSpawnX=p.x+(115+this.rng.integer(0,50))*C.pxPerMeter;
+          }else{
+            this.nextGroundSpawnX=p.x+10*C.pxPerMeter;
+            this.encounterTelemetry.dropped++;
+          }
+        }
       }
       // Telegraphed extending thorns above the tree line: cut them or time the run.
       while(this.nextSnapSpawnX<ahead){
@@ -2098,30 +2120,41 @@ window.GRIM_CONFIG = Object.freeze({
           }
         }
         if(Combat.enemyIsFlying(e)){
-          e.x-=dt*(e.kind==='skeletalBat'?65:42);
+          // Fly FORWARD in world coordinates, but slower than the player.
+          // Relative screen speed is ~40% of terrain speed; previously bats
+          // moved backward in world and rushed in faster than obstacles.
+          e.x+=dt*this.speed*.60;
           const ground=this.terrain.anchorAt(e.x);
-          e.homeY=ground-(e.kind==='skeletalBat'?170:155);
-          if(e.mode==='glide'&&ahead<700&&ahead>80){e.mode='telegraph';e.timer=0;}
+          const high=this.cameraY+76,low=this.cameraY+this.height-94;
+          e.homeY=Math.max(high,Math.min(low,
+            ground-(e.kind==='skeletalBat'?170:155)));
+          if(e.mode==='glide'&&ahead<450&&ahead>85){e.mode='telegraph';e.timer=0;}
           if(e.mode==='telegraph'){
             e.timer+=dt;
-            if(e.timer>=.42){e.mode='dive';e.timer=0;}
+            if(e.timer>=.85){e.mode='dive';e.timer=0;}
           }else if(e.mode==='dive'){
             e.timer+=dt;
-            if(e.timer>=.95){e.mode='recover';e.timer=0;}
+            if(e.timer>=1.35){e.mode='recover';e.timer=0;}
           }else if(e.mode==='recover'){
             e.timer+=dt;
-            if(e.timer>=.55){e.mode='done';e.timer=0;}
+            if(e.timer>=.60){e.mode='done';e.timer=0;}
           }
-          let dip=0;
-          if(e.mode==='dive')dip=122*Math.sin(Math.min(1,e.timer/.95)*Math.PI);
-          if(e.mode==='recover')dip=0;
-          e.y=e.homeY+Math.sin(this.elapsed*5.5+e.phase)*14+dip;
+          const dip=e.mode==='dive'?144*Math.sin(Math.min(1,e.timer/1.35)*Math.PI):0;
+          e.y=e.homeY+Math.sin(this.elapsed*4.2+e.phase)*10+dip;
         }else if(e.kind==='crawler'){
-          const newX=e.x-dt*54;
+          const newX=e.x+dt*this.speed*.49;
           const floor=this.terrain.groundAt(newX);
-          if(floor===null){e.dead=true;continue;}
-          e.x=newX;e.homeY=floor-20;e.y=e.homeY;
+          // A moving crawler stops at a drop; never silently evaporates.
+          // That leaves it present for the player to shoot or scythe.
+          if(floor!==null){
+            e.x=newX;e.homeY=floor-20;e.y=e.homeY;
+          }
         }else if(e.kind==='imp'){
+          // Retreating, ground-hugging imps stay readable for more than a
+          // fleeting obstacle-sized instant and can launch a telegraphed bolt.
+          const newX=e.x+dt*this.speed*.43;
+          const nextGround=this.terrain.groundAt(newX);
+          if(nextGround!==null)e.x=newX;
           const ground=this.terrain.groundAt(e.x);
           if(ground!==null){e.homeY=ground-30;e.y=e.homeY;}
           if(ahead>90&&ahead<600){
@@ -2202,7 +2235,11 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
       // Moving threats cannot enter the guaranteed post-vendor safe corridor.
-      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-125&&e.x<right+600&&
+      // Keep only creatures that have genuinely passed the camera, finished
+      // the world, or entered a vendor safety corridor. Nothing is created
+      // beyond the visible right edge, so legitimate spawns aren't culled.
+      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-130&&
+        e.x<this.terrain.finishX+100&&
         !Core.intersectsVendorCorridor(e.x-22,44,this.startX,C.vendorEveryMeters,C.pxPerMeter));
       this.bullets=this.bullets.filter(b=>!b.dead);
       this.fireballs=this.fireballs.filter(b=>!b.dead&&
@@ -2939,17 +2976,21 @@ window.GRIM_CONFIG = Object.freeze({
           }
           if(skeletal&&e.hp===1){g.fillStyle(0xffcf76,.68);g.fillCircle(x,y+13,3);}
         }else if(e.kind==='crawler'){
-          g.fillStyle(0x52626c);g.fillEllipse(x,y,41,30);
-          g.fillStyle(0x98a9b1,.91);g.fillEllipse(x+5,y-8,27,16);
-          g.lineStyle(3,0xc6d3d4,.82);
+          g.fillStyle(0xa8e1d6,.14);g.fillEllipse(x,y-2,60,48);
+          g.lineStyle(3,0xeff6e6,.9);g.strokeEllipse(x,y-2,43,32);
+          g.fillStyle(0xa9babf);g.fillEllipse(x,y,41,30);
+          g.fillStyle(0xecf4e7,.97);g.fillEllipse(x+5,y-8,27,16);
+          g.lineStyle(3,0xe4fbf1,.96);
           for(const side of [-1,1]){
             g.lineBetween(x+side*12,y+8,x+side*23,y+20);
             g.lineBetween(x+side*3,y+11,x+side*17,y+22);
           }
-          g.fillStyle(0xeb9ac4);g.fillCircle(x-10,y-5,2.4);
+          g.fillStyle(0xfe8390);g.fillCircle(x-10,y-5,3.6);
         }else if(e.kind==='imp'){
-          g.fillStyle(0x7f3634);g.fillEllipse(x,y,36,44);
-          g.fillStyle(0xbc6448);g.fillTriangle(x-17,y-15,x-18,y-33,x-3,y-20);
+          g.fillStyle(0xffb76a,.16);g.fillEllipse(x,y-4,60,65);
+          g.lineStyle(3,0xffc583,.92);g.strokeEllipse(x,y,39,47);
+          g.fillStyle(0x9d4735);g.fillEllipse(x,y,36,44);
+          g.fillStyle(0xe4815a);g.fillTriangle(x-17,y-15,x-18,y-33,x-3,y-20);
           g.fillTriangle(x+7,y-20,x+20,y-33,x+18,y-10);
           g.fillStyle(0xffd48a);g.fillCircle(x-6,y-7,3);g.fillCircle(x+7,y-7,3);
           if(e.warningMs>0){

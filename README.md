@@ -2,11 +2,24 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.8.2 — Souls and Bone**
+**Current playable build: v0.8.3 — Enemy Encounter Rework**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
-- [v0.8.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.8.1)
+- [v0.8.2 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.8.2)
+
+## v0.8.3 enemy patch
+
+The enemy system was reworked following Android playtesting:
+
+- Bats enter at the far-right **visible** edge and move toward the Reaper at a much slower *screen-relative* speed than the terrain, with a longer, telegraphed swoop.
+- Bats spawn every **55–78m** through the Underworld, with normal bats initially and two-hit skeletal bats in late Hell.
+- A separate ground-enemy schedule produces **Bone Crawlers** and later **Ember Imps** every **115–165m**, independently of bat encounters.
+- Ground enemies approach more slowly and have brighter, easier-to-recognize silhouettes.
+- Fixed a cleanup bug where enemies could spawn beyond the screen and be removed without ever being seen.
+- Validated with 300 seeded generation checks and five instrumented simulated full runs in `tests/encounter-reliability.cjs`.
+
+The manual Bone Crossbow, 3-Soul revival, Grave Glide and chest cutscene are unchanged.
 
 ## Controls and objective
 
