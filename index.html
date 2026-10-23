@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.9.0</title>
+  <title>GRIM RUN — v0.9.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -31,7 +31,7 @@ html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#090
 .attack {left:max(env(safe-area-inset-left),18px);bottom:var(--right-bottom);}
 .right-buttons {position:absolute;right:max(env(safe-area-inset-right),19px);bottom:0;width:var(--action-size);height:calc(var(--action-size) * 2 + 28px);}
 .right-buttons .action {left:0;}
-.jump {bottom:calc(var(--right-bottom) + var(--action-size) + 14px);}
+.jump {bottom:calc(var(--right-bottom) + var(--action-size) + 26px);}
 .slide {bottom:var(--right-bottom);}
 .modal-wrap {position:absolute;inset:0;z-index:10;display:flex;justify-content:center;align-items:center;background:#050913bb;overflow:auto;padding:max(env(safe-area-inset-top),8px) max(env(safe-area-inset-right),14px) max(env(safe-area-inset-bottom),8px) max(env(safe-area-inset-left),14px);}
 .modal {width:min(650px,85vw);max-height:92vh;overflow:auto;background:linear-gradient(155deg,#1d2e42ed,#0b1427f4);border:1px solid #b0eae255;box-shadow:0 14px 70px #000c,inset 0 2px 15px #5faaa41a;border-radius:20px;padding:clamp(16px,3vh,26px) clamp(20px,4vw,42px);text-align:center;}
@@ -141,6 +141,10 @@ button {cursor:pointer;}
  .meta-modal #reliquary-back-btn {padding:5px 15px;min-height:30px;}
 }
 .gun-status{font-size:clamp(9px,1.7vh,12px);color:#ffd9a7;letter-spacing:.1em;text-shadow:0 0 9px #ffd08775;margin-top:3px;}
+.meta-reset{font-size:clamp(10px,2.1vh,14px);padding:8px 13px;min-height:35px}
+.meta-reset:disabled{opacity:.4;cursor:not-allowed}
+.confirm-wrap{z-index:24;background:#060b16ee}
+.confirm-wrap .modal{border-color:#baa8ed77}
 .revive-wrap{z-index:23;background:#100912ed;}
 .revive-modal{border-color:#e8b4ae8f;box-shadow:0 0 40px #ab283b38,0 12px 60px #000b;}
 .revive-modal h2{color:#ffe2d8;font-size:clamp(22px,6vh,37px);}
@@ -151,7 +155,7 @@ button {cursor:pointer;}
 @media(max-height:345px){.revive-modal{padding:10px 18px}.revive-modal p{margin:1px auto 3px}.revive-modal h2{margin:1px auto}.revive-hearts{font-size:24px;margin:1px}.revive-cost{margin:1px auto}}
 
 /* v0.8.2 bone crossbow thumb control and cinematic item discovery. */
-.crossbow{left:max(env(safe-area-inset-left),18px);bottom:calc(var(--right-bottom) + var(--action-size) + 14px);border-color:#d5ccb3b3;background:linear-gradient(155deg,#45505ce0,#18202de7);}
+.crossbow{left:max(env(safe-area-inset-left),18px);bottom:calc(var(--right-bottom) + var(--action-size) + 26px);border-color:#d5ccb3b3;background:linear-gradient(155deg,#45505ce0,#18202de7);}
 .crossbow-cd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#101b2bbd;font-size:clamp(16px,4.7vh,26px);color:#d8fff0;letter-spacing:.02em;}
 .crossbow.recharging{border-color:#8599a49a;}
 .rewind{left:max(env(safe-area-inset-left),18px);top:clamp(56px,16vh,83px);bottom:auto;
@@ -244,7 +248,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.9.0 · DEATH'S REVERSAL</div>
+      <div class="mini">v0.9.1 · POLISH & FAIRNESS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -257,7 +261,18 @@ button {cursor:pointer;}
       <p class="meta-intro">Spend collected Souls on permanent powers. All bonuses apply at the start of every future run.</p>
       <div id="reliquary-cards" class="meta-grid"></div>
       <div id="reliquary-notice" class="meta-notice" aria-live="polite"></div>
+      <button id="reliquary-reset-btn" class="secondary meta-reset">RESET ALL UPGRADES · 1 SOUL</button>
       <button id="reliquary-back-btn" class="primary">← MAIN MENU</button>
+    </div>
+  </div>
+  <div id="reliquary-reset-confirm" class="modal-wrap confirm-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+    <div class="modal compact">
+      <div class="eyebrow">PERMANENT UPGRADE RESET</div>
+      <h2 id="reset-title">RESET THE RELIQUARY?</h2>
+      <p id="reset-description"></p>
+      <p>Requires 1 unspent Soul in your bank before resetting. Resets cost 1 Soul.</p>
+      <button id="reset-cancel-btn" class="secondary">CANCEL</button>
+      <button id="reset-confirm-btn" class="primary">CONFIRM RESET · 1 SOUL</button>
     </div>
   </div>
   <div id="upgrade-screen" class="modal-wrap reward-wrap hidden" aria-label="Choose your upgrade">
@@ -278,6 +293,14 @@ button {cursor:pointer;}
       <label class="god-mode-setting"><input id="god-mode-checkbox" type="checkbox"><span> GOD MODE — INVINCIBLE</span></label>
       <p class="god-mode-desc">Playtest only. Hazards cannot take HP; max-level Rewind is temporarily unlocked. Devil deals still cost HP.</p>
       <button id="resume-btn" class="primary">RESUME ▶</button><button id="quit-btn" class="secondary">QUIT RUN</button></div>
+  </div>
+  <div id="abandon-confirm" class="modal-wrap confirm-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="abandon-title">
+    <div class="modal compact">
+      <div class="eyebrow">NO RETURN</div><h2 id="abandon-title">ABANDON RUN?</h2>
+      <p>Are you sure you want to abandon your current run? Run upgrades and progress will be lost. Collected Souls remain banked.</p>
+      <button id="abandon-cancel-btn" class="primary">KEEP PLAYING</button>
+      <button id="abandon-confirm-btn" class="secondary">ABANDON RUN</button>
+    </div>
   </div>
   <div id="revive-screen" class="modal-wrap revive-wrap hidden" aria-label="Resurrection offer">
     <div class="modal compact revive-modal" role="dialog" aria-modal="true" aria-labelledby="revive-title">
@@ -310,7 +333,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.9.0',
+  version: '0.9.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -610,6 +633,22 @@ window.GRIM_CONFIG = Object.freeze({
     save(state);
     return {ok:true,entry,level:level+1,cost};
   }
+  function investedSouls(state){
+    return DEFINITIONS.reduce((sum,item)=>{
+      const level=boundedInt(state.levels[item.id],0,3);
+      return sum+COSTS.slice(0,level).reduce((a,b)=>a+b,0);
+    },0);
+  }
+  function refundAll(state){
+    const invested=investedSouls(state);
+    if(invested<=0)return {ok:false,reason:'No upgrades to refund.'};
+    if(state.souls<1)return {ok:false,reason:'Requires at least 1 unspent Soul.'};
+    const newBalance=boundedInt(state.souls-1+invested,0,MAX_SOULS);
+    for(const item of DEFINITIONS)state.levels[item.id]=0;
+    state.souls=newBalance;
+    save(state);
+    return {ok:true,invested,fee:1,newBalance};
+  }
   function spendSouls(state,amount){
     const cost=boundedInt(amount,1,MAX_SOULS);
     if(state.souls<cost)return false;
@@ -625,7 +664,7 @@ window.GRIM_CONFIG = Object.freeze({
     const percent=DEFINITIONS[2].amounts[boundedInt(state.levels.deathsLeap,0,3)];
     return baseVelocity*Math.sqrt(1+percent/100);
   }
-  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,normalize,load,save,earn,spendSouls,purchase,slideDuration,healthBonus,startingGold,jumpVelocity};
+  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,normalize,load,save,earn,spendSouls,purchase,investedSouls,refundAll,slideDuration,healthBonus,startingGold,jumpVelocity};
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <script>
@@ -644,9 +683,9 @@ window.GRIM_CONFIG = Object.freeze({
       'Slide slows time by 25% for 0.8s.','Slow time 35% for 1.05s.','Slow time 45% for 1.3s.','Slow time 55% for 1.55s.']},
     brittleBones:{id:'brittleBones',name:'BRITTLE BONES',action:'DAMAGE',icon:'☠',color:'#e7efff',descriptions:[
       'When hurt, bone shards clear hazards and fill gaps for 150m.',
-      'When hurt, clear and bridge the next 175m.',
       'When hurt, clear and bridge the next 200m.',
-      'When hurt, clear and bridge the next 225m.']},
+      'When hurt, clear and bridge the next 250m.',
+      'When hurt, clear and bridge the next 300m.']},
     deathsReversal:{id:'deathsReversal',name:"DEATH'S REVERSAL",action:'REWIND',icon:'↶',color:'#c7aaff',descriptions:[
       'Rewind 5 seconds of your run; 60-second cooldown.',
       'Rewind 6 seconds; cooldown reduced to 55 seconds.',
@@ -680,7 +719,7 @@ window.GRIM_CONFIG = Object.freeze({
   const SECOND_JUMP_VELOCITIES=[null,-610,-665,-720,-775];
   const HOVER_MS=[0,700,1050,1400,1750];
   const FIRE_COOLDOWN_MS=[Infinity,10000,8000,6000,4000];
-  const BRITTLE_METERS=[0,150,175,200,225];
+  const BRITTLE_METERS=[0,150,200,250,300];
   function makePowerManager(){
     const levels=Object.fromEntries([...POWER_ORDER,...DEVIL_ORDER].map(id=>[id,0]));
     const maxFor=id=>['rapidFire','powerShot','chainShot'].includes(id)?3:MAX_LEVEL;
@@ -1024,6 +1063,9 @@ window.GRIM_CONFIG = Object.freeze({
       el('start-btn').addEventListener('click', () => actions.start());
       el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
       el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
+      el('reliquary-reset-btn').addEventListener('click', () => actions.openRefund());
+      el('reset-cancel-btn').addEventListener('click', () => actions.cancelRefund());
+      el('reset-confirm-btn').addEventListener('click', () => actions.confirmRefund());
       el('retry-btn').addEventListener('click', () => actions.start());
       el('revive-yes-btn').addEventListener('click', () => actions.revive());
       el('revive-no-btn').addEventListener('click', () => actions.declineRevive());
@@ -1031,7 +1073,9 @@ window.GRIM_CONFIG = Object.freeze({
       el('menu-btn').addEventListener('click', () => actions.menu());
       el('pause-btn').addEventListener('click', () => actions.pause());
       el('resume-btn').addEventListener('click', () => actions.resume());
-      el('quit-btn').addEventListener('click', () => actions.menu());
+      el('quit-btn').addEventListener('click', () => actions.askAbandon());
+      el('abandon-cancel-btn').addEventListener('click', () => actions.cancelAbandon());
+      el('abandon-confirm-btn').addEventListener('click', () => actions.confirmAbandon());
       el('god-mode-checkbox').addEventListener('change', event => actions.setGodMode(event.target.checked));
       document.addEventListener('keydown', event => {
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
@@ -1083,7 +1127,9 @@ window.GRIM_CONFIG = Object.freeze({
       show('countdown-overlay', mode === 'countdown');
       if(mode!=='portal')show('portal-overlay',false);
       show('menu', mode === 'menu');
-      show('reliquary-screen', mode === 'reliquary');
+      show('reliquary-screen',mode==='reliquary'||mode==='refundConfirm');
+      show('reliquary-reset-confirm',mode==='refundConfirm');
+      show('abandon-confirm',mode==='abandonConfirm');
       show('game-over', mode === 'dead');
       show('revive-screen', mode === 'revive');
       show('chest-screen', mode === 'chest');
@@ -1209,7 +1255,16 @@ window.GRIM_CONFIG = Object.freeze({
         buy.addEventListener('click',()=>this.actions.purchaseMeta(item.id));
         card.appendChild(buy);holder.appendChild(card);
       }
+      const invested=window.GRIM_META.investedSouls(meta);
+      el('reliquary-reset-btn').disabled=!(invested>0&&meta.souls>=1);
+      el('reliquary-reset-btn').title=invested===0?'No upgrades to refund':
+        meta.souls<1?'Requires 1 unspent Soul':'Refund '+invested+' Souls; fee 1 Soul';
       el('reliquary-notice').textContent=notice;
+    }
+    showRefundConfirm(invested,balance){
+      el('reset-description').textContent='You have '+balance+' unspent Souls and '+invested+
+        ' Souls invested. Refund '+invested+' Souls and pay a 1-Soul fee? New balance: '+(balance+invested-1)+'.';
+      this.setMode('refundConfirm');
     }
     update(hp,maxHp,distance,souls,coins,score,powerSummary=[]) {
       const hearts=el('hearts');
@@ -1359,6 +1414,12 @@ window.GRIM_CONFIG = Object.freeze({
         openReliquary: () => this.openReliquary(),
         closeReliquary: () => this.closeReliquary(),
         purchaseMeta: id => this.purchaseMeta(id),
+        openRefund:()=>this.openRefund(),
+        cancelRefund:()=>this.cancelRefund(),
+        confirmRefund:()=>this.confirmRefund(),
+        askAbandon:()=>this.askAbandon(),
+        cancelAbandon:()=>this.cancelAbandon(),
+        confirmAbandon:()=>this.confirmAbandon(),
         revive: () => this.revive(),
         declineRevive: () => this.declineRevive(),
         fireCrossbow: () => this.fireCrossbow(),
@@ -1391,6 +1452,39 @@ window.GRIM_CONFIG = Object.freeze({
       this.totalSouls=this.meta.souls;
       this.ui.updateReliquary(this.meta,result.ok?
         `${result.entry.name} UPGRADED TO LEVEL ${result.level}!`:result.reason);
+    }
+    openRefund(){
+      if(this.state!=='reliquary')return false;
+      const invested=Meta.investedSouls(this.meta);
+      if(invested<=0||this.meta.souls<1)return false;
+      this.state='refundConfirm';
+      this.ui.showRefundConfirm(invested,this.meta.souls);
+      return true;
+    }
+    cancelRefund(){
+      if(this.state!=='refundConfirm')return;
+      this.state='reliquary';this.ui.setMode('reliquary');
+    }
+    confirmRefund(){
+      if(this.state!=='refundConfirm')return false;
+      const result=Meta.refundAll(this.meta);
+      this.state='reliquary';this.totalSouls=this.meta.souls;
+      this.ui.updateReliquary(this.meta,result.ok?
+        'ALL UPGRADES RESET · '+result.invested+' SOULS REFUNDED · 1 SOUL FEE':result.reason);
+      this.ui.setMode('reliquary');
+      return result.ok;
+    }
+    askAbandon(){
+      if(this.state!=='paused')return;
+      this.state='abandonConfirm';this.ui.setMode('abandonConfirm');
+    }
+    cancelAbandon(){
+      if(this.state!=='abandonConfirm')return;
+      this.state='paused';this.ui.setMode('paused');
+    }
+    confirmAbandon(){
+      if(this.state!=='abandonConfirm')return;
+      this.goToMenu();
     }
     handleResize(size) {
       const previousY=this.groundY;
