@@ -158,17 +158,18 @@ button {cursor:pointer;}
 .chest-eyebrow{font-size:clamp(10px,2vh,15px);font-weight:900;letter-spacing:.30em;color:#b7fff4;}
 .chest-illustration{position:relative;width:min(335px,40vw);height:clamp(104px,42vh,220px);flex-shrink:0;}
 .chest-beam{position:absolute;bottom:12%;left:35%;width:30%;height:68%;background:linear-gradient(0deg,#8cebe75e,transparent);filter:blur(9px);animation:beamPulse 1.4s infinite alternate;}
-.chest-base{position:absolute;bottom:7%;left:31%;width:38%;height:34%;border:3px solid #d5a66b;border-radius:10px;background:linear-gradient(#6c534c,#292e3b);box-shadow:0 7px 15px #0008;}
+.chest-base{position:absolute;bottom:7%;left:60%;width:34%;height:34%;border:3px solid #d5a66b;border-radius:10px;background:linear-gradient(#6c534c,#292e3b);box-shadow:0 7px 15px #0008;}
 .chest-lid{position:absolute;left:-5%;right:-5%;top:-11%;height:36%;border:4px solid #d6bc8c;border-radius:9px;background:#554640;transform-origin:bottom center;animation:openLid 4.4s ease forwards;}
 .chest-lock{position:absolute;left:40%;top:25%;color:#ffe5a5;font-size:clamp(18px,5vh,33px);}
-.chest-crossbow{position:absolute;width:40%;height:68%;left:30%;top:12%;filter:drop-shadow(0 0 17px #8cebe7);animation:liftRelic 4.4s ease forwards;}
-.chest-reaper{position:absolute;left:7%;bottom:6%;font-size:clamp(36px,14vh,82px);color:#d6e7df;filter:drop-shadow(0 3px 5px #000);}
+.chest-crossbow{position:absolute;width:35%;height:68%;left:58%;top:12%;filter:drop-shadow(0 0 17px #8cebe7);animation:liftRelic 4.4s ease forwards;}
+.chest-reaper{position:absolute;left:13%;bottom:3%;width:36%;height:70%;filter:drop-shadow(0 4px 7px #000);animation:reaperReveal 4.4s ease-out forwards;}
 .chest-rune{position:absolute;left:50%;top:0;transform:translateX(-50%);font-size:clamp(20px,7vh,42px);color:#a6ffea;animation:beamPulse 1.2s infinite alternate;}
 .chest-title{font-size:clamp(16px,4.4vh,35px);font-weight:1000;letter-spacing:.12em;text-shadow:0 0 21px #8cebe794;}
 .chest-caption{font-size:clamp(9px,2vh,14px);font-weight:850;letter-spacing:.15em;margin:4px;color:#a4d3d2;}
 #chest-continue-btn{min-height:32px;padding:5px 20px;margin:5px auto 0;}
 @keyframes openLid{0%,15%{transform:rotate(0)}35%,100%{transform:rotate(-69deg)}}
-@keyframes liftRelic{0%,28%{transform:translateY(35%) scale(.45);opacity:0}46%{opacity:1}72%,100%{transform:translateY(-33%) scale(1.05);opacity:1}}
+@keyframes liftRelic{0%,19%{transform:translateY(40%) scale(.45);opacity:0}35%{opacity:1}72%,100%{transform:translate(-115%,-32%) scale(1.08);opacity:1}}
+@keyframes reaperReveal{0%,15%{opacity:0;transform:translateY(12px)}35%,100%{opacity:1;transform:translateY(0)}}
 @keyframes beamPulse{from{opacity:.42}to{opacity:1}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
@@ -196,7 +197,17 @@ button {cursor:pointer;}
         <path d="M112 19 L100 40 L124 40 Z" fill="#8cebe7"/>
         <path d="M110 89 L145 105 L134 120 L112 106" fill="#ccb99a"/>
       </svg>
-      <div class="chest-reaper">☠</div>
+      <svg class="chest-reaper" viewBox="0 0 110 165" xmlns="http://www.w3.org/2000/svg">
+        <path d="M55 84 L25 106 L10 162 L103 162 L80 103 Z" fill="#172034" stroke="#506575" stroke-width="4"/>
+        <path d="M55 86 Q12 84 19 42 Q22 13 57 10 Q99 13 95 50 L84 91 Z" fill="#28374c" stroke="#627482" stroke-width="4"/>
+        <ellipse cx="58" cy="58" rx="23" ry="25" fill="#061321"/>
+        <ellipse cx="61" cy="62" rx="16" ry="18" fill="#e3e5d9"/>
+        <circle cx="55" cy="61" r="5" fill="#1b2a34"/><circle cx="69" cy="61" r="5" fill="#1b2a34"/>
+        <path d="M62 72 L57 78 L67 78 Z" fill="#2b3233"/>
+        <path d="M35 101 Q18 67 32 36 L46 20" fill="none" stroke="#d5d7c9" stroke-width="9" stroke-linecap="round"/>
+        <path d="M82 101 Q106 70 88 35 L73 20" fill="none" stroke="#d5d7c9" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="46" cy="20" r="7" fill="#ebe3ce"/><circle cx="73" cy="20" r="7" fill="#ebe3ce"/>
+      </svg>
       <div class="chest-base"><div class="chest-lid"></div><div class="chest-lock">✦</div></div>
     </div>
     <div class="chest-title">BONE CROSSBOW ACQUIRED</div>
