@@ -1,152 +1,84 @@
-# Grim Run — Project Status & Roadmap
+# Grim Run — Project Status and Roadmap
 
-**Updated:** October 22, 2026  
-**Current build:** v0.8.1 — *Encounter Reliability Patch*  
-**Target:** Android landscape web game (Phaser 3.90.0; single HTML).  
-**QA status:** Static syntax/integrity checks, 300-seed generation tests and five simulated full-game runs passed. **Actual phone playtest remains essential.**  
-**Rollback:** `backup/v0.8.0` preserves the prior release. Earlier backups include `backup/v0.7.0`.
+**Release:** v0.8.2 — *Souls and Bone*  
+**Platform:** Landscape browser / Android prototype using Phaser 3.90.0 and a single HTML file  
+**Source:** `main/index.html` once promoted to main  
+**Rollback:** `backup/v0.8.1` (last user-playtested stable version)  
+**Verification:** Source syntax, 300-seed procedural regression checks, five simulated full runs, and dedicated v0.8.2 survival/weapon tests passed. **Live Android playtesting pending.**
 
-## v0.8.1 — Encounter Reliability Patch
+## Game foundations
 
-This deliberately focused patch leaves v0.8.0's basic weapon, controls, powers and permanent save scheme unchanged.
+- Auto-running Reaper, movement controls Attack / Jump / Slide, jumps with optional double-jump and hover, slide-to-air-tuck combo.
+- Procedural mountain and Underworld terrain, steep terrain collision fixes, brambles, rocks, branches, fire, lava, abyss sequences, and 2–3 guaranteed air-tuck gates.
+- 5,000m Underworld portal, Souls around 4,850m and 9,500m, final gate at 9,999m.
+- Angel and Devil vendors every 666m; Devil upgrades cost 2 HP on first purchase of Skeletal Wings or Infernal Boots, then 1 HP; gun upgrades cost 1 HP and always grant one level.
+- Rebalancing and spawn reliability improvements from v0.8.1: dozens of enemy placements with multiple retries; only 0–50m after a vendor is a universal fixed no-spawn zone, plus physical geometry checks.
+- Cavern Bats, Skeletal Bats (2 HP), Bone Crawlers, Ember Imps with reflectable fireballs, moving Snapping Brambles.
 
-### Changes
+## v0.8.2 — What's new
 
-- **Unified spawn safety:** The only general distance exclusion for newly placed hazards and enemies is the **0–50m region after each 666m vendor**. Removed the redundant 245px milestone filter, 260px pre-vendor exclusion, variable 60m/65m/85m exclusions, and broad random obstacle bans centered on the Soul locations. Actual physical collisions, gap-clearance, the chest/portal and finish geometry, and one-way Soul platform footprints remain protected as necessary.
-- **Air tuck:** Each generated run selects **2 or 3** valid air-tuck gates beyond 7,000m, spaced over the late section, with jump-attack patterns independently generated.
-- **Enemy encounters:** Rejected random placements are retried at alternative suitable ground locations; ground creatures can fall back to the appropriate flying variant if a location is unusable. First bat encounter now begins soon after the portal, not 190m later. Additional telemetry records attempts, placements, rejected reasons, entering the view, visibility duration, and kills.
-- **On-screen readability:** Auto-targeting now requires an enemy to have been visibly present for at least **650ms**, letting bats and other threats be noticed before a one-hit automatic shot eliminates them.
-- **God Mode:** HP remains unchanged and death is prevented, but real damage events still trigger `on-damage` effects such as Brittle Bones alongside existing hit feedback.
+### Soul Revival
 
-### Checks
+- When the Reaper dies, present **ONE MORE CHANCE** once per run; accept or decline.
+- **3 Souls** deducted atomically from the existing persistent Soul wallet, with a separate current-run balance allocating this run's Souls first and earlier saved Souls second.
+- No Souls awarded on revival. Collected Soul pickups remain collected; no wallet duplication.
+- Revive restores maximum HP to **3** and heals to **3**, regardless of Boneheart or purchased maximum HP bonuses earlier in the run.
+- Temporary upgrades, gold, and prior run progress are retained. Player moves to a safe solid position if necessary; nearby hazards are cleared strictly for immediate respawn safety.
+- **3-second frozen-world countdown** before play resumes, with short invulnerability to prevent instant repeat death.
+- A later death ends the run normally. Insufficient Soul balance disables purchase; declining death preserves the Soul wallet.
 
-- `node tests/encounter-reliability.cjs` is a dependency-free regression suite stored in GitHub.
-- **300 procedural seeds:** 150 runs with 2 gates; 150 with 3 gates. Enemy placement generated 48–52 creatures per tested run. Every placement tested against the exact vendor corridor.
-- **Five simulated portal-to-finish runs:** all reached 9,999m in the mocked graphical environment and recorded 20, 22, 24, 25, and 23 encounters visible at least 650ms.
-- Script parsing, Soul wallet preservation and damage/flight spawn invariants checked.
-- A real phone is required to confirm actual visual appearance, smoothness, collisions, readability, encounter balance, and that enemies are fun rather than overwhelming.
+### Grave Glide — Permanent Reliquary Tree
 
-### v0.8.1 phone playtest priorities
+| Level | Cost for level | Max slide duration |
+|---|---:|---:|
+| 0 (base) | — | 0.85 sec |
+| 1 | 5 Souls | 1.00 sec |
+| 2 | 10 Souls | 1.15 sec |
+| 3 | 25 Souls | 1.30 sec |
 
-- [ ] Confirm the menu reports v0.8.1.
-- [ ] Across a run, encounter 2–3 air-tuck gates after their previous introduction point.
-- [ ] Enter Underworld at 5,000m and see early cavern bats, not an empty cavern.
-- [ ] Later, encounter skeletal bats, ground crawlers and fireball-casting Ember Imps.
-- [ ] Enemies remain visible long enough to recognize and respond; auto-fire still prioritizes airborne targets.
-- [ ] No enemy or obstacle spawns in the first 50m after a vendor.
-- [ ] Obstacles may appear normally before vendors; no unfair overlap combinations.
-- [ ] Soul platforms remain accessible, both Souls collectible, and the 9,999m finish available.
-- [ ] In God Mode, Brittle Bones still clears hazards/bridges terrain when a hit occurs without losing health.
-- [ ] Existing Reliquary balance, upgrades, auto-fire, Devil HP prices, portal, terrain collision and mobile controls remain unchanged.
+This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's Leap. Existing `grim-run-v07-meta` saves load with Grave Glide at level 0 and preserve previously purchased levels, Souls and scores. Shop displays four side-by-side cards in landscape.
 
-### Agreed next releases (not in v0.8.1)
+### Bone Crossbow and Chest Acquisition
 
-- **v0.8.2 — Survival & Presentation:** One revive per run for 3 banked Souls (current run earned Souls spent first), revived at max 3 HP and fully healed with a 3-second resume timer; new permanent maximum-slide-duration Reliquary tree, 5/10/25 Souls for +0.15/+0.30/+0.45 seconds; reskin Soulcaster as bone crossbow, **manually fired** using a new button above the scythe; short skippable chest-acquisition animation at the Underworld portal.
-- **v0.9.0 — Rewind:** Angel ability with 5/6/7/8-second rewinds across levels 1–4 and 60/55/50/45-second cooldowns, dedicated upper-left button, safe time-state snapshot restore. God Mode temporarily unlocks level 4 for testing.
-- Continue presentation, optimization, balance and Android release preparation in later phases.
+- Gun re-themed as a **bone-and-sinew crossbow** with pale bone bolts and a handheld bone weapon appearance.
+- **Manual Fire**: Touch button appears directly above the scythe on the left, with the same vertical spacing as Jump above Slide. Desktop key **F** also shoots.
+- Crossbow keeps auto-aiming at the highest-priority target: visible flying enemies first, then ground enemies, then scythe-cuttable obstacles when Power Shot level 2 is owned.
+- Crossbow never fires automatically; Fire button may shoot an untargeted bolt straight forward. Every shot consumes the same cooldown (1.00s base; Rapid Fire 0.85/0.70/0.55s).
+- Existing Power Shot and Chain Shot remain functional, including automatic level-3 Power Shot screen blast.
+- After the 5,000m portal, a **skippable 4.4-second item acquisition scene** freezes gameplay: chest opens, magical light appears, and the Reaper raises the Bone Crossbow. Only on completion or Continue is the crossbow unlocked and Fire button shown. No fourth action is shown before this point.
 
----
+## Verified in simulated/source testing
 
-## Core premise
+- `node tests/encounter-reliability.cjs`: 300 seeded worlds, 2–3 air-tuck gates, 48–52 enemies, five complete mocked-graphics runs with visible enemies.
+- `node tests/survival-crossbow.cjs`: old Soul balance migration; Grave Glide 5/10/25 costs and reload persistence; revival debits 3 Souls once, with correct current/prior allocation, restored 3/3 HP, three-second countdown and second death; chest skip, weapon unlock, manual fire, no automatic fire, correct rapid-fire cooldowns and flyer targeting.
+- Every inline JavaScript block checked for parse errors; preserved world/collision rules and existing save keys.
 
-Automatically run to the right as the Grim Reaper, using three landscape touch controls: Attack (left), Jump and Slide (right). Survive terrain, gaps, damaging hazards, and enemies, then enter the Underworld at 5,000m and reach the final gate at 9,999m. Angel and Devil vendors offer temporary run powers; the Reliquary spends banked Souls on permanent upgrades.
+**Limitations:** This validates logic but not real Phaser GPU drawing, touch precision, visual fit at each Android screen size, phone frame rate, or real user difficulty. User phone QA remains the release acceptance step.
 
-## Features implemented through v0.7.0
+## Phone playtest checklist for v0.8.2
 
-- Deterministic procedural ascents from forest to mountains, teleport at 5,000m, caverns, late lava/Hell region.
-- Terrain collision and swept landing fixes; airborne movements, sliding, air tuck, double jump, hovering.
-- Angel/Devil merchants every 666m; Angel gold transactions, Devil HP transactions and optional healing.
-- Optional Souls around 4,850m and 9,500m, persistent Soul balance, personal-best tracking, victory at 9,999m.
-- Permanent Reliquary trees, each with upgrade prices **5 → 10 → 25 Souls**:
-  - Boneheart: 3 starting HP baseline; 4/5/6 at levels 1/2/3.
-  - Grave Wealth: +2/+4/+6 starting spendable gold; not added to collected-gold score.
-  - Death's Leap: +5%/+10%/+15% actual base jump height.
-- Existing Soul balances migrate from `grim-run-v05-souls` into `grim-run-v07-meta`; same-browser storage persists after run death and reset.
+- [ ] Main menu says v0.8.2; existing Souls and permanent upgrades are intact.
+- [ ] Reliquary displays four upgrade trees without scrolling/cutting off buttons in landscape.
+- [ ] Grave Glide increases maximum slide duration at each level.
+- [ ] Encounter distribution and terrain collision still work (especially bats, 2–3 air tucks, and Soul platforms).
+- [ ] After portal, chest cutscene is clear, skippable, and pauses game mechanics.
+- [ ] Bone Crossbow appears afterward above Attack. No auto-fire; tapping Fire produces a bolt and respects cooldown.
+- [ ] Crossbow auto-aim prioritizes airborne enemies, rapid fire/power/chain upgrades still work.
+- [ ] Initial death shows revival. Cost is 3 Souls, current-run pickups consumed first. Decline shows game over normally.
+- [ ] Revival restores 3/3 hearts, keeps run abilities and location, and gives a full three-second countdown.
+- [ ] Cannot revive twice in one run; cannot revive without 3 Souls. Reloading preserves the debit.
+- [ ] Check both pre- and post-portal deaths and deaths from lava/abyss, fireball and contact damage.
+- [ ] The full 9,999m game remains finishable.
 
-## v0.8.0 — Combat Expansion
+## Next agreed release
 
-### Fixed weapon at the portal
+**v0.9.0 — Death's Reversal:** new Angel vendor power with a dedicated upper-left Rewind button. Level 1 rewinds 5 seconds on a 60-second cooldown; levels 2–4 give 6/7/8 seconds on 55/50/45-second cooldowns. In God Mode the fully upgraded rewind is available temporarily. Requires bounded, accurate world-state snapshots and irreversible boundaries at Soul collection, vendors and portal changes.
 
-- The Reaper acquires the **Soulcaster** automatically while teleporting at 5,000m; no fourth button.
-- Gun fires a single visible auto-aimed projectile with a **1,000ms base cooldown**.
-- Prioritizes visible flying enemies, then ground enemies; once Power Shot level 2 is owned, cuttable obstacles can be targeted after all enemies.
-- A Soulcaster indicator appears in the HUD. Current weapon and run upgrades reset every new run; permanent Reliquary stats do not.
+Later: visual/audio polish, encounter difficulty balancing, mobile optimization, offline dependency bundling, native Android packaging.
 
-### Devil upgrade trees
+## Source and backups
 
-All Devil purchases grant **exactly one level**, ignoring Angel-only rarity boosts. If any gun upgrades remain, at least one appears among the three Devil offers.
-
-| Upgrade | Purchase price | Levels and effects |
-|---|---|---|
-| **Infernal Boots** (combined Fireproof Boots + Lava Waders) | 2 HP first; 1 HP later | Levels 1–4: lava damage reduced by 1 HP at every level; fire shield one hit at 10/8/6/4-second cooldown |
-| **Skeletal Wings** | 2 HP first; 1 HP later | Existing hover progression (4 levels), unchanged |
-| **Rapid Fire** | 1 HP each | Level 1: 850ms; L2: 700ms; L3: 550ms |
-| **Power Shot** | 1 HP each | L1: 2 damage; L2: gun can target scythe-cuttable obstacles when no enemies in range; L3: automatic full-screen obstacle clear + 2 damage to visible flying enemies, with a 10-second cooldown |
-| **Chain Shot** | 1 HP each | Each gun hit chains to 1, 2, or 3 additional nearby visible flying enemies (levels 1–3) |
-
-A purchase cannot reduce the Reaper below 1 HP. Infernal Boots' fire shield also handles projectile fireballs from Ember Imps.
-
-### New hazards / combat encounters
-
-- **Cavern Bats** (from 5,000m): 1 HP; a short windup precedes a downward swoop.
-- **Skeletal Bats** (late lava/Hell): 2 HP; killed in two base shots or one upgraded Power Shot.
-- **Bone Crawlers** (mid/late Underworld): low mobile enemies following solid ground, vulnerable to scythe or gun.
-- **Ember Imps** (lava/Hell): stationary 2-HP fireball casters; fireballs can be hit and reflected by an active scythe swing back toward the caster.
-- **Snapping Brambles** (mountain ascent): animated extending plants with matching dynamic hitboxes, destroyable with the scythe.
-
-### Safety and compatibility
-
-- Enemy spawning respects Soul platform areas, vendor approaches/departures, and the portal vicinity.
-- Ground enemies require stable solid terrain at spawn; bats can fly over sloped ground but not through chasms.
-- The blast only removes discrete obstacles; it **never fills or deletes terrain, abyss gaps, or lava pits**.
-- Save schema, persistent Soul balances, player controls, and the original terrain collision fixes are unchanged.
-- No new media dependencies; the graphics remain procedural, with existing Phaser CDN dependency.
-
-## Verification results
-
-**Completed:** Static checks of every inline JS script, source diff review, unit-like combat rule tests and simulated Phaser scene updates using stubbed graphics/DOM.
-
-Confirmed in simulation:
-- v0.8.0 menu startup and portal gun grant.
-- Devil price ladder (2 HP initial for Skeletal Wings/Infernal Boots, 1 HP thereafter), one level per transaction, guaranteed offered gun upgrade.
-- Infernal Boots lava mitigation and 10/8/6/4s fire cooldown.
-- Prioritized flyer targeting, Power Shot damage, screen-wide blast and cooldown.
-- Scythe hits (at most once per swing), fireball deflection, Chain Shot links.
-- Extended simulated Underworld and Hell updates produced bats, skeletal bats, crawlers, imps, bullets and fireballs without exceptions in tested seeds.
-- Across twelve seeded mountain generations, snapping bramble encounters spawned several times per ascent.
-
-**Still required:** Actual mobile-device playtesting, measured FPS/battery checks, touch-handling verification, and long-run difficulty/balance evaluation. Simulated graphics tests cannot confirm the appearance and legibility of real Phaser rendering on a phone.
-
-## v0.8.0 phone playtest checklist
-
-- [ ] HUD shows v0.8.0 on the main menu; permanent Reliquary balance/upgrades unchanged.
-- [ ] Existing forest/mountain obstacles and damage behavior unchanged; snapping brambles move and can be cut.
-- [ ] No random floor falls or branch/slide collision regressions.
-- [ ] Portal at 5,000m shows the Soulcaster pickup and gun indicator.
-- [ ] Gun fires automatically about once per second, prioritizing bats; no new touch button.
-- [ ] Normal bats take 1 hit; skeletal bats take 2 basic hits or 1 upgraded shot.
-- [ ] Bats telegraph before swooping; player collision costs 1 HP unless invulnerable.
-- [ ] Ground crawlers move over solid terrain; Ember Imps launch visible fireballs.
-- [ ] Active scythe swings reflect fireballs; reflected shots can hit the caster.
-- [ ] Devil offers show correct costs; upgrades always increase only 1 level.
-- [ ] Rapid Fire, Power Shot and Chain Shot all work at each tier.
-- [ ] Power Shot L3 blasts obstacles and flyers on-screen, recharges 10s, leaves gaps/lava unaltered.
-- [ ] Infernal Boots combine 1-HP lava protection and recharging fire shield.
-- [ ] Vendor, Soul, portal and end-gate areas remain safe from unfair spawns.
-- [ ] Retry resets gun / temporary powers but does not reset banked Souls or purchased Reliquary levels.
-- [ ] No animation jitter, frame drops, screen overflow or unusable buttons in landscape mode.
-
-## Future roadmap
-
-- **v0.8.2 — Survival and Presentation:** 3-Soul revival once per run, permanent slide-duration tree, manual bone-crossbow controls above the scythe, skippable chest acquisition cutscene.
-- **v0.9.0 — Rewind:** new Angel vendor rewind skill (5–8 seconds, 60–45-second cooldown); God Mode grants level 4 temporarily. Safe snapshots must not reverse irreversible persistent Soul transactions.
-- **Later updates — Presentation, balance and release:** combat encounter tuning, art/audio polish, mobile performance, offline Phaser bundling, native Android packaging, release testing.
-
-## Repo references
-
-- `main/index.html`: current release after merging v0.8.1.
-- `tests/encounter-reliability.cjs`: reproducible 300-seed and simulated run tests.
-- `feature/v0.8.1-encounter-reliability/index.html`: v0.8.1 development branch.
-- `backup/v0.8.0/index.html`: prior user-tested v0.8.0 build.
-- `backup/v0.7.0/index.html`: pre-combat meta-progression build.
-- `backup/v0.6.2/index.html`: early stable baseline.
+- `main/index.html`: published game after merge.
+- `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
+- `backup/v0.8.1`: rollback stable version.
+- `backup/v0.8.0`, `backup/v0.7.0`, `backup/v0.6.2`: older baselines.
