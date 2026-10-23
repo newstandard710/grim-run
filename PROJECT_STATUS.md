@@ -1,10 +1,31 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.9.0 — *Death's Reversal*  
+**Release:** v0.9.1 — *Polish & Fairness*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0 and a single HTML file  
 **Source:** `main/index.html` once promoted to main  
-**Rollback:** `backup/v0.8.3` (last confirmed successful user-playtested build); earlier backups remain intact.  
-**Verification:** Rewind-specific world and currency regression checks, 300-seed encounter generation, five simulated full runs, Soul revival and manual crossbow tests. **Live Android playtesting pending.**
+**Rollback:** `backup/v0.9.0` (last successfully user-playtested build); earlier backups remain intact.  
+**Verification:** Rewind 3× visual playback and God Mode cooldown tests; 75-seed jump feasibility tests; Reliquary refund and abandon confirmations; 300 seeded encounter worlds, five simulated full runs, and legacy survival tests. **Live Android playtesting pending.**
+
+## v0.9.1 — Polish & Fairness
+
+### New features and adjustments
+
+- **Real rewind playback:** Instead of instantly jumping backward in time, display the actual previous gameplay snapshots in reverse at **3× normal speed** (a 5-second Rewind lasts approximately 1.7s; 8 seconds lasts approximately 2.7s). Player movement, scythe/slide state, moving enemies, obstacles, bullets, terrain changes and camera reverse together. Gameplay/input is frozen during playback, purple screen tint and "TIME REVERSES" overlay appear, and rewind restores the exact last valid snapshot at the end. Uses the existing bounded timeline history.
+- **God Mode:** Rewind has **no ability cooldown while God Mode is enabled**, but still requires a fresh 8-second history after each use. Vendor transactions, Souls, death, revival and portal/chest boundaries continue to reset history. Disabling God Mode returns to the regular ability rules, including existing non-God cooldown state.
+- **Reliquary refund:** "RESET ALL UPGRADES · 1 SOUL" is available only when you have both permanent upgrades to refund **and at least one already-unspent Soul in the wallet**. Pressing opens a separate confirmation showing invested Souls, fee, and final balance. Confirm deducts 1 unspent Soul, refunds the **full amount spent on all four permanent trees** (5/10/25 Soul levels), resets all trees to level 0, and saves immediately. Wallet-less players cannot reset by deducting the fee from their refund. Canceling has no effect.
+- **Quit confirmation:** The Pause → Quit Run button now asks "ABANDON RUN?" with Keep Playing and Abandon Run choices. Cancel returns to the paused screen without resuming gameplay. Confirm returns to menu; collected Souls remain banked.
+- **Control position:** Raise **Bow and Jump** by 12px while Attack and Slide stay in place; enlarge Jump's touch container accordingly.
+- **Brittle Bones:** Level ranges upgraded from 150/175/200/225m to **150/200/250/300m**, including all descriptions.
+- **Uphill jump fairness:** Rock and fire spawn candidates must pass a deterministic trajectory simulation using **unupgraded held jump** physics at the intended running speed, with slope, hazard width, avatar collision radius and takeoff options considered. Rejects impossible uphill jump placements without flattening procedural terrain or weakening other combat/slide-specific obstacle types.
+
+### QA and regression status
+
+- `node tests/polish-fairness.cjs`: Refund wallet requirement, persisted refund values, modal flows, 50m Brittle Bones increments, flat/steep/uphill base-jump feasibility, and 75 seeded terrain layouts (about 9,944 allowed and 820 rejected jump candidates).
+- `node tests/rewind.cjs`: Confirms real reverse snapshots play at 3× rather than teleporting, God Mode zero cooldown with a fresh 8s history, normal 60-second cooldown, actual terrain and projectile restoration, Soul/vendor/portal safety boundaries.
+- `node tests/encounter-reliability.cjs`: 300 procedural seeds, 2–3 air-tuck gates, five full mocked-graphics 9,999m runs, separate bat/ground enemy visibility.
+- `node tests/survival-crossbow.cjs`: Legacy saves, Soul revival and payment logic, Grave Glide, chest acquisition, manual crossbow cooldown.
+
+**Phone playtest acceptance:** Check the rewind's perceived 3× speed, smoothness and lack of gameplay during playback; repeat it twice in God Mode; switch God Mode off and confirm normal cooldown; reset a partially invested Reliquary with 1 unspent Soul (and confirm no reset with 0); quit/cancel from pause; test the newly raised button tap areas; verify steep uphill rock/fire hazards are clearable with normal jump. Also check baseline Souls, all four enemy types and full-run stability. Simulated logic and UI event tests do **not** replace phone gameplay testing.
 
 ## v0.9.0 — Death's Reversal
 
@@ -149,13 +170,14 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Android v0.9.0 playtest first. After feedback, prioritize encounter balance and game presentation (art, animations, sound, UI feel), then mobile optimization, offline dependency bundling and native Android packaging.
+Android v0.9.1 playtest first. After feedback, prioritize encounter balance and game presentation (art, animations, sound, UI feel), then mobile optimization, offline dependency bundling and native Android packaging.
 
 ## Source and backups
 
 - `main/index.html`: published game after merge.
-- `tests/rewind.cjs`, `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
-- `backup/v0.8.3`: last successful playtest version.
+- `tests/polish-fairness.cjs`, `tests/rewind.cjs`, `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
+- `backup/v0.9.0`: last successful user-playtested version.
+- `backup/v0.8.3`: previous version.
 - `backup/v0.8.2`: earlier version.
 - `backup/v0.8.1`: previous rollback stable version.
 - `backup/v0.8.0`, `backup/v0.7.0`, `backup/v0.6.2`: older baselines.
