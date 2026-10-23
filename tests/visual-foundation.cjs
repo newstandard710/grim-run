@@ -61,19 +61,34 @@ for(let i=0;i<40;i++)game.update(0,34);
 assert.ok(game.distance>0,'Game unaffected by absent artwork');
 const created=[];
 let done;
-const textures=new Map([['gr_reaper_sheet_source',{}],['gr_bat_sheet_source',{}]]);
+const imageReaper={width:768,height:768,image:true},imageBat={width:640,height:256,image:true};
+const textures=new Map([
+ ['gr_reaper_sheet_source',{getSourceImage:()=>imageReaper}],
+ ['gr_bat_sheet_source',{getSourceImage:()=>imageBat}]
+]);
+let spriteSheetImageCount=0;
 const browserScene={
  load:{svg(key,url,config){created.push({key,url,config});return this;},
  on(){},off(){},once(_key,fn){done=fn;},start(){done();}},
  textures:{exists:key=>textures.has(key),get:key=>textures.get(key),
- addSpriteSheet(key,source,settings){textures.set(key,source);
- assert.equal(settings.endFrame,key==='gr_reaper_frames'?15:7);}},
+ addSpriteSheet(key,source,settings){
+  assert.ok(source===imageReaper||source===imageBat,
+    'Phaser addSpriteSheet must receive actual DOM image, not Texture manager object');
+  spriteSheetImageCount++;
+  assert.equal(settings.endFrame,key==='gr_reaper_frames'?15:7);
+  const sheet={key,has(frame){return Number.isInteger(frame)&&frame>=0&&frame<=settings.endFrame;}};
+  textures.set(key,sheet);
+  return sheet;
+ }},
  add:{sprite(x,y,key,frame){
- const obj=gfx();obj.x=x;obj.y=y;obj.frame=frame;obj.texture=key;
+ const obj=gfx();obj.x=x;obj.y=y;
+  obj.frame={name:frame};
+  obj.texture=textures.get(key)||{key:'__MISSING'};
  obj.setOrigin=function(){return this};obj.setScale=function(){return this};
  obj.setDepth=function(){return this};obj.setVisible=function(v){this.visible=v;return this};
  obj.setPosition=function(x,y){this.x=x;this.y=y;return this};
- obj.setAlpha=function(x){this.alpha=x;return this};
+ obj.setFrame=function(x){this.frame={name:x};return this};
+  obj.setAlpha=function(x){this.alpha=x;return this};
  obj.setTint=function(x){this.tint=x;return this};
  obj.setRotation=function(x){this.rotation=x;return this};
  created.push(obj);return obj;
@@ -84,6 +99,8 @@ const browserScene={
 const renderer=new V.GrimVisualSystem(browserScene);
 assert.equal(renderer.begin(),true);
 assert.equal(renderer.reaperReady,true);assert.equal(renderer.batReady,true);
+assert.equal(spriteSheetImageCount,2,'Both SVG textures generated valid sprite sheets');
+assert.equal(renderer.reaper.texture.key,'gr_reaper_frames','Never render Phaser missing texture');
 assert.equal(renderer.batPool.length,12);
 renderer.render();
 assert.ok(renderer.reaper.visible);assert.equal(renderer.reaper.y,312);
@@ -93,7 +110,7 @@ assert.equal(renderer.batPool.filter(x=>x.visible).length,1);
 browserScene.enemies=[];renderer.render();
 assert.equal(renderer.batPool.filter(x=>x.visible).length,0);
 browserScene.player.sliding=true;renderer.render();
-assert.equal(renderer.reaper.frame,8);assert.equal(renderer.reaper.x,200);
+assert.equal(renderer.reaper.frame.name,8);assert.equal(renderer.reaper.x,200);
 assert.equal(renderer.reaper.y,312,'Changing pose does not change feet anchor');
 renderer.shutdown();assert.equal(renderer.batPool.length,0);
 const lost=new V.GrimVisualSystem({
@@ -103,4 +120,20 @@ const lost=new V.GrimVisualSystem({
 });
 lost.begin();assert.equal(lost.reaperReady,false);
 assert.equal(lost.batReady,false);
-console.log('PASS v0.10.0: vector atlas poses, visual-gameplay decoupling, safe fallback, deterministic animations, bat pool and anchored slide.');
+// Reproduce production regression: texture entry exists, but addSpriteSheet
+// returns a null/invalid result. Fallback must remain enabled.
+let doneInvalid;
+const invalid=new V.GrimVisualSystem({
+  load:{svg(){},on(){},off(){},once(k,fn){doneInvalid=fn;},start(){doneInvalid();}},
+  textures:{
+    exists:key=>key==='gr_reaper_sheet_source'||key==='gr_bat_sheet_source',
+    get:key=>({getSourceImage:()=>key==='gr_reaper_sheet_source'?imageReaper:imageBat}),
+    addSpriteSheet:()=>null
+  },
+  add:{sprite(){throw Error('Cannot instantiate an invalid sprite sheet');}}
+});
+invalid.begin();
+assert.equal(invalid.reaperReady,false,'Failure must leave procedural Reaper enabled');
+assert.equal(invalid.batReady,false,'Failure must leave procedural Bat enabled');
+assert.ok(invalid.failedAssets.length>=2);
+console.log('PASS v0.10.1: vector atlas poses, visual-gameplay decoupling, safe fallback, deterministic animations, bat pool and anchored slide.');
