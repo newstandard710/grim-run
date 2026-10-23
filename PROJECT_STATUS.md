@@ -1,10 +1,22 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.10.0 — *The Reaper Reborn*  
+**Release:** v0.10.1 — *Missing-Texture Hotfix*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and versioned external SVG art assets  
 **Source:** `main/index.html` once promoted to main  
-**Rollback:** `backup/v0.9.1` (last successfully user-playtested build); earlier backups remain intact.  
+**Rollback:** `backup/v0.10.0` preserves the original visual release; `backup/v0.9.1` is the last successfully user-playtested full gameplay version.  
 **Verification:** New animation/asset/fallback regression, plus previous Rewind, Soul, jump fairness, 300 seeded encounter worlds and five simulated full runs. **Live Android visual and performance playtesting pending.**
+
+## v0.10.1 — Missing-Texture Hotfix
+
+**Reported on Android Chrome:** Game started and showed only a small green outlined square at the Reaper collision position instead of the new illustrated character. This is the characteristic Phaser missing-texture icon.
+
+**Root cause:** `TextureManager.addSpriteSheet(newKey, sourceTexture, config)` received a Phaser Texture instead of the source HTML image/canvas. For a new sprite sheet key, Phaser requires the actual raster image (`sourceTexture.getSourceImage()`). The runtime incorrectly set `reaperReady=true` even when Phaser returned its missing-texture fallback, suppressing the previous procedural Reaper.
+
+**Fix:** Pass `getSourceImage()` for both Reaper and Cavern Bat; validate source dimensions and presence of necessary frames (0, 8 and 15 for Reaper; 0, 4 and 7 for Bat), and verify the resulting sprite has the correct texture key and isn't `__MISSING`. If ANY check fails, keep the legacy procedural renderer instead of hiding the Reaper. Destroy partial sprite allocations on error.
+
+**New real-browser QA:** `tests/browser-visual-smoke.js` launches actual Chromium, loads the game with Phaser, checks sprite textures and non-transparent SVG raster pixels, verifies Reaper visibility in a real running scene and exercises `?art=off`. `.github/workflows/browser-render.yml` executes the test on new PRs and pushes in GitHub Actions in addition to the five Node/gameplay and SVG parsing tests.
+
+**Android verification:** Refresh the GitHub Pages game (force cache reload if needed) and confirm the menu says `v0.10.1`. Check that the Reaper is illustrated instead of the green missing-texture square; bat appearance and performance still require phone inspection.
 
 ## v0.10.0 — The Reaper Reborn (Visual Foundation)
 
