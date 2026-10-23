@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.8.0</title>
+  <title>GRIM RUN — v0.8.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -167,7 +167,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.8.0 · THE SOULCASTER</div>
+      <div class="mini">v0.8.1 · ENCOUNTER RELIABILITY</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -221,7 +221,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.8.0',
+  version: '0.8.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -347,12 +347,22 @@ window.GRIM_CONFIG = Object.freeze({
     const mod = ((x - startX) % period + period) % period;
     return Math.min(mod, period-mod) > radius;
   }
-  function isUpgradeSafe(x, startX, meters = 666, pxPerMeter = 12, beforePx = 260, afterMeters = 50) {
-    const offset = x - startX;
-    const period = meters * pxPerMeter;
-    const candidate = Math.floor((offset + beforePx) / period);
-    if (candidate < 1) return true;
-    return !(offset >= candidate * period - beforePx && offset <= candidate * period + afterMeters * pxPerMeter);
+  // One universal spawn exclusion: the 50m corridor AFTER each vendor.
+  // Retain old optional arguments solely for backward compatibility; they no longer
+  // create independent pre-vendor or oversized post-vendor restrictions.
+  function intersectsVendorCorridor(x, width, startX, meters = 666, pxPerMeter = 12) {
+    const a=(x-startX)/pxPerMeter, b=(x+Math.max(0,width)-startX)/pxPerMeter;
+    for(let k=Math.max(1,Math.floor(a/meters)-1);k<=Math.min(14,Math.floor(b/meters)+1);k++){
+      if(b>k*meters && a<k*meters+50)return true;
+    }
+    return false;
+  }
+  function isUpgradeSafe(x,startX,meters=666,pxPerMeter=12,_beforePx=0,_afterMeters=50){
+    return !intersectsVendorCorridor(x,0,startX,meters,pxPerMeter);
+  }
+  // Protect physical Soul platform footprints, not a broad meter-radius.
+  function overlapsSoulPlatform(x,width,platforms,padding=25){
+    return (platforms||[]).some(p=>x+width>p.x-padding && x<p.x+p.width+padding);
   }
   // Positions three coins along an unmodified FULL jump. Fractions of total flight
   // time (12%, 50%, 88%) yield a broad arc at every supported run speed.
@@ -444,7 +454,8 @@ window.GRIM_CONFIG = Object.freeze({
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
+    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, intersectsVendorCorridor, overlapsSoulPlatform,
+    fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
     slideCeilingBottomAt, branchHits };
 })(typeof window !== 'undefined' ? window : globalThis);
 
@@ -716,11 +727,11 @@ window.GRIM_CONFIG = Object.freeze({
       if(m<9690 && m+lengthMeters>9320)return false; // second Soul's uninterrupted underpass
       if(m>=5000 && m<5105)return false;
       if(m+lengthMeters>9950)return false;
-      // Keep BOTH gaps and their landing platforms out of the 20m approach
-      // and the first 50m after each 666m soul, whether collected or missed.
-      for(let k=Math.max(1,Math.floor((m-75)/666));k<=Math.ceil((m+lengthMeters+75)/666);k++){
-        const milestone=k*666;
-        if(milestone<=9324 && m<milestone+50 && m+lengthMeters>milestone-20)return false;
+      // No pre-vendor exclusion. Gap groups cannot intersect the 50m
+      // post-vendor safe corridor; the sequence includes its landing runway.
+      for(let k=1;k<=14;k++){
+        const vendor=k*666;
+        if(m<vendor+50&&m+lengthMeters>vendor)return false;
       }
       return true;
     }
@@ -872,8 +883,10 @@ window.GRIM_CONFIG = Object.freeze({
     function groupNear(x){advance(x+1100);return sequences.find(s=>x>=s.startX-100&&x<=s.endX+320)||null;}
     function canPlace(x,width=200){
       advance(x+Math.max(650,width+20));
-      if(Math.abs(x-portalX)<1050||x>finishX-500||Math.abs(meters(x)-4850)<120||Math.abs(meters(x)-9500)<165)return false;
-      if(sequences.some(s=>x+width>s.startX-340&&x<s.endX+310))return false;
+      if(x+width>finishX)return false;
+      // Prevent obstacles hanging into the unsupported edge of a gap group.
+      // This is geometry clearance only, never a generic milestone exclusion.
+      if(sequences.some(s=>x+width>s.startX-85&&x<s.endX+75))return false;
       const a=groundAt(x),b=groundAt(x+width);
       return a!==null&&b!==null&&Math.abs(a-b)<=34;
     }
