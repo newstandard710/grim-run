@@ -163,19 +163,20 @@ const server=http.createServer((req,res)=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_REAPER;
     s.player.sliding=true;v.render();
     const slide=v.reaperPoseSprites.slide;
+    const slideVisible=slide.visible;
     const slideGround=Math.abs(slide.y+m.slide.anchor[1]*m.slide.scale-s.feetY);
     const slideHeight=651*m.slide.scale;
     s.player.sliding=false;s.player.attackMs=120;v.render();
     const attack=v.reaperPoseSprites.scythe_attack;
+    const attackVisible=attack.visible;
     const attackGround=Math.abs(attack.y+m.scythe_attack.anchor[1]*m.scythe_attack.scale-s.feetY);
     s.player.attackMs=0;s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];v.render();
     const flying=v.batPool[0];const flightKey=flying.texture.key;
     s.enemies[0].mode='dive';v.render();
-    return {slideVisible:slide.visible,slideGround,slideHeight,attackVisible:attack.visible,
+    return {slideVisible,slideGround,slideHeight,attackVisible,
       attackGround,attackScale:attack.scale,runScale:m.run.scale,
       batVisible:flying.visible,flightKey,diveKey:flying.texture.key};
   });
-  console.log('V2 static anchor measurements:',JSON.stringify(v2Anchors));
   assert.equal(v2Anchors.slideVisible,true);assert.ok(v2Anchors.slideGround<.1);
   assert.ok(v2Anchors.slideHeight>40&&v2Anchors.slideHeight<45,
     'v2 slide artwork keeps a compact silhouette near the unchanged 48px clearance');
