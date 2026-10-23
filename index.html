@@ -1570,29 +1570,54 @@ window.GRIM_CONFIG = Object.freeze({
       this.obstacles.push(ob);this.makeTip(type,ob);
     }
     populateComboObstacles(){
-      // Place combo patterns inside existing abyss gaps, never on ordinary flat ground.
-      // Air tuck gates start at 7,000m; jump-attack challenges may appear earlier.
-      const segments=this.terrain.segments;
-      let last=-100000,used=0,lateUsed=0;
-      for(const s of segments){
-        if(s.kind!=='gap')continue;
-        const m=(s.start-this.startX)/C.pxPerMeter;
-        if(m<1700||m>9200||m-last<240)continue;
-        if(m>4600&&m<5300)continue;
-        if(Math.abs(m-4850)<140||Math.abs(m-9500)<190)continue;
-        const x=s.start+Math.min(90,(s.end-s.start)*.42);
-        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
-        if(!Core.isUpgradeSafe(x+86,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,60))continue;
-        if(this.coins.some(c=>Math.abs(c.x-x)<80))continue;
-        // Jump + attack may appear earlier. Air tuck is reserved for the
-        // high-difficulty stretch beginning at 7,000m.
-        const type=m>=7000 && (lateUsed++%2===0)?'tuckGate':'airBramble';
-        const base=s.y0;
-        const ob=type==='tuckGate'
-          ?{type,x,y:base-1600,width:80,height:1433,variant:0,dealtDamage:false,destroyed:false,baseY:base}
-          :{type,x,y:base-215,width:80,height:143,variant:0,dealtDamage:false,destroyed:false,baseY:base};
-        this.obstacles.push(ob);this.makeTip(type,ob);
-        used++;last=m;
+      // Explicit encounter allocation. Old alternating gap logic sometimes
+      // produced only one tuck gate for a whole 9,999m run.
+      const eligible=[];
+      for(const section of this.terrain.segments){
+        if(section.kind!=='gap')continue;
+        const meters=(section.start-this.startX)/C.pxPerMeter;
+        if(meters<1700||meters>9300)continue;
+        const x=section.start+Math.min(90,(section.end-section.start)*.42);
+        if(Core.intersectsVendorCorridor(x,80,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
+        if(Core.overlapsSoulPlatform(x,80,this.soulPlatform,30))continue;
+        if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<80))continue;
+        eligible.push({section,meters,x});
+      }
+      const tucks=eligible.filter(c=>c.meters>=7000&&c.meters<=9250);
+      const target=2+((this.seed>>>0)%2);
+      const selected=[];
+      // Spread required tuck obstacles across later Underworld terrain.
+      for(let i=0;i<target;i++){
+        const desired=7100+(i+.5)*2050/target;
+        const choices=tucks.filter(c=>!selected.some(s=>Math.abs(s.meters-c.meters)<340));
+        choices.sort((a,b)=>Math.abs(a.meters-desired)-Math.abs(b.meters-desired));
+        if(choices.length)selected.push(choices[0]);
+      }
+      // Fill any shortfall from other valid late gap segments.
+      for(const candidate of tucks){
+        if(selected.length>=target)break;
+        if(!selected.some(s=>Math.abs(s.meters-candidate.meters)<250))selected.push(candidate);
+      }
+      this.tuckGateTarget=target;this.tuckGatePlaced=selected.length;
+      const chosen=new Set(selected.map(s=>s.section));
+      for(const c of selected){
+        const base=c.section.y0;
+        const ob={type:'tuckGate',x:c.x,y:base-1600,width:80,height:1433,
+          variant:0,dealtDamage:false,destroyed:false,baseY:base};
+        this.obstacles.push(ob);this.makeTip('tuckGate',ob);
+      }
+      // Retain jump-and-attack variations without consuming required tuck slots.
+      let lastAttack=-100000;
+      for(const c of eligible){
+        if(chosen.has(c.section)||c.meters-lastAttack<310)continue;
+        if(selected.some(s=>Math.abs(s.meters-c.meters)<125))continue;
+        if(c.meters<7000 || (this.rng.next()<.36)){
+          const base=c.section.y0;
+          const ob={type:'airBramble',x:c.x,y:base-215,width:80,height:143,
+            variant:0,dealtDamage:false,destroyed:false,baseY:base};
+          this.obstacles.push(ob);this.makeTip('airBramble',ob);
+          lastAttack=c.meters;
+        }
       }
     }
 
