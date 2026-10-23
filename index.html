@@ -1609,6 +1609,106 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='abandonConfirm')return;
       this.goToMenu();
     }
+    togglePracticeSlow(){
+      if(!this.godMode||this.state!=='playing')return false;
+      this.practiceSlow=!this.practiceSlow;
+      this.ui.showPracticeSlow(this.practiceSlow);
+      return true;
+    }
+    askTeleport(value){
+      if(!this.godMode||this.state!=='paused')return false;
+      const d=Number(value);
+      if(!Number.isFinite(d)||d<500||d>9500||d%500!==0)return false;
+      this.pendingTeleport=d;
+      this.state='teleportConfirm';
+      this.ui.teleportConfirmation(d);
+      return true;
+    }
+    cancelTeleport(){
+      if(this.state!=='teleportConfirm')return;
+      this.pendingTeleport=null;
+      this.state='paused';
+      this.ui.setMode('paused');
+    }
+    confirmTeleport(){
+      if(this.state!=='teleportConfirm'||!this.godMode||!this.pendingTeleport)return false;
+      const target=this.pendingTeleport;
+      this.pendingTeleport=null;
+      return this.teleportForTesting(target);
+    }
+    teleportForTesting(meters){
+      if(!this.godMode||this.state!=='teleportConfirm')return false;
+      const d=Number(meters);
+      if(!Number.isFinite(d)||d<500||d>9500||d%500!==0)return false;
+      const wanted=this.startX+d*C.pxPerMeter;
+      // Procedural terrain is generated deterministically for the whole world.
+      // At exactly 5000m the canonical portal destination begins at portalExitX.
+      const destination=d===5000?this.terrain.portalExitX:wanted;
+      const safeAt=x=>{
+        const y=this.terrain.groundAt(x);
+        if(y===null)return null;
+        // No landing immediately at an unsupported ledge.
+        const behind=this.terrain.groundAt(x-24),ahead=this.terrain.groundAt(x+56);
+        if(behind===null||ahead===null||Math.abs(y-ahead)>38)return null;
+        return y;
+      };
+      let x=destination,y=safeAt(x);
+      // Try the nearest clear solid runway, preferably forward of the marker.
+      for(let i=1;y===null&&i<=72;i++){
+        const forward=destination+i*18;
+        if(forward<this.terrain.finishX-160){const test=safeAt(forward);if(test!==null){x=forward;y=test;break;}}
+        const backward=destination-i*18;
+        if(backward>this.startX+15&&((backward>=this.terrain.portalExitX)===(d>=5000))){
+          const test=safeAt(backward);if(test!==null){x=backward;y=test;break;}
+        }
+      }
+      if(y===null){this.state='paused';this.ui.setMode('paused');return false;}
+      const p=this.player;
+      this.teleportUsed=true;
+      this.resetRewindHistory();
+      this.rewindTerrainBase=new Map();
+      this.rewindPlayback=null;this.rewindFlashMs=0;this.ui.rewindFlash(false);
+      this.ui.showRewindPlayback(false);
+      this.portalMs=0;this.chestMs=0;this.ui.showPortal(false);
+      p.x=x;p.y=y;p.velocityY=0;p.grounded=true;p.coyoteMs=0;
+      p.onSoulPlatform=false;p.airJumpUsed=false;p.jumpsUsed=0;
+      p.jumpHeld=false;p.holdSlide=false;p.slideConsumed=false;p.sliding=false;
+      p.airTuck=false;p.hovering=false;p.hoverHoldMs=0;p.hoverPressKind='none';
+      p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
+      p.slideMs=0;p.slideReleaseBufferMs=0;p.attackMs=0;p.attackCooldownMs=0;
+      p.invulMs=Math.max(p.invulMs,1400);
+      this.distance=(x-this.startX)/C.pxPerMeter;
+      this.speed=Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
+      this.cameraX=x-this.width*C.reaperXRatio;
+      this.cameraY=y-this.groundY;
+      this.hasTeleported=d>=5000;
+      this.gunUnlocked=this.hasTeleported;
+      this.gunCooldownMs=0;this.blastCooldownMs=0;
+      this.ui.showGun(this.gunUnlocked);this.ui.showGunCooldown(0);
+      this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
+      this.nextVendorNumber=this.lastVendorNumber+1;
+      this.vendorType=null;this.pendingOffers=[];this.vendorPhase='deal';
+      this.nextEncounterX=x+Math.max(780,this.width);
+      this.nextEnemySpawnX=Math.max(this.startX+5070*C.pxPerMeter,x+530);
+      this.nextGroundSpawnX=Math.max(this.startX+5140*C.pxPerMeter,x+850);
+      this.nextSnapSpawnX=Math.max(this.startX+3260*C.pxPerMeter,x+900);
+      this.obstacles=[];this.enemies=[];this.bullets=[];this.fireballs=[];
+      this.particles=[];this.chainArcs=[];this.brittleClearUntilX=0;
+      for(const tip of this.tips)tip.label.destroy();
+      this.tips=[];this.tipped=new Set();
+      // Skipped collectibles stay uncollected but are not spawned automatically.
+      // Retain known taken state; remove only objects behind the new viewport.
+      this.coins=this.coins.filter(c=>!c.taken&&c.x>x-this.width);
+      this.souls=this.souls.filter(s=>!s.taken&&s.x>x-this.width);
+      this.goFlashMs=0;this.countdownMs=0;this.ui.hideCountdown();
+      this.state='playing';this.ui.setMode('playing');
+      this.ui.showPracticeSlow(this.practiceSlow);
+      this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,
+        this.coinCount,this.points,this.powerManager.summary());
+      this.captureRewind();this.updateRewindButton();
+      this.drawScene();
+      return true;
+    }
     handleResize(size) {
       const previousY=this.groundY;
       this.width=size.width;this.height=size.height;
