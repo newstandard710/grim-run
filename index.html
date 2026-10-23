@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.8.3</title>
+  <title>GRIM RUN — v0.9.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -154,6 +154,18 @@ button {cursor:pointer;}
 .crossbow{left:max(env(safe-area-inset-left),18px);bottom:calc(var(--right-bottom) + var(--action-size) + 14px);border-color:#d5ccb3b3;background:linear-gradient(155deg,#45505ce0,#18202de7);}
 .crossbow-cd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#101b2bbd;font-size:clamp(16px,4.7vh,26px);color:#d8fff0;letter-spacing:.02em;}
 .crossbow.recharging{border-color:#8599a49a;}
+.rewind{left:max(env(safe-area-inset-left),18px);top:clamp(56px,16vh,83px);bottom:auto;
+ width:clamp(58px,17vh,77px);height:clamp(58px,17vh,77px);
+ border-color:#c7abffbf;background:linear-gradient(155deg,#55467adc,#161c35ed);font-size:clamp(9px,1.8vh,12px)}
+.rewind .symbol{font-size:clamp(25px,6vh,37px)}
+.rewind-cd{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;
+ background:#17152bd9;color:#efdfff;font-size:clamp(12px,3vh,20px);font-weight:950;letter-spacing:0}
+.rewind.recharging{border-color:#7c7598c7}
+.rewind-flash{position:absolute;inset:0;z-index:8;pointer-events:none;
+ background:repeating-linear-gradient(-23deg,#b993ff12 0,#b993ff12 12px,transparent 12px,transparent 28px);
+ box-shadow:inset 0 0 160px #ae87f8bb;animation:rewindPulse .55s ease-out forwards}
+@keyframes rewindPulse{from{opacity:.95;filter:hue-rotate(0)}to{opacity:0;filter:hue-rotate(42deg)}}
+@media(max-height:310px){.rewind{top:45px;width:53px;height:53px}}
 .chest-scene{position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#213d46f4 0%,#09101dfb 75%);text-align:center;color:#e5fff5;padding:5px 12px 9px;}
 .chest-eyebrow{font-size:clamp(10px,2vh,15px);font-weight:900;letter-spacing:.30em;color:#b7fff4;}
 .chest-illustration{position:relative;width:min(335px,40vw);height:clamp(104px,42vh,220px);flex-shrink:0;}
@@ -214,10 +226,12 @@ button {cursor:pointer;}
     <div class="chest-caption">AIM IS AUTOMATIC · PRESS FIRE TO SHOOT</div>
     <button id="chest-continue-btn" class="primary" aria-label="Continue from weapon acquisition">CONTINUE ▶</button>
   </div>
+  <div id="rewind-flash" class="rewind-flash hidden" aria-hidden="true"></div>
   <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
     <button id="crossbow-btn" class="action crossbow hidden" aria-label="Fire Bone Crossbow"><span class="symbol">⌁</span><span>FIRE</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
+    <button id="rewind-btn" class="action rewind hidden" aria-label="Rewind Time"><span class="symbol">↶</span><span>REWIND</span><span id="rewind-cd" class="rewind-cd hidden"></span></button>
     <div class="right-buttons">
       <button id="jump-btn" class="action jump" aria-label="Jump"><span class="symbol">↑</span><span>JUMP</span></button>
       <button id="slide-btn" class="action slide" aria-label="Slide"><span class="symbol">⇥</span><span>SLIDE</span></button>
@@ -230,7 +244,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.8.3 · ENEMY REWORK</div>
+      <div class="mini">v0.9.0 · DEATH'S REVERSAL</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -296,7 +310,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.8.3',
+  version: '0.9.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -348,7 +362,8 @@ window.GRIM_CONFIG = Object.freeze({
       next() { state = (Math.imul(1664525, state) + 1013904223) >>> 0; return state / 4294967296; },
       integer(min, max) { return min + Math.floor(this.next() * (max - min + 1)); },
       choose(items) { return items[Math.floor(this.next() * items.length)]; },
-      get state() { return state; }
+      get state() { return state; },
+      setState(value) {state=value>>>0;}
     };
   }
   function overlaps(a, b) { return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; }
@@ -618,7 +633,7 @@ window.GRIM_CONFIG = Object.freeze({
 (function(scope){
   'use strict';
   const MAX_LEVEL=4,HEALTH_CAP=9;
-  const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones'];
+  const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones','deathsReversal'];
   const DEVIL_ORDER=['skeletalWings','infernalBoots','rapidFire','powerShot','chainShot'];
   const POWERS=Object.freeze({
     soulCleave:{id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',descriptions:[
@@ -632,6 +647,11 @@ window.GRIM_CONFIG = Object.freeze({
       'When hurt, clear and bridge the next 175m.',
       'When hurt, clear and bridge the next 200m.',
       'When hurt, clear and bridge the next 225m.']},
+    deathsReversal:{id:'deathsReversal',name:"DEATH'S REVERSAL",action:'REWIND',icon:'↶',color:'#c7aaff',descriptions:[
+      'Rewind 5 seconds of your run; 60-second cooldown.',
+      'Rewind 6 seconds; cooldown reduced to 55 seconds.',
+      'Rewind 7 seconds; cooldown reduced to 50 seconds.',
+      'Rewind 8 seconds; cooldown reduced to 45 seconds.']},
     skeletalWings:{id:'skeletalWings',name:'SKELETAL WINGS',action:'HOVER',icon:'☠',color:'#ffb08e',descriptions:[
       'Share 0.70s of hover over an entire flight.','Share 1.05s of hover per flight.',
       'Share 1.40s of hover per flight.','Share 1.75s of hover per flight.']},
@@ -679,6 +699,8 @@ window.GRIM_CONFIG = Object.freeze({
       skeletalHoverMs:()=>HOVER_MS[levels.skeletalWings],
       fireCooldownMs:()=>FIRE_COOLDOWN_MS[levels.infernalBoots],
       brittleRangeMeters:()=>BRITTLE_METERS[levels.brittleBones],
+      rewindSeconds:()=>levels.deathsReversal?4+levels.deathsReversal:0,
+      rewindCooldownMs:()=>levels.deathsReversal?65000-5000*levels.deathsReversal:0,
       lavaDamage:()=>levels.infernalBoots>0?1:2,
       summary:()=>[...POWER_ORDER,...DEVIL_ORDER].filter(id=>levels[id]>0)
         .map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:false})),
@@ -996,6 +1018,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.selecting = false;
       this.bindAction('attack-btn', 'attack', () => actions.attack());
       this.bindAction('crossbow-btn', 'crossbow', () => actions.fireCrossbow());
+      this.bindAction('rewind-btn','rewind',()=>actions.rewind());
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
       el('start-btn').addEventListener('click', () => actions.start());
@@ -1011,13 +1034,14 @@ window.GRIM_CONFIG = Object.freeze({
       el('quit-btn').addEventListener('click', () => actions.menu());
       el('god-mode-checkbox').addEventListener('change', event => actions.setGodMode(event.target.checked));
       document.addEventListener('keydown', event => {
-        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','Escape','KeyP'].includes(event.code)) event.preventDefault();
+        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
         switch(event.code) {
           case 'Space': case 'ArrowUp': case 'KeyJ': actions.jump(); break;
           case 'KeyA': actions.attack(); break;
           case 'KeyF': actions.fireCrossbow(); break;
+          case 'KeyR': actions.rewind(); break;
           case 'ArrowDown': case 'KeyS': actions.slideStart(); break;
           case 'Escape': case 'KeyP': actions.pause(); break;
           case 'Enter': if (!el('menu').classList.contains('hidden') || !el('game-over').classList.contains('hidden')) actions.start(); break;
@@ -1053,7 +1077,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     releaseAll() {
       this.activePointers.clear(); this.heldKeys.clear();
-      for (const id of ['attack-btn','crossbow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
+      for (const id of ['attack-btn','crossbow-btn','rewind-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
       show('countdown-overlay', mode === 'countdown');
@@ -1093,6 +1117,18 @@ window.GRIM_CONFIG = Object.freeze({
       el('crossbow-cd').textContent=ms>0?(ms/1000).toFixed(1)+'s':'';
       el('crossbow-btn').classList.toggle('recharging',ms>0);
     }
+    showRewind(level,cooldownMs,ready,historyMs,requiredMs){
+      show('rewind-btn',level>0);
+      if(level<=0)return;
+      const pending=cooldownMs>0||!ready;
+      show('rewind-cd',pending);
+      el('rewind-cd').textContent=cooldownMs>0?
+        Math.ceil(cooldownMs/1000)+'s':Math.ceil(Math.max(0,requiredMs-historyMs)/1000)+'s';
+      el('rewind-btn').classList.toggle('recharging',pending);
+      el('rewind-btn').setAttribute('aria-label',cooldownMs>0?
+        'Rewind recharging':!ready?'Rewind history charging':'Rewind '+requiredMs/1000+' seconds');
+    }
+    rewindFlash(on){show('rewind-flash',on);}
     offerVendor(offers,type,phase,meters,hp,maxHp,gold) {
       this.selecting=false;
       const devil=type==='devil', healing=phase==='heal';
@@ -1326,6 +1362,7 @@ window.GRIM_CONFIG = Object.freeze({
         revive: () => this.revive(),
         declineRevive: () => this.declineRevive(),
         fireCrossbow: () => this.fireCrossbow(),
+        rewind: () => this.rewind(),
         finishChest: () => this.finishChest()
       });
       this.meta=Meta.load();
