@@ -10,6 +10,7 @@
 
 - Added a separate opt-in path: `?art=review-v2`. It loads the new transparent Reaper and Bat PNGs into the actual Phaser scene using fixed shared canvases, anchors, and scales.
 - Reaper state poses and Bat neutral/dive stills are mapped to existing visual states. Run and ordinary flight deliberately remain single stills in this review path; no animation frames have been added.
+- After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
 - Default v0.10.4 art and the procedural fallback remain available. This preview does not change collision boxes, game balance, controls, or progression.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html) and light/dark contact sheets are in `assets/visuals/review/character-overhaul-v2/`.
 - **Next:** validate the new character scale and slide clearance in the real Phaser scene, then produce and tune the Reaper run and Bat wing cycles before considering a default-art replacement.
