@@ -112,7 +112,7 @@
       const s=this.scene;
       const p=s.player;
       if(this.reaperReady&&this.reaper){
-        const visible=Boolean(p)&&!['menu','reliquary','refundConfirm'].includes(s.state);
+        const visible=Boolean(p)&&!['reliquary','refundConfirm'].includes(s.state);
         this.reaper.setVisible(visible);
         if(visible){
           const pose=reaperPose({
