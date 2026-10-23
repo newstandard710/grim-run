@@ -2,11 +2,21 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.9.0 — Death's Reversal**
+**Current playable build: v0.9.1 — Polish & Fairness**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
-- [v0.8.3 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.8.3)
+- [v0.9.0 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.0)
+
+## v0.9.1: Polish & Fairness
+
+- Rewind now **plays real snapshot history backward at 3× speed**, with tinted time-reversal effects and temporarily disabled gameplay input. Five seconds of history animates in about 1.7 seconds.
+- **God Mode ignores the Rewind cooldown**, but still needs a fresh eight-second history and respects all irreversible vendor/Soul/portal boundaries.
+- **Reliquary Reset All** refunds the full invested Soul cost and charges a 1-Soul fee. You must have **at least 1 unspent Soul already in your wallet**; an explicit confirmation is required, and the save is updated immediately.
+- Pause → **Quit Run** now asks for confirmation before abandoning a run.
+- **Bow and Jump** are 12px higher; Attack and Slide stay in place.
+- **Brittle Bones** gains 50m per added level: 150 / 200 / 250 / 300m.
+- Uphill **rock and fire** obstacles now require a basic-jump trajectory to be physically clearable before they can spawn; procedural hill shape and other obstacle mechanics are preserved.
 
 ## v0.9.0: Death's Reversal
 
@@ -67,8 +77,9 @@ Regression checks (Node.js, no dependencies):
 node tests/encounter-reliability.cjs
 node tests/survival-crossbow.cjs
 node tests/rewind.cjs
+node tests/polish-fairness.cjs
 ```
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: v0.9.0 phone playtesting, followed by encounter balance and presentation/audio improvements.
+Next: v0.9.1 phone playtesting, followed by further presentation and audio improvements.
