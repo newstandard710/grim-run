@@ -244,7 +244,6 @@ window.GRIM_CONFIG = Object.freeze({
   coinScore: 5,
   soulScore: 50,
   minEncounterGapSeconds: 1.40,
-  upgradeSafetyBeforePx: 260, // clear a safe approach before vendor
   upgradeSafetyAfterMeters: 50, // hazard-free ground after vendor
   resumeCountdownMs: 3000,
   slowCooldownMs: 3300,
@@ -341,11 +340,6 @@ window.GRIM_CONFIG = Object.freeze({
   }
   function milestoneX(startX, soulNumber, meters = 666, pxPerMeter = 12) {
     return startX + soulNumber * meters * pxPerMeter;
-  }
-  function isMilestoneSafe(x, startX, meters = 666, pxPerMeter = 12, radius = 245) {
-    const period = meters * pxPerMeter;
-    const mod = ((x - startX) % period + period) % period;
-    return Math.min(mod, period-mod) > radius;
   }
   // One universal spawn exclusion: the 50m corridor AFTER each vendor.
   // Retain old optional arguments solely for backward compatibility; they no longer
@@ -454,7 +448,7 @@ window.GRIM_CONFIG = Object.freeze({
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isMilestoneSafe, isUpgradeSafe, intersectsVendorCorridor, overlapsSoulPlatform,
+    encounterGap, chooseEncounter, milestoneX, isUpgradeSafe, intersectsVendorCorridor, overlapsSoulPlatform,
     fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
     slideCeilingBottomAt, branchHits };
 })(typeof window !== 'undefined' ? window : globalThis);
