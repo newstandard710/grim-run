@@ -126,8 +126,8 @@ const server=http.createServer((req,res)=>{
       slideArtHeight:slideState.artHeight,batVisible:v.batPool[0].visible,
       batKey:v.batPool[0].texture.key,firstRun,firstBat,attackState};
   });
-  assert.equal(staticReview.runVisible,true);assert.equal(staticReview.firstRun,'gr_ill_reaper_run_02');
-  assert.equal(staticReview.runKey,'gr_ill_reaper_run_03','Reaper run advances to a distinct pose');
+  assert.equal(staticReview.runVisible,true);assert.equal(staticReview.firstRun,'run_02');
+  assert.equal(staticReview.runKey,'run_03','Reaper run advances to a distinct pose');
   assert.ok(staticReview.runGroundError<.1,'Reaper baseline anchor aligns to gameplay feet');
   assert.equal(staticReview.slideVisible,true);assert.ok(staticReview.slideGroundError<.1);
   assert.ok(staticReview.slideArtHeight<=40.2&&staticReview.slideArtHeight>39.8,
