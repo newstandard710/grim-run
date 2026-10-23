@@ -1517,11 +1517,24 @@ window.GRIM_CONFIG = Object.freeze({
       const bonus=126*this.powerManager.attackBonus();
       const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
       for (const ob of this.obstacles) {
-        if ((ob.type !== 'bramble'&&ob.type!=='airBramble') || ob.destroyed || !Core.overlaps(box, ob)) continue;
+        if (!Combat.cuttable(ob) || ob.destroyed || !Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob)) continue;
         ob.destroyed=true;
         // Cutting removes the obstruction; only placed gold pickups grant currency.
         this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12);
         this.puff(ob.x+ob.width/2,ob.y+ob.height-45,0x9bc3a2,13);
+      }
+      // The same scythe cuts attacking enemies and deflects approaching fireballs.
+      for(const e of this.enemies){
+        if(e.dead||e.lastScytheSwing===this.swingSequence)continue;
+        if(!Core.overlaps(box,Combat.rectFor(e)))continue;
+        e.lastScytheSwing=this.swingSequence;
+        this.hitEnemy(e,1,false);
+      }
+      for(const ball of this.fireballs){
+        if(ball.reflected||ball.dead)continue;
+        if(!Core.overlaps(box,{x:ball.x-9,y:ball.y-9,width:18,height:18}))continue;
+        ball.reflected=true;ball.ageMs=0;
+        this.puff(ball.x,ball.y,0x9aefff,9);
       }
     }
     makeTip(type,ob) {
@@ -1569,6 +1582,50 @@ window.GRIM_CONFIG = Object.freeze({
         used++;last=m;
       }
     }
+
+    spawnCombatAhead(ahead){
+      // Spawn moving enemies only after acquiring the Soulcaster at the portal.
+      while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
+        const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
+        this.nextEnemySpawnX+=(m>=8000?70+this.rng.integer(0,40):108+this.rng.integer(0,55))*C.pxPerMeter;
+        if(m>9250||m<5190||m>9780||m>C.finishMeters-180)continue;
+        if(Math.abs(m-9500)<185)continue;
+        if(!this.terrain.canPlace(x,90))continue;
+        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,470,85))continue;
+        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<225))continue;
+        if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<205))continue;
+        const choice=this.rng.next();
+        const kind=m>=8000?(choice<.52?'skeletalBat':choice<.79?'imp':'crawler'):
+          m>=6500?(choice<.72?'bat':'crawler'):'bat';
+        const ground=this.terrain.groundAt(x);
+        if(ground===null)continue;
+        const flying=Combat.enemyIsFlying({kind});
+        const y=ground-(flying?161:kind==='crawler'?21:34);
+        this.enemies.push({kind,x,y,homeY:y,hp:kind==='skeletalBat'?2:1,
+          phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
+          warningMs:0,fireMs:kind==='imp'?430+this.rng.integer(0,350):0,
+          lastScytheSwing:-1,contactDone:false});
+      }
+      // Telegraphed extending thorns above the tree line: cut them or time the run.
+      while(this.nextSnapSpawnX<ahead){
+        const x=this.nextSnapSpawnX,m=(x-this.startX)/C.pxPerMeter;
+        this.nextSnapSpawnX+=(230+this.rng.integer(0,115))*C.pxPerMeter;
+        if(m<3000||m>4630)continue; // Preserve the mountain Soul approach.
+        if(!this.terrain.canPlace(x,62))continue;
+        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,65))continue;
+        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<220))continue;
+        if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
+        const ground=this.terrain.groundAt(x),height=62;
+        if(ground===null)continue;
+        this.obstacles.push({type:'snappingBramble',x,y:ground-height,width:62,height,
+          variant:this.rng.integer(0,5),dealtDamage:false,destroyed:false});
+      }
+    }
+    snappingBox(ob){
+      const ground=this.terrain.anchorAt(ob.x);
+      const height=Combat.snappingHeight(this.elapsed*5.1+ob.variant*1.7);
+      return {...ob,y:ground-height,height};
+    }
     spawnAhead(){
       const ahead=this.player.x+Math.max(950,this.width*1.26);
       this.terrain.advance(ahead+700);
@@ -1588,6 +1645,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.nextEncounterX+=Core.encounterGap(this.speed,this.rng)*(this.distance>=5000?.72:1);
       }
+      this.spawnCombatAhead(ahead);
       if(!this.tipped.has('abyss') && this.terrain.firstGapX-395<ahead){
         this.tipped.add('abyss');
         const x=this.terrain.firstGapX-360;
