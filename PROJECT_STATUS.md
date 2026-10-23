@@ -1,10 +1,26 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.10.3 — *Character Visual Overhaul*  
+**Release:** v0.10.4 — *Sprite Motion Polish*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html` once promoted to main  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
 **Verification:** All Node regression suites and the GitHub Actions real Chromium sprite smoke pass. **Live Android visual and performance playtesting pending.**
+
+## v0.10.4 — Sprite Motion Polish
+
+- Four distinct Reaper run poses cycle at 10 fps; Cavern Bat wings cycle through four poses at 9 fps. Jump, fall and hurt artwork is retained.
+- Slide uses a 40px-tall crouched silhouette and remains anchored to the existing ground baseline. Existing 56×29 slide and 42×79 standing collision boxes are unchanged; 8px of visual margin remains below the 48px obstacle clearance.
+- Scythe attack uses the cleaned transparent pose without its own cyan slash overlay; its visible height matches the standard Reaper scale.
+- Runtime loads 18 illustrated textures. Automated regression coverage confirms run/flap texture changes and unchanged geometry. Android readability and performance remain for device playtesting.
+- No combat timing, progression, controls, or God Mode behavior changes. The v0.10.2 procedural character fallback remains available with `?art=procedural`.
+
+### v0.10.4 phone playtest
+
+- [ ] Reaper visibly cycles while running; boots remain grounded.
+- [ ] Slide silhouette appears natural and clears the unchanged overhead profile.
+- [ ] Bat wings flap while flying; dive pose and hitboxes remain correct.
+- [ ] Scythe strike does not visibly grow or double-render its slash.
+- [ ] Check sprite readability and performance on a landscape phone.
 
 ## v0.10.3 — Character Visual Overhaul
 
@@ -280,7 +296,7 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Next: v0.10.3 landscape phone review of character scale, transparency and performance; then plan static-pose animation sequences, additional enemy art, illustrated biomes, and boss design.
+Next: v0.10.4 landscape phone review of character scale, transparency and performance; then plan static-pose animation sequences, additional enemy art, illustrated biomes, and boss design.
 
 ## Source and backups
 

@@ -1,7 +1,7 @@
-Grim Run illustrated static sprite derivatives
+Grim Run illustrated Reaper and Cavern Bat sprites
 
-This folder contains 25 alpha PNGs derived from the approved concept art and reviewed pose sets. Runtime copies are downsampled to 50% of the review PNG resolution, which still leaves more than 5x oversampling at game display size for main Reaper poses. Full-resolution sources are preserved in the linked review bundles.
+This folder contains the approved illustrated character art and production pose set. PNGs are transparent RGBA files with per-pose runtime anchors and scales documented in manifest.json.
 
-The visual system uses state-matched STATIC images only. The four run in-betweens, scythe wind-up, bat wing cycle poses and dive anticipation are included for the later animation pass but are not animated in this integration.
+The runtime now uses four existing Reaper run poses at 10 fps and a four-pose Bat wing cycle at 9 fps. Jump, fall, hurt, and other action-state poses remain state-matched stills. The Reaper slide uses a taller 40px crouched silhouette; a guide gap remains under overhead hazards. The scythe attack pose omits its own cyan slash so the Phaser slash effect is shown only once.
 
-The Reaper collision boxes remain standing 42x79 and slide 56x29. The clearance slide has a dedicated wide, low profile whose full art silhouette is scaled to the current 29px slide height. No gameplay code, control, progression or collision geometry changes are intended.
+Collision geometry is unchanged: standing 42x79 and sliding 56x29. No movement, controls, combat timing, progression, or God Mode behavior is changed.

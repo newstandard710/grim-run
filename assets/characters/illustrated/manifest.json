@@ -1,10 +1,10 @@
 {
-  "set": "Grim Run illustrated static sprites",
-  "version": "0.10.3-development",
-  "default": "procedural v0.10.2 art remains default; opt-in via ?art=illustrated",
-  "runtimeScaleReference": "Existing Phaser Reaper base frame is 192px at scale 0.74 (142px canvas height); Reaper visible target is 120 world px. Existing Bat is 160x128 at scale 0.66 (106px width); Bat width target is 106 world px. Reaper slide clearance uses current 29px collision height.",
+  "set": "Grim Run illustrated Reaper and Cavern Bat sprites",
+  "version": "0.10.4-development",
+  "default": "Illustrated art is the default; procedural v0.10.2 fallback via ?art=procedural; legacy vector atlas via ?art=experimental.",
+  "runtimeScaleReference": "Reaper standard poses target 120 world px visible height with ground anchors. Reaper slide target is 40px tall, leaving about 8px visual margin to the existing 48px overhead clearance. Bat target width remains 106 world px. Phaser scales source PNGs using the anchors below.",
   "collisionGeometry": "Unchanged: standing 42x79; sliding 56x29.",
-  "alpha": "RGBA with alpha<=4 cleared and >=240 opaque, preserving antialiasing. Runtime derivatives downscaled 50% from high-resolution review sources; full-resolution originals remain in versioned Library bundles.",
+  "alpha": "Transparent RGBA PNGs; generated source images are preserved at original resolution. Alpha bounds and gameplay anchors are recorded per pose. No background scenery is present in the runtime cutouts.",
   "frames": {
     "reaper_master.png": {
       "path": "assets/characters/illustrated/reaper/reaper_master.png",
@@ -88,7 +88,7 @@
       "targetVisibleHeightPx": 120,
       "targetVisibleWidthPx": null,
       "scale": 0.183486,
-      "loading": "static key pose; no frame animation"
+      "loading": "Runtime Reaper running cycle at 10 fps; ground-baseline anchored."
     },
     "reaper_run_03.png": {
       "path": "assets/characters/illustrated/reaper/reaper_run_03.png",
@@ -109,7 +109,7 @@
       "targetVisibleHeightPx": 120,
       "targetVisibleWidthPx": null,
       "scale": 0.180451,
-      "loading": "static key pose; no frame animation"
+      "loading": "Runtime Reaper running cycle at 10 fps; ground-baseline anchored."
     },
     "reaper_run_04.png": {
       "path": "assets/characters/illustrated/reaper/reaper_run_04.png",
@@ -130,7 +130,7 @@
       "targetVisibleHeightPx": 120,
       "targetVisibleWidthPx": null,
       "scale": 0.180451,
-      "loading": "static key pose; no frame animation"
+      "loading": "Runtime Reaper running cycle at 10 fps; ground-baseline anchored."
     },
     "reaper_run_05.png": {
       "path": "assets/characters/illustrated/reaper/reaper_run_05.png",
@@ -151,7 +151,7 @@
       "targetVisibleHeightPx": 120,
       "targetVisibleWidthPx": null,
       "scale": 0.180451,
-      "loading": "static key pose; no frame animation"
+      "loading": "Runtime Reaper running cycle at 10 fps; ground-baseline anchored."
     },
     "reaper_jump.png": {
       "path": "assets/characters/illustrated/reaper/reaper_jump.png",
@@ -530,6 +530,74 @@
       "targetVisibleWidthPx": null,
       "scale": 0.090062,
       "loading": "static clearance-checked slide; full visible silhouette fits current slide collision height"
+    },
+    "reaper_slide_crouch_v2.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_slide_crouch_v2.png",
+      "source": "generated_images/exec-7a92d69b-92dc-4e9a-829c-f331c2cb10f1.png",
+      "width": 1536,
+      "height": 1024,
+      "alphaBounds16": [
+        53,
+        289,
+        1507,
+        799
+      ],
+      "anchorPx": [
+        768,
+        798
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 40,
+      "targetVisibleWidthPx": null,
+      "scale": 0.078585,
+      "loading": "Compact crouch-slide; 40px visible height and 8px margin to 48px obstacle clearance; 56x29 collider unchanged."
+    },
+    "reaper_scythe_attack_clean_v2.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_scythe_attack_clean_v2.png",
+      "source": "generated_images/exec-ef5c030d-c1f2-4df2-bab4-61df2b4c16d9.png",
+      "width": 1536,
+      "height": 1024,
+      "alphaBounds16": [
+        22,
+        157,
+        1507,
+        893
+      ],
+      "anchorPx": [
+        768,
+        894
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.162822,
+      "loading": "Attack pose without embedded slash effect; retains shared 120px body target and ground anchor; Phaser slash arc supplies motion cue."
     }
+  },
+  "runtimeTextures": {
+    "reaper": [
+      "idle",
+      "run_02",
+      "run_03",
+      "run_04",
+      "run_05",
+      "jump",
+      "fall",
+      "slide",
+      "scythe_attack",
+      "crossbow_fire",
+      "hurt",
+      "death",
+      "hover"
+    ],
+    "bat": [
+      "neutral",
+      "raised",
+      "midstroke",
+      "lowered",
+      "dive"
+    ],
+    "reaperRunFps": 10,
+    "batWingFps": 9
   }
 }

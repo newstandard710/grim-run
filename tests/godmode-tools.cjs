@@ -15,7 +15,7 @@ s.window=s;vm.createContext(s);
 for(const [,attrs,source] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(source,s,{filename:'index.html'});
 const C=s.GRIM_CONFIG;
-assert.equal(C.version,'0.10.3');
+assert.equal(C.version,'0.10.4');
 assert.ok(html.includes('id="god-teleport-range"'));
 assert.ok(html.includes('step="500"'), '500m increments are explicit');
 function game(seed){
@@ -98,4 +98,4 @@ const victory=game(2);
 victory.setGodMode(true);victory.state='paused';victory.askTeleport(9500);victory.confirmTeleport();
 victory.completeRun();
 assert.equal(store.has('grim-run-v03-best'),false,'Teleport-assisted victory cannot set personal best');
-console.log('PASS v0.10.3: 50% world speed, toggle guard, 500m selection, confirmation/cancel, '+checks+' teleports across eight seeds including portal and 9500m, skipped vendors, unchanged best scores.');
+console.log('PASS v0.10.4: 50% world speed, toggle guard, 500m selection, confirmation/cancel, '+checks+' teleports across eight seeds including portal and 9500m, skipped vendors, unchanged best scores.');

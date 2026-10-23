@@ -1,6 +1,6 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.1
- * Data-driven 16-pose Reaper + 8-pose Cavern Bat SVG atlases, rasterized
- * once by Phaser, with stable deterministic frame selection.
+/* Grim Run — Macabre Storybook visual system, v0.10.4
+ * The legacy SVG atlas remains available as an experimental option. The
+ * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * NO movement, collision, currency or gameplay changes.
  */
 (function(scope){
@@ -12,12 +12,15 @@
   const BAT={
     flap:[0,1,2,3,2,1],dive:[4,5],hurt:[6],death:[7]
   };
+  const ILLUSTRATED_RUN=Object.freeze(['run_02','run_03','run_04','run_05']);
+  const ILLUSTRATED_BAT_FLAP=Object.freeze(['raised','midstroke','lowered','neutral']);
+  const ILLUSTRATED_RUN_FPS=10;
+  const ILLUSTRATED_BAT_FPS=9;
   const CDN_PATHS=Object.freeze({
     reaper:'assets/characters/reaper/reaper-sheet.svg',
     bat:'assets/enemies/cavern-bat/bat-sheet.svg'
   });
-  // Reviewed, high-resolution PNG derivatives for the opt-in static-art pass.
-  // Per-pose anchors and scale values are generated from manifest.json.
+  // Transparent PNG poses with per-image anchors documented in manifest.json.
   const ILLUSTRATED=Object.freeze({
     reaper:{
       master:{key:'gr_ill_reaper_master',file:'reaper_master.png',scale:.157895,anchor:[320,827.5]},
@@ -29,8 +32,8 @@
       run_05:{key:'gr_ill_reaper_run_05',file:'reaper_run_05.png',scale:.180451,anchor:[512,710]},
       jump:{key:'gr_ill_reaper_jump',file:'reaper_jump.png',scale:.167131,anchor:[320,827.5]},
       fall:{key:'gr_ill_reaper_fall',file:'reaper_fall.png',scale:.180451,anchor:[320,827.5]},
-      slide:{key:'gr_ill_reaper_slide_clearance',file:'reaper_slide_clearance.png',scale:.090062,anchor:[701.5,353]},
-      scythe_attack:{key:'gr_ill_reaper_scythe_attack',file:'reaper_scythe_attack.png',scale:.28777,anchor:[512,920]},
+      slide:{key:'gr_ill_reaper_slide',file:'reaper_slide_crouch_v2.png',scale:.078585,anchor:[768,798]},
+      scythe_attack:{key:'gr_ill_reaper_scythe_attack_clean',file:'reaper_scythe_attack_clean_v2.png',scale:.162822,anchor:[768,894]},
       crossbow_fire:{key:'gr_ill_reaper_crossbow_fire',file:'reaper_crossbow_fire.png',scale:.26087,anchor:[512,920]},
       hurt:{key:'gr_ill_reaper_hurt',file:'reaper_hurt.png',scale:.243902,anchor:[512,920]},
       death:{key:'gr_ill_reaper_death',file:'reaper_death.png',scale:.364742,anchor:[512,920]},
@@ -184,18 +187,17 @@
          typeof s.textures.exists!=='function'||!s.add||typeof s.add.image!=='function')return false;
       if(this.loadRequested)return true;
       this.loadRequested=true;this.illustrated=true;
-      // Load only poses the static runtime currently displays. Additional
-      // production poses stay in the asset package for the animation pass.
-      const runtimeReaper=['idle','run','jump','fall','slide','scythe_attack',
+      // Load current state poses plus the short run and Bat wing cycles.
+      const runtimeReaper=['idle',...ILLUSTRATED_RUN,'jump','fall','slide','scythe_attack',
         'crossbow_fire','hurt','death','hover'].map(name=>ILLUSTRATED.reaper[name]);
-      const runtimeBat=['neutral','dive'].map(name=>ILLUSTRATED.bat[name]);
+      const runtimeBat=['neutral','raised','midstroke','lowered','dive'].map(name=>ILLUSTRATED.bat[name]);
       const all=[...runtimeReaper,...runtimeBat];
       const errors=new Set();
       const fail=file=>{if(file&&file.key)errors.add(file.key);};
       const done=()=>{
         if(typeof s.load.off==='function')s.load.off('loaderror',fail);
         try{
-          for(const name of ['idle','run','jump','fall','slide','scythe_attack',
+          for(const name of ['idle',...ILLUSTRATED_RUN,'jump','fall','slide','scythe_attack',
             'crossbow_fire','hurt','death','hover']){
             const meta=ILLUSTRATED.reaper[name];
             if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
@@ -203,7 +205,7 @@
             this.reaperPoseSprites[name]=image;
           }
           if(this.reaperPoseSprites.idle){this.reaper=this.reaperPoseSprites.idle;this.reaperReady=true;}
-          for(const name of ['neutral','dive']){
+          for(const name of ['neutral','raised','midstroke','lowered','dive']){
             const meta=ILLUSTRATED.bat[name];
             if(errors.has(meta.key)||!s.textures.exists(meta.key))this.failedAssets.push('Bat PNG unavailable: '+name);
           }
@@ -245,8 +247,16 @@
     }
     renderIllustrated(){
       const s=this.scene,p=s.player;
-      const pose=this.illustratedReaperPose(),meta=ILLUSTRATED.reaper[pose]||ILLUSTRATED.reaper.idle;
-      const resolvedPose=this.reaperPoseSprites[pose]?pose:
+      const pose=this.illustratedReaperPose();
+      let resolvedPose=pose;
+      if(pose==='run'){
+        const available=ILLUSTRATED_RUN.filter(name=>this.reaperPoseSprites[name]);
+        if(available.length){
+          const frame=Math.floor(Math.max(0,s.elapsed||0)*ILLUSTRATED_RUN_FPS)%available.length;
+          resolvedPose=available[frame];
+        }
+      }
+      resolvedPose=this.reaperPoseSprites[resolvedPose]?resolvedPose:
         (this.reaperPoseSprites.idle?'idle':Object.keys(this.reaperPoseSprites)[0]);
       const playerVisible=Boolean(p)&&!['reliquary','refundConfirm'].includes(s.state);
       for(const [name,sprite] of Object.entries(this.reaperPoseSprites))
@@ -263,7 +273,10 @@
         const left=s.cameraX-100,right=s.cameraX+s.width+100;
         for(const e of s.enemies||[]){
           if(e.kind!=='bat'||e.dead||e.x<left||e.x>right||used>=this.batPool.length)continue;
-          const name=e.mode==='dive'?'dive':'neutral',meta=ILLUSTRATED.bat[name],sprite=this.batPool[used++];
+          const flapFrame=Math.floor(Math.max(0,s.elapsed||0)*ILLUSTRATED_BAT_FPS+
+            (e.phase||0))%ILLUSTRATED_BAT_FLAP.length;
+          const name=e.mode==='dive'?'dive':ILLUSTRATED_BAT_FLAP[flapFrame];
+          const meta=ILLUSTRATED.bat[name],sprite=this.batPool[used++];
           const [ax,ay]=meta.anchor;
           sprite.setTexture(meta.key).setOrigin(0,0).setScale(meta.scale)
             .setPosition(e.x-ax*meta.scale,e.y-ay*meta.scale).setVisible(true)
@@ -320,5 +333,6 @@
       this.reaperReady=false;this.batReady=false;
     }
   }
-  scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED};
+  scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED,
+    ILLUSTRATED_RUN,ILLUSTRATED_BAT_FLAP,ILLUSTRATED_RUN_FPS,ILLUSTRATED_BAT_FPS};
 })(typeof window!=='undefined'?window:globalThis);
