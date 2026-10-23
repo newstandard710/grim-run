@@ -1588,7 +1588,7 @@ window.GRIM_CONFIG = Object.freeze({
       while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
         const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
         this.nextEnemySpawnX+=(m>=8000?70+this.rng.integer(0,40):108+this.rng.integer(0,55))*C.pxPerMeter;
-        if(m>9250||m<5190||m>9780||m>C.finishMeters-180)continue;
+        if(m<5190||m>C.finishMeters-150)continue;
         if(Math.abs(m-9500)<185)continue;
         if(!this.terrain.canPlace(x,90))continue;
         if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,470,85))continue;
@@ -1959,7 +1959,9 @@ window.GRIM_CONFIG = Object.freeze({
           if(Core.overlaps(Core.collisionBox(p.x,p.y,this.lowProfile),
             {x:ball.x-9,y:ball.y-9,width:18,height:18})){
             ball.dead=true;
-            if(p.invulMs<=0){p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,'fireball');}
+            if(p.invulMs<=0&&!this.blockFireHit()){
+              p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,'fireball');
+            }
           }
         }
         if(ball.ageMs>4000||ball.x<left-130||ball.x>right+180)ball.dead=true;
@@ -2028,6 +2030,14 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.bonesBlastMs=850;
     }
+    blockFireHit(){
+      const p=this.player;
+      if(this.powerManager.level('infernalBoots')<=0||p.fireproofCooldownMs>0)return false;
+      p.fireproofCooldownMs=this.powerManager.fireCooldownMs();
+      p.invulMs=Math.max(p.invulMs,420);
+      this.puff(p.x,p.y-30,0xffcf7c,15);
+      return true;
+    }
     takeDamage(amount,kind){
       // Called only on a new hazard hit / fall, not for purchase costs.
       this.impactFeedback();
@@ -2055,10 +2065,7 @@ window.GRIM_CONFIG = Object.freeze({
           : Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob);
         if(!hit)continue;
         ob.dealtDamage=true;
-        if(ob.type==='fire' && this.powerManager.level('infernalBoots')>0 && p.fireproofCooldownMs<=0){
-          p.fireproofCooldownMs=this.powerManager.fireCooldownMs();
-          p.invulMs=Math.max(p.invulMs,420);
-          this.puff(p.x,p.y-24,0xffcd7c,16);
+        if(ob.type==='fire' && this.blockFireHit()){
           if(this.godMode)this.impactFeedback();
         }else{
           p.invulMs=C.damageInvulnerabilityMs;
