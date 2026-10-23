@@ -54,14 +54,19 @@
   // canvas and one origin; Bat poses share a 2304×1280 canvas and eye pivot.
   // This mode deliberately uses one run pose and one neutral flight pose so
   // art scale/anchors can be checked before new animation frames are built.
-  const V2_REAPER_SCALE=64/1111;
+  // Phone playtest showed the review Reaper read too small next to low
+  // overhead hazards. Enlarge standard poses to the existing 120px target
+  // (1.875×) while preserving the shared ground anchor; the crouched slide
+  // pose is independently sized to stay inside the unchanged 48px clearance.
+  const V2_REAPER_BASE_SCALE=64/1111;
+  const V2_REAPER_SCALE=120/1111;
   const V2_BAT_SCALE=52/766;
   const V2_REAPER=Object.freeze(Object.fromEntries([
     ['run','reaper_run_v1.png',V2_REAPER_SCALE],
     ['idle','reaper_idle_v1.png',V2_REAPER_SCALE],
     ['jump','reaper_jump_v1.png',V2_REAPER_SCALE],
     ['fall','reaper_fall_v1.png',V2_REAPER_SCALE],
-    ['slide','reaper_slide_v1.png',V2_REAPER_SCALE*1.15],
+    ['slide','reaper_slide_v1.png',V2_REAPER_BASE_SCALE*1.25],
     ['scythe_attack','reaper_scythe_attack_v1.png',V2_REAPER_SCALE],
     ['crossbow_fire','reaper_crossbow_fire_v1.png',V2_REAPER_SCALE],
     ['hurt','reaper_hurt_v1.png',V2_REAPER_SCALE],

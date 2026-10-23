@@ -166,6 +166,7 @@ const server=http.createServer((req,res)=>{
     const slideVisible=slide.visible;
     const slideGround=Math.abs(slide.y+m.slide.anchor[1]*m.slide.scale-s.feetY);
     const slideHeight=651*m.slide.scale;
+    const runHeight=1111*m.run.scale;
     s.player.sliding=false;s.player.attackMs=120;v.render();
     const attack=v.reaperPoseSprites.scythe_attack;
     const attackVisible=attack.visible;
@@ -174,15 +175,17 @@ const server=http.createServer((req,res)=>{
     const flying=v.batPool[0];const flightKey=flying.texture.key;
     s.enemies[0].mode='dive';v.render();
     return {slideVisible,slideGround,slideHeight,attackVisible,
-      attackGround,attackScale:attack.scale,runScale:m.run.scale,
+      attackGround,attackScale:attack.scale,runScale:m.run.scale,runHeight,
       batVisible:flying.visible,flightKey,diveKey:flying.texture.key};
   });
   assert.equal(v2Anchors.slideVisible,true);assert.ok(v2Anchors.slideGround<.1);
-  assert.ok(v2Anchors.slideHeight>40&&v2Anchors.slideHeight<45,
-    'v2 slide artwork keeps a compact silhouette near the unchanged 48px clearance');
+  assert.ok(v2Anchors.slideHeight>46&&v2Anchors.slideHeight<48,
+    'v2 slide artwork fills but stays inside the unchanged 48px clearance');
   assert.equal(v2Anchors.attackVisible,true);assert.ok(v2Anchors.attackGround<.1);
   assert.equal(v2Anchors.attackScale,v2Anchors.runScale,
     'v2 scythe pose uses the same apparent scale as the running pose');
+  assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
+    'v2 standard Reaper pose is enlarged to the approved phone-review scale');
   assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.flightKey,'gr_v2_bat_neutral');
   assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
   // The prior procedural presentation remains an explicit fallback option.

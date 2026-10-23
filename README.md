@@ -13,6 +13,7 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 
 - Open `index.html?art=review-v2` to inspect the new transparent pose set in the actual Phaser scene at its shared game scale and anchors.
 - This static review mode leaves the current default, `?art=procedural` fallback, collisions, and gameplay unchanged. It intentionally uses a single Reaper run pose and a single Bat flight pose; the new motion cycles are still a separate art task.
+- Phone feedback prompted a scale correction: standard Reaper poses render at 120px visible height; the slide pose stays at 47px to fit the unchanged 48px overhead clearance.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
 
 ## v0.10.4: Sprite Motion Polish
