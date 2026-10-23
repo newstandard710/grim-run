@@ -1818,6 +1818,166 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.drawScene();
     }
+
+    hitEnemy(enemy,damage,fromGun=false){
+      if(enemy.dead)return;
+      enemy.hp-=damage;
+      this.puff(enemy.x,enemy.y,enemy.kind==='skeletalBat'?0xe5d6cb:0x9edbf2,6);
+      if(enemy.hp<=0){
+        enemy.dead=true;
+        this.puff(enemy.x,enemy.y,enemy.kind==='imp'?0xff874e:0xc5f1fc,12);
+      }
+    }
+    fireSoulcaster(target){
+      const p=this.player,originX=p.x+29,originY=p.y-58;
+      this.bullets.push({x:originX,y:originY,ref:target.ref,kind:target.kind,
+        damage:this.powerManager.level('powerShot')>=1?2:1,ageMs:0,dead:false});
+      this.puff(originX,originY,0xffe2a2,4);
+    }
+    blastSoulcaster(){
+      const left=this.player.x-this.width*C.reaperXRatio,right=left+this.width;
+      const targets=this.obstacles.filter(o=>!o.destroyed&&o.x+o.width>=left&&o.x<=right);
+      const bats=this.enemies.filter(e=>Combat.flightVisible(e,this.player.x,this.width));
+      if(!targets.length&&!bats.length)return false;
+      for(const ob of targets){
+        ob.destroyed=true;this.puff(ob.x+ob.width/2,Math.max(ob.y,ob.y+ob.height-30),0xffd38e,5);
+      }
+      for(const bat of bats)this.hitEnemy(bat,2,true);
+      this.puff(this.player.x+80,this.feetY-90,0xffbd77,24);
+      this.blastFlashMs=420;
+      this.blastCooldownMs=10000;
+      return true;
+    }
+    chainOnHit(first,damage){
+      const count=this.powerManager.level('chainShot');
+      if(count<=0)return;
+      const left=this.player.x-this.width*C.reaperXRatio,right=left+this.width;
+      let origin=first,remaining=count,visited=new Set([first]);
+      while(remaining-->0){
+        const valid=this.enemies.filter(e=>Combat.enemyIsFlying(e)&&!e.dead&&!visited.has(e)&&
+          e.x>=left&&e.x<=right&&Math.hypot(e.x-origin.x,e.y-origin.y)<540);
+        if(!valid.length)break;
+        valid.sort((a,b)=>Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y));
+        const next=valid[0];
+        this.chainArcs.push({x1:origin.x,y1:origin.y,x2:next.x,y2:next.y,lifeMs:250});
+        this.hitEnemy(next,damage,true);visited.add(next);origin=next;
+      }
+    }
+    updateCombat(frameMs,dt){
+      if(!this.gunUnlocked)return;
+      const p=this.player;
+      const left=p.x-this.width*C.reaperXRatio,right=left+this.width;
+      this.gunCooldownMs=Math.max(0,this.gunCooldownMs-frameMs);
+      this.blastCooldownMs=Math.max(0,this.blastCooldownMs-frameMs);
+      this.blastFlashMs=Math.max(0,(this.blastFlashMs||0)-frameMs);
+      for(const arc of this.chainArcs)arc.lifeMs-=frameMs;
+      this.chainArcs=this.chainArcs.filter(a=>a.lifeMs>0);
+      // Bats wind up their dive so a player can react before they descend.
+      for(const e of this.enemies){
+        if(e.dead)continue;
+        const ahead=e.x-p.x;
+        if(Combat.enemyIsFlying(e)){
+          e.x-=dt*(e.kind==='skeletalBat'?65:42);
+          const ground=this.terrain.anchorAt(e.x);
+          e.homeY=ground-(e.kind==='skeletalBat'?170:155);
+          if(e.mode==='glide'&&ahead<700&&ahead>80){e.mode='telegraph';e.timer=0;}
+          if(e.mode==='telegraph'){
+            e.timer+=dt;
+            if(e.timer>=.42){e.mode='dive';e.timer=0;}
+          }else if(e.mode==='dive'){
+            e.timer+=dt;
+            if(e.timer>=.95){e.mode='recover';e.timer=0;}
+          }else if(e.mode==='recover'){
+            e.timer+=dt;
+            if(e.timer>=.55){e.mode='done';e.timer=0;}
+          }
+          let dip=0;
+          if(e.mode==='dive')dip=122*Math.sin(Math.min(1,e.timer/.95)*Math.PI);
+          if(e.mode==='recover')dip=0;
+          e.y=e.homeY+Math.sin(this.elapsed*5.5+e.phase)*14+dip;
+        }else if(e.kind==='crawler'){
+          const newX=e.x-dt*54;
+          const floor=this.terrain.groundAt(newX);
+          if(floor===null){e.dead=true;continue;}
+          e.x=newX;e.homeY=floor-20;e.y=e.homeY;
+        }else if(e.kind==='imp'){
+          const ground=this.terrain.groundAt(e.x);
+          if(ground!==null){e.homeY=ground-30;e.y=e.homeY;}
+          if(ahead>90&&ahead<600){
+            if(e.warningMs>0){
+              e.warningMs-=frameMs;
+              if(e.warningMs<=0){
+                const dx=p.x-e.x,dy=p.y-45-(e.y-11),distance=Math.max(1,Math.hypot(dx,dy));
+                this.fireballs.push({x:e.x-12,y:e.y-11,vx:dx/distance*300,vy:dy/distance*300,
+                  owner:e,reflected:false,dead:false,ageMs:0});
+                e.fireMs=3000;
+              }
+            }else{
+              e.fireMs-=frameMs;
+              if(e.fireMs<=0)e.warningMs=470;
+            }
+          }
+        }
+      }
+      // Shots visibly travel toward moving targets; no fourth control button.
+      if(this.gunCooldownMs<=0){
+        const target=Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,this.powerManager.level('powerShot'));
+        if(target){
+          this.fireSoulcaster(target);
+          this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
+        }
+      }
+      for(const b of this.bullets){
+        if(b.dead)continue;
+        b.ageMs+=frameMs;
+        if(b.ageMs>1550||b.ref.dead||b.ref.destroyed){b.dead=true;continue;}
+        const tx=b.kind==='enemy'?b.ref.x:b.ref.x+b.ref.width/2;
+        const ty=b.kind==='enemy'?b.ref.y:b.ref.y+Math.min(b.ref.height/2,45);
+        const dx=tx-b.x,dy=ty-b.y,distance=Math.hypot(dx,dy);
+        const step=1550*dt;
+        if(distance<=Math.max(21,step)){
+          b.x=tx;b.y=ty;b.dead=true;
+          if(b.kind==='enemy'){this.hitEnemy(b.ref,b.damage,true);this.chainOnHit(b.ref,b.damage);}
+          else {b.ref.destroyed=true;this.puff(tx,ty,0xffd79e,12);}
+        }else {b.x+=dx/distance*step;b.y+=dy/distance*step;}
+      }
+      for(const ball of this.fireballs){
+        if(ball.dead)continue;
+        ball.ageMs+=frameMs;
+        if(ball.reflected){
+          const owner=ball.owner;
+          if(owner&&!owner.dead){
+            const dx=owner.x-ball.x,dy=owner.y-ball.y,distance=Math.hypot(dx,dy);
+            const step=580*dt;
+            if(distance<=Math.max(23,step)){this.hitEnemy(owner,2,false);ball.dead=true;continue;}
+            ball.x+=dx/distance*step;ball.y+=dy/distance*step;
+          }else ball.x+=520*dt;
+        }else {
+          ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;
+          if(Core.overlaps(Core.collisionBox(p.x,p.y,this.lowProfile),
+            {x:ball.x-9,y:ball.y-9,width:18,height:18})){
+            ball.dead=true;
+            if(p.invulMs<=0){p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,'fireball');}
+          }
+        }
+        if(ball.ageMs>4000||ball.x<left-130||ball.x>right+180)ball.dead=true;
+        if(this.state!=='playing')break;
+      }
+      if(this.state!=='playing')return;
+      if(this.powerManager.level('powerShot')>=3&&this.blastCooldownMs<=0)this.blastSoulcaster();
+      if(p.invulMs<=0){
+        const body=Core.collisionBox(p.x,p.y,this.lowProfile);
+        for(const e of this.enemies){
+          if(e.dead||e.contactDone||!Core.overlaps(body,Combat.rectFor(e)))continue;
+          e.contactDone=true;e.dead=true;
+          p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,e.kind);
+          break;
+        }
+      }
+      this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-125&&e.x<right+600);
+      this.bullets=this.bullets.filter(b=>!b.dead);
+      this.fireballs=this.fireballs.filter(b=>!b.dead);
+    }
     checkCollectibles() {
       const p=this.player;
       const centerY=this.feetY-(this.lowProfile?16:43);
