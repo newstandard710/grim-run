@@ -1292,7 +1292,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:startingHP, maxHp:startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
-      this.nextEnemySpawnX=this.startX+5190*C.pxPerMeter;
+      this.nextEnemySpawnX=this.startX+5070*C.pxPerMeter;
       this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
@@ -1671,7 +1671,7 @@ window.GRIM_CONFIG = Object.freeze({
       while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
         const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
         this.nextEnemySpawnX+=(m>=8000?68+this.rng.integer(0,24):94+this.rng.integer(0,38))*C.pxPerMeter;
-        if(m<5150||m>C.finishMeters-110)continue;
+        if(m<5000||m>C.finishMeters-10)continue;
         this.encounterTelemetry.attempts++;
         const choice=this.rng.next();
         const kind=m>=8000?(choice<.54?'skeletalBat':choice<.79?'imp':'crawler'):
