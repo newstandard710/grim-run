@@ -87,36 +87,52 @@ const server=http.createServer((req,res)=>{
   const illustratedLoaded=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
     return {ready:v.reaperReady&&v.batReady,illustrated:v.illustrated,
-      textures:['idle','run','jump','fall','slide','scythe_attack','crossbow_fire','hurt','death','hover']
+      textures:['idle','run_02','run_03','run_04','run_05','jump','fall','slide','scythe_attack','crossbow_fire','hurt','death','hover']
         .every(k=>s.textures.exists(window.GRIM_VISUALS.ILLUSTRATED.reaper[k].key))&&
-        ['neutral','dive'].every(k=>s.textures.exists(window.GRIM_VISUALS.ILLUSTRATED.bat[k].key)),
+        ['neutral','raised','midstroke','lowered','dive'].every(k=>s.textures.exists(window.GRIM_VISUALS.ILLUSTRATED.bat[k].key)),
       poses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length};
   });
-  assert.deepEqual(illustratedLoaded,{ready:true,illustrated:true,textures:true,poses:10,bats:12});
+  assert.deepEqual(illustratedLoaded,{ready:true,illustrated:true,textures:true,poses:13,bats:12});
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const staticReview=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
-    const run=v.reaperPoseSprites.run,meta=window.GRIM_VISUALS.ILLUSTRATED.reaper.run;
+    const run=v.reaperPoseSprites.run_02,meta=window.GRIM_VISUALS.ILLUSTRATED.reaper.run_02;
     s.player.sliding=true;v.render();
     const slide=v.reaperPoseSprites.slide,sm=window.GRIM_VISUALS.ILLUSTRATED.reaper.slide;
     const slideState={visible:slide.visible,
       groundError:Math.abs(slide.y+sm.anchor[1]*sm.scale-s.feetY),
-      artHeight:322*sm.scale};
+      artHeight:511*sm.scale};
     s.player.sliding=false;
+    s.player.attackMs=120;v.render();
+    const attack=v.reaperPoseSprites.scythe_attack,am=window.GRIM_VISUALS.ILLUSTRATED.reaper.scythe_attack;
+    const idleMeta=window.GRIM_VISUALS.ILLUSTRATED.reaper.idle;
+    const attackState={visible:attack.visible,scale:attack.scale,
+      groundError:Math.abs(attack.y+am.anchor[1]*am.scale-s.feetY),
+      artHeight:(893-157)*am.scale,idleArtHeight:(828-67)*idleMeta.scale};
+    s.player.attackMs=0;
     s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:1,phase:0,dead:false}];
-    v.render();
+    s.elapsed=0;v.render();
+    const firstRun=run.texture.key,firstBat=v.batPool[0].texture.key;
+    s.elapsed=.12;v.render();
     return {runVisible:run.visible,runKey:run.texture.key,
       runGroundError:Math.abs(run.y+meta.anchor[1]*meta.scale-s.feetY),
       slideVisible:slideState.visible,slideGroundError:slideState.groundError,
       slideArtHeight:slideState.artHeight,batVisible:v.batPool[0].visible,
-      batKey:v.batPool[0].texture.key};
+      batKey:v.batPool[0].texture.key,firstRun,firstBat,attackState};
   });
-  assert.equal(staticReview.runVisible,true);assert.equal(staticReview.runKey,'gr_ill_reaper_run');
+  assert.equal(staticReview.runVisible,true);assert.equal(staticReview.firstRun,'gr_ill_reaper_run_02');
+  assert.equal(staticReview.runKey,'gr_ill_reaper_run_03','Reaper run advances to a distinct pose');
   assert.ok(staticReview.runGroundError<.1,'Reaper baseline anchor aligns to gameplay feet');
   assert.equal(staticReview.slideVisible,true);assert.ok(staticReview.slideGroundError<.1);
-  assert.ok(staticReview.slideArtHeight<=29.01,'Low-profile slide artwork fits unchanged 29px clearance');
-  assert.equal(staticReview.batVisible,true);assert.equal(staticReview.batKey,'gr_ill_bat_neutral');
+  assert.ok(staticReview.slideArtHeight<=40.2&&staticReview.slideArtHeight>39.8,
+    'Crouched slide art uses a 40px silhouette within unchanged 48px overhead clearance');
+  assert.equal(staticReview.attackState.visible,true);
+  assert.ok(staticReview.attackState.groundError<.1,'Scythe pose shares the ground anchor');
+  assert.ok(Math.abs(staticReview.attackState.artHeight-staticReview.attackState.idleArtHeight)<1,
+    'Scythe attack art stays the same apparent height as idle');
+  assert.equal(staticReview.batVisible,true);assert.equal(staticReview.firstBat,'gr_ill_bat_raised');
+  assert.equal(staticReview.batKey,'gr_ill_bat_midstroke','Bat wings visibly advance during flight');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:30000});
@@ -159,7 +175,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: illustrated v0.10.3 default, explicit procedural fallback, legacy atlas option, PNG anchors and God Mode tools.');
+  console.log('PASS actual Chromium: illustrated v0.10.4 default, run/flap cycles, slide profile, procedural fallback, legacy atlas and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

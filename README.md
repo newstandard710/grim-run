@@ -2,21 +2,25 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.3 — Character Visual Overhaul**
+**Current playable build: v0.10.4 — Sprite Motion Polish**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
 
+## v0.10.4: Sprite Motion Polish
+
+- The illustrated Reaper now cycles through four distinct running poses, and Cavern Bats use a four-pose wing flap while flying. Jump, fall and hurt artwork is preserved.
+- Replaced the flat slide silhouette with a compact 40px crouch, leaving 8px of visual margin inside the existing 48px overhead clearance. The 56×29 collision box is unchanged.
+- Scythe attack now uses a cleaned pose without a second slash effect; its visible height is normalized to the standard Reaper scale to prevent an attack-only size jump.
+- Startup loads 18 character textures for state poses and the new movement cycles. PNG detail is retained; the new slide and attack sources have transparent alpha.
+- No gameplay mechanics, controls, progression or God Mode behavior changed. `?art=procedural` restores the v0.10.2 fallback; `?art=experimental` opens the legacy SVG art.
+- Regression and Chromium smoke checks cover run/flap frame changes, ground anchors, slide clearance, fallback behavior and God Mode. Android readability and performance still need device playtesting.
+
 ## v0.10.3: Character Visual Overhaul
 
-- The approved illustrated Reaper and Cavern Bat are now the default game artwork, using transparent PNGs with consistent world anchors.
-- Static poses cover the Reaper's idle, run, jump, fall, slide, scythe attack, crossbow, hurt, death and hover states; the Bat uses neutral flight and dive poses. These are single poses, not animation loops.
-- The low slide art fits the existing **56×29** slide clearance. Standing collision remains **42×79**; gameplay geometry and controls are unchanged.
-- The reviewed source set contains 25 PNGs. The game loads only the 12 currently used textures; additional poses remain packaged for the later animation pass.
-- Use `?art=procedural` to restore the v0.10.2 procedural Reaper and Bat, or `?art=experimental` to inspect the older SVG atlas. Neither option changes saved game data.
-- Regression and real Chromium checks pass in GitHub Actions. The game is live for landscape phone playtesting; performance and readability should be checked on device.
+The approved illustrated Reaper and Cavern Bat became the default visual set, with transparent PNG poses for the Reaper's gameplay states and Bat neutral/dive states. The prior procedural presentation remains available with `?art=procedural`. The v0.10.4 update adds motion poses and corrects the slide and attack scale issues reported during playtesting.
 
 ## v0.10.2: God Mode Playtest Tools
 
@@ -122,4 +126,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: v0.10.3 landscape phone review; then static-pose animation sequences, additional enemies/combat effects, illustrated biomes and final boss.
+Next: v0.10.4 landscape phone review; then refine static-pose animation sequences, additional enemies/combat effects, illustrated biomes and final boss.
