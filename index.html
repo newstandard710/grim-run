@@ -444,6 +444,42 @@ window.GRIM_CONFIG = Object.freeze({
       : { x: reaperX + 15, y: feetY - 140, width: 126 + rangeBonus, height: 130 };
   }
   function encounterGap(speed, rng) { return Math.max(410, speed * 1.40) + rng.integer(105, 235); }
+  // Try multiple legal jump launch points. This is a conservative simulation
+  // of a HELD, unupgraded jump at the intended running speed. If the player
+  // cannot clear a rock/fire obstacle uphill, do not generate that obstacle.
+  function canClearJumpObstacle(groundAt,ob,speed,jumpVelocity=-610,gravity=1550){
+    if(!['rock','fire'].includes(ob.type))return true;
+    if(!(speed>0)||!(jumpVelocity<0)||!(gravity>0))return false;
+    const left=ob.x-21,right=ob.x+ob.width+22;
+    // The player can choose when to start their jump, but cannot start it in
+    // a chasm or inside the hazard. Grounded movement prior to launch is free.
+    for(let offset=55;offset<=340;offset+=19){
+      const launchX=left-offset,startY=groundAt(launchX);
+      if(startY===null)continue;
+      const preflight=groundAt(launchX-24);
+      if(preflight===null||Math.abs(startY-preflight)>32)continue;
+      let cleared=true,landed=false;
+      for(let t=.016;t<1.3;t+=.016){
+        const x=launchX+speed*t;
+        if(x>right+55)break;
+        let feetY=startY+jumpVelocity*t+.5*gravity*t*t;
+        const floor=groundAt(x);
+        if(floor!==null&&feetY>=floor-1){
+          landed=true;feetY=floor;
+        }
+        if(x>=left&&x<=right){
+          if(landed || feetY>ob.y-8){cleared=false;break;}
+        }
+      }
+      if(cleared&&!landed)return true;
+      // Landing AFTER the obstacle is safe and is not a failure.
+      if(cleared){
+        const approach=groundAt(right+55);
+        if(approach!==null)return true;
+      }
+    }
+    return false;
+  }
   function chooseEncounter(rng, distanceMeters) {
     const pool = distanceMeters < 80 ? ['rock','bramble','rock','branch'] :
       distanceMeters >= 8000 ? ['fire','rock','fire','branch','bramble','rock','fire','branch','bramble'] :
@@ -561,7 +597,7 @@ window.GRIM_CONFIG = Object.freeze({
     return progress >= start && progress <= end;
   }
   scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
-    encounterGap, chooseEncounter, milestoneX, isUpgradeSafe, intersectsVendorCorridor, overlapsSoulPlatform,
+    encounterGap, chooseEncounter, canClearJumpObstacle, milestoneX, isUpgradeSafe, intersectsVendorCorridor, overlapsSoulPlatform,
     fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
     slideCeilingBottomAt, branchHits };
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -2156,6 +2192,10 @@ window.GRIM_CONFIG = Object.freeze({
         const type=Core.chooseEncounter(this.rng,this.distance);
         const width=type==='branch'?74:type==='bramble'?60:type==='fire'?58:54;
         if(x>this.brittleClearUntilX && this.terrain.canPlace(x,width) &&
+           Core.canClearJumpObstacle(this.terrain.groundAt.bind(this.terrain),
+             {type,x,width,y:(this.terrain.groundAt(x)??0)-(type==='rock'?48:41)},
+             Math.min(C.maxSpeed,C.initialSpeed+((x-this.startX)/C.pxPerMeter)*C.speedGainPerMeter),
+             C.jumpVelocity,C.gravity) &&
            !Core.intersectsVendorCorridor(x,width,this.startX,C.vendorEveryMeters,C.pxPerMeter) &&
            !Core.overlapsSoulPlatform(x,width,this.soulPlatform,30) &&
            Math.abs(x-this.terrain.portalX)>95 &&
