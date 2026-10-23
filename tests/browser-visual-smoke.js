@@ -175,6 +175,7 @@ const server=http.createServer((req,res)=>{
       attackGround,attackScale:attack.scale,runScale:m.run.scale,
       batVisible:flying.visible,flightKey,diveKey:flying.texture.key};
   });
+  console.log('V2 static anchor measurements:',JSON.stringify(v2Anchors));
   assert.equal(v2Anchors.slideVisible,true);assert.ok(v2Anchors.slideGround<.1);
   assert.ok(v2Anchors.slideHeight>40&&v2Anchors.slideHeight<45,
     'v2 slide artwork keeps a compact silhouette near the unchanged 48px clearance');
