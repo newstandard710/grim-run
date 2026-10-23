@@ -1627,6 +1627,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
       this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);
+      this.rewindFrames=[];this.rewindFlashMs=0;
       this.ui.rewindFlash(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
     }
     togglePause() {
@@ -1761,6 +1762,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     triggerVendor(number){
       if(this.state!=='playing'||number>14||number<=this.lastVendorNumber)return;
+      this.resetRewindHistory();
       this.lastVendorNumber=number;
       this.vendorType=number*C.vendorEveryMeters<5000?'angel':'devil';
       this.vendorPhase='deal';
@@ -1787,6 +1789,7 @@ window.GRIM_CONFIG = Object.freeze({
       if((devil&&this.player.hp<=price)||(!devil&&this.coinCount<price))return;
       if(!offer||!this.powerManager.apply(id,this.player,()=>{},offer.levelsGained||1))return;
       if(id==='skeletalWings')this.player.hoverBudgetMs=this.powerManager.skeletalHoverMs();
+      this.resetRewindHistory();
       if(devil)this.player.hp-=price;
       else this.coinCount-=price;
       this.puff(this.player.x,this.feetY-45,devil?0xff765e:0xffd98e,14);
@@ -1801,6 +1804,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='upgrade'||this.vendorType!=='devil'||this.vendorPhase!=='heal')return;
       if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp)return;
       this.coinCount-=C.devilHealPrice;this.player.hp++;
+      this.resetRewindHistory();
       this.showVendor();
     }
     leaveVendor(){
@@ -1808,6 +1812,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.pendingOffers=[];this.vendorType=null;this.vendorPhase='deal';
       this.countdownMs=0;this.goFlashMs=0;
       this.state='playing';this.ui.setMode('playing');this.ui.hideCountdown();
+      this.resetRewindHistory();this.captureRewind();
       this.refreshHud();
     }
     refreshHud(){
@@ -1815,6 +1820,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
     collectSoul(){
+      this.resetRewindHistory(); // Banked currency can never be time-reversed.
       this.soulCount++;
       this.runSoulsAvailable++;
       this.totalSouls=Meta.earn(this.meta,1);
@@ -2192,6 +2198,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.checkCollectibles();
         if(this.state==='upgrade'){this.drawScene();return;}
         this.checkHazards();
+        if(this.state!=='playing'){this.drawScene();return;}
         this.obstacles = this.obstacles.filter(ob => !ob.destroyed && ob.x + ob.width > p.x - this.width);
         this.souls = this.souls.filter(s => !s.taken && s.x > p.x-this.width);
         this.coins = this.coins.filter(s => !s.taken && s.x > p.x-this.width);
@@ -2205,6 +2212,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
+        this.tickRewind(frameMs);
       }
       if(this.fallFeedbackMs>0){
         this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
@@ -2460,6 +2468,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(!range)return;
       const from=this.player.x,to=from+range*C.pxPerMeter;
       this.brittleClearUntilX=Math.max(this.brittleClearUntilX,to);
+      this.saveTerrainOriginal(from-12,to);
       this.terrain.fillGaps(from-12,to);
       for(const tip of this.tips){if(tip.atX>=from&&tip.atX<=to)tip.label.destroy();}
       this.tips=this.tips.filter(tip=>tip.atX<from||tip.atX>to);
@@ -2552,7 +2561,7 @@ window.GRIM_CONFIG = Object.freeze({
     startChest(){
       if(this.state!=='portal')return;
       this.ui.showPortal(false);
-      this.state='chest';this.chestMs=4400;
+      this.state='chest';this.chestMs=4400;this.resetRewindHistory();
       this.ui.setMode('chest');
     }
     finishChest(){
@@ -2561,11 +2570,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.gunUnlocked=true;this.gunCooldownMs=0;
       this.player.invulMs=Math.max(this.player.invulMs,1600);
       this.ui.setMode('playing');this.ui.showGun(true);this.ui.showGunCooldown(0);
+      this.resetRewindHistory();this.captureRewind();
       this.puff(this.player.x,this.player.y-70,0x9effe0,22);
     }
     enterUnderworld(){
       const p=this.player;
       this.hasTeleported=true;
+      this.resetRewindHistory();
       this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.ui.showGun(false);
       this.portalMs=1450;
@@ -2588,6 +2599,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.puff(p.x,p.y-50,0xa6abff,26);
     }
     completeRun(){
+      this.resetRewindHistory();
       const p=this.player;
       p.x=this.terrain.finishX;
       this.distance=C.finishMeters;
@@ -2605,6 +2617,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
     }
     die(){
+      this.resetRewindHistory();
       this.countdownMs=0;this.goFlashMs=0;
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
       if(!this.reviveUsed){
@@ -2621,6 +2634,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.runSoulsAvailable-=spentFromRun;
       this.lastRevivePayment={currentRun:spentFromRun,priorRuns:3-spentFromRun};
       this.reviveUsed=true;
+      this.resetRewindHistory();
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       const p=this.player;
