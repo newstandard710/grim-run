@@ -99,14 +99,16 @@ const server=http.createServer((req,res)=>{
     const run=v.reaperPoseSprites.run,meta=window.GRIM_VISUALS.ILLUSTRATED.reaper.run;
     s.player.sliding=true;v.render();
     const slide=v.reaperPoseSprites.slide,sm=window.GRIM_VISUALS.ILLUSTRATED.reaper.slide;
-    const slideAnchorY=slide.y+sm.anchor[1]*sm.scale;
+    const slideState={visible:slide.visible,
+      groundError:Math.abs(slide.y+sm.anchor[1]*sm.scale-s.feetY),
+      artHeight:322*sm.scale};
     s.player.sliding=false;
     s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:1,phase:0,dead:false}];
     v.render();
     return {runVisible:run.visible,runKey:run.texture.key,
       runGroundError:Math.abs(run.y+meta.anchor[1]*meta.scale-s.feetY),
-      slideVisible:slide.visible,slideGroundError:Math.abs(slideAnchorY-s.feetY),
-      slideArtHeight:322*sm.scale,batVisible:v.batPool[0].visible,
+      slideVisible:slideState.visible,slideGroundError:slideState.groundError,
+      slideArtHeight:slideState.artHeight,batVisible:v.batPool[0].visible,
       batKey:v.batPool[0].texture.key};
   });
   assert.equal(staticReview.runVisible,true);assert.equal(staticReview.runKey,'gr_ill_reaper_run');
