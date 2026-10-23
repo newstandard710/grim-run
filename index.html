@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.10.2 · VISUALS & TOOLS</div>
+      <div class="mini">v0.10.2 · GOD MODE TOOLS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1551,7 +1551,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.visuals=scope.GRIM_VISUALS?new scope.GRIM_VISUALS.GrimVisualSystem(this):null;
       if(this.visuals){
         // Optional art=off playtest switch, without touching saved gameplay.
-        if(new URLSearchParams(location.search).get('art')!=='off')
+        if(new URLSearchParams(location.search).get('art')==='experimental')
           this.visuals.begin();
         this.events.once('shutdown',()=>this.visuals.shutdown());
       }
