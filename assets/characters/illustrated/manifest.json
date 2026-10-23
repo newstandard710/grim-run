@@ -1,0 +1,535 @@
+{
+  "set": "Grim Run illustrated static sprites",
+  "version": "0.10.3-development",
+  "default": "procedural v0.10.2 art remains default; opt-in via ?art=illustrated",
+  "runtimeScaleReference": "Existing Phaser Reaper base frame is 192px at scale 0.74 (142px canvas height); Reaper visible target is 120 world px. Existing Bat is 160x128 at scale 0.66 (106px width); Bat width target is 106 world px. Reaper slide clearance uses current 29px collision height.",
+  "collisionGeometry": "Unchanged: standing 42x79; sliding 56x29.",
+  "alpha": "RGBA with alpha<=4 cleared and >=240 opaque, preserving antialiasing. Runtime derivatives downscaled 50% from high-resolution review sources; full-resolution originals remain in versioned Library bundles.",
+  "frames": {
+    "reaper_master.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_master.png",
+      "source": "grim-run-reaper-static-v1/reaper_master.png",
+      "width": 640,
+      "height": 896,
+      "alphaBounds16": [
+        70,
+        68,
+        572,
+        828
+      ],
+      "anchorPx": [
+        320.0,
+        827.5
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.157895,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_idle.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_idle.png",
+      "source": "grim-run-reaper-static-v1/reaper_idle.png",
+      "width": 640,
+      "height": 896,
+      "alphaBounds16": [
+        77,
+        67,
+        569,
+        828
+      ],
+      "anchorPx": [
+        320.0,
+        827.5
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.157687,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_run.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_run.png",
+      "source": "grim-run-reaper-static-v1/reaper_run.png",
+      "width": 640,
+      "height": 896,
+      "alphaBounds16": [
+        69,
+        183,
+        575,
+        828
+      ],
+      "anchorPx": [
+        320.0,
+        827.5
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.186047,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_run_02.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_run_02.png",
+      "source": "grim-run-key-poses-v1/reaper/reaper_run_02.png",
+      "width": 1024,
+      "height": 768,
+      "alphaBounds16": [
+        27,
+        56,
+        997,
+        710
+      ],
+      "anchorPx": [
+        512.0,
+        710.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.183486,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_run_03.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_run_03.png",
+      "source": "grim-run-key-poses-v1/reaper/reaper_run_03.png",
+      "width": 1024,
+      "height": 768,
+      "alphaBounds16": [
+        75,
+        45,
+        949,
+        710
+      ],
+      "anchorPx": [
+        512.0,
+        710.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.180451,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_run_04.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_run_04.png",
+      "source": "grim-run-key-poses-v1/reaper/reaper_run_04.png",
+      "width": 1024,
+      "height": 768,
+      "alphaBounds16": [
+        137,
+        45,
+        887,
+        710
+      ],
+      "anchorPx": [
+        512.0,
+        710.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.180451,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_run_05.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_run_05.png",
+      "source": "grim-run-key-poses-v1/reaper/reaper_run_05.png",
+      "width": 1024,
+      "height": 768,
+      "alphaBounds16": [
+        35,
+        45,
+        989,
+        710
+      ],
+      "anchorPx": [
+        512.0,
+        710.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.180451,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_jump.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_jump.png",
+      "source": "grim-run-reaper-static-v1/reaper_jump.png",
+      "width": 640,
+      "height": 896,
+      "alphaBounds16": [
+        69,
+        72,
+        574,
+        790
+      ],
+      "anchorPx": [
+        320.0,
+        827.5
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.167131,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_fall.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_fall.png",
+      "source": "grim-run-reaper-static-v1/reaper_fall.png",
+      "width": 640,
+      "height": 896,
+      "alphaBounds16": [
+        70,
+        106,
+        572,
+        771
+      ],
+      "anchorPx": [
+        320.0,
+        827.5
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.180451,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_slide.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_slide.png",
+      "source": "grim-run-reaper-static-v1/reaper_slide.png",
+      "width": 640,
+      "height": 896,
+      "alphaBounds16": [
+        69,
+        383,
+        576,
+        827
+      ],
+      "anchorPx": [
+        320.0,
+        827.5
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 29,
+      "targetVisibleWidthPx": null,
+      "scale": 0.065315,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_scythe_windup.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_scythe_windup.png",
+      "source": "grim-run-key-poses-v1/reaper/reaper_scythe_windup.png",
+      "width": 1024,
+      "height": 768,
+      "alphaBounds16": [
+        65,
+        44,
+        958,
+        710
+      ],
+      "anchorPx": [
+        512.0,
+        710.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.18018,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_scythe_attack.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_scythe_attack.png",
+      "source": "grim-run-stage-d-static-v1/reaper_scythe_attack.png",
+      "width": 1024,
+      "height": 1024,
+      "alphaBounds16": [
+        138,
+        503,
+        895,
+        920
+      ],
+      "anchorPx": [
+        512.0,
+        920.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.28777,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_crossbow_fire.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_crossbow_fire.png",
+      "source": "grim-run-stage-d-static-v1/reaper_crossbow_fire.png",
+      "width": 1024,
+      "height": 1024,
+      "alphaBounds16": [
+        142,
+        460,
+        892,
+        920
+      ],
+      "anchorPx": [
+        512.0,
+        920.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.26087,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_hurt.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_hurt.png",
+      "source": "grim-run-stage-d-static-v1/reaper_hurt.png",
+      "width": 1024,
+      "height": 1024,
+      "alphaBounds16": [
+        143,
+        428,
+        841,
+        920
+      ],
+      "anchorPx": [
+        512.0,
+        920.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.243902,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_death.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_death.png",
+      "source": "grim-run-stage-d-static-v1/reaper_death.png",
+      "width": 1024,
+      "height": 1024,
+      "alphaBounds16": [
+        93,
+        591,
+        937,
+        920
+      ],
+      "anchorPx": [
+        512.0,
+        920.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.364742,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_hover.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_hover.png",
+      "source": "grim-run-stage-d-static-v1/reaper_hover.png",
+      "width": 1024,
+      "height": 1024,
+      "alphaBounds16": [
+        267,
+        132,
+        765,
+        884
+      ],
+      "anchorPx": [
+        512.0,
+        920.0
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 120,
+      "targetVisibleWidthPx": null,
+      "scale": 0.159574,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_neutral.png": {
+      "path": "assets/characters/illustrated/bat/bat_neutral.png",
+      "source": "grim-run-bat-static-v1/bat_neutral.png",
+      "width": 1024,
+      "height": 640,
+      "alphaBounds16": [
+        76,
+        113,
+        950,
+        511
+      ],
+      "anchorPx": [
+        512.0,
+        320.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.121281,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_wings_raised.png": {
+      "path": "assets/characters/illustrated/bat/bat_wings_raised.png",
+      "source": "grim-run-bat-static-v1/bat_wings_raised.png",
+      "width": 1024,
+      "height": 640,
+      "alphaBounds16": [
+        81,
+        111,
+        944,
+        529
+      ],
+      "anchorPx": [
+        512.0,
+        320.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.122827,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_flap_midstroke.png": {
+      "path": "assets/characters/illustrated/bat/bat_flap_midstroke.png",
+      "source": "grim-run-key-poses-v1/bat/bat_flap_midstroke.png",
+      "width": 1024,
+      "height": 640,
+      "alphaBounds16": [
+        37,
+        100,
+        987,
+        541
+      ],
+      "anchorPx": [
+        512.0,
+        320.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.111579,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_wings_lowered.png": {
+      "path": "assets/characters/illustrated/bat/bat_wings_lowered.png",
+      "source": "grim-run-bat-static-v1/source_originals/bat_wings_lowered_original.png",
+      "width": 887,
+      "height": 444,
+      "alphaBounds16": [
+        32,
+        42,
+        863,
+        418
+      ],
+      "anchorPx": [
+        443.5,
+        222.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.127557,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_dive_anticipation.png": {
+      "path": "assets/characters/illustrated/bat/bat_dive_anticipation.png",
+      "source": "grim-run-key-poses-v1/bat/bat_dive_anticipation.png",
+      "width": 1024,
+      "height": 640,
+      "alphaBounds16": [
+        37,
+        98,
+        987,
+        542
+      ],
+      "anchorPx": [
+        512.0,
+        320.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.111579,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_dive.png": {
+      "path": "assets/characters/illustrated/bat/bat_dive.png",
+      "source": "grim-run-bat-static-v1/bat_dive.png",
+      "width": 1024,
+      "height": 640,
+      "alphaBounds16": [
+        113,
+        108,
+        796,
+        525
+      ],
+      "anchorPx": [
+        512.0,
+        320.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.155198,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_hit.png": {
+      "path": "assets/characters/illustrated/bat/bat_hit.png",
+      "source": "grim-run-stage-d-static-v1/source_originals/bat_hit_original.png",
+      "width": 887,
+      "height": 444,
+      "alphaBounds16": [
+        15,
+        12,
+        861,
+        434
+      ],
+      "anchorPx": [
+        443.5,
+        222.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.125296,
+      "loading": "static key pose; no frame animation"
+    },
+    "bat_death.png": {
+      "path": "assets/characters/illustrated/bat/bat_death.png",
+      "source": "grim-run-stage-d-static-v1/bat_death.png",
+      "width": 1024,
+      "height": 640,
+      "alphaBounds16": [
+        198,
+        112,
+        829,
+        558
+      ],
+      "anchorPx": [
+        512.0,
+        320.0
+      ],
+      "anchorType": "center",
+      "targetVisibleHeightPx": null,
+      "targetVisibleWidthPx": 106,
+      "scale": 0.167987,
+      "loading": "static key pose; no frame animation"
+    },
+    "reaper_slide_clearance.png": {
+      "path": "assets/characters/illustrated/reaper/reaper_slide_clearance.png",
+      "source": "generated_images/exec-0a3c0a68-6ce3-4318-82ce-f62215049e66.png",
+      "width": 1403,
+      "height": 412,
+      "alphaBounds16": [
+        33,
+        31,
+        1373,
+        353
+      ],
+      "anchorPx": [
+        701.5,
+        353
+      ],
+      "anchorType": "ground-baseline",
+      "targetVisibleHeightPx": 29,
+      "targetVisibleWidthPx": null,
+      "scale": 0.090062,
+      "loading": "static clearance-checked slide; full visible silhouette fits current slide collision height"
+    }
+  }
+}

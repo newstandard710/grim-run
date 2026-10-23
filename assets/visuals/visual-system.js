@@ -16,6 +16,37 @@
     reaper:'assets/characters/reaper/reaper-sheet.svg',
     bat:'assets/enemies/cavern-bat/bat-sheet.svg'
   });
+  // Reviewed, high-resolution PNG derivatives for the opt-in static-art pass.
+  // Per-pose anchors and scale values are generated from manifest.json.
+  const ILLUSTRATED=Object.freeze({
+    reaper:{
+      master:{key:'gr_ill_reaper_master',file:'reaper_master.png',scale:.157895,anchor:[320,827.5]},
+      idle:{key:'gr_ill_reaper_idle',file:'reaper_idle.png',scale:.157687,anchor:[320,827.5]},
+      run:{key:'gr_ill_reaper_run',file:'reaper_run.png',scale:.186047,anchor:[320,827.5]},
+      run_02:{key:'gr_ill_reaper_run_02',file:'reaper_run_02.png',scale:.183486,anchor:[512,710]},
+      run_03:{key:'gr_ill_reaper_run_03',file:'reaper_run_03.png',scale:.180451,anchor:[512,710]},
+      run_04:{key:'gr_ill_reaper_run_04',file:'reaper_run_04.png',scale:.180451,anchor:[512,710]},
+      run_05:{key:'gr_ill_reaper_run_05',file:'reaper_run_05.png',scale:.180451,anchor:[512,710]},
+      jump:{key:'gr_ill_reaper_jump',file:'reaper_jump.png',scale:.167131,anchor:[320,827.5]},
+      fall:{key:'gr_ill_reaper_fall',file:'reaper_fall.png',scale:.180451,anchor:[320,827.5]},
+      slide:{key:'gr_ill_reaper_slide_clearance',file:'reaper_slide_clearance.png',scale:.090062,anchor:[701.5,353]},
+      scythe_attack:{key:'gr_ill_reaper_scythe_attack',file:'reaper_scythe_attack.png',scale:.28777,anchor:[512,920]},
+      crossbow_fire:{key:'gr_ill_reaper_crossbow_fire',file:'reaper_crossbow_fire.png',scale:.26087,anchor:[512,920]},
+      hurt:{key:'gr_ill_reaper_hurt',file:'reaper_hurt.png',scale:.243902,anchor:[512,920]},
+      death:{key:'gr_ill_reaper_death',file:'reaper_death.png',scale:.364742,anchor:[512,920]},
+      hover:{key:'gr_ill_reaper_hover',file:'reaper_hover.png',scale:.159574,anchor:[512,920]}
+    },
+    bat:{
+      neutral:{key:'gr_ill_bat_neutral',file:'bat_neutral.png',scale:.121281,anchor:[512,320]},
+      raised:{key:'gr_ill_bat_raised',file:'bat_wings_raised.png',scale:.122827,anchor:[512,320]},
+      midstroke:{key:'gr_ill_bat_midstroke',file:'bat_flap_midstroke.png',scale:.111579,anchor:[512,320]},
+      lowered:{key:'gr_ill_bat_lowered',file:'bat_wings_lowered.png',scale:.127557,anchor:[443.5,222]},
+      dive_anticipation:{key:'gr_ill_bat_dive_anticipation',file:'bat_dive_anticipation.png',scale:.111579,anchor:[512,320]},
+      dive:{key:'gr_ill_bat_dive',file:'bat_dive.png',scale:.155198,anchor:[512,320]},
+      hit:{key:'gr_ill_bat_hit',file:'bat_hit.png',scale:.125296,anchor:[443.5,222]},
+      death:{key:'gr_ill_bat_death',file:'bat_death.png',scale:.167987,anchor:[512,320]}
+    }
+  });
   const snapFrame=(arr,time,fps)=>arr[Math.floor(Math.max(0,time)*fps)%arr.length];
 
   function reaperPose(scene){
@@ -58,6 +89,8 @@
       this.batPool=[];
       this.failedAssets=[];
       this.loadRequested=false;
+      this.illustrated=false;
+      this.reaperPoseSprites={};
     }
     begin(){
       const s=this.scene;
@@ -145,9 +178,104 @@
       }
       return true;
     }
+    beginIllustrated(){
+      const s=this.scene;
+      if(!s.load||typeof s.load.image!=='function'||!s.textures||
+         typeof s.textures.exists!=='function'||!s.add||typeof s.add.image!=='function')return false;
+      if(this.loadRequested)return true;
+      this.loadRequested=true;this.illustrated=true;
+      // Load only poses the static runtime currently displays. Additional
+      // production poses stay in the asset package for the animation pass.
+      const runtimeReaper=['idle','run','jump','fall','slide','scythe_attack',
+        'crossbow_fire','hurt','death','hover'].map(name=>ILLUSTRATED.reaper[name]);
+      const runtimeBat=['neutral','dive'].map(name=>ILLUSTRATED.bat[name]);
+      const all=[...runtimeReaper,...runtimeBat];
+      const errors=new Set();
+      const fail=file=>{if(file&&file.key)errors.add(file.key);};
+      const done=()=>{
+        if(typeof s.load.off==='function')s.load.off('loaderror',fail);
+        try{
+          for(const name of ['idle','run','jump','fall','slide','scythe_attack',
+            'crossbow_fire','hurt','death','hover']){
+            const meta=ILLUSTRATED.reaper[name];
+            if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
+            const image=s.add.image(0,0,meta.key).setOrigin(0,0).setDepth(12).setVisible(false);
+            this.reaperPoseSprites[name]=image;
+          }
+          if(this.reaperPoseSprites.idle){this.reaper=this.reaperPoseSprites.idle;this.reaperReady=true;}
+          for(const name of ['neutral','dive']){
+            const meta=ILLUSTRATED.bat[name];
+            if(errors.has(meta.key)||!s.textures.exists(meta.key))this.failedAssets.push('Bat PNG unavailable: '+name);
+          }
+          if(runtimeBat.every(meta=>s.textures.exists(meta.key)&&!errors.has(meta.key))){
+            for(let i=0;i<12;i++)this.batPool.push(s.add.image(0,0,ILLUSTRATED.bat.neutral.key)
+              .setOrigin(0,0).setDepth(9).setVisible(false));
+            this.batReady=true;
+          }
+          if(!this.reaperReady)this.failedAssets.push('Illustrated Reaper PNGs unavailable');
+          this.loaded=true;
+        }catch(e){
+          for(const sprite of Object.values(this.reaperPoseSprites))sprite.destroy();
+          this.reaperPoseSprites={};this.reaper=null;this.reaperReady=false;
+          for(const sprite of this.batPool)sprite.destroy();this.batPool=[];this.batReady=false;
+          this.failedAssets.push('Illustrated sprite creation: '+String(e));
+        }
+      };
+      try{
+        if(typeof s.load.on==='function')s.load.on('loaderror',fail);
+        s.load.once('complete',done);
+        for(const meta of all)s.load.image(meta.key,'assets/characters/illustrated/'+
+          (meta.key.includes('_bat_')?'bat/':'reaper/')+meta.file);
+        s.load.start();
+      }catch(e){this.failedAssets.push('Illustrated loader: '+String(e));return false;}
+      return true;
+    }
+    illustratedReaperPose(){
+      const s=this.scene,p=s.player;
+      if(!p)return 'idle';
+      if(s.state==='dead'||s.state==='revive')return 'death';
+      if(s.state==='won')return 'idle';
+      if(p.sliding||p.airTuck)return 'slide';
+      if(p.attackMs>0)return 'scythe_attack';
+      if(p.visualFireMs>0)return 'crossbow_fire';
+      if(s.damageFlashMs>0&&p.invulMs>0)return 'hurt';
+      if(!p.grounded&&!p.onSoulPlatform){if(p.hovering)return 'hover';return p.velocityY<0?'jump':'fall';}
+      if(['playing','rewinding','countdown'].includes(s.state))return 'run';
+      return 'idle';
+    }
+    renderIllustrated(){
+      const s=this.scene,p=s.player;
+      const pose=this.illustratedReaperPose(),meta=ILLUSTRATED.reaper[pose]||ILLUSTRATED.reaper.idle;
+      const resolvedPose=this.reaperPoseSprites[pose]?pose:
+        (this.reaperPoseSprites.idle?'idle':Object.keys(this.reaperPoseSprites)[0]);
+      const playerVisible=Boolean(p)&&!['reliquary','refundConfirm'].includes(s.state);
+      for(const [name,sprite] of Object.entries(this.reaperPoseSprites))
+        sprite.setVisible(name===resolvedPose&&playerVisible);
+      const image=this.reaperPoseSprites[resolvedPose];
+      if(image&&p&&!['reliquary','refundConfirm'].includes(s.state)){
+        const resolvedMeta=ILLUSTRATED.reaper[resolvedPose],scale=resolvedMeta.scale,[ax,ay]=resolvedMeta.anchor;
+        image.setScale(scale).setPosition(p.x-ax*scale,(s.feetY||p.y)-ay*scale)
+          .setVisible(true).setAlpha(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1)
+          .setTint(p.slowMs>0?0xb9ecff:0xffffff);
+      }
+      let used=0;
+      if(!['menu','reliquary','refundConfirm'].includes(s.state)){
+        const left=s.cameraX-100,right=s.cameraX+s.width+100;
+        for(const e of s.enemies||[]){
+          if(e.kind!=='bat'||e.dead||e.x<left||e.x>right||used>=this.batPool.length)continue;
+          const name=e.mode==='dive'?'dive':'neutral',meta=ILLUSTRATED.bat[name],sprite=this.batPool[used++];
+          const [ax,ay]=meta.anchor;
+          sprite.setTexture(meta.key).setOrigin(0,0).setScale(meta.scale)
+            .setPosition(e.x-ax*meta.scale,e.y-ay*meta.scale).setVisible(true)
+            .setAlpha(e.hp<1?.5:1).setRotation(e.mode==='dive'?.10:0);
+        }
+      }
+      for(let i=used;i<this.batPool.length;i++)this.batPool[i].setVisible(false);
+    }
     render(){
       const s=this.scene;
       const p=s.player;
+      if(this.illustrated){this.renderIllustrated();return;}
       if(this.reaperReady&&this.reaper){
         const visible=Boolean(p)&&!['reliquary','refundConfirm'].includes(s.state);
         this.reaper.setVisible(visible);
@@ -185,10 +313,12 @@
     }
     shutdown(){
       if(this.reaper){this.reaper.destroy();this.reaper=null;}
+      for(const sprite of Object.values(this.reaperPoseSprites))if(sprite!==this.reaper)sprite.destroy();
+      this.reaperPoseSprites={};
       for(const sprite of this.batPool)sprite.destroy();
       this.batPool=[];
       this.reaperReady=false;this.batReady=false;
     }
   }
-  scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS};
+  scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED};
 })(typeof window!=='undefined'?window:globalThis);

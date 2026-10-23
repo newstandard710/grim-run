@@ -4,7 +4,10 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.3"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('else this.visuals.beginIllustrated()'),'Illustrated sprites are the current default');
+assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
+assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector atlas remains available');
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
  assert.ok(svg.startsWith('<svg')&&svg.includes('width="'+width+'" height="'+height+'"'));
  assert.equal((svg.match(/<g(?:\s|>)/g)||[]).length,(svg.match(/<\/g>/g)||[]).length);
@@ -21,6 +24,8 @@ const p={grounded:true,onSoulPlatform:false,sliding:false,airTuck:false,attackMs
 const pose=(state='playing',elapsed=0,damageFlashMs=0)=>
  V.reaperPose({player:p,state,elapsed,damageFlashMs,attackDurationMs:260});
 assert.ok(V.REAPER.run.includes(pose().frame));
+assert.ok(Object.keys(V.ILLUSTRATED.reaper).includes('slide'));
+assert.ok(Math.abs(V.ILLUSTRATED.reaper.slide.scale-29/322)<1e-6,'Low slide art fits the unchanged 29px clearance');
 assert.equal(pose('paused').name,'idle');
 p.grounded=false;p.velocityY=-200;assert.equal(pose().name,'jump');
 p.velocityY=140;assert.equal(pose().name,'fall');
@@ -136,4 +141,30 @@ invalid.begin();
 assert.equal(invalid.reaperReady,false,'Failure must leave procedural Reaper enabled');
 assert.equal(invalid.batReady,false,'Failure must leave procedural Bat enabled');
 assert.ok(invalid.failedAssets.length>=2);
-console.log('PASS v0.10.2: vector atlas poses, visual-gameplay decoupling, safe fallback, deterministic animations, bat pool and anchored slide.');
+console.log('PASS v0.10.3: vector atlas poses, static PNG mapping, safe procedural fallback, bat pool and anchored slide.');
+
+// Production PNG review mode loads only static images, and the menu/default path stays unchanged.
+const staticTextures=new Map(),staticNodes=[];let staticDone;
+const staticScene={
+ load:{image(key,file){staticTextures.set(key,{file});return this;},on(){},off(){},once(_key,fn){staticDone=fn;},start(){staticDone();}},
+ textures:{exists:key=>staticTextures.has(key)},
+ add:{image(x,y,key){const n=gfx();n.x=x;n.y=y;n.key=key;n.setOrigin=function(){return this};
+  n.setScale=function(v){this.scale=v;return this};n.setPosition=function(x,y){this.x=x;this.y=y;return this};
+  n.setVisible=function(v){this.visible=v;return this};n.setAlpha=function(v){this.alpha=v;return this};
+  n.setTint=function(v){this.tint=v;return this};n.setDepth=function(){return this};
+  n.setTexture=function(v){this.key=v;return this};n.setRotation=function(v){this.rotation=v;return this};
+  n.destroy=function(){this.destroyed=true};staticNodes.push(n);return n;}},
+ player:{...p,x:200,y:300,grounded:true,attackMs:0,visualFireMs:0,invulMs:0,slowMs:0},
+ state:'playing',elapsed:0,frame:0,feetY:300,damageFlashMs:0,width:950,cameraX:0,enemies:[]
+};
+const staticRenderer=new V.GrimVisualSystem(staticScene);
+assert.equal(staticRenderer.beginIllustrated(),true);
+assert.equal(staticRenderer.reaperReady,true);assert.equal(staticRenderer.batReady,true);
+assert.equal(staticRenderer.reaperPoseSprites.idle.key,'gr_ill_reaper_idle');
+assert.equal(staticTextures.size,12,'Runtime loads only displayed static pose PNGs');
+assert.equal(staticRenderer.illustratedReaperPose(),'run');
+staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPose(),'slide');
+staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
+assert.equal(staticRenderer.illustratedReaperPose(),'fall');
+staticRenderer.shutdown();
+console.log('PASS v0.10.3: 12 runtime illustrated PNG textures load with static pose selection and 29px slide clearance.');

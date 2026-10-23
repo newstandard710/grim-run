@@ -2,11 +2,21 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.2 — God Mode Playtest Tools**
+**Current playable build: v0.10.3 — Character Visual Overhaul**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
+- [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
+
+## v0.10.3: Character Visual Overhaul
+
+- The approved illustrated Reaper and Cavern Bat are now the default game artwork, using transparent PNGs with consistent world anchors.
+- Static poses cover the Reaper's idle, run, jump, fall, slide, scythe attack, crossbow, hurt, death and hover states; the Bat uses neutral flight and dive poses. These are single poses, not animation loops.
+- The low slide art fits the existing **56×29** slide clearance. Standing collision remains **42×79**; gameplay geometry and controls are unchanged.
+- The reviewed source set contains 25 PNGs. The game loads only the 12 currently used textures; additional poses remain packaged for the later animation pass.
+- Use `?art=procedural` to restore the v0.10.2 procedural Reaper and Bat, or `?art=experimental` to inspect the older SVG atlas. Neither option changes saved game data.
+- Regression and real Chromium checks pass in GitHub Actions. The game is live for landscape phone playtesting; performance and readability should be checked on device.
 
 ## v0.10.2: God Mode Playtest Tools
 
@@ -112,4 +122,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: v0.10.2 playtesting and proper illustrated Reaper/Bat production; then additional enemies/combat effects, illustrated biomes and final boss.
+Next: v0.10.3 landscape phone review; then static-pose animation sequences, additional enemies/combat effects, illustrated biomes and final boss.

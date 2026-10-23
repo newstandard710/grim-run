@@ -1,10 +1,28 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.10.2 — *God Mode Playtest Tools*  
-**Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and versioned external SVG art assets  
+**Release:** v0.10.3 — *Character Visual Overhaul*  
+**Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html` once promoted to main  
-**Rollback:** `backup/v0.10.1` protects the prior release; `backup/v0.9.1` is the last fully user-tested pre-art gameplay version.  
-**Verification:** New animation/asset/fallback regression, plus previous Rewind, Soul, jump fairness, 300 seeded encounter worlds and five simulated full runs. **Live Android visual and performance playtesting pending.**
+**Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
+**Verification:** All Node regression suites and the GitHub Actions real Chromium sprite smoke pass. **Live Android visual and performance playtesting pending.**
+
+## v0.10.3 — Character Visual Overhaul
+
+- The approved illustrated Reaper and Cavern Bat PNGs are the default visual set. The previous procedural v0.10.2 presentation remains available with `?art=procedural`; the earlier SVG experiment remains at `?art=experimental`.
+- Runtime uses state-matched static images: Reaper idle, run, jump, fall, slide, scythe attack, crossbow, hurt, death and hover; Bat neutral flight and dive. No frame animation is introduced in this release.
+- Packaged 25 transparent PNG poses and references; Phaser loads only the 12 runtime textures to keep the additional production poses out of startup loading.
+- Reaper gameplay target is 120px visible height. Slide art is 29px high and aligned to ground; existing standing **42×79** and sliding **56×29** collision boxes remain unchanged.
+- No changes to movement, combat rules, progression, controls, or God Mode. The prior version is recoverable from `backup/v0.10.2`.
+- CI passed for regression tests and actual Chromium loading, pose selection, feet anchors, slide clearance, procedural fallback and God Mode controls. Phone-scale legibility and performance remain for device playtesting.
+
+### v0.10.3 phone playtest
+
+- [ ] Menu shows `v0.10.3 · ILLUSTRATED SPRITES`; Reaper appears in the menu and run.
+- [ ] Reaper idle, run, jump, fall, slide, scythe attack, crossbow, hurt, death and hover poses follow gameplay state.
+- [ ] Reaper boots align with terrain; low slide clears overhead hazards within the existing slide profile.
+- [ ] Cavern Bats use the illustrated neutral pose and dive pose, with existing hitboxes and warning cues.
+- [ ] `?art=procedural` restores the v0.10.2 fallback; `?art=experimental` remains available.
+- [ ] Check readability, load time and frame rate in Android landscape, especially on a slower connection and during multiple bat encounters.
 
 ## v0.10.2 — God Mode Playtest Tools (complete)
 
@@ -262,7 +280,7 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Android v0.10.2 God Mode tools playtest first, then complete the real art-production pass. Then v0.10.1 other enemies and combat visuals, v0.11.0 illustrated biomes, and v0.12.0 boss design. Later sound, UI optimization and native Android packaging.
+Next: v0.10.3 landscape phone review of character scale, transparency and performance; then plan static-pose animation sequences, additional enemy art, illustrated biomes, and boss design.
 
 ## Source and backups
 
