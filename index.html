@@ -149,20 +149,64 @@ button {cursor:pointer;}
 .revive-cost{font-size:clamp(10px,2vh,13px);color:#f6d5a1;font-weight:850;margin-bottom:8px;}
 .revive-modal button:disabled{opacity:.44;cursor:not-allowed;}
 @media(max-height:345px){.revive-modal{padding:10px 18px}.revive-modal p{margin:1px auto 3px}.revive-modal h2{margin:1px auto}.revive-hearts{font-size:24px;margin:1px}.revive-cost{margin:1px auto}}
+
+/* v0.8.2 bone crossbow thumb control and cinematic item discovery. */
+.crossbow{left:max(env(safe-area-inset-left),18px);bottom:calc(var(--right-bottom) + var(--action-size) + 14px);border-color:#d5ccb3b3;background:linear-gradient(155deg,#45505ce0,#18202de7);}
+.crossbow-cd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#101b2bbd;font-size:clamp(16px,4.7vh,26px);color:#d8fff0;letter-spacing:.02em;}
+.crossbow.recharging{border-color:#8599a49a;}
+.chest-scene{position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#213d46f4 0%,#09101dfb 75%);text-align:center;color:#e5fff5;padding:5px 12px 9px;}
+.chest-eyebrow{font-size:clamp(10px,2vh,15px);font-weight:900;letter-spacing:.30em;color:#b7fff4;}
+.chest-illustration{position:relative;width:min(335px,40vw);height:clamp(104px,42vh,220px);flex-shrink:0;}
+.chest-beam{position:absolute;bottom:12%;left:35%;width:30%;height:68%;background:linear-gradient(0deg,#8cebe75e,transparent);filter:blur(9px);animation:beamPulse 1.4s infinite alternate;}
+.chest-base{position:absolute;bottom:7%;left:31%;width:38%;height:34%;border:3px solid #d5a66b;border-radius:10px;background:linear-gradient(#6c534c,#292e3b);box-shadow:0 7px 15px #0008;}
+.chest-lid{position:absolute;left:-5%;right:-5%;top:-11%;height:36%;border:4px solid #d6bc8c;border-radius:9px;background:#554640;transform-origin:bottom center;animation:openLid 4.4s ease forwards;}
+.chest-lock{position:absolute;left:40%;top:25%;color:#ffe5a5;font-size:clamp(18px,5vh,33px);}
+.chest-crossbow{position:absolute;width:40%;height:68%;left:30%;top:12%;filter:drop-shadow(0 0 17px #8cebe7);animation:liftRelic 4.4s ease forwards;}
+.chest-reaper{position:absolute;left:7%;bottom:6%;font-size:clamp(36px,14vh,82px);color:#d6e7df;filter:drop-shadow(0 3px 5px #000);}
+.chest-rune{position:absolute;left:50%;top:0;transform:translateX(-50%);font-size:clamp(20px,7vh,42px);color:#a6ffea;animation:beamPulse 1.2s infinite alternate;}
+.chest-title{font-size:clamp(16px,4.4vh,35px);font-weight:1000;letter-spacing:.12em;text-shadow:0 0 21px #8cebe794;}
+.chest-caption{font-size:clamp(9px,2vh,14px);font-weight:850;letter-spacing:.15em;margin:4px;color:#a4d3d2;}
+#chest-continue-btn{min-height:32px;padding:5px 20px;margin:5px auto 0;}
+@keyframes openLid{0%,15%{transform:rotate(0)}35%,100%{transform:rotate(-69deg)}}
+@keyframes liftRelic{0%,28%{transform:translateY(35%) scale(.45);opacity:0}46%{opacity:1}72%,100%{transform:translateY(-33%) scale(1.05);opacity:1}}
+@keyframes beamPulse{from{opacity:.42}to{opacity:1}}
+@media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
 </head>
 <body>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
     <div id="hearts" class="top-left" aria-label="Health">♥ ♥ ♥</div>
-    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div><div id="time-status" class="time-status hidden">◷ TIME SLOWED</div><div id="god-mode-status" class="god-mode-status hidden">♜ GOD MODE</div><div id="gun-status" class="gun-status hidden">✹ SOULCASTER</div></div>
+    <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div><div id="time-status" class="time-status hidden">◷ TIME SLOWED</div><div id="god-mode-status" class="god-mode-status hidden">♜ GOD MODE</div><div id="gun-status" class="gun-status hidden">⌁ BONE CROSSBOW</div></div>
     <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
     <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
   </div>
-  <div id="portal-overlay" class="portal-overlay hidden"><div class="portal-rune">✦</div><div class="portal-title">DESCENT INTO THE UNDERWORLD</div><div class="portal-subtitle">SOULCASTER ACQUIRED · AUTOMATIC FIRE</div></div>
+  <div id="portal-overlay" class="portal-overlay hidden"><div class="portal-rune">✦</div><div class="portal-title">DESCENT INTO THE UNDERWORLD</div><div class="portal-subtitle">A RELIC RESTS BEYOND THE GATE</div></div>
+  <div id="chest-screen" class="chest-scene hidden" aria-label="Bone Crossbow acquired">
+    <div class="chest-eyebrow">AN ANCIENT RELIC</div>
+    <div class="chest-illustration" aria-hidden="true">
+      <div class="chest-beam"></div>
+      <div class="chest-rune">✦</div>
+      <svg class="chest-crossbow" viewBox="0 0 220 140" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21 61 Q55 0 108 62 Q163 -2 199 61" stroke="#e7e1c9" stroke-width="14" fill="none" stroke-linecap="round"/>
+        <path d="M20 61 L200 61" stroke="#b6ffe8" stroke-width="2" fill="none"/>
+        <path d="M47 69 Q110 53 173 69" stroke="#6a574e" stroke-width="10" fill="none"/>
+        <path d="M110 31 L112 123" stroke="#e4c9a9" stroke-width="20" stroke-linecap="round"/>
+        <path d="M110 32 L110 108" stroke="#455169" stroke-width="5"/>
+        <path d="M112 19 L100 40 L124 40 Z" fill="#8cebe7"/>
+        <path d="M110 89 L145 105 L134 120 L112 106" fill="#ccb99a"/>
+      </svg>
+      <div class="chest-reaper">☠</div>
+      <div class="chest-base"><div class="chest-lid"></div><div class="chest-lock">✦</div></div>
+    </div>
+    <div class="chest-title">BONE CROSSBOW ACQUIRED</div>
+    <div class="chest-caption">AIM IS AUTOMATIC · PRESS FIRE TO SHOOT</div>
+    <button id="chest-continue-btn" class="primary" aria-label="Continue from weapon acquisition">CONTINUE ▶</button>
+  </div>
   <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
+    <button id="crossbow-btn" class="action crossbow hidden" aria-label="Fire Bone Crossbow"><span class="symbol">⌁</span><span>FIRE</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
     <div class="right-buttons">
       <button id="jump-btn" class="action jump" aria-label="Jump"><span class="symbol">↑</span><span>JUMP</span></button>
       <button id="slide-btn" class="action slide" aria-label="Slide"><span class="symbol">⇥</span><span>SLIDE</span></button>
@@ -940,6 +984,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.heldKeys = new Set();
       this.selecting = false;
       this.bindAction('attack-btn', 'attack', () => actions.attack());
+      this.bindAction('crossbow-btn', 'crossbow', () => actions.fireCrossbow());
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
       el('start-btn').addEventListener('click', () => actions.start());
@@ -948,18 +993,20 @@ window.GRIM_CONFIG = Object.freeze({
       el('retry-btn').addEventListener('click', () => actions.start());
       el('revive-yes-btn').addEventListener('click', () => actions.revive());
       el('revive-no-btn').addEventListener('click', () => actions.declineRevive());
+      el('chest-continue-btn').addEventListener('click', () => actions.finishChest());
       el('menu-btn').addEventListener('click', () => actions.menu());
       el('pause-btn').addEventListener('click', () => actions.pause());
       el('resume-btn').addEventListener('click', () => actions.resume());
       el('quit-btn').addEventListener('click', () => actions.menu());
       el('god-mode-checkbox').addEventListener('change', event => actions.setGodMode(event.target.checked));
       document.addEventListener('keydown', event => {
-        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','Escape','KeyP'].includes(event.code)) event.preventDefault();
+        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
         switch(event.code) {
           case 'Space': case 'ArrowUp': case 'KeyJ': actions.jump(); break;
           case 'KeyA': actions.attack(); break;
+          case 'KeyF': actions.fireCrossbow(); break;
           case 'ArrowDown': case 'KeyS': actions.slideStart(); break;
           case 'Escape': case 'KeyP': actions.pause(); break;
           case 'Enter': if (!el('menu').classList.contains('hidden') || !el('game-over').classList.contains('hidden')) actions.start(); break;
@@ -995,7 +1042,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     releaseAll() {
       this.activePointers.clear(); this.heldKeys.clear();
-      for (const id of ['attack-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
+      for (const id of ['attack-btn','crossbow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
       show('countdown-overlay', mode === 'countdown');
@@ -1004,6 +1051,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('reliquary-screen', mode === 'reliquary');
       show('game-over', mode === 'dead');
       show('revive-screen', mode === 'revive');
+      show('chest-screen', mode === 'chest');
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
       show('controls', mode === 'playing');
@@ -1024,7 +1072,16 @@ window.GRIM_CONFIG = Object.freeze({
     showFallNotice(on) { show('fall-notice', on); }
     showPortal(on) { show('portal-overlay',on); }
     showGodMode(on) { el('god-mode-checkbox').checked=on; show('god-mode-status',on); }
-    showGun(on){show('gun-status',on);}
+    showGun(on){
+      show('gun-status',on);
+      show('crossbow-btn',on);
+      if(!on)show('crossbow-cd',false);
+    }
+    showGunCooldown(ms){
+      show('crossbow-cd',ms>0);
+      el('crossbow-cd').textContent=ms>0?(ms/1000).toFixed(1)+'s':'';
+      el('crossbow-btn').classList.toggle('recharging',ms>0);
+    }
     offerVendor(offers,type,phase,meters,hp,maxHp,gold) {
       this.selecting=false;
       const devil=type==='devil', healing=phase==='heal';
@@ -1151,11 +1208,11 @@ window.GRIM_CONFIG = Object.freeze({
   function nearest(items,originX){
     return items.slice().sort((a,b)=>Math.abs(a.x-originX)-Math.abs(b.x-originX))[0]||null;
   }
-  function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel){
+  function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel,minVisibleMs=650){
     const visible=e=>!e.dead&&e.x>Math.max(playerX+38,screenLeft)&&e.x<screenRight-25;
     // Let creatures be perceptible on-screen for at least 0.65s before auto-fire.
     // Without this, one-HP bats can die before their first swoop is noticed.
-    const eligible=e=>visible(e)&&(e.visibleMs||0)>=650;
+    const eligible=e=>visible(e)&&(e.visibleMs||0)>=minVisibleMs;
     const flyers=enemies.filter(e=>eligible(e)&&enemyIsFlying(e));
     if(flyers.length)return {kind:'enemy',ref:nearest(flyers,playerX)};
     const grounded=enemies.filter(e=>eligible(e)&&!enemyIsFlying(e));
@@ -1201,7 +1258,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY = 0;
       this.fallFeedbackMs=0;
       this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
-      this.hasTeleported=false;this.portalMs=0;
+      this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
       this.nextEnemySpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
@@ -1256,7 +1313,9 @@ window.GRIM_CONFIG = Object.freeze({
         closeReliquary: () => this.closeReliquary(),
         purchaseMeta: id => this.purchaseMeta(id),
         revive: () => this.revive(),
-        declineRevive: () => this.declineRevive()
+        declineRevive: () => this.declineRevive(),
+        fireCrossbow: () => this.fireCrossbow(),
+        finishChest: () => this.finishChest()
       });
       this.meta=Meta.load();
       this.totalSouls=this.meta.souls;
@@ -1317,7 +1376,7 @@ window.GRIM_CONFIG = Object.freeze({
       const startingHP=C.startingHP+Meta.healthBonus(this.meta);
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
-      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;
+      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
       this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
@@ -1787,13 +1846,11 @@ window.GRIM_CONFIG = Object.freeze({
     update(_,deltaMs) {
       if(this.state==='portal'){
         this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
-        if(this.portalMs===0){
-          this.ui.showPortal(false);
-          this.state='playing';
-          // Portal animation provides its own clear pause; only explicit pause
-          // menu resume uses the 3-second countdown.
-          this.ui.setMode('playing');
-        }
+        if(this.portalMs===0)this.startChest();
+      }
+      else if(this.state==='chest'){
+        this.chestMs=Math.max(0,this.chestMs-Math.min(250,Math.max(0,deltaMs)));
+        if(this.chestMs===0)this.finishChest();
       }
       else if(this.state==='countdown'){
         // World, obstacles, player and ability timers remain completely frozen.
@@ -1958,11 +2015,22 @@ window.GRIM_CONFIG = Object.freeze({
         this.puff(enemy.x,enemy.y,enemy.kind==='imp'?0xff874e:0xc5f1fc,12);
       }
     }
+    fireCrossbow(){
+      if(this.state!=='playing'||!this.gunUnlocked||this.gunCooldownMs>0)return false;
+      const p=this.player,left=p.x-this.width*C.reaperXRatio,right=left+this.width;
+      const target=Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,
+        this.powerManager.level('powerShot'),0);
+      this.fireSoulcaster(target);
+      this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
+      this.ui.showGunCooldown(this.gunCooldownMs);
+      return true;
+    }
     fireSoulcaster(target){
       const p=this.player,originX=p.x+29,originY=p.y-58;
-      this.bullets.push({x:originX,y:originY,ref:target.ref,kind:target.kind,
+      this.bullets.push({x:originX,y:originY,
+        ref:target?target.ref:null,kind:target?target.kind:'free',
         damage:this.powerManager.level('powerShot')>=1?2:1,ageMs:0,dead:false});
-      this.puff(originX,originY,0xffe2a2,4);
+      this.puff(originX,originY,0xd8ffe9,6);
     }
     blastSoulcaster(){
       const left=this.player.x-this.width*C.reaperXRatio,right=left+this.width;
@@ -2061,18 +2129,22 @@ window.GRIM_CONFIG = Object.freeze({
           }
         }
       }
-      // Shots visibly travel toward moving targets; no fourth control button.
-      if(this.gunCooldownMs<=0){
-        const target=Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,this.powerManager.level('powerShot'));
-        if(target){
-          this.fireSoulcaster(target);
-          this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
-        }
-      }
+      // No automatic firing. The crossbow only launches a bolt from FIRE input.
+      this.ui.showGunCooldown(this.gunCooldownMs);
       for(const b of this.bullets){
         if(b.dead)continue;
         b.ageMs+=frameMs;
-        if(b.ageMs>1550||b.ref.dead||b.ref.destroyed){b.dead=true;continue;}
+        if(b.ageMs>1550){b.dead=true;continue;}
+        if(b.kind==='free'){
+          b.x+=1550*dt;
+          const enemy=this.enemies.find(e=>!e.dead&&
+            Core.overlaps(Combat.rectFor(e),{x:b.x-25,y:b.y-7,width:50,height:14}));
+          if(enemy){
+            this.hitEnemy(enemy,b.damage,true);this.chainOnHit(enemy,b.damage);b.dead=true;
+          }else if(b.x>right+70)b.dead=true;
+          continue;
+        }
+        if(b.ref.dead||b.ref.destroyed){b.dead=true;continue;}
         const tx=b.kind==='enemy'?b.ref.x:b.ref.x+b.ref.width/2;
         const ty=b.kind==='enemy'?b.ref.y:b.ref.y+Math.min(b.ref.height/2,45);
         const dx=tx-b.x,dy=ty-b.y,distance=Math.hypot(dx,dy);
@@ -2245,11 +2317,25 @@ window.GRIM_CONFIG = Object.freeze({
       this.puff(p.x,p.y-40,0xe57b9a,20);
       // takeDamage() already handled lethal damage and Brittle Bones.
     }
+    startChest(){
+      if(this.state!=='portal')return;
+      this.ui.showPortal(false);
+      this.state='chest';this.chestMs=4400;
+      this.ui.setMode('chest');
+    }
+    finishChest(){
+      if(this.state!=='chest')return;
+      this.state='playing';this.chestMs=0;
+      this.gunUnlocked=true;this.gunCooldownMs=0;
+      this.player.invulMs=Math.max(this.player.invulMs,1600);
+      this.ui.setMode('playing');this.ui.showGun(true);this.ui.showGunCooldown(0);
+      this.puff(this.player.x,this.player.y-70,0x9effe0,22);
+    }
     enterUnderworld(){
       const p=this.player;
       this.hasTeleported=true;
-      this.gunUnlocked=true;this.gunCooldownMs=400;this.blastCooldownMs=0;
-      this.ui.showGun(true);
+      this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
+      this.ui.showGun(false);
       this.portalMs=1450;
       this.state='portal';
       p.x=this.terrain.portalExitX;
@@ -2867,7 +2953,8 @@ window.GRIM_CONFIG = Object.freeze({
         const dx=b.x-this.player.x,dy=b.y-(this.player.y-58);
         const len=Math.max(1,Math.hypot(dx,dy));
         g.lineStyle(3,0xbefaff,.9);g.lineBetween(b.x,b.y,b.x-dx/len*17,b.y-dy/len*17);
-        g.fillStyle(b.damage===2?0xffd18a:0xb2fff2,.96);g.fillCircle(b.x,b.y,5);
+        g.fillStyle(b.damage===2?0xffe6b5:0xd3f8e7,.96);g.fillCircle(b.x,b.y,3.8);
+        g.lineStyle(2,0xe6e3d7,.94);g.lineBetween(b.x-11,b.y-4,b.x-6,b.y+4);
       }
       for(const ball of this.fireballs){
         g.fillStyle(ball.reflected?0x71ffff:0xff7a37,.21);g.fillCircle(ball.x,ball.y,16);
@@ -3023,9 +3110,14 @@ window.GRIM_CONFIG = Object.freeze({
       }
       g.setAlpha(1);
       if(this.gunUnlocked){
-        g.fillStyle(0x8e968c,.92);g.fillRoundedRect(x+13,feet-51,24,9,2);
-        g.fillStyle(0xe8c98f,.85);g.fillRect(x+28,feet-49,18,5);
-        g.fillStyle(0x314053,.95);g.fillRect(x+14,feet-45,7,15);
+        // Bone-and-sinew crossbow: ivory curved limbs, pale bowstring, carved stock.
+        const cx=x+26,cy=feet-53;
+        g.lineStyle(5,0xe1dbc9,.98);
+        g.beginPath();g.moveTo(cx-8,cy-18);g.lineTo(cx+2,cy-7);g.lineTo(cx+14,cy-18);g.strokePath();
+        g.lineStyle(2,0x91f1df,.9);g.lineBetween(cx-8,cy-18,cx+14,cy-18);
+        g.lineStyle(7,0xd4bea0,.96);g.lineBetween(cx+3,cy-24,cx+13,cy+13);
+        g.lineStyle(3,0x535e6a,.96);g.lineBetween(cx+3,cy-20,cx+12,cy+9);
+        g.fillStyle(0x98ffe6,.9);g.fillTriangle(cx-1,cy-22,cx+6,cy-30,cx+8,cy-19);
       }
       if(!p.grounded&&this.powerManager.level('skeletalWings')>0){
         const total=this.powerManager.skeletalHoverMs();
