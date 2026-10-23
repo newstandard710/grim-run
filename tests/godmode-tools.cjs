@@ -83,6 +83,12 @@ for(const seed of [1,7,19,42,99,314,888,1999]){
   checks++;
  }
 }
+const currency=game(55);currency.setGodMode(true);currency.state='paused';
+currency.askTeleport(9500);currency.confirmTeleport();
+const walletBefore=currency.meta.souls;
+currency.collectSoul();
+assert.equal(currency.meta.souls,walletBefore,'Teleport-assisted Soul cannot increase durable wallet');
+assert.equal(currency.runSoulsAvailable,0,'Teleport-assisted Soul cannot subsidize revival');
 const best=game(1);
 best.setGodMode(true);best.state='paused';best.askTeleport(9500);best.confirmTeleport();
 best.points=999999;
