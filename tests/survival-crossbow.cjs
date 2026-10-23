@@ -89,4 +89,4 @@ const poor=game(24);poor.meta.souls=2;poor.player.hp=1;poor.takeDamage(1,'rock')
 assert.equal(poor.state,'revive');assert.equal(get('revive-yes-btn').disabled,true);
 assert.equal(poor.revive(),false);poor.declineRevive();assert.equal(poor.state,'dead');
 assert.equal(game(25).reviveUsed,false,'New run resets revive quota');
-console.log('PASS: v0.9.1 permanent slide tiers, legacy wallet, Soul revival, chest, manual crossbow and cooldowns.');
+console.log('PASS: v0.10.0 permanent slide tiers, legacy wallet, Soul revival, chest, manual crossbow and cooldowns.');
