@@ -80,6 +80,40 @@ const server=http.createServer((req,res)=>{
   assert.equal(playing.spriteX,playing.playerX,'Player sprite must follow collision origin');
   assert.ok(Math.abs(playing.spriteY-playing.footY)<=13);
   assert.deepEqual(errors,[],'Browser console errors');
+  // Review the painted, transparent PNGs in the real Phaser runtime without
+  // changing the default release path or using any animated frame sequence.
+  await page.goto(origin+'/?art=illustrated&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.loaded===true,null,{timeout:45000});
+  const illustratedLoaded=await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],v=s.visuals;
+    return {ready:v.reaperReady&&v.batReady,illustrated:v.illustrated,
+      textures:Object.values(window.GRIM_VISUALS.ILLUSTRATED.reaper).every(m=>s.textures.exists(m.key))&&
+        Object.values(window.GRIM_VISUALS.ILLUSTRATED.bat).every(m=>s.textures.exists(m.key)),
+      poses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length};
+  });
+  assert.deepEqual(illustratedLoaded,{ready:true,illustrated:true,textures:true,poses:15,bats:12});
+  await page.click('#start-btn');
+  await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
+  const staticReview=await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],v=s.visuals;
+    const run=v.reaperPoseSprites.run,meta=window.GRIM_VISUALS.ILLUSTRATED.reaper.run;
+    s.player.sliding=true;v.render();
+    const slide=v.reaperPoseSprites.slide,sm=window.GRIM_VISUALS.ILLUSTRATED.reaper.slide;
+    const slideAnchorY=slide.y+sm.anchor[1]*sm.scale;
+    s.player.sliding=false;
+    s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:1,phase:0,dead:false}];
+    v.render();
+    return {runVisible:run.visible,runKey:run.texture.key,
+      runGroundError:Math.abs(run.y+meta.anchor[1]*meta.scale-s.feetY),
+      slideVisible:slide.visible,slideGroundError:Math.abs(slideAnchorY-s.feetY),
+      slideArtHeight:322*sm.scale,batVisible:v.batPool[0].visible,
+      batKey:v.batPool[0].texture.key};
+  });
+  assert.equal(staticReview.runVisible,true);assert.equal(staticReview.runKey,'gr_ill_reaper_run');
+  assert.ok(staticReview.runGroundError<.1,'Reaper baseline anchor aligns to gameplay feet');
+  assert.equal(staticReview.slideVisible,true);assert.ok(staticReview.slideGroundError<.1);
+  assert.ok(staticReview.slideArtHeight<=29.01,'Low-profile slide artwork fits unchanged 29px clearance');
+  assert.equal(staticReview.batVisible,true);assert.equal(staticReview.batKey,'gr_ill_bat_neutral');
   // Default game currently uses procedural fallback while painted art is reviewed.
   // The previous SVGs remain available as opt-in experimental art.
   await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
@@ -123,7 +157,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: legacy sprite opt-in, safe procedural fallback, God Mode 5000m teleport and practice slow toggling.');
+  console.log('PASS actual Chromium: legacy and illustrated opt-ins, PNG transparency anchors, static pose selection, safe default fallback and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
