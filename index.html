@@ -1398,6 +1398,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.groundY=Math.round(this.height*C.groundRatio);
       const dy=this.groundY-previousY;
       this.terrain.shiftY(dy);
+      // Existing snapshots are screen-size specific; invalidate on rotation.
+      if(this.rewindTerrainBase)for(const item of this.rewindTerrainBase.values()){
+        item.y0+=dy;item.y1+=dy;
+      }
+      if(this.rewindFrames)this.resetRewindHistory();
       for(const enemy of this.enemies){enemy.y+=dy;enemy.homeY+=dy;}
       for(const bullet of this.bullets)bullet.y+=dy;
       for(const ball of this.fireballs)ball.y+=dy;
@@ -1450,7 +1455,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     captureRewind(){
-      if(this.state!=='playing')return;
+      if(this.state!=='playing'||this.rewindLevel()===0)return;
       if(!this.rewindFrames)this.rewindFrames=[];
       const enemies=this.enemies.map(e=>({...e}));
       const obstacles=this.obstacles.map(o=>({...o}));
@@ -1492,6 +1497,12 @@ window.GRIM_CONFIG = Object.freeze({
     }
     tickRewind(frameMs){
       this.rewindCooldownMs=Math.max(0,(this.rewindCooldownMs||0)-frameMs);
+      if(this.rewindLevel()===0){
+        if(this.rewindFrames.length)this.resetRewindHistory();
+        this.rewindFlashMs=Math.max(0,(this.rewindFlashMs||0)-frameMs);
+        if(this.rewindFlashMs===0)this.ui.rewindFlash(false);
+        this.updateRewindButton();return;
+      }
       this.rewindClockMs+=frameMs;this.rewindSampleMs+=frameMs;
       if(this.rewindSampleMs>=100){
         this.rewindSampleMs=0;this.captureRewind();
@@ -1638,7 +1649,13 @@ window.GRIM_CONFIG = Object.freeze({
       } else if(this.state==='paused') this.resume();
     }
     autoPause() { if(this.state==='playing' || this.state==='countdown') this.togglePause(); }
-    setGodMode(on){this.godMode=Boolean(on);this.ui.showGodMode(this.godMode);this.updateRewindButton();}
+    setGodMode(on){
+      const had=this.rewindLevel();
+      this.godMode=Boolean(on);this.ui.showGodMode(this.godMode);
+      if(had===0&&this.rewindLevel()>0)this.resetRewindHistory();
+      if(had>0&&this.rewindLevel()===0)this.resetRewindHistory();
+      this.updateRewindButton();
+    }
     beginCountdown(){
       this.state='countdown'; this.countdownMs=C.resumeCountdownMs;this.goFlashMs=0;
       this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
