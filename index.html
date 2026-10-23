@@ -1613,9 +1613,10 @@ window.GRIM_CONFIG = Object.freeze({
       // Telegraphed extending thorns above the tree line: cut them or time the run.
       while(this.nextSnapSpawnX<ahead){
         const x=this.nextSnapSpawnX,m=(x-this.startX)/C.pxPerMeter;
-        this.nextSnapSpawnX+=(230+this.rng.integer(0,115))*C.pxPerMeter;
+        this.nextSnapSpawnX+=(175+this.rng.integer(0,75))*C.pxPerMeter;
         if(m<3000||m>4630)continue; // Preserve the mountain Soul approach.
-        if(!this.terrain.canPlace(x,62))continue;
+        const nearGround=this.terrain.groundAt(x),farGround=this.terrain.groundAt(x+62);
+        if(nearGround===null||farGround===null||Math.abs(nearGround-farGround)>105)continue;
         if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,65))continue;
         if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<220))continue;
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
