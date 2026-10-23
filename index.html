@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.9.1</title>
+  <title>GRIM RUN — v0.10.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -259,7 +259,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.9.1 · POLISH & FAIRNESS</div>
+      <div class="mini">v0.10.0 · THE REAPER REBORN</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -344,7 +344,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.9.1',
+  version: '0.10.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1384,6 +1384,8 @@ window.GRIM_CONFIG = Object.freeze({
   scope.GRIM_COMBAT={SHOT_MS,FLYERS,CUTTABLE,enemyIsFlying,cuttable,hpCost,pickTarget,snappingHeight,rectFor,flightVisible};
 })(typeof window!=='undefined'?window:globalThis);
   </script>
+  <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
+  <script src="assets/visuals/visual-system.js"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1418,7 +1420,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
-      this.actor = this.add.graphics().setDepth(10);
+      this.actor = this.add.graphics().setDepth(14);
       this.foreground = this.add.graphics().setScrollFactor(0).setDepth(20);
       this.state = 'menu';
       this.countdownMs = 0;
@@ -1480,6 +1482,13 @@ window.GRIM_CONFIG = Object.freeze({
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.scale.on('resize', this.handleResize, this);
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
+      this.visuals=scope.GRIM_VISUALS?new scope.GRIM_VISUALS.GrimVisualSystem(this):null;
+      if(this.visuals){
+        // Optional art=off playtest switch, without touching saved gameplay.
+        if(new URLSearchParams(location.search).get('art')!=='off')
+          this.visuals.begin();
+        this.events.once('shutdown',()=>this.visuals.shutdown());
+      }
       this.drawScene();
     }
     openReliquary(){
@@ -2412,6 +2421,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.particles=this.particles.filter(part=>part.life>0);
         this.tickRewind(frameMs);
       }
+      if(this.state==='playing'&&this.player.visualFireMs>0)
+        this.player.visualFireMs=Math.max(0,this.player.visualFireMs-Math.min(250,deltaMs));
       if(this.fallFeedbackMs>0){
         this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
         if(this.fallFeedbackMs===0)this.ui.showFallNotice(false);
@@ -2445,6 +2456,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.powerManager.level('powerShot'),0);
       this.fireSoulcaster(target);
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
+      this.player.visualFireMs=180;
       this.ui.showGunCooldown(this.gunCooldownMs);
       return true;
     }
@@ -2904,6 +2916,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawParticles();
       this.drawReaper();
       this.drawForeground();
+      if(this.visuals)this.visuals.render();
     }
     drawAtmosphere(g,w,h,gy){
       const m=this.distance,underworld=this.hasTeleported;
@@ -3354,6 +3367,14 @@ window.GRIM_CONFIG = Object.freeze({
       for(const e of this.enemies){
         if(e.dead)continue;
         const x=e.x,y=e.y,t=this.elapsed*13+e.phase;
+        if(e.kind==='bat'&&this.visuals&&this.visuals.batReady){
+          // Actual illustrated flying animation is managed by the sprite pool.
+          // The telegraph is a gameplay cue, not part of the old placeholder.
+          if(e.mode==='telegraph'){
+            g.lineStyle(2,0xffc77c,.80);g.strokeCircle(x,y,35);
+          }
+          continue;
+        }
         if(Combat.enemyIsFlying(e)){
           const skeletal=e.kind==='skeletalBat',wing=Math.sin(t)*13;
           g.fillStyle(skeletal?0xcbd5d4:0x413e60,.95);
@@ -3423,6 +3444,45 @@ window.GRIM_CONFIG = Object.freeze({
     drawReaper() {
       const g=this.actor;g.clear();
       const p=this.player,x=p.x,feet=this.feetY;
+      if(this.visuals&&this.visuals.reaperReady){
+        // Art is drawn by a Phaser sprite. Keep combat arcs and hover indicators
+        // on this separate FX layer and leave every collision box unchanged.
+        if(p.attackMs>0&&Core.attackActive(p.attackMs,C.attackDurationMs,
+             C.attackActiveStart,C.attackActiveEnd)){
+          const progress=1-p.attackMs/C.attackDurationMs;
+          const reach=94*(1+this.powerManager.attackBonus());
+          const angle=4.1+progress*2.0;
+          const cy=feet-(p.sliding?17:65);
+          g.lineStyle(11,0x57e8db,.13);g.beginPath();
+          g.arc(x+15,cy,reach,angle-.68,angle+.30);g.strokePath();
+          g.lineStyle(3,0xb6fff1,.88);g.beginPath();
+          g.arc(x+15,cy,reach-1,angle-.5,angle+.25);g.strokePath();
+        }
+        if(!p.grounded&&(this.powerManager.level('skeletalWings')>0||
+            this.powerManager.level('ravenWings')>0)){
+          const t=Math.sin(this.elapsed*15)*8;
+          for(const side of [-1,1]){
+            if(this.powerManager.level('skeletalWings')>0){
+              g.lineStyle(4,0xf4e6cc,.82);
+              g.lineBetween(x+side*9,feet-71,x+side*(43+t),feet-112);
+              g.lineBetween(x+side*(43+t),feet-112,x+side*(76+t),feet-83);
+            }
+            if(this.powerManager.level('ravenWings')>0){
+              g.fillStyle(0xa496ea,.55);
+              g.fillTriangle(x+side*12,feet-70,x+side*(58+t),feet-121,
+                x+side*(51+t),feet-67);
+            }
+          }
+        }
+        if(!p.grounded&&this.powerManager.level('skeletalWings')>0){
+          const total=this.powerManager.skeletalHoverMs();
+          const ratio=Math.max(0,Math.min(1,p.hoverBudgetMs/Math.max(total,1)));
+          g.fillStyle(0x0d1424,.78);g.fillRoundedRect(x-32,feet-153,64,7,3);
+          if(ratio>0){g.fillStyle(0xd5e2e0,.93);
+            g.fillRoundedRect(x-30,feet-151,60*ratio,3,1.5);}
+        }
+        return;
+      }
       const moving=this.state==='playing';
       const running=moving&&this.onGround&&!p.sliding;
       const cycle=this.elapsed*18;

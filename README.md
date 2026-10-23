@@ -2,11 +2,23 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.9.1 — Polish & Fairness**
+**Current playable build: v0.10.0 — The Reaper Reborn**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
-- [v0.9.0 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.0)
+- [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
+
+## v0.10.0: The Reaper Reborn
+
+Our first major visual refresh establishes **Macabre Storybook Fantasy**, an original illustrated dark-fantasy style with strong silhouettes, bone/teal Reaper accents and moody violet bats.
+
+- A **16-frame SVG Reaper atlas** includes five run poses, two idle poses, jump, fall, low-profile slide, scythe strikes, crossbow, hit, death and hover poses.
+- An **eight-frame Cavern Bat atlas** adds wing flaps and dive frames.
+- The new `assets/visuals/visual-system.js` loads and rasterizes the atlases once in Phaser, maps animation poses to existing gameplay, and pools up to 12 bats.
+- Rewind animates historical art poses deterministically from its saved time and states. Scythe trails, wings and bat warnings remain tied to the original gameplay logic.
+- New art does not change collision boxes, controls, power balance or saved Souls. If an asset fails, the original geometric graphics remain a fallback; optional **`?art=off`** forces fallback for comparisons.
+- **[View the animation showcase](assets/visuals/showcase.html)** or see the [art guide](assets/ART_DIRECTION.md). The showcase uses the actual game SVG frame sheets.
+- The other enemies and scenery still use prototype drawings pending further visual updates.
 
 ## v0.9.1: Polish & Fairness
 
@@ -69,7 +81,7 @@ Survive hazards, vendors and combat across procedural terrain to the 5,000m Unde
 
 ## Running and testing
 
-Open `index.html` with an internet connection for the Phaser 3.90.0 CDN dependency, or serve it with GitHub Pages. This is not yet a packaged Android APK.
+Serve `index.html` with GitHub Pages to load the external art folders and the Phaser 3.90.0 CDN dependency. Opening a bare HTML file without the companion `assets/` folder leaves the old art fallback. This is not yet a packaged Android APK.
 
 Regression checks (Node.js, no dependencies):
 
@@ -78,8 +90,9 @@ node tests/encounter-reliability.cjs
 node tests/survival-crossbow.cjs
 node tests/rewind.cjs
 node tests/polish-fairness.cjs
+node tests/visual-foundation.cjs
 ```
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: v0.9.1 phone playtesting, followed by further presentation and audio improvements.
+Next: v0.10.0 phone visual playtesting; then additional enemies/combat effects, illustrated biomes and final boss.
