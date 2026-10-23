@@ -1556,6 +1556,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(artMode==='procedural'){
           // Keep Phaser's original procedural Reaper/Bat renderers active.
         }else if(artMode==='experimental')this.visuals.begin();
+        else if(artMode==='review-v2')this.visuals.beginReviewV2();
         else this.visuals.beginIllustrated();
         this.events.once('shutdown',()=>this.visuals.shutdown());
       }
