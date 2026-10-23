@@ -2,11 +2,17 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.0 — The Reaper Reborn**
+**Current playable build: v0.10.1 — Missing-Texture Hotfix**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
+
+## v0.10.1: Green-square sprite hotfix
+
+Fixes a live Android Chrome bug where the illustrated Reaper was replaced by Phaser's green missing-texture placeholder. The Phaser loader now slices sprite atlases from the actual raster image rather than passing the Phaser Texture object. Frames and sprite keys are verified before suppressing the previous procedural renderer; if art is unavailable, the game continues with the original Reaper.
+
+A new actual Chromium smoke test (`tests/browser-visual-smoke.js`) runs in GitHub Actions and checks that the Reaper and Bat are real, nonblank Phaser sprite sheets. Use `?art=off` to force the prior renderer if diagnosing visual performance.
 
 ## v0.10.0: The Reaper Reborn
 
@@ -95,4 +101,4 @@ node tests/visual-foundation.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: v0.10.0 phone visual playtesting; then additional enemies/combat effects, illustrated biomes and final boss.
+Next: v0.10.1 phone visual verification; then additional enemies/combat effects, illustrated biomes and final boss.
