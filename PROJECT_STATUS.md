@@ -1,10 +1,36 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.10.1 — *Missing-Texture Hotfix*  
+**Release:** v0.10.2 — *God Mode Playtest Tools*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and versioned external SVG art assets  
 **Source:** `main/index.html` once promoted to main  
-**Rollback:** `backup/v0.10.0` preserves the original visual release; `backup/v0.9.1` is the last successfully user-playtested full gameplay version.  
+**Rollback:** `backup/v0.10.1` protects the prior release; `backup/v0.9.1` is the last fully user-tested pre-art gameplay version.  
 **Verification:** New animation/asset/fallback regression, plus previous Rewind, Soul, jump fairness, 300 seeded encounter worlds and five simulated full runs. **Live Android visual and performance playtesting pending.**
+
+## v0.10.2 — God Mode Playtest Tools (complete)
+
+**Scope adjustment:** God Mode tools can be released safely now. The requested Reaper and Bat visual redesign is **NOT approved or published** in this build. The previous SVG characters were rejected as insufficiently polished, and the next illustrated concept approach still needs proper transparent production poses and real-device art review. We must not substitute a promo poster or low-quality cropped concept for finished animation art.
+
+- **God Mode Slow Time:** New bottom-center button toggles the complete gameplay simulation to **0.5× speed**. No cooldown, duration or Soul cost. Works on movement, timers, cooldowns, physics, enemy animations, projectiles, and Rewind playback. Switching God Mode off disables Slow Time automatically. Pause and menus remain normally responsive. Hidden if God Mode is off.
+- **God Mode Distance Teleport:** From Pause, reveal slider and ±500m controls, selecting **500m to 9,500m in 500m increments**. Confirmation required. Cancel returns to pause. Confirm puts the Reaper onto safe ground near the target **without countdown**. Teleports are limited to an active run with God Mode enabled.
+- **World-state synchronization:** Portal boundary at 5,000m is traversed programmatically, giving the crossbow and using Underworld terrain/background; no portal/chest animation. Prior vendors are marked passed so no skipped upgrades or healing deals are granted. Enemies, active projectiles, generated ordinary obstacles and visual warnings are cleared near relocation; new spawn cursors are placed safely ahead. Rewind snapshots cannot cross teleport. Existing banked Souls are never duplicated; skipped pickups are not collected.
+- **Scores:** Teleport-assisted runs are disqualified from writing `grim-run-v03-best` on death or victory. Other persistent Soul/reliquary records retain their normal rules. The cheat flag resets on a new run.
+- **Art fallback by default:** v0.10.1's character drawings were rejected. Until the replacement art is genuinely game-ready, the prior procedural Reaper and Bat show by default. Add `?art=experimental` only if you want to inspect the previously rejected SVG art; the opt-in does not affect saved data.
+- **QA:** `tests/godmode-tools.cjs` passes 64 destinations across eight procedural seeds, forbidden destinations, UI confirmation/cancel, God Mode scope, 50% simulated clock/movement, portal/crossbow synchronization and score protections. All existing gameplay regression suites pass. Real Chromium game/Pause controls are additionally tested in `tests/browser-visual-smoke.js` on CI.
+
+### Artwork in development, NOT shipped yet
+
+The new design target is a **lean, frightening, painted Grim Reaper with a legible scythe and expressive trailing fabrics**, and an **organic membranous Cavern Bat with anatomically readable body and wings**. The game-art production pipeline must yield distinct consistent transparent sprites for running/jumping/sliding/scythe and bat flapping/diving before the visual replacement is allowed. Concept-only art and frame extraction samples remain separate until that bar is met. This reverses the v0.10.0 mistake of shipping unattractive artwork on technical correctness alone.
+
+### v0.10.2 phone playtest
+
+- [ ] Menu says `v0.10.2`; ordinary procedural Reaper/Bat appear by default.
+- [ ] Pause > God Mode reveals teleport selection, slider snap in 500m increments and a clear confirmation.
+- [ ] Cancel teleport keeps the game paused.
+- [ ] Confirm 500m, 4,500m, 5,000m, 5,500m and 9,500m: safe landing near selected meter, correct biome and crossbow behavior, no countdown.
+- [ ] Toggle bottom-center Slow Time on and off during God Mode; visibly slows Reaper, terrain approach, enemy motion and animations by half.
+- [ ] Switch off God Mode: Slow Time button disappears and speed returns to normal.
+- [ ] Teleported run does not update personal-best record; Souls are not awarded for skipped milestones.
+- [ ] Revive, Rewind, vendors, terrain, encounters and legitimate non-teleported runs remain unchanged.
 
 ## v0.10.1 — Missing-Texture Hotfix
 
@@ -236,13 +262,14 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Android v0.10.0 art/animation playtest first. Then v0.10.1 other enemies and combat visuals, v0.11.0 illustrated biomes, and v0.12.0 boss design. Later sound, UI optimization and native Android packaging.
+Android v0.10.2 God Mode tools playtest first, then complete the real art-production pass. Then v0.10.1 other enemies and combat visuals, v0.11.0 illustrated biomes, and v0.12.0 boss design. Later sound, UI optimization and native Android packaging.
 
 ## Source and backups
 
 - `main/index.html`: published game after merge.
-- `tests/visual-foundation.cjs`, `tests/polish-fairness.cjs`, `tests/rewind.cjs`, `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
-- `backup/v0.9.1`: last successful user-playtested version.
+- `tests/godmode-tools.cjs`, `tests/visual-foundation.cjs`, `tests/polish-fairness.cjs`, `tests/rewind.cjs`, `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
+- `backup/v0.10.1`: prior published art hotfix.
+- `backup/v0.9.1`: last successful pre-art gameplay version.
 - `backup/v0.9.0`: earlier version.
 - `backup/v0.8.3`: previous version.
 - `backup/v0.8.2`: earlier version.
