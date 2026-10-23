@@ -1786,6 +1786,8 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.spawnAhead();
         if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
+        this.updateCombat(frameMs,dt);
+        if(this.state!=='playing'){this.drawScene();return;}
         this.checkCollectibles();
         if(this.state==='upgrade'){this.drawScene();return;}
         this.checkHazards();
@@ -2050,7 +2052,7 @@ window.GRIM_CONFIG = Object.freeze({
             p.y>=localSlideGround-14 && p.y<=localSlideGround+24));
         const hit=ob.type==='branch'
           ? Core.branchHits(box,ob,this.terrain.groundAt.bind(this.terrain),C.slideClearancePx,nearGroundSlide)
-          : Core.overlaps(box,ob);
+          : Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob);
         if(!hit)continue;
         ob.dealtDamage=true;
         if(ob.type==='fire' && this.powerManager.level('infernalBoots')>0 && p.fireproofCooldownMs<=0){
@@ -2163,6 +2165,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
       for(const soul of this.souls) if (!soul.taken) this.drawSoul(soul);
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
+      this.drawCombat();
       this.drawParticles();
       this.drawReaper();
       this.drawForeground();
@@ -2463,6 +2466,21 @@ window.GRIM_CONFIG = Object.freeze({
     drawObstacle(o) {
       const g=this.world, x=o.x, ground=this.terrain.anchorAt(o.x);
       const v=o.variant%6;
+      if(o.type==='snappingBramble'){
+        const b=this.snappingBox(o),top=b.y;
+        const t=this.elapsed*5.1+o.variant*1.7;
+        g.fillStyle(0x283323,.95);g.fillEllipse(x+31,ground-5,67,15);
+        for(let k=0;k<5;k++){
+          const stem=x+9+k*11;
+          g.lineStyle(5,0x64835a,.94);
+          g.lineBetween(stem,ground-4,stem+Math.sin(t+k)*7,top+10+(k%2)*9);
+          g.fillStyle(0xa5bfa0,.9);
+          g.fillTriangle(stem-8,top+22+(k%2)*10,stem+9,top+22+(k%2)*10,
+            stem+3,top+(k%2)*10);
+        }
+        g.fillStyle(0xdd6f88,.76);g.fillCircle(x+31,top+18,4);
+        return;
+      }
       if(o.type==='fire'){
         const t=this.elapsed*9+x*.012;
         g.fillStyle(0x9b250e,.85);g.fillEllipse(x+o.width/2,ground-3,o.width+11,11);
@@ -2594,6 +2612,69 @@ window.GRIM_CONFIG = Object.freeze({
         g.fillStyle(0x72986c,.45);g.fillEllipse(mid+6,top+9,17,16);
       }
       // No gold from cutting obstacles: currency comes only from placed pickups.
+    }
+
+    drawCombat(){
+      const g=this.world;
+      for(const e of this.enemies){
+        if(e.dead)continue;
+        const x=e.x,y=e.y,t=this.elapsed*13+e.phase;
+        if(Combat.enemyIsFlying(e)){
+          const skeletal=e.kind==='skeletalBat',wing=Math.sin(t)*13;
+          g.fillStyle(skeletal?0xcbd5d4:0x413e60,.95);
+          g.fillTriangle(x-9,y-2,x-40,y-24-wing,x-24,y+18-wing*.2);
+          g.fillTriangle(x+9,y-2,x+40,y-24-wing,x+24,y+18-wing*.2);
+          g.fillStyle(skeletal?0xadbeb9:0x24273e);g.fillEllipse(x,y,26,31);
+          if(skeletal){
+            g.lineStyle(3,0xf0e2c8,.89);g.lineBetween(x-17,y-8,x-33,y-22-wing);
+            g.lineBetween(x+17,y-8,x+33,y-22-wing);
+            g.fillStyle(0xf1e8db);g.fillTriangle(x-5,y+8,x,y+20,x+5,y+8);
+          }
+          g.fillStyle(skeletal?0xff8158:0xe4a0ec);
+          g.fillCircle(x-5,y-4,3.2);g.fillCircle(x+5,y-4,3.2);
+          if(e.mode==='telegraph'){
+            g.lineStyle(2,0xffc77c,.80);g.strokeCircle(x,y,35);
+          }
+          if(skeletal&&e.hp===1){g.fillStyle(0xffcf76,.68);g.fillCircle(x,y+13,3);}
+        }else if(e.kind==='crawler'){
+          g.fillStyle(0x52626c);g.fillEllipse(x,y,41,30);
+          g.fillStyle(0x98a9b1,.91);g.fillEllipse(x+5,y-8,27,16);
+          g.lineStyle(3,0xc6d3d4,.82);
+          for(const side of [-1,1]){
+            g.lineBetween(x+side*12,y+8,x+side*23,y+20);
+            g.lineBetween(x+side*3,y+11,x+side*17,y+22);
+          }
+          g.fillStyle(0xeb9ac4);g.fillCircle(x-10,y-5,2.4);
+        }else if(e.kind==='imp'){
+          g.fillStyle(0x7f3634);g.fillEllipse(x,y,36,44);
+          g.fillStyle(0xbc6448);g.fillTriangle(x-17,y-15,x-18,y-33,x-3,y-20);
+          g.fillTriangle(x+7,y-20,x+20,y-33,x+18,y-10);
+          g.fillStyle(0xffd48a);g.fillCircle(x-6,y-7,3);g.fillCircle(x+7,y-7,3);
+          if(e.warningMs>0){
+            g.lineStyle(2,0xff9c50,.85);
+            g.strokeCircle(x,y,27+4*Math.sin(this.elapsed*24));
+            g.fillStyle(0xffb46e,.6);g.fillCircle(x-17,y-9,7);
+          }
+        }
+      }
+      // Fast bright bolts are visually distinct from slow, deflectable fireballs.
+      for(const b of this.bullets){
+        const dx=b.x-this.player.x,dy=b.y-(this.player.y-58);
+        const len=Math.max(1,Math.hypot(dx,dy));
+        g.lineStyle(3,0xbefaff,.9);g.lineBetween(b.x,b.y,b.x-dx/len*17,b.y-dy/len*17);
+        g.fillStyle(b.damage===2?0xffd18a:0xb2fff2,.96);g.fillCircle(b.x,b.y,5);
+      }
+      for(const ball of this.fireballs){
+        g.fillStyle(ball.reflected?0x71ffff:0xff7a37,.21);g.fillCircle(ball.x,ball.y,16);
+        g.fillStyle(ball.reflected?0xb4ffff:0xffb358,.96);g.fillCircle(ball.x,ball.y,8);
+        g.fillStyle(0xffffff,.85);g.fillCircle(ball.x-2,ball.y-2,2.5);
+      }
+      for(const arc of this.chainArcs){
+        g.lineStyle(5,0xd7bbff,.85*arc.lifeMs/250);
+        g.lineBetween(arc.x1,arc.y1,arc.x2,arc.y2);
+        g.fillStyle(0xe4cfff,.8*arc.lifeMs/250);
+        g.fillCircle(arc.x2,arc.y2,5);
+      }
     }
     drawParticles() {
       const g=this.fx;g.clear();
@@ -2736,6 +2817,11 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
       g.setAlpha(1);
+      if(this.gunUnlocked){
+        g.fillStyle(0x8e968c,.92);g.fillRoundedRect(x+13,feet-51,24,9,2);
+        g.fillStyle(0xe8c98f,.85);g.fillRect(x+28,feet-49,18,5);
+        g.fillStyle(0x314053,.95);g.fillRect(x+14,feet-45,7,15);
+      }
       if(!p.grounded&&this.powerManager.level('skeletalWings')>0){
         const total=this.powerManager.skeletalHoverMs();
         const ratio=Math.max(0,Math.min(1,p.hoverBudgetMs/total));
@@ -2769,6 +2855,10 @@ window.GRIM_CONFIG = Object.freeze({
           g.fillRect(0,j*thickness,w,thickness);
           g.fillRect(0,h-(j+1)*thickness,w,thickness);
         }
+      }
+      if(this.blastFlashMs>0){
+        g.fillStyle(0xf6d78b,.19*(this.blastFlashMs/420));
+        g.fillRect(0,0,this.width,this.height);
       }
       if(this.damageFlashMs>0){
         const a=.27*Math.pow(this.damageFlashMs/420,1.8);
