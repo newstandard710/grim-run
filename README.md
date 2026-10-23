@@ -2,11 +2,21 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.1 — Missing-Texture Hotfix**
+**Current playable build: v0.10.2 — God Mode Playtest Tools**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
+
+## v0.10.2: God Mode Playtest Tools
+
+- **Half speed:** Enable God Mode in Pause, then toggle the **0.5× SPEED** button at bottom center. Slows gameplay physics, enemy/projectile movement, cooldowns and animation to half speed. Free, unlimited and instantly toggled. Turning off God Mode restores normal speed.
+- **Distance Teleport:** While God Mode is enabled, Pause displays a slider and buttons for **500m–9,500m in 500m steps**. Requires confirmation; cancelling remains paused; confirming places the Reaper on safe solid ground and resumes immediately **without a countdown**. Teleporting to 5,000m or beyond initializes the Underworld and Bone Crossbow, marks earlier vendors as passed and clears Rewind history. Skipped Souls/venders give no rewards.
+- **Best-score protection:** Runs that use teleport cannot write a legitimate personal-best score.
+- **Visual-art safeguard:** The v0.10.1 painted-style SVG character art is not aesthetically accepted. Until an actual illustrated frame set passes gameplay-scale art review, the older procedural Reaper and Bat are the **default**; use `?art=experimental` to opt into the rejected SVG version for A/B comparison.
+- **Tests:** `tests/godmode-tools.cjs` covers 64 teleports, simulation-wide half-speed, confirmations, score safety and save preservation. Other gameplay tests and the real Chromium browser UI suite also run in CI.
+
+**Note:** Reaper and Bat visual replacement is still in production, not included in v0.10.2. The God Mode tools are being released first so subsequent art testing can be substantially faster.
 
 ## v0.10.1: Green-square sprite hotfix
 
@@ -97,8 +107,9 @@ node tests/survival-crossbow.cjs
 node tests/rewind.cjs
 node tests/polish-fairness.cjs
 node tests/visual-foundation.cjs
+node tests/godmode-tools.cjs
 ```
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: v0.10.1 phone visual verification; then additional enemies/combat effects, illustrated biomes and final boss.
+Next: v0.10.2 playtesting and proper illustrated Reaper/Bat production; then additional enemies/combat effects, illustrated biomes and final boss.
