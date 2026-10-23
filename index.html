@@ -1587,19 +1587,21 @@ window.GRIM_CONFIG = Object.freeze({
       // Spawn moving enemies only after acquiring the Soulcaster at the portal.
       while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
         const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
-        this.nextEnemySpawnX+=(m>=8000?70+this.rng.integer(0,40):108+this.rng.integer(0,55))*C.pxPerMeter;
+        this.nextEnemySpawnX+=(m>=8000?53+this.rng.integer(0,30):84+this.rng.integer(0,43))*C.pxPerMeter;
         if(m<5190||m>C.finishMeters-150)continue;
         if(Math.abs(m-9500)<185)continue;
-        if(!this.terrain.canPlace(x,90))continue;
         if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,470,85))continue;
-        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<225))continue;
-        if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<205))continue;
         const choice=this.rng.next();
-        const kind=m>=8000?(choice<.52?'skeletalBat':choice<.79?'imp':'crawler'):
-          m>=6500?(choice<.72?'bat':'crawler'):'bat';
-        const ground=this.terrain.groundAt(x);
-        if(ground===null)continue;
+        const kind=m>=8000?(choice<.64?'skeletalBat':choice<.82?'imp':'crawler'):
+          m>=6500?(choice<.77?'bat':'crawler'):'bat';
         const flying=Combat.enemyIsFlying({kind});
+        // Flying creatures can appear above uneven ground, but never above a chasm.
+        // Ground enemies require flat solid floor to avoid climbing into the terrain.
+        const ground=this.terrain.groundAt(x);
+        if(ground===null||(!flying&&!this.terrain.canPlace(x,90)))continue;
+        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<(flying?140:195)&&
+          (!flying||o.type==='tuckGate'||o.type==='airBramble')))continue;
+        if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<(flying?145:185)))continue;
         const y=ground-(flying?161:kind==='crawler'?21:34);
         this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
           phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
