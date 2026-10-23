@@ -2,11 +2,24 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.8.3 — Enemy Encounter Rework**
+**Current playable build: v0.9.0 — Death's Reversal**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
-- [v0.8.2 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.8.2)
+- [v0.8.3 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.8.3)
+
+## v0.9.0: Death's Reversal
+
+**Rewind Time** is now an Angel vendor power with a dedicated upper-left control (desktop: **R**). The first level moves the run back **5 seconds** with a **60-second** cooldown; each added level increases rewind by 1 second and decreases cooldown by 5 seconds:
+
+- Level 1: 5 seconds / 60-second cooldown
+- Level 2: 6 seconds / 55-second cooldown
+- Level 3: 7 seconds / 50-second cooldown
+- Level 4: 8 seconds / 45-second cooldown
+
+Rewind restores the Reaper's physics, HP, active enemy and projectile state, obstacles, gold, and the mutable terrain bridges made by Brittle Bones. Souls, vendor purchases and portal transitions are irreversible timeline boundaries; rewind cannot undo them. Rewind cooldown itself is never reversed.
+
+**God Mode** temporarily grants max-level Rewind to facilitate tests and returns to the real level when toggled off. The button shows a history-ready or cooldown counter when Rewind is unavailable. Snapshots are collected only when the ability is active.
 
 ## v0.8.3 enemy patch
 
@@ -26,7 +39,8 @@ The manual Bone Crossbow, 3-Soul revival, Grave Glide and chest cutscene are unc
 - **Attack**: lower left, swing your scythe.
 - **Bone Crossbow Fire**: upper left, appears after obtaining the crossbow at the 5,000m portal. **Manual fire**, with priority auto-aim. F on desktop.
 - **Jump / Slide**: upper/lower right; sliding then jumping enables air-tuck.
-- **Pause**: upper right; God Mode allows invulnerable ability playtesting.
+- **Rewind**: upper-left when unlocked; desktop R.
+- **Pause**: upper right; God Mode grants temporary fully upgraded Rewind and invulnerability.
 
 Survive hazards, vendors and combat across procedural terrain to the 5,000m Underworld portal, collect Souls near 4,850m and 9,500m, and reach the 9,999m final gate.
 
@@ -52,8 +66,9 @@ Regression checks (Node.js, no dependencies):
 ```sh
 node tests/encounter-reliability.cjs
 node tests/survival-crossbow.cjs
+node tests/rewind.cjs
 ```
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next planned release: **v0.9.0 Death's Reversal** (Rewind Time Angel ability).
+Next: v0.9.0 phone playtesting, followed by encounter balance and presentation/audio improvements.
