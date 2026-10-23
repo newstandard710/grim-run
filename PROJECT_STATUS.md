@@ -2,8 +2,8 @@
 
 **Release:** v0.8.2 — *Souls and Bone*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0 and a single HTML file  
-**Source:** \`main/index.html\` once promoted to main  
-**Rollback:** \`backup/v0.8.1\` (last user-playtested stable version)  
+**Source:** `main/index.html` once promoted to main  
+**Rollback:** `backup/v0.8.1` (last user-playtested stable version)  
 **Verification:** Source syntax, 300-seed procedural regression checks, five simulated full runs, and dedicated v0.8.2 survival/weapon tests passed. **Live Android playtesting pending.**
 
 ## Game foundations
@@ -36,7 +36,7 @@
 | 2 | 10 Souls | 1.15 sec |
 | 3 | 25 Souls | 1.30 sec |
 
-This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's Leap. Existing \`grim-run-v07-meta\` saves load with Grave Glide at level 0 and preserve previously purchased levels, Souls and scores. Shop displays four side-by-side cards in landscape.
+This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's Leap. Existing `grim-run-v07-meta` saves load with Grave Glide at level 0 and preserve previously purchased levels, Souls and scores. Shop displays four side-by-side cards in landscape.
 
 ### Bone Crossbow and Chest Acquisition
 
@@ -49,8 +49,8 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Verified in simulated/source testing
 
-- \`node tests/encounter-reliability.cjs\`: 300 seeded worlds, 2–3 air-tuck gates, 48–52 enemies, five complete mocked-graphics runs with visible enemies.
-- \`node tests/survival-crossbow.cjs\`: old Soul balance migration; Grave Glide 5/10/25 costs and reload persistence; revival debits 3 Souls once, with correct current/prior allocation, restored 3/3 HP, three-second countdown and second death; chest skip, weapon unlock, manual fire, no automatic fire, correct rapid-fire cooldowns and flyer targeting.
+- `node tests/encounter-reliability.cjs`: 300 seeded worlds, 2–3 air-tuck gates, 48–52 enemies, five complete mocked-graphics runs with visible enemies.
+- `node tests/survival-crossbow.cjs`: old Soul balance migration; Grave Glide 5/10/25 costs and reload persistence; revival debits 3 Souls once, with correct current/prior allocation, restored 3/3 HP, three-second countdown and second death; chest skip, weapon unlock, manual fire, no automatic fire, correct rapid-fire cooldowns and flyer targeting.
 - Every inline JavaScript block checked for parse errors; preserved world/collision rules and existing save keys.
 
 **Limitations:** This validates logic but not real Phaser GPU drawing, touch precision, visual fit at each Android screen size, phone frame rate, or real user difficulty. User phone QA remains the release acceptance step.
@@ -78,7 +78,7 @@ Later: visual/audio polish, encounter difficulty balancing, mobile optimization,
 
 ## Source and backups
 
-- \`main/index.html\`: published game after merge.
-- \`tests/encounter-reliability.cjs\`, \`tests/survival-crossbow.cjs\`: dependency-free Node regression suites.
-- \`backup/v0.8.1\`: rollback stable version.
-- \`backup/v0.8.0\`, \`backup/v0.7.0\`, \`backup/v0.6.2\`: older baselines.
+- `main/index.html`: published game after merge.
+- `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
+- `backup/v0.8.1`: rollback stable version.
+- `backup/v0.8.0`, `backup/v0.7.0`, `backup/v0.6.2`: older baselines.
