@@ -136,15 +136,17 @@ Confirmed in simulation:
 - [ ] Retry resets gun / temporary powers but does not reset banked Souls or purchased Reliquary levels.
 - [ ] No animation jitter, frame drops, screen overflow or unusable buttons in landscape mode.
 
-## Proposed future roadmap
+## Future roadmap
 
-- **v0.9.0 — Presentation and feedback:** improve character/enemy animations, visual language, effects, audio, UI layout.
-- **v0.10.0 — Encounter variety and tuning:** balance combat combinations and progression; consider bosses and major content.
-- **v1.0.0 — Android release preparation:** offline dependency bundling, native packaging, hardware performance testing, release workflow.
+- **v0.8.2 — Survival and Presentation:** 3-Soul revival once per run, permanent slide-duration tree, manual bone-crossbow controls above the scythe, skippable chest acquisition cutscene.
+- **v0.9.0 — Rewind:** new Angel vendor rewind skill (5–8 seconds, 60–45-second cooldown); God Mode grants level 4 temporarily. Safe snapshots must not reverse irreversible persistent Soul transactions.
+- **Later updates — Presentation, balance and release:** combat encounter tuning, art/audio polish, mobile performance, offline Phaser bundling, native Android packaging, release testing.
 
 ## Repo references
 
-- `main/index.html`: deployed version once promoted from feature branch.
-- `feature/v0.8.0-combat-expansion/index.html`: implementation and simulated test source.
-- `backup/v0.7.0/index.html`: last user-confirmed stable HTML.
-- `backup/v0.6.2/index.html`: earlier stable baseline.
+- `main/index.html`: current release after merging v0.8.1.
+- `tests/encounter-reliability.cjs`: reproducible 300-seed and simulated run tests.
+- `feature/v0.8.1-encounter-reliability/index.html`: v0.8.1 development branch.
+- `backup/v0.8.0/index.html`: prior user-tested v0.8.0 build.
+- `backup/v0.7.0/index.html`: pre-combat meta-progression build.
+- `backup/v0.6.2/index.html`: early stable baseline.
