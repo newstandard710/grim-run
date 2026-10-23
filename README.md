@@ -1,51 +1,46 @@
 # Grim Run
 
-A mobile-first, landscape side-scrolling action roguelike starring the Grim Reaper.
+A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable HTML: v0.8.1 — Encounter Reliability Patch**
+**Current playable build: v0.8.2 — Souls and Bone**
 
-- [Play source (`index.html`)](index.html)
-- [Development status, milestones and phone playtest checklist](PROJECT_STATUS.md)
-- [Previous v0.8.0 build](https://github.com/newstandard710/grim-run/tree/backup/v0.8.0)
+- [Game HTML](index.html)
+- [Development status and playtest checklist](PROJECT_STATUS.md)
+- [v0.8.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.8.1)
 
-## v0.8.1 reliability improvements
+## Controls and objective
 
-- Guarantees **2–3 air-tuck gates** across full runs, starting after 7,000m.
-- Fixes underpopulated Underworld sections with placement retries and more readable bat entrances.
-- Removes obsolete spawn buffers; the universal fixed exclusion is **the first 50m after each vendor**, with additional checks only for physically unsafe or impassable placements.
-- God Mode now activates effects such as Brittle Bones when struck, without losing HP.
-- Reproducible encounter tests: `node tests/encounter-reliability.cjs`, including 300 seeded generation checks and five simulated portal-to-finish runs.
+- **Attack**: lower left, swing your scythe.
+- **Bone Crossbow Fire**: upper left, appears after obtaining the crossbow at the 5,000m portal. **Manual fire**, with priority auto-aim. F on desktop.
+- **Jump / Slide**: upper/lower right; sliding then jumping enables air-tuck.
+- **Pause**: upper right; God Mode allows invulnerable ability playtesting.
 
-This patch **retains automatic Soulcaster firing**. The confirmed manual bone-crossbow button, item chest scene, revival, and permanent slide upgrade are planned for v0.8.2, followed by rewind in v0.9.0.
+Survive hazards, vendors and combat across procedural terrain to the 5,000m Underworld portal, collect Souls near 4,850m and 9,500m, and reach the 9,999m final gate.
 
-## Gameplay
+## v0.8.2 changes
 
-Attack (left thumb), Jump and Slide (right thumb) across a procedurally generated ascent to 5,000m, then continue through the Underworld toward the 9,999m final gate. Souls at roughly 4,850m and 9,500m are banked for persistent progression. Angel and Devil vendors offer temporary powers during each run.
+- **Revival:** Once per run on death, spend **3 banked Souls** (current-run collected Souls first) to recover at **3/3 HP**, keep run progress and powers, and resume after a **3-second countdown**. Decline or insufficient Souls results in ordinary game over.
+- **Grave Glide:** Fourth permanent Reliquary tree, adding +0.15, +0.30 or +0.45 seconds of maximum slide duration. Levels cost 5, 10, and 25 Souls. Existing saved Souls and upgrade trees are preserved.
+- **Bone Crossbow:** Replaces the Soulcaster gun's appearance and automatic firing. Open an ancient chest in a skippable portal-acquisition scene; then use the new button above Attack to manually shoot. Aiming automatically prioritizes flying enemies; Rapid Fire, Power Shot and Chain Shot still work.
 
-### v0.8.0 new features
+## Existing gameplay
 
-At the **5,000m portal**, the Reaper receives a **Soulcaster** gun that automatically shoots enemies, prioritizing flying bats. It shoots once per second before upgrades and requires no extra touch controls.
-
-Three new Devil gun trees:
-- **Rapid Fire:** Shot intervals 1,000ms (base), then 850 / 700 / 550ms.
-- **Power Shot:** 2 damage, then distant cutting of scythe-cuttable obstacles, then an automatic 10-second screen-wide obstacle-clearing blast that also damages bats, without affecting terrain/chasms/lava.
-- **Chain Shot:** Successful hits chain to 1, 2 or 3 additional nearby flying enemies.
-
-**Infernal Boots** now combine Fireproof Boots and Lava Waders: lava damage is reduced by 1 HP and a fire hit can be blocked once per recharge (10 / 8 / 6 / 4 seconds).
-
-New threats: normal bats, two-HP skeletal bats, crawling ground enemies, fireball-throwing Ember Imps, and mountain snapping brambles. Well-timed scythe attacks can cut enemies and deflect enemy fireballs.
-
-Devil purchase costs: **2 HP** for initial Skeletal Wings or Infernal Boots, **1 HP** to upgrade either afterward; all gun purchases cost **1 HP**. Devil purchases grant exactly one level.
-
-### Permanent progression (v0.7.0, retained)
-
-Use the **Reliquary** on the main menu to spend Souls on permanent power. Each three-level tree costs **5 / 10 / 25 Souls** per level:
-- **Boneheart:** 3 HP base, then 4 / 5 / 6 starting HP.
-- **Grave Wealth:** 0 base, then 2 / 4 / 6 starting spendable gold.
-- **Death's Leap:** +5 / +10 / +15% base jump height.
+- Guaranteed 2–3 late air-tuck obstacles and reliable bat/crawler/imp spawns from v0.8.1.
+- Infernal Boots provide lava reduction and timed fire shield. Devil purchases remain 2 HP for initial boots/wings and 1 HP for later levels and all crossbow upgrades.
+- Three prior permanent Reliquary trees: Boneheart (3–6 starting HP), Grave Wealth (0–6 starting gold), Death's Leap (+5/+10/+15% jump height).
+- Collected Souls immediately banked into browser-local storage; best score is also saved.
 
 ## Running and testing
 
-Open `index.html` in a modern browser with Internet access (Phaser 3.90.0 is loaded from the pinned CDN), or serve the repository with GitHub Pages. Landscape Android browser is the primary target.
+Open \`index.html\` with an internet connection for the Phaser 3.90.0 CDN dependency, or serve it with GitHub Pages. This is not yet a packaged Android APK.
 
-The game is not yet packaged as a native APK. **v0.8.1 passed seeded encounter-generation and mocked-graphics full-run tests; live mobile playtesting is still needed.** See [PROJECT_STATUS.md](PROJECT_STATUS.md) for full checklists.
+Regression checks (Node.js, no dependencies):
+
+\`\`\`sh
+node tests/encounter-reliability.cjs
+node tests/survival-crossbow.cjs
+\`\`\`
+
+The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
+
+Next planned release: **v0.9.0 Death's Reversal** (Rewind Time Angel ability).
