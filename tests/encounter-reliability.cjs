@@ -31,7 +31,7 @@ for(const [,attributes,source] of scripts){
 }
 const C=sandbox.GRIM_CONFIG,Core=sandbox.GRIM_CORE,Terrain=sandbox.GRIM_TERRAIN;
 const Powers=sandbox.GRIM_POWERS,Combat=sandbox.GRIM_COMBAT,GameScene=sandbox.GrimGameScene;
-assert.equal(C.version,'0.8.1');
+assert.equal(C.version,'0.8.2');
 
 for(let k=1;k<=14;k++){
   const x=200+k*666*C.pxPerMeter;
@@ -113,6 +113,9 @@ for(const seed of [1,7,42,99,314]){
   world.enterUnderworld();
   world.godMode=true;world.nextVendorNumber=8;world.lastVendorNumber=7;
   for(let n=0;n<6;n++)world.update(0,250);
+  assert.equal(world.state,'chest','Portal now transitions to chest acquisition');
+  world.finishChest();
+  assert.equal(world.state,'playing','Chest can be skipped');
   let frames=0;
   while(world.state!=='won'&&frames<6000){
     if(world.state==='upgrade')world.leaveVendor();
@@ -128,6 +131,6 @@ for(const seed of [1,7,42,99,314]){
 }
 console.log('Full-run encounter visibility: '+visibility.join(', '));
 
-console.log('v0.8.1 PASS: 300 seeded worlds; air-tuck gate counts '+JSON.stringify(counts)+
+console.log('v0.8.2 PASS: 300 seeded worlds; air-tuck gate counts '+JSON.stringify(counts)+
   '; enemy spawns '+Math.min(...totals)+'–'+Math.max(...totals)+
   '; 50m vendor rules, visibility gate, and God Mode damage effects.');
