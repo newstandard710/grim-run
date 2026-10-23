@@ -1,10 +1,64 @@
 # Grim Run — Project Status and Roadmap
 
-**Release:** v0.9.1 — *Polish & Fairness*  
-**Platform:** Landscape browser / Android prototype using Phaser 3.90.0 and a single HTML file  
+**Release:** v0.10.0 — *The Reaper Reborn*  
+**Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and versioned external SVG art assets  
 **Source:** `main/index.html` once promoted to main  
-**Rollback:** `backup/v0.9.0` (last successfully user-playtested build); earlier backups remain intact.  
-**Verification:** Rewind 3× visual playback and God Mode cooldown tests; 75-seed jump feasibility tests; Reliquary refund and abandon confirmations; 300 seeded encounter worlds, five simulated full runs, and legacy survival tests. **Live Android playtesting pending.**
+**Rollback:** `backup/v0.9.1` (last successfully user-playtested build); earlier backups remain intact.  
+**Verification:** New animation/asset/fallback regression, plus previous Rewind, Soul, jump fairness, 300 seeded encounter worlds and five simulated full runs. **Live Android visual and performance playtesting pending.**
+
+## v0.10.0 — The Reaper Reborn (Visual Foundation)
+
+**Design:** *Macabre Storybook Fantasy*, an original gothic-cartoony illustration style with ivory bone, dark navy robes, teal spectral eyes, worn scythe, magenta inner robe, and expressive poses. See [art guide](assets/ART_DIRECTION.md).
+
+### Shipped game artwork and new animation system
+
+- Original, authored SVG Reaper atlas: **16 coordinated poses**, 768 × 768px, 192px cells. Covers two idle poses, five run poses, jump, fall, physically narrow slide pose, two scythe attack poses, crossbow fire, hit, death and wing-hover.
+- Original, authored SVG Cavern Bat atlas: **eight wing and dive/hit/death frames**, 640 × 256px, 160px cells. Bat wings, head, eyes, ears, body and legs remain consistently illustrated across frames.
+- Runtime `assets/visuals/visual-system.js` rasterizes each SVG atlas into a fixed Phaser texture **once at load**, then creates an animated Reaper sprite and a **12-bat reusable sprite pool**.
+- Animation frames are selected from the actual gameplay state and elapsed time, so Rewind shows the appropriate old pose when snapshots play backward. Player input, jump physics, hitboxes, ability durations and economy are untouched.
+- Scythe swing produces a refined spectral arc that lines up with the existing collision-active interval. Wings remain shown for existing power levels. Bat's threat-warning circle stays visible with the new artwork.
+- Asset errors leave the original procedural Reaper and Bat renderers available independently. For comparison/troubleshooting, add **`?art=off`** to the game's URL to force classic procedural art without changing any save data.
+- An optional mobile [animation showcase](assets/visuals/showcase.html) displays actual game sprite atlas frames. Use it to assess character silhouette and frame continuity without a full run.
+- World geometry, backgrounds, Soul platforms, enemy spawn/combat, health, rewards and v0.9.1 Rewind gameplay unchanged.
+- Skeletal Bat, Crawler, Imp, vendors, portal, obstacles and world scenery remain procedural placeholders until subsequent art passes.
+
+### Source layout
+
+- `index.html` — gameplay and art visual-system include.
+- `assets/visuals/visual-system.js` — Phaser loader, deterministic pose mapper and sprite pool.
+- `assets/visuals/showcase.html` — self-contained browser/phone art lab for Reaper and Bat animation.
+- `assets/characters/reaper/reaper-sheet.svg` — Reaper 16-frame vector atlas.
+- `assets/enemies/cavern-bat/bat-sheet.svg` — regular Cavern Bat 8-frame vector atlas.
+- `assets/ART_DIRECTION.md` — original art guide, palette names and frame-map reference.
+- `tests/visual-foundation.cjs` — art content, frame mapping, loaded-texture, sprite pool, slide-foot-anchor and fallback checks.
+
+### Acceptance checklist (Android landscape)
+
+- [ ] Menu displays **v0.10.0**, previous Souls/Reliquary remain unchanged.
+- [ ] Illustrated Reaper appears after starting (and in the menu background); not the old geometric Reaper.
+- [ ] Running body/robes and scythe animate consistently; jump, fall, slide, attack, crossbow, hit and death have appropriate visual poses.
+- [ ] On a branch/slide combo, the new **slide sprite clears the existing low obstacle clearance** visually, with feet touching terrain correctly on slopes.
+- [ ] Crossbow fire pose triggers on tapping Fire; scythe visual hit trails match actual collision timing.
+- [ ] Regular Cavern Bats use articulated wing poses during flight and diving; warning circles remain readable. Skeletal Bats deliberately remain old art in this release.
+- [ ] Raven/Skeletal Wings continue appearing after purchase; hover and God Mode remain functional.
+- [ ] Rewind reverses both the Reaper pose and the bat sprite animation with the world; no visual jump after rewind completes.
+- [ ] Running, jumping, sliding, terrain collisions and enemy behavior still work across forest, mountain and underworld biomes.
+- [ ] 9,999m full runs, Souls, vendor transactions, Revive and finish function unchanged.
+- [ ] Check responsiveness and FPS during many bats on-screen. Actual mobile visuals/performance still require user inspection.
+- [ ] Add `?art=off` in the game URL; the original Reaper/Bat procedural art should return as a safe fallback.
+
+### Testing and caveats
+
+- `node tests/visual-foundation.cjs` passes (original SVG frame cells, pure pose logic, fixed foot anchors, Phaser-like art loading and Bat sprite pooling, failed-asset fallback).
+- Existing `tests/encounter-reliability.cjs`, `tests/rewind.cjs`, `tests/survival-crossbow.cjs` and `tests/polish-fairness.cjs` pass with the new version, using mocked Phaser graphics. 300 seeded encounter worlds and five simulated complete runs continue to pass.
+- **Limit:** Testing validates SVG structural rules and mocked loader behavior, not actual real-phone SVG rasterization, shader behavior or measured FPS. Phone QA is required before accepting the finished visual quality.
+
+### Next release roadmap
+
+- **v0.10.1 — Characters & Combat:** Art passes for Skeletal Bats, Bone Crawlers, Ember Imps, Snapping Brambles and upgrades to scythe/crossbow, hit feedback and wing rigs.
+- **v0.11.0 — World & Atmosphere:** Illustrated background parallax, ground textures, detailed biome transitions, vendor and portal redesign.
+- **v0.12.0 — Final Boss:** Arena, boss behavior, telegraphs, phases and distinctive boss artwork based on the established animation system.
+- **v0.13.0 — Sound/UI/Polish:** Audio, menu art, performance refinements and accessibility.
 
 ## v0.9.1 — Polish & Fairness
 
@@ -170,13 +224,14 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Android v0.9.1 playtest first. After feedback, prioritize encounter balance and game presentation (art, animations, sound, UI feel), then mobile optimization, offline dependency bundling and native Android packaging.
+Android v0.10.0 art/animation playtest first. Then v0.10.1 other enemies and combat visuals, v0.11.0 illustrated biomes, and v0.12.0 boss design. Later sound, UI optimization and native Android packaging.
 
 ## Source and backups
 
 - `main/index.html`: published game after merge.
-- `tests/polish-fairness.cjs`, `tests/rewind.cjs`, `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
-- `backup/v0.9.0`: last successful user-playtested version.
+- `tests/visual-foundation.cjs`, `tests/polish-fairness.cjs`, `tests/rewind.cjs`, `tests/encounter-reliability.cjs`, `tests/survival-crossbow.cjs`: dependency-free Node regression suites.
+- `backup/v0.9.1`: last successful user-playtested version.
+- `backup/v0.9.0`: earlier version.
 - `backup/v0.8.3`: previous version.
 - `backup/v0.8.2`: earlier version.
 - `backup/v0.8.1`: previous rollback stable version.
