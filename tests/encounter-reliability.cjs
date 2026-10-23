@@ -6,12 +6,20 @@ const path=require('node:path');
 const vm=require('node:vm');
 
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
-const node=()=>({textContent:'',style:{setProperty(){}},classList:{toggle(){},add(){},remove(){}},addEventListener(){},setAttribute(){}});
+const node=()=>{let element;
+  element=new Proxy({textContent:'',style:{setProperty(){}},
+    classList:{toggle(){},add(){},remove(){},contains(){return false}},
+    addEventListener(){},setAttribute(){},appendChild(){},replaceChildren(){},destroy(){}},
+    {get(o,p){return p in o?o[p]:(...args)=>element;},set(o,p,v){o[p]=v;return true;}});
+  return element;
+};
+const nodes=new Map();
+const getNode=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
 const sandbox={
-  document:{getElementById:()=>node(),createElement:node,write(){}},
+  document:{getElementById:getNode,createElement:node,write(){},addEventListener(){}},
   localStorage:{getItem:()=>null,setItem(){}},
   Phaser:{Scene:class{},Game:class{},AUTO:1,Scale:{RESIZE:1,CENTER_BOTH:1}},
-  location:{search:''},
+  location:{search:''},URLSearchParams,
   innerWidth:950,innerHeight:430,addEventListener(){}
 };
 sandbox.window=sandbox;
@@ -88,6 +96,38 @@ assert.ok(scene.damageFlashMs>0,'Damage feedback must activate in God Mode');
 scene.godMode=false;
 scene.takeDamage(1,'rock');
 assert.equal(scene.player.hp,2,'Normal damage should still deduct one heart');
+
+function graphic(){return node();}
+const visibility=[];
+for(const seed of [1,7,42,99,314]){
+  sandbox.location.search='?seed='+seed;
+  const world=new GameScene();
+  world.scale={width:950,height:430,on(){},off(){}};
+  world.events={once(){}};
+  world.add={graphics:graphic,text:graphic};
+  world.cameras={main:{setScroll(){}}};
+  world.create();
+  world.drawScene=()=>{}; // Simulate gameplay, not actual pixels.
+  world.startRun();
+  world.player.x=world.startX+5000*C.pxPerMeter;world.distance=5000;
+  world.enterUnderworld();
+  world.godMode=true;world.nextVendorNumber=8;world.lastVendorNumber=7;
+  for(let n=0;n<6;n++)world.update(0,250);
+  let frames=0;
+  while(world.state!=='won'&&frames<6000){
+    if(world.state==='upgrade')world.leaveVendor();
+    assert.notEqual(world.state,'dead','Unexpected death in God Mode: seed '+seed);
+    world.update(0,34);frames++;
+  }
+  assert.equal(world.state,'won','Full run must reach 9,999m: seed '+seed);
+  assert.ok(world.encounterTelemetry.enteredView>=15,
+    'Enemies spawned but did not enter viewport: seed '+seed);
+  assert.ok(world.encounterTelemetry.visibleFor650ms>=12,
+    'Enemies disappeared before a readable encounter: seed '+seed);
+  visibility.push(world.encounterTelemetry.visibleFor650ms);
+}
+console.log('Full-run encounter visibility: '+visibility.join(', '));
+
 console.log('v0.8.1 PASS: 300 seeded worlds; air-tuck gate counts '+JSON.stringify(counts)+
   '; enemy spawns '+Math.min(...totals)+'–'+Math.max(...totals)+
   '; 50m vendor rules, visibility gate, and God Mode damage effects.');
