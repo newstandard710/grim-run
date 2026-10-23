@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.10.2</title>
+  <title>GRIM RUN — v0.10.3</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.10.2 · GOD MODE TOOLS</div>
+      <div class="mini">v0.10.3 · ILLUSTRATED SPRITES</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.10.2',
+  version: '0.10.3',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1550,11 +1550,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
       this.visuals=scope.GRIM_VISUALS?new scope.GRIM_VISUALS.GrimVisualSystem(this):null;
       if(this.visuals){
-        // Temporary art review switches are opt-in; the default remains the
-        // established v0.10.2 procedural presentation.
+        // Illustrated v0.10.3 art is the default. Keep the stable procedural
+        // presentation explicitly available for comparison and fallback.
         const artMode=new URLSearchParams(location.search).get('art');
-        if(artMode==='illustrated')this.visuals.beginIllustrated();
-        else if(artMode==='experimental')this.visuals.begin();
+        if(artMode==='procedural'){
+          // Keep Phaser's original procedural Reaper/Bat renderers active.
+        }else if(artMode==='experimental')this.visuals.begin();
+        else this.visuals.beginIllustrated();
         this.events.once('shutdown',()=>this.visuals.shutdown());
       }
       this.drawScene();

@@ -5,7 +5,8 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
 assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.3"></script>'), 'Versioned art JS avoids stale mobile cached loader');
-assert.ok(html.includes("artMode==='illustrated'"),'Illustrated sprites remain behind an opt-in review flag');
+assert.ok(html.includes('else this.visuals.beginIllustrated()'),'Illustrated sprites are the current default');
+assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
 assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector atlas remains available');
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
  assert.ok(svg.startsWith('<svg')&&svg.includes('width="'+width+'" height="'+height+'"'));
@@ -140,7 +141,7 @@ invalid.begin();
 assert.equal(invalid.reaperReady,false,'Failure must leave procedural Reaper enabled');
 assert.equal(invalid.batReady,false,'Failure must leave procedural Bat enabled');
 assert.ok(invalid.failedAssets.length>=2);
-console.log('PASS v0.10.2: vector atlas poses, visual-gameplay decoupling, safe fallback, deterministic animations, bat pool and anchored slide.');
+console.log('PASS v0.10.3: vector atlas poses, static PNG mapping, safe procedural fallback, bat pool and anchored slide.');
 
 // Production PNG review mode loads only static images, and the menu/default path stays unchanged.
 const staticTextures=new Map(),staticNodes=[];let staticDone;
@@ -160,10 +161,10 @@ const staticRenderer=new V.GrimVisualSystem(staticScene);
 assert.equal(staticRenderer.beginIllustrated(),true);
 assert.equal(staticRenderer.reaperReady,true);assert.equal(staticRenderer.batReady,true);
 assert.equal(staticRenderer.reaperPoseSprites.idle.key,'gr_ill_reaper_idle');
-assert.equal(staticTextures.size,23,'All static production PNG poses load');
+assert.equal(staticTextures.size,12,'Runtime loads only displayed static pose PNGs');
 assert.equal(staticRenderer.illustratedReaperPose(),'run');
 staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPose(),'slide');
 staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
 assert.equal(staticRenderer.illustratedReaperPose(),'fall');
 staticRenderer.shutdown();
-console.log('PASS v0.10.3: 23 illustrated static PNG poses load with state-matched pose selection and 29px slide clearance.');
+console.log('PASS v0.10.3: 12 runtime illustrated PNG textures load with static pose selection and 29px slide clearance.');

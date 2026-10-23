@@ -82,16 +82,17 @@ const server=http.createServer((req,res)=>{
   assert.deepEqual(errors,[],'Browser console errors');
   // Review the painted, transparent PNGs in the real Phaser runtime without
   // changing the default release path or using any animated frame sequence.
-  await page.goto(origin+'/?art=illustrated&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.loaded===true,null,{timeout:45000});
   const illustratedLoaded=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
     return {ready:v.reaperReady&&v.batReady,illustrated:v.illustrated,
-      textures:Object.values(window.GRIM_VISUALS.ILLUSTRATED.reaper).every(m=>s.textures.exists(m.key))&&
-        Object.values(window.GRIM_VISUALS.ILLUSTRATED.bat).every(m=>s.textures.exists(m.key)),
+      textures:['idle','run','jump','fall','slide','scythe_attack','crossbow_fire','hurt','death','hover']
+        .every(k=>s.textures.exists(window.GRIM_VISUALS.ILLUSTRATED.reaper[k].key))&&
+        ['neutral','dive'].every(k=>s.textures.exists(window.GRIM_VISUALS.ILLUSTRATED.bat[k].key)),
       poses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length};
   });
-  assert.deepEqual(illustratedLoaded,{ready:true,illustrated:true,textures:true,poses:15,bats:12});
+  assert.deepEqual(illustratedLoaded,{ready:true,illustrated:true,textures:true,poses:10,bats:12});
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const staticReview=await page.evaluate(()=>{
@@ -116,9 +117,8 @@ const server=http.createServer((req,res)=>{
   assert.equal(staticReview.slideVisible,true);assert.ok(staticReview.slideGroundError<.1);
   assert.ok(staticReview.slideArtHeight<=29.01,'Low-profile slide artwork fits unchanged 29px clearance');
   assert.equal(staticReview.batVisible,true);assert.equal(staticReview.batKey,'gr_ill_bat_neutral');
-  // Default game currently uses procedural fallback while painted art is reviewed.
-  // The previous SVGs remain available as opt-in experimental art.
-  await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  // The prior procedural presentation remains an explicit fallback option.
+  await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:30000});
   const fallback=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0];
@@ -159,7 +159,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: legacy and illustrated opt-ins, PNG transparency anchors, static pose selection, safe default fallback and God Mode tools.');
+  console.log('PASS actual Chromium: illustrated v0.10.3 default, explicit procedural fallback, legacy atlas option, PNG anchors and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

@@ -184,21 +184,30 @@
          typeof s.textures.exists!=='function'||!s.add||typeof s.add.image!=='function')return false;
       if(this.loadRequested)return true;
       this.loadRequested=true;this.illustrated=true;
-      const all=[...Object.values(ILLUSTRATED.reaper),...Object.values(ILLUSTRATED.bat)];
+      // Load only poses the static runtime currently displays. Additional
+      // production poses stay in the asset package for the animation pass.
+      const runtimeReaper=['idle','run','jump','fall','slide','scythe_attack',
+        'crossbow_fire','hurt','death','hover'].map(name=>ILLUSTRATED.reaper[name]);
+      const runtimeBat=['neutral','dive'].map(name=>ILLUSTRATED.bat[name]);
+      const all=[...runtimeReaper,...runtimeBat];
       const errors=new Set();
       const fail=file=>{if(file&&file.key)errors.add(file.key);};
       const done=()=>{
         if(typeof s.load.off==='function')s.load.off('loaderror',fail);
         try{
-          for(const [name,meta] of Object.entries(ILLUSTRATED.reaper)){
+          for(const name of ['idle','run','jump','fall','slide','scythe_attack',
+            'crossbow_fire','hurt','death','hover']){
+            const meta=ILLUSTRATED.reaper[name];
             if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
             const image=s.add.image(0,0,meta.key).setOrigin(0,0).setDepth(12).setVisible(false);
             this.reaperPoseSprites[name]=image;
           }
           if(this.reaperPoseSprites.idle){this.reaper=this.reaperPoseSprites.idle;this.reaperReady=true;}
-          for(const [name,meta] of Object.entries(ILLUSTRATED.bat))
+          for(const name of ['neutral','dive']){
+            const meta=ILLUSTRATED.bat[name];
             if(errors.has(meta.key)||!s.textures.exists(meta.key))this.failedAssets.push('Bat PNG unavailable: '+name);
-          if(Object.values(ILLUSTRATED.bat).every(meta=>s.textures.exists(meta.key)&&!errors.has(meta.key))){
+          }
+          if(runtimeBat.every(meta=>s.textures.exists(meta.key)&&!errors.has(meta.key))){
             for(let i=0;i<12;i++)this.batPool.push(s.add.image(0,0,ILLUSTRATED.bat.neutral.key)
               .setOrigin(0,0).setDepth(9).setVisible(false));
             this.batReady=true;
