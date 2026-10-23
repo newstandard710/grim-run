@@ -1168,6 +1168,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
       this.nextEnemySpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
+      this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
+        rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
+        kills:0,byKind:{}};
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -1277,13 +1280,16 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
+      this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
+        rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
+        kills:0,byKind:{}};
       if(this.ui){this.ui.showFallNotice(false);this.ui.showPortal(false);}
       this.state = 'playing';
       this.countdownMs = 0; this.goFlashMs = 0;
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:startingHP, maxHp:startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
-      this.nextEnemySpawnX=this.startX+5240*C.pxPerMeter;
+      this.nextEnemySpawnX=this.startX+5190*C.pxPerMeter;
       this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
       this.speed = C.initialSpeed;
       this.nextEncounterX = this.player.x + 850;
@@ -1519,10 +1525,10 @@ window.GRIM_CONFIG = Object.freeze({
     }
     clearUpgradeCorridor(vendorX){
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
-      const beginX=vendorX-C.upgradeSafetyBeforePx-90;
+      const beginX=vendorX;
       this.obstacles=this.obstacles.filter(ob=>ob.x>endX||ob.x+ob.width<beginX);
-      this.enemies=this.enemies.filter(e=>e.x<beginX-30||e.x>endX+30);
-      this.fireballs=this.fireballs.filter(b=>b.x<beginX-30||b.x>endX+30);
+      this.enemies=this.enemies.filter(e=>e.x+25<beginX||e.x-25>endX);
+      this.fireballs=this.fireballs.filter(b=>b.x+9<beginX||b.x-9>endX);
       for(const tip of this.tips)if(tip.atX+80>=beginX&&tip.atX<=endX)tip.label.destroy();
       this.tips=this.tips.filter(t=>t.atX+80<beginX||t.atX>endX);
     }
@@ -1621,32 +1627,69 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
 
+    trySpawnCombat(x,kind){
+      const stats=this.encounterTelemetry;
+      const flying=Combat.enemyIsFlying({kind});
+      const width=flying?46:42;
+      if(Core.intersectsVendorCorridor(x-width/2,width,this.startX,C.vendorEveryMeters,C.pxPerMeter)){
+        stats.rejectedVendor++;return false;
+      }
+      // Protect actual pickup-platform geometry, not hundreds of meters nearby.
+      if(Core.overlapsSoulPlatform(x-width/2,width,this.soulPlatform,35)){
+        stats.rejectedGeometry++;return false;
+      }
+      const ground=this.terrain.groundAt(x);
+      if(ground===null){stats.rejectedGeometry++;return false;}
+      if(!flying){
+        const left=this.terrain.groundAt(x-38),right=this.terrain.groundAt(x+45);
+        if(left===null||right===null||Math.abs(left-ground)>80||Math.abs(right-ground)>80){
+          stats.rejectedGeometry++;return false;
+        }
+      }
+      if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x+o.width/2-x)<(flying?105:125)&&
+          (!flying||['branch','airBramble','tuckGate'].includes(o.type)))){
+        stats.rejectedOverlap++;return false;
+      }
+      if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<220)){
+        stats.rejectedOverlap++;return false;
+      }
+      const y=ground-(flying?161:kind==='crawler'?21:34);
+      this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
+        phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
+        visibleMs:0,everVisible:false,lastScytheSwing:-1,contactDone:false,
+        warningMs:0,fireMs:kind==='imp'?430+this.rng.integer(0,350):0});
+      stats.spawned++;
+      stats.byKind[kind]=(stats.byKind[kind]||0)+1;
+      return true;
+    }
     spawnCombatAhead(ahead){
-      // Spawn moving enemies only after acquiring the Soulcaster at the portal.
+      // Try several alternative positions for each encounter instead of
+      // discarding it when the original candidate happens to land in a gap.
       while(this.hasTeleported&&this.nextEnemySpawnX<ahead){
         const x=this.nextEnemySpawnX,m=(x-this.startX)/C.pxPerMeter;
-        this.nextEnemySpawnX+=(m>=8000?53+this.rng.integer(0,30):84+this.rng.integer(0,43))*C.pxPerMeter;
-        if(m<5190||m>C.finishMeters-150)continue;
-        if(Math.abs(m-9500)<185)continue;
-        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,470,85))continue;
+        this.nextEnemySpawnX+=(m>=8000?68+this.rng.integer(0,24):94+this.rng.integer(0,38))*C.pxPerMeter;
+        if(m<5150||m>C.finishMeters-110)continue;
+        this.encounterTelemetry.attempts++;
         const choice=this.rng.next();
-        const kind=m>=8000?(choice<.64?'skeletalBat':choice<.82?'imp':'crawler'):
-          m>=6500?(choice<.77?'bat':'crawler'):'bat';
-        const flying=Combat.enemyIsFlying({kind});
-        // Flying creatures can appear above uneven ground, but never above a chasm.
-        // Ground enemies require flat solid floor to avoid climbing into the terrain.
-        const ground=this.terrain.groundAt(x);
-        if(ground===null)continue;
-        if(!flying&&(this.terrain.groundAt(x-70)===null||
-          this.terrain.groundAt(x+38)===null))continue;
-        if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<(flying?140:195)&&
-          (!flying||o.type==='tuckGate'||o.type==='airBramble')))continue;
-        if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-x)<(flying?145:185)))continue;
-        const y=ground-(flying?161:kind==='crawler'?21:34);
-        this.enemies.push({kind,x,y,homeY:y,hp:(kind==='skeletalBat'||kind==='imp')?2:1,
-          phase:this.rng.next()*Math.PI*2,dead:false,mode:'glide',timer:0,
-          warningMs:0,fireMs:kind==='imp'?430+this.rng.integer(0,350):0,
-          lastScytheSwing:-1,contactDone:false});
+        const kind=m>=8000?(choice<.54?'skeletalBat':choice<.79?'imp':'crawler'):
+          m>=6500?(choice<.73?'bat':'crawler'):'bat';
+        let placed=false;
+        for(let attempt=0;attempt<10&&!placed;attempt++){
+          const candidate=x+attempt*11*C.pxPerMeter;
+          if(candidate>this.terrain.finishX-65)break;
+          placed=this.trySpawnCombat(candidate,kind);
+        }
+        // At a tricky chasm or slope, retry as a flyer before dropping a
+        // ground encounter completely. This keeps the biome populated.
+        if(!placed&&!Combat.enemyIsFlying({kind})){
+          const bat=m>=8000?'skeletalBat':'bat';
+          for(let attempt=0;attempt<10&&!placed;attempt++){
+            const candidate=x+attempt*11*C.pxPerMeter;
+            if(candidate>this.terrain.finishX-65)break;
+            placed=this.trySpawnCombat(candidate,bat);
+          }
+        }
+        if(!placed)this.encounterTelemetry.dropped++;
       }
       // Telegraphed extending thorns above the tree line: cut them or time the run.
       while(this.nextSnapSpawnX<ahead){
@@ -1655,7 +1698,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(m<3000||m>4630)continue; // Preserve the mountain Soul approach.
         const nearGround=this.terrain.groundAt(x),farGround=this.terrain.groundAt(x+62);
         if(nearGround===null||farGround===null||Math.abs(nearGround-farGround)>105)continue;
-        if(!Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,400,65))continue;
+        if(Core.intersectsVendorCorridor(x,62,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
         if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<220))continue;
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
         const ground=this.terrain.groundAt(x),height=62;
@@ -1677,13 +1720,12 @@ window.GRIM_CONFIG = Object.freeze({
         const type=Core.chooseEncounter(this.rng,this.distance);
         const width=type==='branch'?74:type==='bramble'?60:type==='fire'?58:54;
         if(x>this.brittleClearUntilX && this.terrain.canPlace(x,width) &&
-           Core.isMilestoneSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,245) &&
-           Core.isUpgradeSafe(x,this.startX,C.vendorEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters) &&
-           Core.isUpgradeSafe(x+width,this.startX,C.vendorEveryMeters,C.pxPerMeter,C.upgradeSafetyBeforePx,C.upgradeSafetyAfterMeters) &&
-           Math.abs((x-this.startX)/C.pxPerMeter-4850)>120 &&
-           Math.abs((x-this.startX)/C.pxPerMeter-9500)>165 &&
-           !this.obstacles.some(o=>(o.type==='tuckGate'||o.type==='airBramble')&&Math.abs(o.x-x)<230) &&
-           !this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<125)){
+           !Core.intersectsVendorCorridor(x,width,this.startX,C.vendorEveryMeters,C.pxPerMeter) &&
+           !Core.overlapsSoulPlatform(x,width,this.soulPlatform,30) &&
+           Math.abs(x-this.terrain.portalX)>95 &&
+           x+width<this.terrain.finishX-80 &&
+           !this.obstacles.some(o=>!o.destroyed&&x<o.x+o.width+90&&x+width>o.x-90) &&
+           !this.coins.some(c=>!c.taken&&c.x>x-40&&c.x<x+width+40)){
           this.placeEncounter(type,x);
         }
         this.nextEncounterX+=Core.encounterGap(this.speed,this.rng)*(this.distance>=5000?.72:1);
