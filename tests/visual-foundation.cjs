@@ -50,6 +50,7 @@ const scope={window:{innerWidth:950,innerHeight:430,GRIM_VISUALS:V,addEventListe
 vm.createContext(scope);
 for(const [,attrs,code] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(code,scope,{filename:'index.html'});
+scope.GrimUI=scope.window.GrimUI; // Node VM global binding for the game's constructor.
 const Game=scope.window.GrimGameScene;
 const game=new Game();game.scale={width:950,height:430,on(){},off(){}};
 game.events={once(){}};game.add={graphics:gfx,text:gfx};game.cameras={main:{setScroll(){}}};
