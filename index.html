@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.8.3</title>
+  <title>GRIM RUN — v0.9.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -154,6 +154,18 @@ button {cursor:pointer;}
 .crossbow{left:max(env(safe-area-inset-left),18px);bottom:calc(var(--right-bottom) + var(--action-size) + 14px);border-color:#d5ccb3b3;background:linear-gradient(155deg,#45505ce0,#18202de7);}
 .crossbow-cd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#101b2bbd;font-size:clamp(16px,4.7vh,26px);color:#d8fff0;letter-spacing:.02em;}
 .crossbow.recharging{border-color:#8599a49a;}
+.rewind{left:max(env(safe-area-inset-left),18px);top:clamp(56px,16vh,83px);bottom:auto;
+ width:clamp(58px,17vh,77px);height:clamp(58px,17vh,77px);
+ border-color:#c7abffbf;background:linear-gradient(155deg,#55467adc,#161c35ed);font-size:clamp(9px,1.8vh,12px)}
+.rewind .symbol{font-size:clamp(25px,6vh,37px)}
+.rewind-cd{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;
+ background:#17152bd9;color:#efdfff;font-size:clamp(12px,3vh,20px);font-weight:950;letter-spacing:0}
+.rewind.recharging{border-color:#7c7598c7}
+.rewind-flash{position:absolute;inset:0;z-index:8;pointer-events:none;
+ background:repeating-linear-gradient(-23deg,#b993ff12 0,#b993ff12 12px,transparent 12px,transparent 28px);
+ box-shadow:inset 0 0 160px #ae87f8bb;animation:rewindPulse .55s ease-out forwards}
+@keyframes rewindPulse{from{opacity:.95;filter:hue-rotate(0)}to{opacity:0;filter:hue-rotate(42deg)}}
+@media(max-height:310px){.rewind{top:45px;width:53px;height:53px}}
 .chest-scene{position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#213d46f4 0%,#09101dfb 75%);text-align:center;color:#e5fff5;padding:5px 12px 9px;}
 .chest-eyebrow{font-size:clamp(10px,2vh,15px);font-weight:900;letter-spacing:.30em;color:#b7fff4;}
 .chest-illustration{position:relative;width:min(335px,40vw);height:clamp(104px,42vh,220px);flex-shrink:0;}
@@ -214,10 +226,12 @@ button {cursor:pointer;}
     <div class="chest-caption">AIM IS AUTOMATIC · PRESS FIRE TO SHOOT</div>
     <button id="chest-continue-btn" class="primary" aria-label="Continue from weapon acquisition">CONTINUE ▶</button>
   </div>
+  <div id="rewind-flash" class="rewind-flash hidden" aria-hidden="true"></div>
   <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
     <button id="crossbow-btn" class="action crossbow hidden" aria-label="Fire Bone Crossbow"><span class="symbol">⌁</span><span>FIRE</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
+    <button id="rewind-btn" class="action rewind hidden" aria-label="Rewind Time"><span class="symbol">↶</span><span>REWIND</span><span id="rewind-cd" class="rewind-cd hidden"></span></button>
     <div class="right-buttons">
       <button id="jump-btn" class="action jump" aria-label="Jump"><span class="symbol">↑</span><span>JUMP</span></button>
       <button id="slide-btn" class="action slide" aria-label="Slide"><span class="symbol">⇥</span><span>SLIDE</span></button>
@@ -230,7 +244,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.8.3 · ENEMY REWORK</div>
+      <div class="mini">v0.9.0 · DEATH'S REVERSAL</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -262,7 +276,7 @@ button {cursor:pointer;}
   <div id="pause-screen" class="modal-wrap hidden">
     <div class="modal compact"><h2>PAUSED</h2><p>The Underworld can wait.</p>
       <label class="god-mode-setting"><input id="god-mode-checkbox" type="checkbox"><span> GOD MODE — INVINCIBLE</span></label>
-      <p class="god-mode-desc">Playtest only. Hazards cannot take HP; Devil deals still cost HP.</p>
+      <p class="god-mode-desc">Playtest only. Hazards cannot take HP; max-level Rewind is temporarily unlocked. Devil deals still cost HP.</p>
       <button id="resume-btn" class="primary">RESUME ▶</button><button id="quit-btn" class="secondary">QUIT RUN</button></div>
   </div>
   <div id="revive-screen" class="modal-wrap revive-wrap hidden" aria-label="Resurrection offer">
@@ -296,7 +310,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.8.3',
+  version: '0.9.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -348,7 +362,8 @@ window.GRIM_CONFIG = Object.freeze({
       next() { state = (Math.imul(1664525, state) + 1013904223) >>> 0; return state / 4294967296; },
       integer(min, max) { return min + Math.floor(this.next() * (max - min + 1)); },
       choose(items) { return items[Math.floor(this.next() * items.length)]; },
-      get state() { return state; }
+      get state() { return state; },
+      setState(value) {state=value>>>0;}
     };
   }
   function overlaps(a, b) { return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; }
@@ -618,7 +633,7 @@ window.GRIM_CONFIG = Object.freeze({
 (function(scope){
   'use strict';
   const MAX_LEVEL=4,HEALTH_CAP=9;
-  const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones'];
+  const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones','deathsReversal'];
   const DEVIL_ORDER=['skeletalWings','infernalBoots','rapidFire','powerShot','chainShot'];
   const POWERS=Object.freeze({
     soulCleave:{id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',descriptions:[
@@ -632,6 +647,11 @@ window.GRIM_CONFIG = Object.freeze({
       'When hurt, clear and bridge the next 175m.',
       'When hurt, clear and bridge the next 200m.',
       'When hurt, clear and bridge the next 225m.']},
+    deathsReversal:{id:'deathsReversal',name:"DEATH'S REVERSAL",action:'REWIND',icon:'↶',color:'#c7aaff',descriptions:[
+      'Rewind 5 seconds of your run; 60-second cooldown.',
+      'Rewind 6 seconds; cooldown reduced to 55 seconds.',
+      'Rewind 7 seconds; cooldown reduced to 50 seconds.',
+      'Rewind 8 seconds; cooldown reduced to 45 seconds.']},
     skeletalWings:{id:'skeletalWings',name:'SKELETAL WINGS',action:'HOVER',icon:'☠',color:'#ffb08e',descriptions:[
       'Share 0.70s of hover over an entire flight.','Share 1.05s of hover per flight.',
       'Share 1.40s of hover per flight.','Share 1.75s of hover per flight.']},
@@ -679,6 +699,8 @@ window.GRIM_CONFIG = Object.freeze({
       skeletalHoverMs:()=>HOVER_MS[levels.skeletalWings],
       fireCooldownMs:()=>FIRE_COOLDOWN_MS[levels.infernalBoots],
       brittleRangeMeters:()=>BRITTLE_METERS[levels.brittleBones],
+      rewindSeconds:()=>levels.deathsReversal?4+levels.deathsReversal:0,
+      rewindCooldownMs:()=>levels.deathsReversal?65000-5000*levels.deathsReversal:0,
       lavaDamage:()=>levels.infernalBoots>0?1:2,
       summary:()=>[...POWER_ORDER,...DEVIL_ORDER].filter(id=>levels[id]>0)
         .map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:false})),
@@ -996,6 +1018,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.selecting = false;
       this.bindAction('attack-btn', 'attack', () => actions.attack());
       this.bindAction('crossbow-btn', 'crossbow', () => actions.fireCrossbow());
+      this.bindAction('rewind-btn','rewind',()=>actions.rewind());
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
       el('start-btn').addEventListener('click', () => actions.start());
@@ -1011,13 +1034,14 @@ window.GRIM_CONFIG = Object.freeze({
       el('quit-btn').addEventListener('click', () => actions.menu());
       el('god-mode-checkbox').addEventListener('change', event => actions.setGodMode(event.target.checked));
       document.addEventListener('keydown', event => {
-        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','Escape','KeyP'].includes(event.code)) event.preventDefault();
+        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
         switch(event.code) {
           case 'Space': case 'ArrowUp': case 'KeyJ': actions.jump(); break;
           case 'KeyA': actions.attack(); break;
           case 'KeyF': actions.fireCrossbow(); break;
+          case 'KeyR': actions.rewind(); break;
           case 'ArrowDown': case 'KeyS': actions.slideStart(); break;
           case 'Escape': case 'KeyP': actions.pause(); break;
           case 'Enter': if (!el('menu').classList.contains('hidden') || !el('game-over').classList.contains('hidden')) actions.start(); break;
@@ -1053,7 +1077,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     releaseAll() {
       this.activePointers.clear(); this.heldKeys.clear();
-      for (const id of ['attack-btn','crossbow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
+      for (const id of ['attack-btn','crossbow-btn','rewind-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
       show('countdown-overlay', mode === 'countdown');
@@ -1093,6 +1117,18 @@ window.GRIM_CONFIG = Object.freeze({
       el('crossbow-cd').textContent=ms>0?(ms/1000).toFixed(1)+'s':'';
       el('crossbow-btn').classList.toggle('recharging',ms>0);
     }
+    showRewind(level,cooldownMs,ready,historyMs,requiredMs){
+      show('rewind-btn',level>0);
+      if(level<=0)return;
+      const pending=cooldownMs>0||!ready;
+      show('rewind-cd',pending);
+      el('rewind-cd').textContent=cooldownMs>0?
+        Math.ceil(cooldownMs/1000)+'s':Math.ceil(Math.max(0,requiredMs-historyMs)/1000)+'s';
+      el('rewind-btn').classList.toggle('recharging',pending);
+      el('rewind-btn').setAttribute('aria-label',cooldownMs>0?
+        'Rewind recharging':!ready?'Rewind history charging':'Rewind '+requiredMs/1000+' seconds');
+    }
+    rewindFlash(on){show('rewind-flash',on);}
     offerVendor(offers,type,phase,meters,hp,maxHp,gold) {
       this.selecting=false;
       const devil=type==='devil', healing=phase==='heal';
@@ -1326,6 +1362,7 @@ window.GRIM_CONFIG = Object.freeze({
         revive: () => this.revive(),
         declineRevive: () => this.declineRevive(),
         fireCrossbow: () => this.fireCrossbow(),
+        rewind: () => this.rewind(),
         finishChest: () => this.finishChest()
       });
       this.meta=Meta.load();
@@ -1361,6 +1398,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.groundY=Math.round(this.height*C.groundRatio);
       const dy=this.groundY-previousY;
       this.terrain.shiftY(dy);
+      // Existing snapshots are screen-size specific; invalidate on rotation.
+      if(this.rewindTerrainBase)for(const item of this.rewindTerrainBase.values()){
+        item.y0+=dy;item.y1+=dy;
+      }
+      if(this.rewindFrames)this.resetRewindHistory();
       for(const enemy of this.enemies){enemy.y+=dy;enemy.homeY+=dy;}
       for(const bullet of this.bullets)bullet.y+=dy;
       for(const ball of this.fireballs)ball.y+=dy;
@@ -1380,6 +1422,155 @@ window.GRIM_CONFIG = Object.freeze({
     get feetY(){return this.player.y;}
     get onGround(){return this.player.grounded;}
     get lowProfile(){return this.player.sliding || (!this.onGround&&(this.player.holdSlide||this.player.airTuck));}
+    rewindLevel(){
+      // God Mode is a temporary level-4 test override, never a real purchase.
+      return this.godMode?4:this.powerManager.level('deathsReversal');
+    }
+    rewindLengthMs(){return this.rewindLevel()?1000*(4+this.rewindLevel()):0;}
+    rewindRechargeMs(){return this.rewindLevel()?65000-5000*this.rewindLevel():0;}
+    resetRewindHistory(){
+      // Irreversible checkpoint: no crossing vendor transactions, banked Souls,
+      // portal changes, or revival. The cooldown deliberately is NOT reset.
+      this.rewindFrames=[];this.rewindClockMs=0;this.rewindSampleMs=0;
+      this.updateRewindButton();
+    }
+    updateRewindButton(){
+      if(!this.ui)return;
+      const duration=this.rewindLengthMs();
+      const actual=this.rewindFrames.length?
+        this.rewindClockMs-this.rewindFrames[0].at:0;
+      const ready=duration>0&&actual>=duration;
+      this.ui.showRewind(this.rewindLevel(),this.rewindCooldownMs||0,
+        ready,actual,duration);
+    }
+    saveTerrainOriginal(from,to){
+      if(!this.terrain||!Array.isArray(this.terrain.segments))return;
+      // Brittle Bones permanently turns gaps into bridges. Preserve each
+      // section's original geometry once so rewinding can undo that change.
+      if(!this.rewindTerrainBase)this.rewindTerrainBase=new Map();
+      for(let i=0;i<this.terrain.segments.length;i++){
+        const s=this.terrain.segments[i];
+        if(s.kind!=='gap'||s.start<from-4||s.end>to+4||
+          this.rewindTerrainBase.has(i))continue;
+        this.rewindTerrainBase.set(i,{kind:s.kind,y0:s.y0,y1:s.y1});
+      }
+    }
+    captureRewind(){
+      if(this.state!=='playing'||this.rewindLevel()===0)return;
+      if(!this.rewindFrames)this.rewindFrames=[];
+      const enemies=this.enemies.map(e=>({...e}));
+      const obstacles=this.obstacles.map(o=>({...o}));
+      const bullets=this.bullets.map(b=>{
+        const {ref,...data}=b;
+        return {...data,refEnemy:this.enemies.indexOf(ref),refObstacle:this.obstacles.indexOf(ref)};
+      });
+      const fireballs=this.fireballs.map(b=>{
+        const {owner,...data}=b;
+        return {...data,ownerEnemy:this.enemies.indexOf(owner)};
+      });
+      const rubble=[];
+      for(const [index] of this.rewindTerrainBase||[]){
+        const s=this.terrain.segments[index];
+        if(s&&s.kind!=='gap')rubble.push({index,kind:s.kind,y0:s.y0,y1:s.y1});
+      }
+      this.rewindFrames.push({
+        at:this.rewindClockMs,
+        player:{...this.player},
+        speed:this.speed,distance:this.distance,elapsed:this.elapsed,frame:this.frame,
+        cameraX:this.cameraX,cameraY:this.cameraY,
+        nextEncounterX:this.nextEncounterX,nextEnemySpawnX:this.nextEnemySpawnX,
+        nextGroundSpawnX:this.nextGroundSpawnX,nextSnapSpawnX:this.nextSnapSpawnX,
+        gunCooldownMs:this.gunCooldownMs,blastCooldownMs:this.blastCooldownMs,
+        blastFlashMs:this.blastFlashMs||0,
+        damageFlashMs:this.damageFlashMs,bonesBlastMs:this.bonesBlastMs,
+        brittleClearUntilX:this.brittleClearUntilX,
+        fallFeedbackMs:this.fallFeedbackMs,goFlashMs:this.goFlashMs,
+        swingSequence:this.swingSequence,
+        coinCount:this.coinCount,goldCollected:this.goldCollected,points:this.points,
+        enemies,obstacles,bullets,fireballs,
+        coins:this.coins.map(o=>({...o})),souls:this.souls.map(o=>({...o})),
+        rubble,rngState:this.rng.state
+      });
+      // 8 seconds max rewind plus one sample, at about 10 samples / second.
+      const cutoff=this.rewindClockMs-8400;
+      while(this.rewindFrames.length>2&&this.rewindFrames[1].at<cutoff)
+        this.rewindFrames.shift();
+    }
+    tickRewind(frameMs){
+      this.rewindCooldownMs=Math.max(0,(this.rewindCooldownMs||0)-frameMs);
+      if(this.rewindLevel()===0){
+        if(this.rewindFrames.length)this.resetRewindHistory();
+        this.rewindFlashMs=Math.max(0,(this.rewindFlashMs||0)-frameMs);
+        if(this.rewindFlashMs===0)this.ui.rewindFlash(false);
+        this.updateRewindButton();return;
+      }
+      this.rewindClockMs+=frameMs;this.rewindSampleMs+=frameMs;
+      if(this.rewindSampleMs>=100){
+        this.rewindSampleMs=0;this.captureRewind();
+      }
+      this.rewindFlashMs=Math.max(0,(this.rewindFlashMs||0)-frameMs);
+      if(this.rewindFlashMs===0)this.ui.rewindFlash(false);
+      this.updateRewindButton();
+    }
+    rewind(){
+      if(this.state!=='playing'||this.rewindLevel()<=0||this.rewindCooldownMs>0)return false;
+      const duration=this.rewindLengthMs();
+      if(!this.rewindFrames.length||this.rewindClockMs-this.rewindFrames[0].at<duration)return false;
+      const target=this.rewindClockMs-duration;
+      // Choose latest saved state AT OR BEFORE requested rewind time.
+      const saved=[...this.rewindFrames].reverse().find(s=>s.at<=target);
+      if(!saved)return false;
+      const copy=a=>a.map(o=>({...o}));
+      this.player={...saved.player};
+      // Don't leave touch controls held after teleporting the player back.
+      this.player.jumpHeld=false;this.player.holdSlide=false;
+      this.player.slideConsumed=false;
+      this.speed=saved.speed;this.distance=saved.distance;this.elapsed=saved.elapsed;
+      this.frame=saved.frame;this.cameraX=saved.cameraX;this.cameraY=saved.cameraY;
+      this.nextEncounterX=saved.nextEncounterX;this.nextEnemySpawnX=saved.nextEnemySpawnX;
+      this.nextGroundSpawnX=saved.nextGroundSpawnX;this.nextSnapSpawnX=saved.nextSnapSpawnX;
+      this.gunCooldownMs=saved.gunCooldownMs;this.blastCooldownMs=saved.blastCooldownMs;
+      this.blastFlashMs=saved.blastFlashMs;
+      this.damageFlashMs=saved.damageFlashMs;this.bonesBlastMs=saved.bonesBlastMs;
+      this.brittleClearUntilX=saved.brittleClearUntilX;
+      this.fallFeedbackMs=saved.fallFeedbackMs;this.goFlashMs=0;
+      this.swingSequence=saved.swingSequence;
+      this.coinCount=saved.coinCount;this.goldCollected=saved.goldCollected;this.points=saved.points;
+      this.enemies=copy(saved.enemies);this.obstacles=copy(saved.obstacles);
+      this.bullets=saved.bullets.map(b=>{
+        const {refEnemy,refObstacle,...data}=b;
+        return {...data,ref:refEnemy>=0?this.enemies[refEnemy]:
+          refObstacle>=0?this.obstacles[refObstacle]:null};
+      });
+      this.fireballs=saved.fireballs.map(b=>{
+        const {ownerEnemy,...data}=b;
+        return {...data,owner:ownerEnemy>=0?this.enemies[ownerEnemy]:null};
+      });
+      this.coins=copy(saved.coins);this.souls=copy(saved.souls);
+      // Restore exactly the rubble bridges that existed in the earlier frame,
+      // without altering immutable procedural terrain/gap geometry.
+      const rubble=new Map(saved.rubble.map(x=>[x.index,x]));
+      for(const [index,original] of this.rewindTerrainBase){
+        const to=rubble.get(index)||original,s=this.terrain.segments[index];
+        if(s){s.kind=to.kind;s.y0=to.y0;s.y1=to.y1;}
+      }
+      this.rng.setState(saved.rngState);
+      this.particles=[];this.chainArcs=[];
+      this.cameras.main.setScroll(this.cameraX,this.cameraY);
+      this.ui.showTimeSlow(this.player.slowMs>0);
+      this.ui.showGunCooldown(this.gunCooldownMs);
+      this.ui.showFallNotice(false);
+      this.ui.update(this.player.hp,this.player.maxHp,this.distance,
+        this.soulCount,this.coinCount,this.points,this.powerManager.summary());
+      // An entire new timeline: do not allow immediate re-use of old snapshots,
+      // and NEVER restore Rewind's own cooldown.
+      this.rewindCooldownMs=this.rewindRechargeMs();
+      this.resetRewindHistory();
+      this.captureRewind();
+      this.rewindFlashMs=550;this.ui.rewindFlash(true);
+      this.puff(this.player.x,this.player.y-55,0xd5a8ff,20);
+      return true;
+    }
     startRun() {
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
@@ -1390,6 +1581,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
+      this.rewindFrames=[];this.rewindTerrainBase=new Map();
+      this.rewindClockMs=0;this.rewindSampleMs=0;
+      this.rewindCooldownMs=0;this.rewindFlashMs=0;
       this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
         rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
         kills:0,byKind:{}};
@@ -1437,13 +1631,16 @@ window.GRIM_CONFIG = Object.freeze({
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
       this.ui.showGodMode(false);this.ui.showGun(false);
+      this.ui.rewindFlash(false);this.captureRewind();this.updateRewindButton();
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
     }
     goToMenu() {
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);this.ui.setMode('menu');
+      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);
+      this.rewindFrames=[];this.rewindFlashMs=0;
+      this.ui.rewindFlash(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
     }
     togglePause() {
       if(this.state==='playing' || this.state==='countdown'){
@@ -1453,7 +1650,13 @@ window.GRIM_CONFIG = Object.freeze({
       } else if(this.state==='paused') this.resume();
     }
     autoPause() { if(this.state==='playing' || this.state==='countdown') this.togglePause(); }
-    setGodMode(on){ this.godMode=Boolean(on);this.ui.showGodMode(this.godMode); }
+    setGodMode(on){
+      const had=this.rewindLevel();
+      this.godMode=Boolean(on);this.ui.showGodMode(this.godMode);
+      if(had===0&&this.rewindLevel()>0)this.resetRewindHistory();
+      if(had>0&&this.rewindLevel()===0)this.resetRewindHistory();
+      this.updateRewindButton();
+    }
     beginCountdown(){
       this.state='countdown'; this.countdownMs=C.resumeCountdownMs;this.goFlashMs=0;
       this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
@@ -1577,6 +1780,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     triggerVendor(number){
       if(this.state!=='playing'||number>14||number<=this.lastVendorNumber)return;
+      this.resetRewindHistory();
       this.lastVendorNumber=number;
       this.vendorType=number*C.vendorEveryMeters<5000?'angel':'devil';
       this.vendorPhase='deal';
@@ -1603,6 +1807,7 @@ window.GRIM_CONFIG = Object.freeze({
       if((devil&&this.player.hp<=price)||(!devil&&this.coinCount<price))return;
       if(!offer||!this.powerManager.apply(id,this.player,()=>{},offer.levelsGained||1))return;
       if(id==='skeletalWings')this.player.hoverBudgetMs=this.powerManager.skeletalHoverMs();
+      this.resetRewindHistory();
       if(devil)this.player.hp-=price;
       else this.coinCount-=price;
       this.puff(this.player.x,this.feetY-45,devil?0xff765e:0xffd98e,14);
@@ -1617,6 +1822,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='upgrade'||this.vendorType!=='devil'||this.vendorPhase!=='heal')return;
       if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp)return;
       this.coinCount-=C.devilHealPrice;this.player.hp++;
+      this.resetRewindHistory();
       this.showVendor();
     }
     leaveVendor(){
@@ -1624,6 +1830,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.pendingOffers=[];this.vendorType=null;this.vendorPhase='deal';
       this.countdownMs=0;this.goFlashMs=0;
       this.state='playing';this.ui.setMode('playing');this.ui.hideCountdown();
+      this.resetRewindHistory();this.captureRewind();
       this.refreshHud();
     }
     refreshHud(){
@@ -1631,6 +1838,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
     collectSoul(){
+      this.resetRewindHistory(); // Banked currency can never be time-reversed.
       this.soulCount++;
       this.runSoulsAvailable++;
       this.totalSouls=Meta.earn(this.meta,1);
@@ -2008,6 +2216,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.checkCollectibles();
         if(this.state==='upgrade'){this.drawScene();return;}
         this.checkHazards();
+        if(this.state!=='playing'){this.drawScene();return;}
         this.obstacles = this.obstacles.filter(ob => !ob.destroyed && ob.x + ob.width > p.x - this.width);
         this.souls = this.souls.filter(s => !s.taken && s.x > p.x-this.width);
         this.coins = this.coins.filter(s => !s.taken && s.x > p.x-this.width);
@@ -2021,6 +2230,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
+        this.tickRewind(frameMs);
       }
       if(this.fallFeedbackMs>0){
         this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
@@ -2276,6 +2486,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(!range)return;
       const from=this.player.x,to=from+range*C.pxPerMeter;
       this.brittleClearUntilX=Math.max(this.brittleClearUntilX,to);
+      this.saveTerrainOriginal(from-12,to);
       this.terrain.fillGaps(from-12,to);
       for(const tip of this.tips){if(tip.atX>=from&&tip.atX<=to)tip.label.destroy();}
       this.tips=this.tips.filter(tip=>tip.atX<from||tip.atX>to);
@@ -2368,7 +2579,7 @@ window.GRIM_CONFIG = Object.freeze({
     startChest(){
       if(this.state!=='portal')return;
       this.ui.showPortal(false);
-      this.state='chest';this.chestMs=4400;
+      this.state='chest';this.chestMs=4400;this.resetRewindHistory();
       this.ui.setMode('chest');
     }
     finishChest(){
@@ -2377,11 +2588,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.gunUnlocked=true;this.gunCooldownMs=0;
       this.player.invulMs=Math.max(this.player.invulMs,1600);
       this.ui.setMode('playing');this.ui.showGun(true);this.ui.showGunCooldown(0);
+      this.resetRewindHistory();this.captureRewind();
       this.puff(this.player.x,this.player.y-70,0x9effe0,22);
     }
     enterUnderworld(){
       const p=this.player;
       this.hasTeleported=true;
+      this.resetRewindHistory();
       this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.ui.showGun(false);
       this.portalMs=1450;
@@ -2404,6 +2617,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.puff(p.x,p.y-50,0xa6abff,26);
     }
     completeRun(){
+      this.resetRewindHistory();
       const p=this.player;
       p.x=this.terrain.finishX;
       this.distance=C.finishMeters;
@@ -2421,6 +2635,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
     }
     die(){
+      this.resetRewindHistory();
       this.countdownMs=0;this.goFlashMs=0;
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
       if(!this.reviveUsed){
@@ -2437,6 +2652,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.runSoulsAvailable-=spentFromRun;
       this.lastRevivePayment={currentRun:spentFromRun,priorRuns:3-spentFromRun};
       this.reviveUsed=true;
+      this.resetRewindHistory();
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       const p=this.player;
