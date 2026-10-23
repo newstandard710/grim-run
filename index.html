@@ -1444,6 +1444,7 @@ window.GRIM_CONFIG = Object.freeze({
         ready,actual,duration);
     }
     saveTerrainOriginal(from,to){
+      if(!this.terrain||!Array.isArray(this.terrain.segments))return;
       // Brittle Bones permanently turns gaps into bridges. Preserve each
       // section's original geometry once so rewinding can undo that change.
       if(!this.rewindTerrainBase)this.rewindTerrainBase=new Map();
