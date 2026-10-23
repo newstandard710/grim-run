@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.10.1</title>
+  <title>GRIM RUN — v0.10.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -165,6 +165,22 @@ button {cursor:pointer;}
 .rewind-cd{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;
  background:#17152bd9;color:#efdfff;font-size:clamp(12px,3vh,20px);font-weight:950;letter-spacing:0}
 .rewind.recharging{border-color:#7c7598c7}
+.practice-slow{left:50%;transform:translateX(-50%);bottom:var(--right-bottom);
+ width:clamp(63px,18vh,82px);height:clamp(58px,17vh,75px);background:#21384bea;
+ border-color:#9df3f39a;font-size:clamp(9px,1.8vh,12px)}
+.practice-slow .symbol{font-size:clamp(25px,5.5vh,36px)}
+.practice-slow.pressed{transform:translateX(-50%) scale(.95)}
+.practice-slow.active{background:linear-gradient(150deg,#2b877d,#0a4e51);border-color:#c3ffef;box-shadow:0 0 18px #5dffee66}
+.god-teleport-panel{margin:3px auto 8px;padding:6px 10px;border:1px solid #80c9b277;
+ border-radius:12px;background:#12283bbc;max-width:460px}
+.god-teleport-panel label{display:flex;align-items:center;justify-content:space-between;
+ font-size:clamp(10px,2vh,13px);font-weight:950;letter-spacing:.06em}
+.god-teleport-panel strong{color:#adffed}
+.god-teleport-panel input{width:100%;height:18px;accent-color:#7af3d8;display:block;margin:4px 0}
+.teleport-controls{display:flex;justify-content:center;gap:8px}
+.teleport-controls button{font-size:clamp(9px,1.8vh,12px);padding:4px 10px;min-height:28px}
+@media(max-height:350px){.god-teleport-panel{padding:3px 9px;margin:2px auto 5px}
+.teleport-controls button{min-height:24px;padding:2px 8px}}
 .rewind-playback{position:absolute;inset:0;z-index:8;pointer-events:none;
  display:flex;justify-content:center;align-items:flex-start;padding-top:clamp(8px,2vh,16px);
  background:radial-gradient(ellipse at 50% 50%,#9d60df0d,#5722a038 85%);
@@ -247,6 +263,7 @@ button {cursor:pointer;}
     <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
     <button id="crossbow-btn" class="action crossbow hidden" aria-label="Fire Bone Crossbow"><span class="symbol">⌁</span><span>FIRE</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
     <button id="rewind-btn" class="action rewind hidden" aria-label="Rewind Time"><span class="symbol">↶</span><span>REWIND</span><span id="rewind-cd" class="rewind-cd hidden"></span></button>
+    <button id="practice-slow-btn" class="action practice-slow hidden" aria-label="Toggle half speed" aria-pressed="false"><span class="symbol">◷</span><span>0.5× SPEED</span></button>
     <div class="right-buttons">
       <button id="jump-btn" class="action jump" aria-label="Jump"><span class="symbol">↑</span><span>JUMP</span></button>
       <button id="slide-btn" class="action slide" aria-label="Slide"><span class="symbol">⇥</span><span>SLIDE</span></button>
@@ -259,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.10.1 · SPRITE HOTFIX</div>
+      <div class="mini">v0.10.2 · VISUALS & TOOLS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -302,8 +319,26 @@ button {cursor:pointer;}
   <div id="pause-screen" class="modal-wrap hidden">
     <div class="modal compact"><h2>PAUSED</h2><p>The Underworld can wait.</p>
       <label class="god-mode-setting"><input id="god-mode-checkbox" type="checkbox"><span> GOD MODE — INVINCIBLE</span></label>
-      <p class="god-mode-desc">Playtest only. Hazards cannot take HP; max-level Rewind is temporarily unlocked. Devil deals still cost HP.</p>
+      <p class="god-mode-desc">Playtest only: invincibility, max-level Rewind, half-speed gameplay, and distance teleport. Devil deals still cost HP.</p>
+      <div id="god-teleport-panel" class="god-teleport-panel hidden">
+        <label for="god-teleport-range">TEST TELEPORT <strong id="god-teleport-value">5,000M</strong></label>
+        <input id="god-teleport-range" type="range" min="500" max="9500" step="500" value="5000" aria-label="Select destination in 500m increments">
+        <div class="teleport-controls">
+          <button id="god-teleport-minus" class="secondary" aria-label="500 meters earlier">−500M</button>
+          <button id="god-teleport-confirm-open" class="secondary">TELEPORT ▶</button>
+          <button id="god-teleport-plus" class="secondary" aria-label="500 meters later">+500M</button>
+        </div>
+      </div>
       <button id="resume-btn" class="primary">RESUME ▶</button><button id="quit-btn" class="secondary">QUIT RUN</button></div>
+  </div>
+  <div id="teleport-confirm" class="modal-wrap confirm-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="teleport-confirm-title">
+    <div class="modal compact">
+      <div class="eyebrow">GOD MODE · TEST TRAVEL</div>
+      <h2 id="teleport-confirm-title">TELEPORT TO <span id="teleport-confirm-distance">5,000</span>M?</h2>
+      <p>Resume instantly near this distance. Skipped Souls and vendors grant no rewards. This run will not count toward personal best.</p>
+      <button id="teleport-confirm-cancel" class="primary">STAY PAUSED</button>
+      <button id="teleport-confirm-yes" class="secondary">CONFIRM TELEPORT</button>
+    </div>
   </div>
   <div id="abandon-confirm" class="modal-wrap confirm-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="abandon-title">
     <div class="modal compact">
@@ -344,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.10.1',
+  version: '0.10.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1105,6 +1140,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.bindAction('attack-btn', 'attack', () => actions.attack());
       this.bindAction('crossbow-btn', 'crossbow', () => actions.fireCrossbow());
       this.bindAction('rewind-btn','rewind',()=>actions.rewind());
+      this.bindAction('practice-slow-btn','practiceSlow',()=>actions.togglePracticeSlow());
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
       el('start-btn').addEventListener('click', () => actions.start());
@@ -1124,6 +1160,12 @@ window.GRIM_CONFIG = Object.freeze({
       el('abandon-cancel-btn').addEventListener('click', () => actions.cancelAbandon());
       el('abandon-confirm-btn').addEventListener('click', () => actions.confirmAbandon());
       el('god-mode-checkbox').addEventListener('change', event => actions.setGodMode(event.target.checked));
+      el('god-teleport-range').addEventListener('input',event=>this.updateTeleportValue(Number(event.target.value)));
+      el('god-teleport-minus').addEventListener('click',()=>this.updateTeleportValue(Number(el('god-teleport-range').value)-500));
+      el('god-teleport-plus').addEventListener('click',()=>this.updateTeleportValue(Number(el('god-teleport-range').value)+500));
+      el('god-teleport-confirm-open').addEventListener('click',()=>actions.askTeleport(Number(el('god-teleport-range').value)));
+      el('teleport-confirm-cancel').addEventListener('click',()=>actions.cancelTeleport());
+      el('teleport-confirm-yes').addEventListener('click',()=>actions.confirmTeleport());
       document.addEventListener('keydown', event => {
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
@@ -1168,7 +1210,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     releaseAll() {
       this.activePointers.clear(); this.heldKeys.clear();
-      for (const id of ['attack-btn','crossbow-btn','rewind-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
+      for (const id of ['attack-btn','crossbow-btn','rewind-btn','practice-slow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
       show('countdown-overlay', mode === 'countdown');
@@ -1177,6 +1219,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('reliquary-screen',mode==='reliquary'||mode==='refundConfirm');
       show('reliquary-reset-confirm',mode==='refundConfirm');
       show('abandon-confirm',mode==='abandonConfirm');
+      show('teleport-confirm',mode==='teleportConfirm');
       show('game-over', mode === 'dead');
       show('revive-screen', mode === 'revive');
       show('chest-screen', mode === 'chest');
@@ -1199,7 +1242,26 @@ window.GRIM_CONFIG = Object.freeze({
     showTimeSlow(on) { show('time-status', on); }
     showFallNotice(on) { show('fall-notice', on); }
     showPortal(on) { show('portal-overlay',on); }
-    showGodMode(on) { el('god-mode-checkbox').checked=on; show('god-mode-status',on); }
+    showGodMode(on) {
+      el('god-mode-checkbox').checked=on;
+      show('god-mode-status',on);show('god-teleport-panel',on);
+      show('practice-slow-btn',on);
+      if(!on)this.showPracticeSlow(false);
+    }
+    showPracticeSlow(on){
+      el('practice-slow-btn').classList.toggle('active',on);
+      el('practice-slow-btn').setAttribute('aria-pressed',String(on));
+      el('practice-slow-btn').title=on?'Return to normal speed':'Slow game to 50%';
+    }
+    updateTeleportValue(value){
+      const rounded=Math.max(500,Math.min(9500,Math.round((Number(value)||500)/500)*500));
+      el('god-teleport-range').value=String(rounded);
+      el('god-teleport-value').textContent=rounded.toLocaleString()+'M';
+    }
+    teleportConfirmation(value){
+      el('teleport-confirm-distance').textContent=value.toLocaleString();
+      this.setMode('teleportConfirm');
+    }
     showGun(on){
       show('gun-status',on);
       show('crossbow-btn',on);
@@ -1447,7 +1509,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorType=null;this.vendorPhase='deal';
       this.soulPlatform=null;
       this.totalSouls=0;
-      this.godMode=false;
+      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.pendingTeleport=null;
       this.distance = 0;
       this.points = 0;
       this.powerManager = Powers.makePowerManager();
@@ -1461,6 +1523,10 @@ window.GRIM_CONFIG = Object.freeze({
         chooseUpgrade: id => this.chooseUpgrade(id),
         leaveVendor: () => this.leaveVendor(), declineDeal: () => this.declineDeal(), heal: () => this.healFromDevil(),
         setGodMode: on => this.setGodMode(on),
+        togglePracticeSlow:()=>this.togglePracticeSlow(),
+        askTeleport:value=>this.askTeleport(value),
+        cancelTeleport:()=>this.cancelTeleport(),
+        confirmTeleport:()=>this.confirmTeleport(),
         openReliquary: () => this.openReliquary(),
         closeReliquary: () => this.closeReliquary(),
         purchaseMeta: id => this.purchaseMeta(id),
@@ -1786,7 +1852,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorType=null;this.vendorPhase='deal';
       this.soulPlatform=null;
       this.totalSouls=this.meta.souls;
-      this.godMode=false;
+      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.pendingTeleport=null;
       for (const tip of this.tips) tip.label.destroy();
       this.tips = [];
       this.tipped = new Set();
@@ -1822,7 +1888,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);
+      this.practiceSlow=false;this.pendingTeleport=null;
+      this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);this.ui.showGodMode(false);
       this.rewindFrames=[];this.rewindFlashMs=0;
       this.ui.rewindFlash(false);this.ui.showRewindPlayback(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
     }
@@ -1837,6 +1904,7 @@ window.GRIM_CONFIG = Object.freeze({
     setGodMode(on){
       const had=this.rewindLevel();
       this.godMode=Boolean(on);this.ui.showGodMode(this.godMode);
+      if(!this.godMode){this.practiceSlow=false;this.ui.showPracticeSlow(false);}
       if(had===0&&this.rewindLevel()>0)this.resetRewindHistory();
       if(had>0&&this.rewindLevel()===0)this.resetRewindHistory();
       this.updateRewindButton();
@@ -2293,7 +2361,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       else if (this.state === 'playing') {
         // Cap large frame steps after browser interruptions to avoid tunneling through hazards.
-        const frameMs = clamp(deltaMs,0,34);
+        const frameMs = clamp(deltaMs*(this.godMode&&this.practiceSlow?.5:1),0,34);
         const dt = frameMs/1000;
         const p=this.player;
         this.elapsed += dt;
@@ -2822,7 +2890,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       let best=false;
       try{const key='grim-run-v03-best';const old=Number(localStorage.getItem(key)||0);
-        if(this.points>old){localStorage.setItem(key,String(this.points));best=true;}}
+        if(!this.teleportUsed&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}}
       catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
     }
@@ -2888,7 +2956,7 @@ window.GRIM_CONFIG = Object.freeze({
       let best=false;
       try{
         const key='grim-run-v03-best',old=Number(localStorage.getItem(key)||0);
-        if(this.points>old){localStorage.setItem(key,String(this.points));best=true;}
+        if(!this.teleportUsed&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}
       }catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,
         `${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),false);
