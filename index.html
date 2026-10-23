@@ -2441,7 +2441,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     update(_,deltaMs) {
-      if(this.state==='rewinding')this.playRewindFrame(Math.min(250,Math.max(0,deltaMs)));
+      if(this.state==='rewinding')this.playRewindFrame(Math.min(250,Math.max(0,deltaMs))*(this.godMode&&this.practiceSlow?.5:1));
       else if(this.state==='portal'){
         this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.portalMs===0)this.startChest();
