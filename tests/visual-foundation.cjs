@@ -136,4 +136,4 @@ invalid.begin();
 assert.equal(invalid.reaperReady,false,'Failure must leave procedural Reaper enabled');
 assert.equal(invalid.batReady,false,'Failure must leave procedural Bat enabled');
 assert.ok(invalid.failedAssets.length>=2);
-console.log('PASS v0.10.1: vector atlas poses, visual-gameplay decoupling, safe fallback, deterministic animations, bat pool and anchored slide.');
+console.log('PASS v0.10.2: vector atlas poses, visual-gameplay decoupling, safe fallback, deterministic animations, bat pool and anchored slide.');
