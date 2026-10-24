@@ -1,20 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.10 — *Skeletal Bat Art Review*. Current development phase: opt-in art review for the remaining enemies.
+**Current build:** v0.10.11 — *Bone Crawler Art Review*. Current development phase: opt-in art review for remaining enemy sprites.
 
-The user accepted the current Reaper and regular Cavern Bat animations on October 24, 2026. Their art, timing, scale and collision behavior stay unchanged during the enemy-sprite phase.
+The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October 24, 2026. Their art, timing, scale and collision behavior stay unchanged during the remaining enemy-sprite phase.
 
-**Release:** v0.10.10 — *Skeletal Bat Art Review*  
+**Release:** v0.10.11 — *Bone Crawler Art Review*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering, and the GitHub Pages review deployment passed. The opt-in Skeletal Bat is ready for phone review at `?enemyReview=skeletal-bat`.
+**Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering, and Pages deployment are pending for this build. The Bone Crawler review is opt-in at `?enemyReview=bone-crawler`.
 
 ## Remaining enemy sprite phase
 
-- **Skeletal Bat:** eight-frame art set in `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, loaded only with `?enemyReview=skeletal-bat`. Its visible target is about 58px, slightly larger than the regular Cavern Bat's 52px target.
-- The atlas covers four flap poses, the existing dive tell and dive, hit recoil, and defeat. The current 2 HP, flight/dive behavior, telegraph timing, collision box and fallback art are unchanged.
-- **Next:** review the Skeletal Bat in the opt-in game view; then create Bone Crawler and Ember Imp sprites. Begin v0.11 World & Atmosphere only after the enemy-sprite phase.
+- **Skeletal Bat:** approved eight-frame art set in `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, now the default. Its visible target is about 58px, slightly larger than the regular Cavern Bat's 52px target.
+- The atlas covers four flap poses, the existing dive tell and dive, hit recoil, and defeat. Its 2 HP, flight/dive behavior, telegraph timing, collision box and procedural fallback are unchanged.
+- **Bone Crawler:** four crawl poses are opt-in at `?enemyReview=bone-crawler`. The art is about 34–37px tall by 45–52px wide; its 38×42 collision box, movement and ledge stopping are unchanged.
+- **Next:** review the Bone Crawler on a phone, then create Ember Imp sprites. Begin v0.11 World & Atmosphere only after the enemy-sprite phase.
 
 ## Main Reaper motion cycle v4
 
@@ -39,8 +40,15 @@ The user accepted the current Reaper and regular Cavern Bat animations on Octobe
 ## v0.10.10 — Skeletal Bat Art Review
 
 - Added an eight-pose Skeletal Bat atlas for the four-frame flight cycle, telegraph, dive, hit reaction, and defeat.
-- The sprite is available only through `?enemyReview=skeletal-bat` until reviewed. Its visible target is 58px, slightly larger than the regular Cavern Bat's 52px; its 2 HP, attack behavior, collision box, and procedural fallback stay intact.
-- **Verification:** Regression, exact PNG integrity, phone-sized Chromium/Phaser rendering, and the Pages deployment passed. The opt-in art awaits user review.
+- The sprite was opt-in during review. The user accepted it on October 24, 2026; v0.10.11 promotes the art to the default game. Its 2 HP, flight behavior, collision box, and procedural fallback stay intact.
+- **Verification:** Regression, exact PNG integrity, phone-sized Chromium/Phaser rendering, Pages deployment, and user phone review passed.
+
+## v0.10.11 — Bone Crawler Art Review
+
+- Added four transparent crawl poses based on the approved Reaper and Cavern Bat PNG style references. They render at about 34–37px high and 45–52px wide.
+- Bone Crawler art is loaded only with `?enemyReview=bone-crawler` until the phone review is accepted. The 38×42 collision box, one HP, ground movement, ledge stopping, spawn cadence and combat remain unchanged.
+- The previously reviewed Skeletal Bat atlas is now the default. Missing or invalid Bone Crawler PNGs retain the procedural crawler.
+- **Verification:** pending full regression, exact PNG integrity, phone-sized Chromium/Phaser rendering, and Pages review deployment.
 
 ## v0.10.8 — Reaper Run Cycle Rework
 

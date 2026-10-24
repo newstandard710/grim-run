@@ -159,15 +159,14 @@ const server=http.createServer((req,res)=>{
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:20,bats:12,skeletalBatReady:false,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:20,bats:12,skeletalBatReady:true,
     textures:true,failures:[]});
 
-  // Skeletal Bat art is deliberately absent from the default game and loads
-  // only in the opt-in review URL. Exercise all eight frames through Phaser at
-  // the same 950x430 phone canvas used for the other mobile render checks.
+  // The accepted Skeletal Bat art is now present in the default game. Exercise
+  // all eight frames through Phaser at the same phone canvas dimensions.
   const skeletalPage=await browser.newPage({viewport:{width:950,height:430}});
   skeletalPage.on('pageerror',e=>errors.push('Skeletal Bat review: '+String(e)));
-  await skeletalPage.goto(origin+'/?enemyReview=skeletal-bat&seed=33',
+  await skeletalPage.goto(origin+'/?seed=33',
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>{
     const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
@@ -179,10 +178,10 @@ const server=http.createServer((req,res)=>{
     return {ready:s.visuals.skeletalBatReady,pool:s.visuals.skeletalBatPool.length,
       dimensions:[source.width,source.height],
       frames:V.V2_SKELETAL_BAT_FRAMES.every(frame=>texture.has(frame.name)),
-      requested:new URLSearchParams(location.search).get('enemyReview')};
+      reviewFlag:new URLSearchParams(location.search).get('enemyReview')};
   });
   assert.deepEqual(skeletalLoaded,{ready:true,pool:12,dimensions:[1254,1254],frames:true,
-    requested:'skeletal-bat'});
+    reviewFlag:null});
   await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
@@ -253,6 +252,94 @@ const server=http.createServer((req,res)=>{
     s.elapsed=1.7;s.drawScene();g.step(performance.now(),0);return sprite.visible;
   });
   assert.equal(afterDeath,false,'Defeat art clears after its short visual hold');
+
+  // Bone Crawler art remains opt-in. Exercise all four crawl drawings through
+  // real Phaser at 950x430 and compare their actual rendered phone-scale pixels.
+  await skeletalPage.goto(origin+'/?enemyReview=bone-crawler&seed=33',
+    {waitUntil:'domcontentloaded',timeout:45000});
+  await skeletalPage.waitForFunction(()=>{
+    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    return v?.loaded===true&&v.boneCrawlerReady===true;
+  },null,{timeout:45000});
+  const crawlerLoaded=await skeletalPage.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS;
+    return {ready:s.visuals.boneCrawlerReady,pool:s.visuals.boneCrawlerPool.length,
+      textures:V.V2_BONE_CRAWLER_FRAMES.map(meta=>{
+        const image=s.textures.get(meta.key).getSourceImage();return [image.width,image.height];
+      }),flag:new URLSearchParams(location.search).get('enemyReview')};
+  });
+  assert.deepEqual(crawlerLoaded,{ready:true,pool:12,textures:Array(4).fill([1477,1065]),flag:'bone-crawler'});
+  await skeletalPage.click('#start-btn');
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
+    null,{timeout:15000});
+  await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0];
+    g.loop.stop();s.state='paused';s.elapsed=0;s.enemies=[];
+    s.drawScene();g.step(performance.now(),0);
+  });
+  const crawlerEmpty=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot());
+  const crawlerRect=await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0],v=s.visuals;
+    const x=s.cameraX+320,y=s.terrain.groundAt(x)-20;
+    const enemy={kind:'crawler',x,y,phase:0,dead:false,hp:1};
+    s.enemies=[enemy];s.drawScene();g.step(performance.now(),0);
+    const sprite=v.boneCrawlerPool[0],meta=window.GRIM_VISUALS.V2_BONE_CRAWLER_FRAMES[0];
+    return {frame:sprite.texture.key,visible:sprite.visible,x:sprite.x,y:sprite.y,
+      displayWidth:sprite.displayWidth,displayHeight:sprite.displayHeight,
+      enemyX:enemy.x,enemyY:enemy.y,
+      screenX:Math.round(enemy.x-s.cameraX-sprite.displayWidth*.5),
+      screenY:Math.round(enemy.y-sprite.displayHeight*.5),scale:sprite.scaleX,
+      expectedScale:meta.scale};
+  });
+  assert.equal(crawlerRect.frame,'gr_v2_crawler_crawl_01');
+  assert.equal(crawlerRect.visible,true);assert.equal(crawlerRect.x,crawlerRect.enemyX);
+  assert.equal(crawlerRect.y,crawlerRect.enemyY);
+  assert.ok(Math.abs(crawlerRect.scale-crawlerRect.expectedScale)<.00001);
+  assert.ok(crawlerRect.displayWidth>54&&crawlerRect.displayWidth<57);
+  assert.ok(crawlerRect.displayHeight>39&&crawlerRect.displayHeight<41);
+  await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'bone-crawler-phone-scale.png')});
+  const crawlerStates=[
+    {elapsed:0,name:'crawl_01'},
+    {elapsed:1/8,name:'crawl_02'},
+    {elapsed:2/8,name:'crawl_03'},
+    {elapsed:3/8,name:'crawl_04'}
+  ];
+  const crawlerHashes=[];
+  for(let i=0;i<crawlerStates.length;i++){
+    const state=crawlerStates[i];
+    const rendered=await skeletalPage.evaluate(({elapsed,name})=>{
+      const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.boneCrawlerPool[0];
+      s.elapsed=elapsed;s.drawScene();g.step(performance.now(),0);
+      return {frame:sprite.texture.key,visible:sprite.visible};
+    },state);
+    assert.equal(rendered.frame,'gr_v2_crawler_'+state.name,
+      'Phaser selects the '+state.name+' texture');
+    assert.equal(rendered.visible,true,'Phaser displays the '+state.name+' texture');
+    const canvas=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({
+      path:path.join(skeletalArtifactDir,'bone-crawler-canvas-'+String(i+1).padStart(2,'0')+'.png')}));
+    const x=Math.max(0,Math.floor(crawlerRect.screenX)),y=Math.max(0,Math.floor(crawlerRect.screenY));
+    const width=Math.min(Math.ceil(crawlerRect.displayWidth),canvas.width-x);
+    const height=Math.min(Math.ceil(crawlerRect.displayHeight),canvas.height-y);
+    const crop=Buffer.alloc(width*height*4);let changed=0;
+    for(let row=0;row<height;row++){
+      const from=((y+row)*canvas.width+x)*4,to=row*width*4;
+      canvas.data.copy(crop,to,from,from+width*4);
+      for(let px=0;px<width*4;px+=4){
+        const offset=from+px;
+        if(Math.abs(canvas.data[offset]-crawlerEmpty.data[offset])>14||
+           Math.abs(canvas.data[offset+1]-crawlerEmpty.data[offset+1])>14||
+           Math.abs(canvas.data[offset+2]-crawlerEmpty.data[offset+2])>14)changed++;
+      }
+    }
+    assert.ok(changed>80,'Rendered '+state.name+' art changes phone-canvas pixels');
+    crawlerHashes.push(crypto.createHash('sha256').update(crop).digest('hex'));
+  }
+  assert.equal(new Set(crawlerHashes).size,4,'All four crawl poses render distinct phone-scale pixels');
+  const crawlerAfterDeath=await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.boneCrawlerPool[0];
+    enemy.dead=true;s.drawScene();g.step(performance.now(),0);return sprite.visible;
+  });
+  assert.equal(crawlerAfterDeath,false,'Dead crawlers return to ordinary enemy cleanup');
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -494,7 +581,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.10 Reaper/Bat presentation, opt-in Skeletal Bat atlas states and phone-scale pixels, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.10.11 Reaper/Bat/Skeletal Bat defaults, opt-in Bone Crawler four-pose phone-scale render, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

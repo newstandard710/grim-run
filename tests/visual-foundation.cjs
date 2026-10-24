@@ -4,13 +4,14 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.10-skeletal-bat-review-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.11-bone-crawler-review-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
 assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
 assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector atlas remains available');
-assert.ok(html.includes("get('enemyReview')==='skeletal-bat'"),'Skeletal Bat art stays behind its opt-in review query');
+assert.ok(html.includes('this.visuals.skeletalBatArtEnabled=true'),'Approved Skeletal Bat art is the default');
+assert.ok(html.includes("get('enemyReview')==='bone-crawler'"),'Bone Crawler art stays behind its opt-in review query');
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
  assert.ok(svg.startsWith('<svg')&&svg.includes('width="'+width+'" height="'+height+'"'));
  assert.equal((svg.match(/<g(?:\s|>)/g)||[]).length,(svg.match(/<\/g>/g)||[]).length);
@@ -49,6 +50,12 @@ assert.ok(Math.abs(314*V.V2_SKELETAL_BAT_ATLAS.scale-58)<.01,
 assert.equal(V.V2_SKELETAL_BAT_FRAMES.length,8);
 assert.deepEqual(Array.from(V.V2_SKELETAL_BAT_FLAP),['flap_raised','flap_mid_down','flap_lowered','flap_mid_up']);
 assert.equal(V.V2_SKELETAL_BAT_FLAP_FPS,12);
+assert.equal(V.V2_BONE_CRAWLER_FRAMES.length,4);
+assert.equal(V.V2_BONE_CRAWLER_FPS,8);
+assert.ok(Math.abs(V.V2_BONE_CRAWLER_SCALE*1065-40)<.01,
+  'Bone Crawler canvas scale yields about 36px visible height');
+assert.ok(V.V2_BONE_CRAWLER_FRAMES.every(frame=>frame.width===1477&&frame.height===1065),
+  'Bone Crawler frames share a stable canvas and registration');
 for(const frame of V.V2_SKELETAL_BAT_FRAMES){
  assert.ok(frame.x>=0&&frame.y>=0&&frame.x+frame.width<=1254&&frame.y+frame.height<=1254,
    `Skeletal Bat frame ${frame.name} stays inside the source atlas`);
@@ -217,18 +224,41 @@ const skeletonFrame=()=>({setOrigin(){return this},setScale(v){this.scale=v;retu
 const skeletalRenderer=new V.GrimVisualSystem(skeletalScene);
 skeletalRenderer.skeletalBatReady=true;
 skeletalRenderer.skeletalBatPool=Array.from({length:12},skeletonFrame);
-skeletalRenderer.renderReviewSkeletalBats();
+skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'flap_raised');
 assert.ok(Math.abs(314*skeletalRenderer.skeletalBatPool[0].scale-58)<.01);
-skeletalEnemy.mode='telegraph';skeletalRenderer.renderReviewSkeletalBats();
+skeletalEnemy.mode='telegraph';skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'telegraph');
-skeletalEnemy.mode='dive';skeletalRenderer.renderReviewSkeletalBats();
+skeletalEnemy.mode='dive';skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'dive');
-skeletalEnemy.hp=1;skeletalScene.elapsed=.04;skeletalRenderer.renderReviewSkeletalBats();
+skeletalEnemy.hp=1;skeletalScene.elapsed=.04;skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'hit');
-skeletalEnemy.dead=true;skeletalScene.elapsed=.06;skeletalRenderer.renderReviewSkeletalBats();
+skeletalEnemy.dead=true;skeletalScene.elapsed=.06;skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'death');
-skeletalScene.elapsed=.5;skeletalRenderer.renderReviewSkeletalBats();
+skeletalScene.elapsed=.5;skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].visible,false,'Defeat pose ends and returns the enemy to normal cleanup');
 skeletalRenderer.shutdown();
-console.log('PASS v0.10.10: accepted Reaper/Cavern Bat art unchanged; Skeletal Bat opt-in pose states and scale covered.');
+
+const crawlerEnemy={kind:'crawler',x:450,y:280,phase:0,dead:false};
+const crawlerScene={state:'playing',cameraX:0,width:950,elapsed:0,enemies:[crawlerEnemy]};
+const crawlerFrame=()=>({setTexture(v){this.key=v;return this},setOrigin(x,y){this.origin=[x,y];return this},
+ setScale(v){this.scale=v;return this},setPosition(x,y){this.x=x;this.y=y;return this},
+ setVisible(v){this.visible=v;return this},setAlpha(v){this.alpha=v;return this},
+ setRotation(v){this.rotation=v;return this},destroy(){this.destroyed=true}});
+const crawlerRenderer=new V.GrimVisualSystem(crawlerScene);
+crawlerRenderer.boneCrawlerReady=true;
+crawlerRenderer.boneCrawlerPool=Array.from({length:12},crawlerFrame);
+for(let i=0;i<4;i++){
+ crawlerScene.elapsed=i/V.V2_BONE_CRAWLER_FPS;
+ crawlerRenderer.renderBoneCrawlers();
+ const sprite=crawlerRenderer.boneCrawlerPool[0],meta=V.V2_BONE_CRAWLER_FRAMES[i];
+ assert.equal(sprite.key,meta.key,'Crawler animation selects '+meta.name);
+ assert.equal(sprite.visible,true);
+ assert.deepEqual(sprite.origin,[.5,.5]);
+ assert.equal(sprite.x,crawlerEnemy.x);assert.equal(sprite.y,crawlerEnemy.y);
+ assert.ok(Math.abs(sprite.scale*1065-40)<.01);
+}
+crawlerEnemy.dead=true;crawlerRenderer.renderBoneCrawlers();
+assert.equal(crawlerRenderer.boneCrawlerPool[0].visible,false,'Dead crawler returns to normal cleanup');
+crawlerRenderer.shutdown();assert.equal(crawlerRenderer.boneCrawlerReady,false);
+console.log('PASS v0.10.11: accepted Reaper/Cavern/Skeletal Bat art unchanged; opt-in Bone Crawler crawl cycle, scale, and anchor covered.');

@@ -17,7 +17,7 @@ for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 }
 const M=w.GRIM_META,C=w.GRIM_CONFIG,Combat=w.GRIM_COMBAT;
-assert.equal(C.version,'0.10.10');
+assert.equal(C.version,'0.10.11');
 const wallet=M.load();assert.equal(wallet.souls,60);
 assert.equal(wallet.levels.graveGlide,0);
 for(const [lvl,cost] of [[1,5],[2,10],[3,25]]){

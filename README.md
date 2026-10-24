@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.10 — Skeletal Bat Art Review**
+**Current playable build: v0.10.11 — Bone Crawler Art Review**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -18,12 +18,18 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
 - [Run-cycle review board and source image](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg) show the redesigned Reaper poses at phone scale. The [earlier motion-cycle review](assets/visuals/review/character-motion-cycle-v1/README.md) remains available.
 
-## Skeletal Bat art review
+## Approved Skeletal Bat art
 
-- The eight-pose Skeletal Bat atlas is opt-in at `?enemyReview=skeletal-bat`; the normal Bat and Reaper art remain the default.
+- The eight-pose Skeletal Bat atlas is now the default after phone review. The regular Cavern Bat and Reaper remain unchanged.
 - Its target visible height is about 58px, slightly larger than the regular Cavern Bat's 52px target.
-- The review atlas changes only the Skeletal Bat drawing. Its existing 2 HP, flight and dive behavior, telegraph timing, and collision box stay unchanged. Procedural art remains the fallback.
-- [Open the Skeletal Bat phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=skeletal-bat).
+- The atlas changes only the Skeletal Bat drawing. Its existing 2 HP, flight and dive behavior, telegraph timing, and collision box stay unchanged. Procedural art remains the fallback.
+- [Open the current game](https://newstandard710.github.io/grim-run/).
+
+## Bone Crawler art review
+
+- The four-pose crawl cycle is opt-in at `?enemyReview=bone-crawler` while it is reviewed on a phone.
+- The animated silhouette is about 34–37px high and 45–52px wide. The existing 38×42 collision box, ledge stopping, movement, HP and combat remain unchanged.
+- [Open the Bone Crawler phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=bone-crawler).
 
 ## v0.10.9: Subtle Reaper Run Head Bob
 
@@ -173,4 +179,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: review the Skeletal Bat in the opt-in landscape phone view; then finish the Bone Crawler and Ember Imp art before v0.11 World & Atmosphere.
+Next: review the Bone Crawler in the opt-in landscape phone view, then create the Ember Imp sprites. Begin v0.11 World & Atmosphere after the enemy art is accepted.
