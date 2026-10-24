@@ -1,3 +1,7 @@
+## Recovery preview — pending phone acceptance
+
+See `RECOVERY_STATUS.md`. Six damaged Reaper PNGs restored in the recovery branch; integrity checks and complete-character fallback added. Earlier passing browser tests did not establish visual correctness. Default gameplay and art remain unchanged.
+
 # Grim Run — Project Status and Roadmap
 
 **Release:** v0.10.4 — *Sprite Motion Polish*  

@@ -1,0 +1,26 @@
+{
+  "assets/characters/illustrated-v2/reaper/reaper_run_airborne_v1.png": {
+    "bytes": 1350570,
+    "sha256": "3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"
+  },
+  "assets/characters/illustrated-v2/reaper/reaper_run_contact_v1.png": {
+    "bytes": 1200830,
+    "sha256": "976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"
+  },
+  "assets/characters/illustrated-v2/reaper/reaper_run_recovery_v1.png": {
+    "bytes": 1179770,
+    "sha256": "0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"
+  },
+  "assets/visuals/review/character-motion-cycle-v1/reaper-source/reaper_run_airborne_source.png": {
+    "bytes": 1244831,
+    "sha256": "14e96b3a895ae024ac9f5c6dea08fc2034781a1b0d962ed2bd15cabaf7ea1b72"
+  },
+  "assets/visuals/review/character-motion-cycle-v1/reaper-source/reaper_run_contact_source.png": {
+    "bytes": 1190938,
+    "sha256": "6ef6e09c39001bc55c16bd368eea48a3893a3fc422b277486616dd996444b338"
+  },
+  "assets/visuals/review/character-motion-cycle-v1/reaper-source/reaper_run_recovery_source.png": {
+    "bytes": 1211835,
+    "sha256": "8ce891b22aae90e1402304b9f78e13a2e10fe1ddd3393002801f0630580c8b43"
+  }
+}

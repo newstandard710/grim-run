@@ -21,3 +21,10 @@ jobs:
           npx playwright install chromium
       - name: Verify Reaper and Bat textures in actual Chromium Phaser
         run: node tests/browser-visual-smoke.js
+      - name: Save mobile-size render evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: grim-run-mobile-renders
+          path: test-results/*.png
+          if-no-files-found: ignore
