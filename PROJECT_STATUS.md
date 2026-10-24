@@ -1,6 +1,6 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.4 — *Sprite Motion Polish* with the Reaper eight-pose cycle active by default. The verified contact pose appears first while the remaining art loads. Previous illustrated art remains available with `?art=illustrated`.
+**Current build:** v0.10.4 — *Sprite Motion Polish* with the Reaper twelve-pose cycle active by default. A compact approved contact pose loads first; the Start control waits until it is ready. Previous illustrated art remains available with `?art=illustrated`.
 
 The repaired Reaper files are in `main`; the actual Chromium checks pass. Phone review of startup timing and motion quality is still needed.
 
@@ -10,15 +10,16 @@ The repaired Reaper files are in `main`; the actual Chromium checks pass. Phone 
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
 **Verification:** All Node regression suites and the GitHub Actions real Chromium sprite smoke pass. **Live Android visual and performance playtesting pending.**
 
-## Main Reaper motion cycle v2
+## Main Reaper motion cycle v3
 
-- The eight-pose motion cycle is now the normal game art. The verified contact pose appears while the remaining large images are checked and loaded, preventing a blank character during startup.
-- Reaper ground movement now cycles eight registered run drawings at 12 fps. Four original poses remain intact; four transition drawings were added after phone review found abrupt pose changes. Ordinary Bat flight cycles eight eye-aligned wing positions at 12 fps; dive remains on its existing pose.
+- The twelve-pose motion cycle is the normal game art. The compact contact pose appears before gameplay can start. It is loaded first, followed by the compact run cycle, then the larger action and Bat artwork.
+- Reaper ground movement now cycles twelve registered run drawings at 18 fps. Four original poses remain intact; four earlier transition drawings and four new in-between drawings reduce the movement jumps while keeping the same total stride timing. Ordinary Bat flight remains on its existing eight-pose cycle at 12 fps; dive remains on its existing pose.
+- The 12 compact run files total about 300 KB rather than more than 15 MB. The source artwork remains unchanged.
 - The Reaper's run poses now use matching visible pixel heights and measured eye/ground anchors. This corrects size pulsing and sideways head movement while leaving collision geometry untouched.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
 - Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`. No collision boxes, game balance, controls, or progression changed.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [run/flap review sheets](assets/visuals/review/character-motion-cycle-v1/README.md), and source PNGs document the review art.
-- **Next:** phone-test the Reaper cadence, Bat flap, silhouette, and startup timing on the main game.
+- **Next:** phone-test the updated Reaper cadence, Bat flap, silhouette, and startup timing on the main game.
 
 ## v0.10.4 — Sprite Motion Polish
 

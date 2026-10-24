@@ -1447,7 +1447,7 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/visual-system.js?v=0.10.4-main-run-cycle-v3"></script>
+  <script src="assets/visuals/visual-system.js?v=0.10.4-main-run-cycle-v4"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1550,8 +1550,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
       this.visuals=scope.GRIM_VISUALS?new scope.GRIM_VISUALS.GrimVisualSystem(this):null;
       if(this.visuals){
-        // Illustrated v0.10.4 art is the default. Keep the stable procedural
-        // presentation explicitly available for comparison and fallback.
+        // The eight-pose Reaper motion cycle is the main game art. Keep the
+        // previous illustrated art and procedural art available for comparison.
         const artMode=new URLSearchParams(location.search).get('art');
         if(artMode==='procedural'){
           // Keep Phaser's original procedural Reaper/Bat renderers active.

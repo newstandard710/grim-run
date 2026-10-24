@@ -155,7 +155,7 @@ const server=http.createServer((req,res)=>{
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:17,bats:12,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:21,bats:12,
     textures:true,failures:[]});
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
@@ -174,7 +174,7 @@ const server=http.createServer((req,res)=>{
     s.player.attackMs=0;s.elapsed=0;
     v.render();const firstRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
-    s.elapsed=.11;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+    s.elapsed=1/18;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
     s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];
     s.elapsed=0;v.render();const flying=v.batPool[0],firstBat=flying.texture.key;
@@ -194,7 +194,7 @@ const server=http.createServer((req,res)=>{
   assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
   assert.equal(v2Anchors.runFrame1,'run_contact');
-  assert.equal(v2Anchors.runFrame2,'run_transition_01','Reaper cycle includes registered in-between poses');
+  assert.equal(v2Anchors.runFrame2,'run_contact_mid','Reaper cycle advances to a new in-between pose');
   assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.firstBat,'gr_v2_bat_raised');
   assert.equal(v2Anchors.secondBat,'gr_v2_bat_mid_up','Bat flap advances through aligned in-between art');
   assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
@@ -221,7 +221,7 @@ const server=http.createServer((req,res)=>{
   });
   for(const p of decoded){assert.ok(p.coverage>.025&&p.coverage<.8,p.key+' silhouette coverage');assert.ok(p.black<.5,p.key+' is not a black rectangle');assert.ok(p.height>20,p.key+' is not a flattened fragment');}
   const runPixelBounds=decoded.filter(p=>p.name.startsWith('run_')||p.name==='run');
-  assert.equal(runPixelBounds.length,8,'all eight run poses were decoded from PNG pixels');
+  assert.equal(runPixelBounds.length,12,'all twelve run poses were decoded from PNG pixels');
   assert.ok(runPixelBounds.every(p=>p.height>118&&p.height<122),'all run drawings keep the same visible height');
   for(const name of ['run_contact','run','run_transition_01','run_transition_04']){
     const frame=runPixelBounds.find(p=>p.name===name);
@@ -234,8 +234,9 @@ const server=http.createServer((req,res)=>{
   const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
   await page.setViewportSize({width:950,height:430});
   const renderedRunFrames=[];
-  for(const [i,name] of ['contact','transition-01','airborne','transition-02','recovery','transition-03','run','transition-04'].entries()){
-    const time=i/12;
+  for(const [i,name] of ['contact','contact-mid','transition-01','airborne','airborne-mid','transition-02',
+    'recovery','recovery-mid','transition-03','run','stride-mid','transition-04'].entries()){
+    const time=i/18;
     await page.evaluate(t=>{
       const g=window.grimRun,s=g.scene.scenes[0];g.loop.stop();
       s.state='playing';s.elapsed=t;s.damageFlashMs=0;Object.assign(s.player,{grounded:true,onSoulPlatform:false,sliding:false,airTuck:false,attackMs:0,visualFireMs:0,invulMs:0,slowMs:0});
@@ -253,35 +254,49 @@ const server=http.createServer((req,res)=>{
     for(let p=0;p<a.length;p+=4)if(Math.abs(a[p]-b[p])>18||Math.abs(a[p+1]-b[p+1])>18||Math.abs(a[p+2]-b[p+2])>18)changed++;
     assert.ok(changed>100,'adjacent run poses create visible pixel movement on the game canvas');
   }
-  // Delay the full cycle except its contact pose. The main game must keep the
-  // verified Reaper visible while the remaining large images are loading.
+  // Delay the art after its compact contact pose. The start control must wait
+  // for that verified pose, then gameplay must begin with the Reaper visible
+  // while action poses and Bat art are still loading.
   const earlyPage=await browser.newPage({viewport:{width:950,height:430}});
   await earlyPage.route('**/assets/characters/illustrated-v2/**',async route=>{
-    if(!route.request().url().includes('reaper_run_contact_v1.png'))
+    if(!route.request().url().includes('run_contact_mobile_v1.png'))
       await new Promise(resolve=>setTimeout(resolve,2500));
     await route.continue();
   });
   await earlyPage.goto(origin+'/?seed=44',{waitUntil:'domcontentloaded',timeout:45000});
+  await earlyPage.waitForFunction(()=>{
+    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    return v?.reviewV2===true&&document.getElementById('start-btn')?.disabled===true;
+  },null,{timeout:12000});
+  assert.equal(await earlyPage.locator('#start-btn').isEnabled(),false,
+    'Do not start a run before the first small Reaper image is ready');
+  await earlyPage.waitForFunction(()=>document.getElementById('start-btn')?.disabled===false,
+    null,{timeout:12000});
   await earlyPage.click('#start-btn');
   await earlyPage.waitForFunction(()=>{
     const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return s?.state==='playing'&&v?.reviewV2===true&&
-      v.reaperPoseSprites.run_contact?.visible===true&&v.loaded===false;
+      v.reaperPoseSprites.run_contact?.visible===true&&v.loaded===false&&s.distance<5;
   },null,{timeout:12000});
   const earlySprite=await earlyPage.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,p=v.reaperPoseSprites.run_contact;
-    return {visible:p.visible,texture:s.textures.exists('gr_v2_reaper_run_contact'),loading:!v.loaded};
+    return {visible:p.visible,texture:s.textures.exists('gr_v2_reaper_run_contact'),loading:!v.loaded,
+      distance:s.distance,buttonEnabled:!document.getElementById('start-btn').disabled};
   });
-  assert.deepEqual(earlySprite,{visible:true,texture:true,loading:true},
-    'The Reaper stays visible while the remaining full-size art loads');
+  assert.equal(earlySprite.visible,true);
+  assert.equal(earlySprite.texture,true);
+  assert.equal(earlySprite.loading,true);
+  assert.ok(earlySprite.distance<5,'The Reaper is visible before the run reaches five meters');
+  assert.equal(earlySprite.buttonEnabled,true);
   await earlyPage.close();
   // A broken initial pose must not prevent the remaining valid motion art appearing.
-  await page.route('**/reaper_run_contact_v1.png*',route=>route.fulfill({status:200,contentType:'image/png',body:fs.readFileSync(path.join(root,'assets/characters/illustrated-v2/reaper/reaper_run_contact_v1.png')).subarray(0,786444)}));
+  const compactContact=path.join(root,'assets/characters/illustrated-v2/reaper/run-cycle-mobile-v1/run_contact_mobile_v1.png');
+  await page.route('**/run_contact_mobile_v1.png*',route=>route.fulfill({status:200,contentType:'image/png',body:fs.readFileSync(compactContact).subarray(0,Math.floor(fs.statSync(compactContact).size/2))}));
   await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.loaded);
   const rejected=await page.evaluate(()=>{const v=window.grimRun.scene.scenes[0].visuals;return {ready:v.reaperReady,poses:Object.keys(v.reaperPoseSprites).length,contactPresent:Boolean(v.reaperPoseSprites.run_contact),failed:v.failedAssets.some(x=>x.includes('byte count'))};});
-  assert.deepEqual(rejected,{ready:true,poses:16,contactPresent:false,failed:true});
-  await page.unroute('**/reaper_run_contact_v1.png*');
+  assert.deepEqual(rejected,{ready:true,poses:20,contactPresent:false,failed:true});
+  await page.unroute('**/run_contact_mobile_v1.png*');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:30000});

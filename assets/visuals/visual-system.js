@@ -77,7 +77,7 @@
     run_transition_03:Object.freeze([1250,1420]),
     run_transition_04:Object.freeze([1250,1420])
   });
-  const V2_REAPER=Object.freeze(Object.fromEntries([
+  const V2_REAPER_BASE=Object.freeze(Object.fromEntries([
     ['run','reaper_run_v1.png',V2_REAPER_SCALE],
     ['run_contact','reaper_run_contact_v1.png',V2_REAPER_SCALE],
     ['run_airborne','reaper_run_airborne_v1.png',V2_REAPER_SCALE],
@@ -98,6 +98,21 @@
   ].map(([name,file,scale])=>[name,Object.freeze({
     key:'gr_v2_reaper_'+name,file,scale:V2_REAPER_RUN_SCALES[name]||scale,anchor:V2_REAPER_RUN_ANCHORS[name]||Object.freeze([1250,1420])
   })])));
+  const V2_REAPER_RUN_MOBILE=Object.freeze({
+    run_contact:Object.freeze({key:'gr_v2_reaper_run_contact',file:'run-cycle-mobile-v1/run_contact_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.731,279.725])}),
+    run_contact_mid:Object.freeze({key:'gr_v2_reaper_run_contact_mid',file:'run-cycle-mobile-v1/run_contact_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.691,279.985])}),
+    run_transition_01:Object.freeze({key:'gr_v2_reaper_run_transition_01',file:'run-cycle-mobile-v1/run_transition_01_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([309.06,280.245])}),
+    run_airborne:Object.freeze({key:'gr_v2_reaper_run_airborne',file:'run-cycle-mobile-v1/run_airborne_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([297.511,286.135])}),
+    run_airborne_mid:Object.freeze({key:'gr_v2_reaper_run_airborne_mid',file:'run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([313.025,288.954])}),
+    run_transition_02:Object.freeze({key:'gr_v2_reaper_run_transition_02',file:'run-cycle-mobile-v1/run_transition_02_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([318.195,291.773])}),
+    run_recovery:Object.freeze({key:'gr_v2_reaper_run_recovery',file:'run-cycle-mobile-v1/run_recovery_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([287.722,300.198])}),
+    run_recovery_mid:Object.freeze({key:'gr_v2_reaper_run_recovery_mid',file:'run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([323.607,299.533])}),
+    run_transition_03:Object.freeze({key:'gr_v2_reaper_run_transition_03',file:'run-cycle-mobile-v1/run_transition_03_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([322.193,298.868])}),
+    run:Object.freeze({key:'gr_v2_reaper_run',file:'run-cycle-mobile-v1/run_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([274.082,280.0])}),
+    run_stride_mid:Object.freeze({key:'gr_v2_reaper_run_stride_mid',file:'run-cycle-mobile-v1/run_stride_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([310.48,280.245])}),
+    run_transition_04:Object.freeze({key:'gr_v2_reaper_run_transition_04',file:'run-cycle-mobile-v1/run_transition_04_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([305.245,280.49])})
+  });
+  const V2_REAPER=Object.freeze({...V2_REAPER_BASE,...V2_REAPER_RUN_MOBILE});
   const V2_BAT=Object.freeze(Object.fromEntries([
     ['neutral','bat_neutral_v1.png'],['raised','bat_wings_raised_v1.png'],
     ['mid_up','bat_flap_mid_up_v1.png'],['mid_down','bat_flap_mid_down_v1.png'],
@@ -106,14 +121,15 @@
   ].map(([name,file])=>[name,Object.freeze({
     key:'gr_v2_bat_'+name,file,scale:V2_BAT_SCALE,anchor:Object.freeze([1500,720])
   })])));
-  // The v2 review uses four distinct Reaper run drawings and an eight-step
-  // Bat flap assembled from its approved extremes plus two aligned in-betweens.
+  // The main game uses the approved eight run poses plus four new in-between
+  // poses. Compact mobile PNGs keep the first pose and the full run cycle fast.
   const V2_REAPER_RUN=Object.freeze([
-    'run_contact','run_transition_01','run_airborne','run_transition_02',
-    'run_recovery','run_transition_03','run','run_transition_04'
+    'run_contact','run_contact_mid','run_transition_01','run_airborne',
+    'run_airborne_mid','run_transition_02','run_recovery','run_recovery_mid',
+    'run_transition_03','run','run_stride_mid','run_transition_04'
   ]);
   const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
-  const V2_REAPER_RUN_FPS=12;
+  const V2_REAPER_RUN_FPS=18;
   const V2_BAT_FLAP_FPS=12;
   const snapFrame=(arr,time,fps)=>arr[Math.floor(Math.max(0,time)*fps)%arr.length];
 
@@ -150,7 +166,7 @@
 
   // Review-only integrity gate. Validate the exact bytes handed to Phaser,
   // rather than trusting an image load event (Chrome can display partial PNGs).
-  const REVIEW_INTEGRITY=Object.freeze({"reaper_run_transition_01_v1.png":{"bytes":1432602,"sha256":"141cf50436a62789629cd8a488f6bc8da70992b442683572526f561711fc394a"},"reaper_run_transition_02_v1.png":{"bytes":1381487,"sha256":"6aa4b4f225bc67d702e16dc3d89a6a9f1d89c6b6cbd075efc9c4d53401d1216b"},"reaper_run_transition_03_v1.png":{"bytes":1521275,"sha256":"46e0e128ff50f2c988608eb92c8966ab3441bc396bcd2edb248ad96a224d3f70"},"reaper_run_transition_04_v1.png":{"bytes":1380002,"sha256":"c11a9085037ebbdacd2d18d2f74e61051af713d087f59b38a8c71713b37bf572"},"reaper_run_airborne_v1.png":{"bytes":1350570,"sha256":"3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"},"reaper_run_recovery_v1.png":{"bytes":1179770,"sha256":"0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"},"reaper_fall_v1.png":{"bytes":1404482,"sha256":"a1859b8b51dac28d3d08d04cf7aa3fe9fbf262676f12abeda91b12bf34eb6218"},"reaper_jump_v1.png":{"bytes":1350180,"sha256":"aecd58ad785f1cf5d0f08e8cd9489bc39be236e32fdffcd4c263796ccbb05d3f"},"reaper_death_v1.png":{"bytes":727130,"sha256":"f0b71de8c58a670ec85bd663d8e096d590fe864417df1e136cde70dba4333915"},"reaper_crossbow_fire_v1.png":{"bytes":820955,"sha256":"8df8c45253c880c2b2cec44bcd68c20a5b2ba0aa9781bf5c41e0955b03f06a09"},"reaper_run_contact_v1.png":{"bytes":1200830,"sha256":"976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"},"reaper_hover_v1.png":{"bytes":952384,"sha256":"de4a4a8ec36540bf06313b6d140351aa3ddc02871600de868aa13ad806d2eb1d"},"reaper_slide_v1.png":{"bytes":995383,"sha256":"70c9a7c6e13132801eb02939b7a9bc3d466aa6216bff759b2863e82aa059baa8"},"reaper_run_v1.png":{"bytes":1444963,"sha256":"873cd968a4b4c56e21d46d1db634bd0a602cbd9c212738f593fbcaf295f10243"},"reaper_idle_v1.png":{"bytes":1306891,"sha256":"253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"},"reaper_scythe_attack_v1.png":{"bytes":1167906,"sha256":"7b13d15a6b6de3f88a4d64a8d08b46325d227af68c31cc8018baa9ac320b866f"},"reaper_hurt_v1.png":{"bytes":1102948,"sha256":"5c091e89477790ba47e985e71abde99581b3b88854836f60e84c3b4fec3341bc"},"bat_neutral_v1.png":{"bytes":972200,"sha256":"91bd27d39d7fa71f698563fafbac02eeb40ee9e3fb8590ec13a8f587b182eb94"},"bat_wings_raised_v1.png":{"bytes":793683,"sha256":"4b818264821d70908bfb5f882ace67e509e0b334520c6d683dfe9becccd85cd9"},"bat_hit_v1.png":{"bytes":801324,"sha256":"86fbb1025e86e36e7cbfd81b6ccd71ce88fb866fadcdf6a3febf3b2d6e72407e"},"bat_death_v1.png":{"bytes":605422,"sha256":"e912d431c1614ad5127edbdf8b817e0ab6e16571f4e852b45503204dd219cfda"},"bat_flap_mid_down_v1.png":{"bytes":536563,"sha256":"c568978e463b93cea21af3ecf18b0322c88e99a4ed463582760442261e02dcd4"},"bat_wings_lowered_v1.png":{"bytes":875269,"sha256":"87cc9202294f325eea8bd2cf4e4fcf01018fbe191eef72492ba90522c428886a"},"bat_dive_v1.png":{"bytes":873768,"sha256":"d946f909b05d8f2d79b28275c1b654b4761c1a196a69e9d54dec27e7b201a18b"},"bat_flap_mid_up_v1.png":{"bytes":608831,"sha256":"952debf01be31561941e34adb3b7ce5b00f2364a1e7ed37ddf9bf32472df9b34"}});
+  const REVIEW_INTEGRITY=Object.freeze({"reaper_run_transition_01_v1.png":{"bytes":1432602,"sha256":"141cf50436a62789629cd8a488f6bc8da70992b442683572526f561711fc394a"},"reaper_run_transition_02_v1.png":{"bytes":1381487,"sha256":"6aa4b4f225bc67d702e16dc3d89a6a9f1d89c6b6cbd075efc9c4d53401d1216b"},"reaper_run_transition_03_v1.png":{"bytes":1521275,"sha256":"46e0e128ff50f2c988608eb92c8966ab3441bc396bcd2edb248ad96a224d3f70"},"reaper_run_transition_04_v1.png":{"bytes":1380002,"sha256":"c11a9085037ebbdacd2d18d2f74e61051af713d087f59b38a8c71713b37bf572"},"reaper_run_airborne_v1.png":{"bytes":1350570,"sha256":"3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"},"reaper_run_recovery_v1.png":{"bytes":1179770,"sha256":"0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"},"reaper_fall_v1.png":{"bytes":1404482,"sha256":"a1859b8b51dac28d3d08d04cf7aa3fe9fbf262676f12abeda91b12bf34eb6218"},"reaper_jump_v1.png":{"bytes":1350180,"sha256":"aecd58ad785f1cf5d0f08e8cd9489bc39be236e32fdffcd4c263796ccbb05d3f"},"reaper_death_v1.png":{"bytes":727130,"sha256":"f0b71de8c58a670ec85bd663d8e096d590fe864417df1e136cde70dba4333915"},"reaper_crossbow_fire_v1.png":{"bytes":820955,"sha256":"8df8c45253c880c2b2cec44bcd68c20a5b2ba0aa9781bf5c41e0955b03f06a09"},"reaper_run_contact_v1.png":{"bytes":1200830,"sha256":"976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"},"reaper_hover_v1.png":{"bytes":952384,"sha256":"de4a4a8ec36540bf06313b6d140351aa3ddc02871600de868aa13ad806d2eb1d"},"reaper_slide_v1.png":{"bytes":995383,"sha256":"70c9a7c6e13132801eb02939b7a9bc3d466aa6216bff759b2863e82aa059baa8"},"reaper_run_v1.png":{"bytes":1444963,"sha256":"873cd968a4b4c56e21d46d1db634bd0a602cbd9c212738f593fbcaf295f10243"},"reaper_idle_v1.png":{"bytes":1306891,"sha256":"253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"},"reaper_scythe_attack_v1.png":{"bytes":1167906,"sha256":"7b13d15a6b6de3f88a4d64a8d08b46325d227af68c31cc8018baa9ac320b866f"},"reaper_hurt_v1.png":{"bytes":1102948,"sha256":"5c091e89477790ba47e985e71abde99581b3b88854836f60e84c3b4fec3341bc"},"bat_neutral_v1.png":{"bytes":972200,"sha256":"91bd27d39d7fa71f698563fafbac02eeb40ee9e3fb8590ec13a8f587b182eb94"},"bat_wings_raised_v1.png":{"bytes":793683,"sha256":"4b818264821d70908bfb5f882ace67e509e0b334520c6d683dfe9becccd85cd9"},"bat_hit_v1.png":{"bytes":801324,"sha256":"86fbb1025e86e36e7cbfd81b6ccd71ce88fb866fadcdf6a3febf3b2d6e72407e"},"bat_death_v1.png":{"bytes":605422,"sha256":"e912d431c1614ad5127edbdf8b817e0ab6e16571f4e852b45503204dd219cfda"},"bat_flap_mid_down_v1.png":{"bytes":536563,"sha256":"c568978e463b93cea21af3ecf18b0322c88e99a4ed463582760442261e02dcd4"},"bat_wings_lowered_v1.png":{"bytes":875269,"sha256":"87cc9202294f325eea8bd2cf4e4fcf01018fbe191eef72492ba90522c428886a"},"bat_dive_v1.png":{"bytes":873768,"sha256":"d946f909b05d8f2d79b28275c1b654b4761c1a196a69e9d54dec27e7b201a18b"},"bat_flap_mid_up_v1.png":{"bytes":608831,"sha256":"952debf01be31561941e34adb3b7ce5b00f2364a1e7ed37ddf9bf32472df9b34"},"run-cycle-mobile-v1/run_contact_mobile_v1.png":{"bytes":24116,"sha256":"dc2e276c8535e2816d4bea34597b764697ab9a7a7fb210c28e72a13fa460b7f8"},"run-cycle-mobile-v1/run_contact_mid_mobile_v1.png":{"bytes":26157,"sha256":"6da0069905f2088ab880daa335771c41a0a4225da0927e84c19625149480830e"},"run-cycle-mobile-v1/run_transition_01_mobile_v1.png":{"bytes":25093,"sha256":"5126d1e2ad5423bdac383771b9c1f54edcd0cdd3351ae446cc2dabb8283c9aa3"},"run-cycle-mobile-v1/run_airborne_mobile_v1.png":{"bytes":24883,"sha256":"bc3fcbc9f58523400e857b59a409c63f6e062a172ea41669d32d5c5e7eab2e96"},"run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png":{"bytes":27005,"sha256":"57397cd636131afb3d0f95d6a279182fd87c256903b2d1895054b79cb0c7fd0a"},"run-cycle-mobile-v1/run_transition_02_mobile_v1.png":{"bytes":24601,"sha256":"50acb5314237c2b19085cc08f0713ec69db5d9b4414d8242892e0e4e44a08719"},"run-cycle-mobile-v1/run_recovery_mobile_v1.png":{"bytes":24186,"sha256":"a09b103aaa1857f56dbf5774d5486067bd17ecf5600c3670154d5c4094de25f3"},"run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png":{"bytes":26220,"sha256":"c46856e62a410e71382db84c673acf997f3ae4340c7cd79257f08a6e16851e58"},"run-cycle-mobile-v1/run_transition_03_mobile_v1.png":{"bytes":25816,"sha256":"02a7a71cb0ec6f914455b6902f4bde1d0f22c78e3cdfb12276722d9837707014"},"run-cycle-mobile-v1/run_mobile_v1.png":{"bytes":23318,"sha256":"ec02c70f52c9e380a8984c00ed05862d617f8fa378b94a0d61c2ea47411578c3"},"run-cycle-mobile-v1/run_stride_mid_mobile_v1.png":{"bytes":24973,"sha256":"54796f149b6864875a384bb2d45f8926d2f9ddfde33cbb7f12fcfcbf58b3c604"},"run-cycle-mobile-v1/run_transition_04_mobile_v1.png":{"bytes":24175,"sha256":"b0b4e671fe9a2f4160229b24db0d6cf0ae88b8ee9cd818a59b788d2256985651"}});
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);
     if(b.length!==meta.bytes)throw new Error('PNG byte count mismatch');
@@ -341,86 +357,97 @@
       if(this.loadRequested)return true;
       this.loadRequested=true;this.reviewV2=true;
       const errors=new Set(),urls=[];
-      const fail=file=>{if(file&&file.key)errors.add(file.key);};
-      const done=()=>{
-        if(typeof s.load.off==='function')s.load.off('loaderror',fail);
-        for(const url of urls)URL.revokeObjectURL(url);
-        try{
-          for(const [name,meta] of Object.entries(V2_REAPER)){
-            if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
-            if(this.reaperPoseSprites[name])continue;
-            this.reaperPoseSprites[name]=s.add.image(0,0,meta.key)
-              .setOrigin(0,0).setDepth(12).setVisible(false);
-          }
-          const completeReaper=Object.keys(V2_REAPER).every(name=>this.reaperPoseSprites[name]);
-          this.reaper=this.reaperPoseSprites.idle||this.reaperPoseSprites.run_contact||null;
-          this.reaperReady=Boolean(this.reaper);
-          if(!completeReaper)this.failedAssets.push('Review Reaper incomplete; keeping the verified contact pose visible');
-          for(const [name,meta] of Object.entries(V2_BAT))
-            if(errors.has(meta.key)||!s.textures.exists(meta.key))
-              this.failedAssets.push('v2 Bat PNG unavailable: '+name);
-          if(Object.values(V2_BAT).every(meta=>s.textures.exists(meta.key)&&!errors.has(meta.key))){
-            for(let i=0;i<12;i++)this.batPool.push(s.add.image(0,0,V2_BAT.neutral.key)
-              .setOrigin(0,0).setDepth(9).setVisible(false));
-            this.batReady=true;
-          }
-          this.loaded=true;
-        }catch(e){
-          for(const sprite of Object.values(this.reaperPoseSprites))sprite.destroy();
-          this.reaperPoseSprites={};this.reaper=null;this.reaperReady=false;
-          for(const sprite of this.batPool)sprite.destroy();this.batPool=[];this.batReady=false;
-          this.failedAssets.push('v2 sprite creation: '+String(e));
-        }
+      const startButton=typeof document!=='undefined'?document.getElementById('start-btn'):null;
+      const originalStartHTML=startButton?.innerHTML;
+      const setStartReady=ready=>{
+        if(!startButton)return;
+        startButton.disabled=!ready;
+        if(ready){if(originalStartHTML!==undefined)startButton.innerHTML=originalStartHTML;}
+        else startButton.textContent='PREPARING REAPER…';
       };
+      setStartReady(false);
+      const fail=file=>{if(file&&file.key)errors.add(file.key);};
       const reaperBase='assets/characters/illustrated-v2/reaper/';
       const batBase='assets/enemies/illustrated-v2/bat/';
-      const initialMeta=V2_REAPER.run_contact;
       const fetchVerified=async(base,meta)=>{
         try{
           const url=await verifiedReviewURL(base+meta.file,REVIEW_INTEGRITY[meta.file]);
           urls.push(url);return {meta,url};
         }catch(e){errors.add(meta.key);this.failedAssets.push(meta.file+': '+String(e));return null;}
       };
-      // Start every download together, but put the contact pose into Phaser
-      // as soon as its own integrity check finishes. It keeps the Reaper
-      // visible while the larger set of review images is still loading.
-      const initialFetch=fetchVerified(reaperBase,initialMeta);
-      const remainingFetch=Promise.all([
-        ...Object.entries(V2_REAPER).filter(([name])=>name!=='run_contact')
-          .map(([,meta])=>fetchVerified(reaperBase,meta)),
-        ...Object.values(V2_BAT).map(meta=>fetchVerified(batBase,meta))
-      ]);
-      const installInitial=async()=>{
-        const entry=await initialFetch;
-        if(!entry||this.disposed)return;
+      const loadEntries=async entries=>{
+        if(!entries.length)return;
         await new Promise(resolve=>{
-          if(typeof s.load.on==='function')s.load.on('loaderror',fail);
-          s.load.once('complete',()=>{
+          const complete=()=>{
             if(typeof s.load.off==='function')s.load.off('loaderror',fail);
-            if(!this.disposed&&s.textures.exists(initialMeta.key)){
-              this.reaperPoseSprites.run_contact=s.add.image(0,0,initialMeta.key)
-                .setOrigin(0,0).setDepth(12).setVisible(false);
-              this.reaper=this.reaperPoseSprites.run_contact;
-              this.reaperReady=true;
-            }
             resolve();
-          });
-          s.load.image(initialMeta.key,entry.url);
+          };
+          if(typeof s.load.on==='function')s.load.on('loaderror',fail);
+          s.load.once('complete',complete);
+          for(const {meta,url} of entries)s.load.image(meta.key,url);
           s.load.start();
         });
+        for(const {url} of entries){const i=urls.indexOf(url);if(i>=0)urls.splice(i,1);URL.revokeObjectURL(url);}
+      };
+      const installReaper=names=>{
+        for(const name of names){
+          const meta=V2_REAPER[name];
+          if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
+          if(!this.reaperPoseSprites[name])
+            this.reaperPoseSprites[name]=s.add.image(0,0,meta.key)
+              .setOrigin(0,0).setDepth(12).setVisible(false);
+        }
+        this.reaper=this.reaperPoseSprites.idle||
+          V2_REAPER_RUN.find(name=>this.reaperPoseSprites[name])&&
+            this.reaperPoseSprites[V2_REAPER_RUN.find(name=>this.reaperPoseSprites[name])]||null;
+        this.reaperReady=Boolean(this.reaper);
+        if(this.reaperReady)setStartReady(true);
+      };
+      const loadNames=async(base,entries)=>{
+        const fetched=await Promise.all(entries.map(([,meta])=>fetchVerified(base,meta)));
+        const valid=fetched.filter(Boolean);
+        await loadEntries(valid);
+        return valid;
       };
       this.reviewLoad=(async()=>{
-        await installInitial();
-        const entries=await remainingFetch;
-        if(this.disposed){for(const url of urls)URL.revokeObjectURL(url);return;}
-        const valid=entries.filter(Boolean);
-        if(typeof s.load.on==='function')s.load.on('loaderror',fail);
-        s.load.once('complete',done);
-        if(!valid.length){done();return;}
-        for(const {meta,url} of valid)s.load.image(meta.key,url);
-        s.load.start();
-      })().catch(e=>{for(const url of urls)URL.revokeObjectURL(url);
-        this.failedAssets.push('v2 loader: '+String(e));this.loaded=true;});
+        // Fetch and install a compact contact pose first. Do not let the other
+        // large character and Bat images compete with the player's first image.
+        const initial=await fetchVerified(reaperBase,V2_REAPER.run_contact);
+        if(initial){await loadEntries([initial]);installReaper(['run_contact']);}
+        if(this.disposed)return;
+
+        // Finish all twelve compact run drawings before starting secondary art.
+        const runNames=V2_REAPER_RUN.filter(name=>name!=='run_contact');
+        await loadNames(reaperBase,runNames.map(name=>[name,V2_REAPER[name]]));
+        installReaper(V2_REAPER_RUN);
+        if(this.disposed)return;
+        if(!this.reaperReady){
+          this.reviewV2=false;setStartReady(true);
+          this.failedAssets.push('No verified run pose loaded; using the built-in character fallback');
+        }
+
+        // Idle, jump, combat, and Bat artwork can load after the run cycle is ready.
+        const otherReaper=Object.entries(V2_REAPER).filter(([name])=>!V2_REAPER_RUN.includes(name));
+        const batEntries=Object.values(V2_BAT).map(meta=>[meta.key,meta]);
+        const rest=await Promise.all([
+          loadNames(reaperBase,otherReaper),
+          loadNames(batBase,batEntries)
+        ]);
+        installReaper(otherReaper.map(([name])=>name));
+        for(const [name,meta] of Object.entries(V2_BAT))
+          if(errors.has(meta.key)||!s.textures.exists(meta.key))
+            this.failedAssets.push('v2 Bat PNG unavailable: '+name);
+        if(Object.values(V2_BAT).every(meta=>s.textures.exists(meta.key)&&!errors.has(meta.key))){
+          for(let i=0;i<12;i++)this.batPool.push(s.add.image(0,0,V2_BAT.neutral.key)
+            .setOrigin(0,0).setDepth(9).setVisible(false));
+          this.batReady=true;
+        }
+        this.loaded=true;
+      })().catch(e=>{
+        for(const url of urls)URL.revokeObjectURL(url);
+        this.reviewV2=false;setStartReady(true);
+        this.failedAssets.push('v2 loader: '+String(e));this.loaded=true;
+      });
       return true;
     }
     illustratedReaperPose(){
