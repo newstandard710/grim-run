@@ -1,0 +1,84 @@
+{
+  "status": "opt-in motion-cycle review",
+  "review_url": "?art=review-v2",
+  "gameplay_collision_changes": false,
+  "cycles": {
+    "reaper_run": {
+      "fps": 10,
+      "sequence": [
+        "run_contact",
+        "run_airborne",
+        "run_recovery",
+        "run"
+      ],
+      "canvas": [1792, 1536],
+      "scene_anchor_px": [1250, 1420],
+      "visible_height_px": 120,
+      "anchor_registration": "cyan eye center aligned to approved reaper_run_v1"
+    },
+    "bat_flight": {
+      "fps": 12,
+      "sequence": [
+        "raised",
+        "mid_up",
+        "neutral",
+        "mid_down",
+        "lowered",
+        "mid_down",
+        "neutral",
+        "mid_up"
+      ],
+      "canvas": [2304, 1280],
+      "scene_anchor_px": [1500, 720],
+      "visible_height_px": 52,
+      "anchor_registration": "magenta eye center aligned to approved bat_neutral_v1"
+    }
+  },
+  "new_frames": {
+    "reaper": {
+      "assets/characters/illustrated-v2/reaper/reaper_run_airborne_v1.png": {
+        "source": "reaper-source/reaper_run_airborne_source.png",
+        "source_size": [1355, 1161],
+        "alpha_bbox": [259, 302, 1579, 1413],
+        "visible_height": 1111,
+        "registered_eye_px": [1172.4, 656.0]
+      },
+      "assets/characters/illustrated-v2/reaper/reaper_run_contact_v1.png": {
+        "source": "reaper-source/reaper_run_contact_source.png",
+        "source_size": [1355, 1161],
+        "alpha_bbox": [189, 255, 1530, 1367],
+        "visible_height": 1112,
+        "registered_eye_px": [1172.4, 656.0]
+      },
+      "assets/characters/illustrated-v2/reaper/reaper_run_recovery_v1.png": {
+        "source": "reaper-source/reaper_run_recovery_source.png",
+        "source_size": [1355, 1161],
+        "alpha_bbox": [453, 291, 1781, 1402],
+        "visible_height": 1111,
+        "registered_eye_px": [1172.4, 656.0]
+      }
+    },
+    "bat": {
+      "assets/enemies/illustrated-v2/bat/bat_flap_mid_up_v1.png": {
+        "source": "bat-source/bat_flap_mid_up_source.png",
+        "source_size": [1683, 935],
+        "alpha_bbox": [556, 230, 1947, 996],
+        "visible_height": 766,
+        "registered_eye_px": [1412.3, 658.7]
+      },
+      "assets/enemies/illustrated-v2/bat/bat_flap_mid_down_v1.png": {
+        "source": "bat-source/bat_flap_mid_down_source.png",
+        "source_size": [1683, 935],
+        "alpha_bbox": [575, 273, 1885, 1040],
+        "visible_height": 767,
+        "registered_eye_px": [1412.3, 658.7]
+      }
+    }
+  },
+  "review_sheets": [
+    "reaper_run_cycle_review_dark.jpg",
+    "reaper_run_cycle_review_light.jpg",
+    "bat_flap_cycle_review_dark.jpg",
+    "bat_flap_cycle_review_light.jpg"
+  ]
+}

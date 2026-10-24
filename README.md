@@ -9,12 +9,13 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
 
-## Character art review v2 (opt-in, not a release)
+## Character art review v2 (opt-in)
 
-- Open `index.html?art=review-v2` to inspect the new transparent pose set in the actual Phaser scene at its shared game scale and anchors.
-- This static review mode leaves the current default, `?art=procedural` fallback, collisions, and gameplay unchanged. It intentionally uses a single Reaper run pose and a single Bat flight pose; the new motion cycles are still a separate art task.
+- Open `index.html?art=review-v2` to inspect the transparent pose set and new Reaper run/Bat wing cycles in the actual Phaser scene.
+- The preview leaves the current default, `?art=procedural` fallback, collisions, and gameplay unchanged. New run-cycle frames are not promoted to default pending phone review.
 - Phone feedback prompted a scale correction: standard Reaper poses render at 120px visible height; the slide pose stays at 47px to fit the unchanged 48px overhead clearance.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
+- [Motion-cycle review sheets and source images](assets/visuals/review/character-motion-cycle-v1/README.md) document the four-pose Reaper run and eight-step Bat flap.
 
 ## v0.10.4: Sprite Motion Polish
 
