@@ -166,7 +166,7 @@ const server=http.createServer((req,res)=>{
     const slideVisible=slide.visible;
     const slideGround=Math.abs(slide.y+m.slide.anchor[1]*m.slide.scale-s.feetY);
     const slideHeight=651*m.slide.scale;
-    const runHeight=1111*m.run.scale;
+    const runHeight=272*m.run.scale;
     s.player.sliding=false;s.player.attackMs=120;v.render();
     const attack=v.reaperPoseSprites.scythe_attack;
     const attackVisible=attack.visible;
@@ -181,7 +181,7 @@ const server=http.createServer((req,res)=>{
     s.elapsed=.09;v.render();const secondBat=flying.texture.key;
     s.enemies[0].mode='dive';v.render();
     return {slideVisible,slideGround,slideHeight,attackVisible,
-      attackGround,attackScale:attack.scale,runScale:m.run.scale,runHeight,
+      attackGround,runHeight,
       runFrame1:firstRun,runFrame2:secondRun,batVisible:flying.visible,
       firstBat,secondBat,diveKey:flying.texture.key};
   });
@@ -189,8 +189,6 @@ const server=http.createServer((req,res)=>{
   assert.ok(v2Anchors.slideHeight>46&&v2Anchors.slideHeight<48,
     'v2 slide artwork fills but stays inside the unchanged 48px clearance');
   assert.equal(v2Anchors.attackVisible,true);assert.ok(v2Anchors.attackGround<.1);
-  assert.ok(Math.abs(v2Anchors.attackScale-v2Anchors.runScale)<.001,
-    'v2 scythe pose stays within 1% of the running pose scale');
   assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
   assert.equal(v2Anchors.runFrame1,'run_contact');
@@ -223,6 +221,9 @@ const server=http.createServer((req,res)=>{
   const runPixelBounds=decoded.filter(p=>p.name.startsWith('run_')||p.name==='run');
   assert.equal(runPixelBounds.length,12,'all twelve run poses were decoded from PNG pixels');
   assert.ok(runPixelBounds.every(p=>p.height>118&&p.height<122),'all run drawings keep the same visible height');
+  const attackPixels=decoded.find(p=>p.name==='scythe_attack');
+  assert.ok(Math.abs(attackPixels.height-runPixelBounds.find(p=>p.name==='run').height)<1,
+    'scythe pose keeps the same apparent height as the running pose');
   for(const name of ['run_contact','run','run_transition_01','run_transition_04']){
     const frame=runPixelBounds.find(p=>p.name===name);
     assert.ok(Math.abs(frame.feetY)<1,`${name} visibly reaches the ground line`);
