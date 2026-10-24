@@ -1,19 +1,19 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.8 — *Reaper Run Cycle Rework* with an eight-pose balanced run cycle active by default. The first pose loads before gameplay can start. Previous illustrated art remains available with `?art=illustrated`.
+**Current build:** v0.10.9 — *Reaper Run Cycle Head Bob* with a subtle head bob added to the eight-pose run cycle. Previous illustrated art remains available with `?art=illustrated`.
 
-The approved Reaper art and 76px slide opening are in `main`. This update redesigns the run positions and restores the previous 0.67-second stride duration. Phone review of the updated motion remains needed.
+The approved Reaper art and 76px slide opening are in `main`. v0.10.9 adds a 1.75px vertical bob twice per stride to the drawn Reaper during runs. Size, collision, world movement, and the 0.67-second stride remain unchanged. Phone review is still needed.
 
-**Release:** v0.10.8 — *Reaper Run Cycle Rework*  
+**Release:** v0.10.9 — *Reaper Run Cycle Head Bob*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression, PNG integrity, actual Chromium pixel/render checks, and GitHub Pages deployment passed. **Live Android animation-quality playtesting pending.**
+**Verification:** Local regression and asset checks passed. GitHub Actions browser rendering and Pages deployment are pending for v0.10.9. **Live Android animation-quality playtesting pending.**
 
 ## Main Reaper motion cycle v4
 
 - Eight new transparent run drawings replace the twelve-pose cycle that felt too fast and uneven. The first verified pose loads before gameplay can start; the remaining seven load next, followed by the larger action and Bat artwork.
-- The cycle advances through eight registered leg positions at 12 fps, for the same approximately 0.67-second stride as the earlier twelve-pose, 18fps cycle. Upper-body eye position and character scale stay nearly fixed while the feet alternate; world movement is unchanged.
+- The cycle advances through eight registered leg positions at 12 fps, for the same approximately 0.67-second stride as the earlier twelve-pose, 18fps cycle. A 1.75px rendered-only bob now follows both footfalls; world movement is unchanged.
 - The eight optimized runtime PNGs total about 233 KB. Their full transparent source sheet and a phone-scale review board are preserved under `assets/visuals/review/character-motion-cycle-v3/`.
 - The browser test decodes the actual PNG pixels and measures eye alignment, ground position, visible height, and eight distinct rendered poses at mobile gameplay scale. Collision geometry remains untouched.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
@@ -21,9 +21,9 @@ The approved Reaper art and 76px slide opening are in `main`. This update redesi
 - The scythe strike uses four distinct drawings for wind-up, sweep, impact, and follow-through across the existing 260ms action window. The current v0.10.6 sweep pose leads with the sharp point. Damage, reach, controls, and progression are unchanged.
 - Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [new run-cycle review board](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg), and source PNG document the visual direction.
-- **Next:** phone-test the redesigned Reaper stride and hit pose on the main game.
+- **Next:** phone-test the run cycle's subtle head bob on the main game.
 
-## v0.10.8 — Reaper Run Cycle Rework
+## v0.10.9 — Subtle Reaper Run Head Bob\n\n- Added a smooth 1.75px up/down sprite offset, twice per stride, to give the head a natural running bob. The sprite's dimensions and collision position are unchanged.\n- The eight run drawings, 12fps animation, 0.67-second stride, world movement, damage pose, controls, and progression remain unchanged.\n- **Verification:** pending regression, image-integrity, and actual Chromium mobile-render checks. Phone review remains the final animation-quality check.\n\n## v0.10.8 — Reaper Run Cycle Rework
 
 - Replaced the uneven twelve-pose cycle with eight clearer alternating running positions, keeping the torso, eye, and scythe steadier between poses.
 - Plays at 12fps for a 0.67-second cycle, restoring the slower stride the user preferred while preserving world movement and the successful full-size damage pose.

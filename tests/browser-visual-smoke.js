@@ -182,12 +182,20 @@ const server=http.createServer((req,res)=>{
       name.startsWith('run')&&sprite.visible)?.[0];
     s.elapsed=1/12;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
+    const runBobYs=[];
+    for(let i=0;i<8;i++){
+      s.elapsed=i/12;v.render();
+      const sprite=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+        name.startsWith('run_pose_')&&sprite.visible)?.[1];
+      runBobYs.push(sprite?.y);
+    }
+    const runBobRange=Math.max(...runBobYs)-Math.min(...runBobYs);
     s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];
     s.elapsed=0;v.render();const flying=v.batPool[0],firstBat=flying.texture.key;
     s.elapsed=.09;v.render();const secondBat=flying.texture.key;
     s.enemies[0].mode='dive';v.render();
     return {slideVisible,slideGround,slideHeight,attackVisible,
-      attackGround,attackPose,runHeight,slideClearance:window.GRIM_CONFIG.slideClearancePx,
+      attackGround,attackPose,runHeight,runBobRange,slideClearance:window.GRIM_CONFIG.slideClearancePx,
       runFrame1:firstRun,runFrame2:secondRun,batVisible:flying.visible,
       firstBat,secondBat,diveKey:flying.texture.key};
   });
@@ -201,6 +209,8 @@ const server=http.createServer((req,res)=>{
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
   assert.equal(v2Anchors.runFrame1,'run_pose_01');
   assert.equal(v2Anchors.runFrame2,'run_pose_02','Reaper cycle advances one balanced gait position every 1/12 second');
+  assert.ok(v2Anchors.runBobRange>3.2&&v2Anchors.runBobRange<3.8,
+    'Reaper gets a subtle 3.5px peak-to-peak bob across the full stride without changing scale');
   assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.firstBat,'gr_v2_bat_raised');
   assert.equal(v2Anchors.secondBat,'gr_v2_bat_mid_up','Bat flap advances through aligned in-between art');
   assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
@@ -389,7 +399,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.8 normalized damage pose, balanced eight-pose Reaper run at the previous stride duration, slide, scythe, PNG pixels, mobile rendering and fallbacks.');
+  console.log('PASS actual Chromium: v0.10.9 normalized damage pose, balanced eight-pose Reaper run at the previous stride duration, slide, scythe, PNG pixels, mobile rendering and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

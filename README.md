@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.8 — Reaper Run Cycle Rework**
+**Current playable build: v0.10.9 — Reaper Run Cycle Head Bob**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -12,10 +12,23 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 ## Current Reaper art
 
 - The eight-pose Reaper run cycle and the new slide and four-beat scythe attack appear in the main game. Bat wing animation and the approved standard poses remain unchanged.
+- The run cycle adds a subtle 1.75px up/down bob, twice per stride, to keep the Reaper's head from appearing locked in place. This only moves the drawn sprite; it does not change its size, collision, or speed.
 - The slide pose preserves the Reaper's head and torso size and is about 74px tall. Low branches are raised to a 76px opening; the 79px standing collider still hits them, so the player must slide. The existing 56×29 slide collider is unchanged.
 - The scythe attack plays four drawn poses over the existing 260ms action window, with the pointed edge leading the forward sweep. Attack timing and damage remain unchanged.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
 - [Run-cycle review board and source image](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg) show the redesigned Reaper poses at phone scale. The [earlier motion-cycle review](assets/visuals/review/character-motion-cycle-v1/README.md) remains available.
+
+## v0.10.9: Subtle Reaper Run Head Bob
+
+- Adds a small, smooth vertical bob to the Reaper during the eight-pose run cycle so the head does not look locked in place.
+- The bob is 1.75px in either direction and follows both steps of the stride. It changes only the drawn sprite; character size, collision, world speed, and the 0.67-second cycle stay unchanged.
+- Chromium checks measure the bob across the complete run cycle at phone dimensions, alongside the existing rendered-pixel and registration checks.
+
+## v0.10.9: Subtle Reaper Run Head Bob
+
+- Adds a small, smooth vertical bob to the Reaper during the eight-pose run cycle so the head does not look locked in place.
+- The bob is 1.75px in either direction and follows both steps of the stride. It changes only the drawn sprite; character size, collision, world speed, and the 0.67-second cycle stay unchanged.
+- Chromium checks measure the bob across the complete run cycle at phone dimensions, alongside the existing rendered-pixel and registration checks.
 
 ## v0.10.8: Reaper Run Cycle Rework
 
