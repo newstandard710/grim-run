@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering, and Pages deployment are pending for this build. The Bone Crawler review is opt-in at `?enemyReview=bone-crawler`.
+**Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering, and Pages deployment passed on October 24, 2026. User phone review is pending. The Bone Crawler review is opt-in at `?enemyReview=bone-crawler`.
 
 ## Remaining enemy sprite phase
 
@@ -48,7 +48,7 @@ The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October
 - Added four transparent crawl poses based on the approved Reaper and Cavern Bat PNG style references. They render at about 34–37px high and 45–52px wide.
 - Bone Crawler art is loaded only with `?enemyReview=bone-crawler` until the phone review is accepted. The 38×42 collision box, one HP, ground movement, ledge stopping, spawn cadence and combat remain unchanged.
 - The previously reviewed Skeletal Bat atlas is now the default. Missing or invalid Bone Crawler PNGs retain the procedural crawler.
-- **Verification:** pending full regression, exact PNG integrity, phone-sized Chromium/Phaser rendering, and Pages review deployment.
+- **Verification:** Full regression, exact PNG integrity, phone-sized Chromium/Phaser rendering, and Pages review deployment passed. User phone review is pending.
 
 ## v0.10.8 — Reaper Run Cycle Rework
 
