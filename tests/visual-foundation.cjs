@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.5-reaper-action-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.6-scythe-tip-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
@@ -33,6 +33,8 @@ assert.equal(V.ILLUSTRATED_RUN_FPS,10);assert.equal(V.ILLUSTRATED_BAT_FPS,9);
 assert.deepEqual(Array.from(V.V2_REAPER_RUN),['run_contact','run_contact_mid','run_transition_01','run_airborne','run_airborne_mid','run_transition_02','run_recovery','run_recovery_mid','run_transition_03','run','run_stride_mid','run_transition_04']);
 assert.equal(V.V2_REAPER_RUN_FPS,18);
 assert.deepEqual(Array.from(V.V2_REAPER_SWING),['scythe_attack','scythe_attack_02','scythe_attack_03','scythe_attack_04']);
+assert.ok(V.V2_REAPER.scythe_attack_02.file.includes('scythe-swing-v2/sweep_tip-leading_v2.png'),
+  'The first forward swing uses the point-leading scythe pose');
 assert.equal(V.V2_REAPER_SWING_MS,260,'The new scythe sequence uses the existing attack duration');
 assert.equal(V.V2_BAT_FLAP.length,8);assert.equal(V.V2_BAT_FLAP_FPS,12);
 for(const pose of V.V2_REAPER_RUN)
@@ -189,4 +191,4 @@ staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPos
 staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
 assert.equal(staticRenderer.illustratedReaperPose(),'fall');
 staticRenderer.shutdown();
-console.log('PASS v0.10.5: 18 runtime illustrated PNG textures load with movement cycles and anchored crouch slide.');
+console.log('PASS v0.10.6: 18 runtime illustrated PNG textures load with movement cycles and anchored crouch slide.');

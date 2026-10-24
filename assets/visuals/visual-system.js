@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.5
+/* Grim Run — Macabre Storybook visual system, v0.10.6
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -95,7 +95,9 @@
     // lower silhouette stays inside the raised branch opening.
     ['slide','slide-mobile-v1.png',0.414],
     ['scythe_attack','scythe-swing-v1/windup_mobile_v1.png',0.44117647],
-    ['scythe_attack_02','scythe-swing-v1/sweep_mobile_v1.png',0.44117647],
+    // The forward sweep leads with the pointed cutting edge; the previous
+    // frame had the scythe's blunt spine facing into the swing.
+    ['scythe_attack_02','scythe-swing-v2/sweep_tip-leading_v2.png',0.44117647],
     ['scythe_attack_03','scythe-swing-v1/impact_mobile_v1.png',0.44117647],
     ['scythe_attack_04','scythe-swing-v1/followthrough_mobile_v1.png',0.44117647],
     ['crossbow_fire','reaper_crossbow_fire_v1.png',V2_REAPER_SCALE],
@@ -190,7 +192,8 @@
     'scythe-swing-v1/windup_mobile_v1.png':{bytes:197518,sha256:'639e7abcc00acd24ecdb85a6345d24c68e2f5b5fafe06b0c7c5d8d18ff66c854'},
     'scythe-swing-v1/sweep_mobile_v1.png':{bytes:184649,sha256:'147b2a799cb410f2d6bd05fa66ad87a776c99dc2ea45b5cd869157ac9de19d9f'},
     'scythe-swing-v1/impact_mobile_v1.png':{bytes:158943,sha256:'5f2be7931423f297cf6fd11c7a44214c3640c156e997e6a5a160772e0b98dca8'},
-    'scythe-swing-v1/followthrough_mobile_v1.png':{bytes:158142,sha256:'e6e7eab949613908e9b444c941bf930c2149c1ccb8b99a3573e0990a943faa47'}
+    'scythe-swing-v1/followthrough_mobile_v1.png':{bytes:158142,sha256:'e6e7eab949613908e9b444c941bf930c2149c1ccb8b99a3573e0990a943faa47'},
+    'scythe-swing-v2/sweep_tip-leading_v2.png':{bytes:178387,sha256:'ea7a1c5c9265c9da9a9b619e93e5932630e88a2252587919fb08638bbb056011'}
   });
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);

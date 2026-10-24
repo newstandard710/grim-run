@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.5 — Reaper Action Polish**
+**Current playable build: v0.10.6 — Tip-First Scythe Swing**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -13,9 +13,15 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 
 - The twelve-pose Reaper run cycle and the new slide and four-beat scythe attack appear in the main game. Bat wing animation and the approved standard poses remain unchanged.
 - The slide pose preserves the Reaper's head and torso size and is about 74px tall. Low branches are raised to a 76px opening; the 79px standing collider still hits them, so the player must slide. The existing 56×29 slide collider is unchanged.
-- The scythe attack plays four drawn poses over the existing 260ms action window. Attack timing and damage remain unchanged.
+- The scythe attack plays four drawn poses over the existing 260ms action window, with the pointed edge leading the forward sweep. Attack timing and damage remain unchanged.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
 - [Motion-cycle review sheets and source images](assets/visuals/review/character-motion-cycle-v1/README.md) document the four-pose Reaper run and eight-step Bat flap.
+
+## v0.10.6: Tip-First Scythe Swing
+
+- Corrected the first forward scythe sweep so the pointed cutting tip leads into the attack and the blunt spine trails. The Reaper pose, size, and four-beat timing remain stable.
+- The previous 260ms attack timing, reach, damage, controls, slide fix, run cycle, and other art are unchanged.
+- The browser check verifies the replacement PNG and captures all four swing poses at phone gameplay scale.
 
 ## v0.10.5: Reaper Action Polish
 

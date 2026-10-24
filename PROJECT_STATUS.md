@@ -1,14 +1,14 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.5 — *Reaper Action Polish* with the Reaper twelve-pose cycle active by default. A compact approved contact pose loads first; the Start control waits until it is ready. Previous illustrated art remains available with `?art=illustrated`.
+**Current build:** v0.10.6 — *Tip-First Scythe Swing* with the Reaper twelve-pose cycle active by default. A compact approved contact pose loads first; the Start control waits until it is ready. Previous illustrated art remains available with `?art=illustrated`.
 
-The repaired Reaper files are in `main`; the actual Chromium checks pass. Phone review of startup timing and motion quality is still needed.
+The approved Reaper art and 76px slide opening are in `main`. The v0.10.6 tip-first scythe sweep is being verified before it is published. Phone review of motion quality is still needed.
 
-**Release:** v0.10.5 — *Reaper Action Polish*  
+**Release:** v0.10.6 — *Tip-First Scythe Swing*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression suites pass. The GitHub Actions real Chromium sprite smoke is pending for this revision. **Live Android visual and performance playtesting pending.**
+**Verification:** Pending local regression, asset integrity, and GitHub Actions real Chromium rendering for v0.10.6. **Live Android visual and performance playtesting pending.**
 
 ## Main Reaper motion cycle v3
 
@@ -18,10 +18,17 @@ The repaired Reaper files are in `main`; the actual Chromium checks pass. Phone 
 - The Reaper's run poses now use matching visible pixel heights and measured eye/ground anchors. This corrects size pulsing and sideways head movement while leaving collision geometry untouched.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
 - The slide pose now bends at the knees while keeping the head/torso at normal art scale. Its visible height is about 74px. Low branch openings are raised from 48px to 76px; standing still collides against the 79px standing body. The 42×79 standing and 56×29 sliding collision boxes remain unchanged.
-- The scythe strike now uses four distinct drawings for wind-up, sweep, impact, and follow-through across the existing 260ms action window. Damage, reach, controls, and progression are unchanged.
+- The scythe strike uses four distinct drawings for wind-up, sweep, impact, and follow-through across the existing 260ms action window. The current v0.10.6 sweep pose leads with the sharp point. Damage, reach, controls, and progression are unchanged.
 - Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [run/flap review sheets](assets/visuals/review/character-motion-cycle-v1/README.md), and source PNGs document the review art.
 - **Next:** phone-test the updated Reaper cadence, Bat flap, silhouette, and startup timing on the main game.
+
+## v0.10.6 — Tip-First Scythe Swing
+
+- Replaced the first forward scythe sweep pose so the sharp point leads through the swing and the blunt spine trails behind.
+- Reaper scale, body pose, anchor, four-pose sequence, 260ms attack period, reach, damage, and controls are preserved.
+- Slide art and 76px branch opening are unchanged.
+- **Verification:** pending local regression, PNG integrity, and actual Chromium rendering for this revision.
 
 ## v0.10.5 — Reaper Action Polish
 
