@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.11 — Bone Crawler Art Review**
+**Current playable build: v0.10.12 — Bone Crawler Scale Review**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -25,10 +25,12 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The atlas changes only the Skeletal Bat drawing. Its existing 2 HP, flight and dive behavior, telegraph timing, and collision box stay unchanged. Procedural art remains the fallback.
 - [Open the current game](https://newstandard710.github.io/grim-run/).
 
-## Bone Crawler art review
+## Bone Crawler scale review
 
 - The four-pose crawl cycle is opt-in at `?enemyReview=bone-crawler` while it is reviewed on a phone.
-- The animated silhouette is about 34–37px high and 45–52px wide. The existing 38×42 collision box, ledge stopping, movement, HP and combat remain unchanged.
+- At 2.5× its first review size, the animated silhouette is about 85–93px high and 112–131px wide, close to a large dog beside the 120px Reaper. Its hitbox is now 95×105px, also 2.5× larger, and shares the art's ground baseline.
+- One HP, ground movement, ledge stopping, spawn schedule and attack logic remain unchanged.
+- To reach a crawler quickly, use Pause → God Mode → Teleport to 5,000m, confirm, then continue until one enters view. Crawlers appear in the Underworld.
 - [Open the Bone Crawler phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=bone-crawler).
 
 ## v0.10.9: Subtle Reaper Run Head Bob

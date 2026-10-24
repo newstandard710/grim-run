@@ -280,13 +280,15 @@ const server=http.createServer((req,res)=>{
   const crawlerEmpty=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot());
   const crawlerRect=await skeletalPage.evaluate(()=>{
     const g=window.grimRun,s=g.scene.scenes[0],v=s.visuals;
-    const x=s.cameraX+320,y=s.terrain.groundAt(x)-20;
+    const ground=s.terrain.groundAt(s.cameraX+320),x=s.cameraX+320;
+    const y=ground-window.GRIM_COMBAT.CRAWLER_HITBOX.footOffset;
     const enemy={kind:'crawler',x,y,phase:0,dead:false,hp:1};
     s.enemies=[enemy];s.drawScene();g.step(performance.now(),0);
     const sprite=v.boneCrawlerPool[0],meta=window.GRIM_VISUALS.V2_BONE_CRAWLER_FRAMES[0];
     return {frame:sprite.texture.key,visible:sprite.visible,x:sprite.x,y:sprite.y,
       displayWidth:sprite.displayWidth,displayHeight:sprite.displayHeight,
       enemyX:enemy.x,enemyY:enemy.y,
+      groundY:ground,hitbox:window.GRIM_COMBAT.rectFor(enemy),
       screenX:Math.round(enemy.x-s.cameraX-sprite.displayWidth*.5),
       screenY:Math.round(enemy.y-sprite.displayHeight*.5),scale:sprite.scaleX,
       expectedScale:meta.scale};
@@ -295,8 +297,12 @@ const server=http.createServer((req,res)=>{
   assert.equal(crawlerRect.visible,true);assert.equal(crawlerRect.x,crawlerRect.enemyX);
   assert.equal(crawlerRect.y,crawlerRect.enemyY);
   assert.ok(Math.abs(crawlerRect.scale-crawlerRect.expectedScale)<.00001);
-  assert.ok(crawlerRect.displayWidth>54&&crawlerRect.displayWidth<57);
-  assert.ok(crawlerRect.displayHeight>39&&crawlerRect.displayHeight<41);
+  assert.ok(crawlerRect.displayWidth>137&&crawlerRect.displayWidth<141);
+  assert.ok(crawlerRect.displayHeight>99&&crawlerRect.displayHeight<101);
+  assert.equal(crawlerRect.hitbox.width,95);assert.equal(crawlerRect.hitbox.height,105);
+  assert.equal(crawlerRect.hitbox.x+crawlerRect.hitbox.width/2,crawlerRect.enemyX);
+  assert.ok(Math.abs(crawlerRect.hitbox.y+crawlerRect.hitbox.height-crawlerRect.groundY)<.01,
+    'The enlarged hitbox rests on the same ground baseline as the artwork');
   await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'bone-crawler-phone-scale.png')});
   const crawlerStates=[
     {elapsed:0,name:'crawl_01'},
@@ -581,7 +587,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.11 Reaper/Bat/Skeletal Bat defaults, opt-in Bone Crawler four-pose phone-scale render, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.10.12 Reaper/Bat/Skeletal Bat defaults, opt-in Bone Crawler 2.5x art/hitbox four-pose phone render, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
