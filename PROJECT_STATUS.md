@@ -8,7 +8,7 @@ The approved Reaper art and 76px slide opening are in `main`. v0.10.9 adds a 1.7
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression and asset checks passed. GitHub Actions browser rendering and Pages deployment are pending for v0.10.9. **Live Android animation-quality playtesting pending.**
+**Verification:** Local regression, image integrity, actual phone-sized Chromium rendering, and GitHub Pages deployment passed. **Live Android animation-quality playtesting pending.**
 
 ## Main Reaper motion cycle v4
 
@@ -23,7 +23,13 @@ The approved Reaper art and 76px slide opening are in `main`. v0.10.9 adds a 1.7
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [new run-cycle review board](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg), and source PNG document the visual direction.
 - **Next:** phone-test the run cycle's subtle head bob on the main game.
 
-## v0.10.9 — Subtle Reaper Run Head Bob\n\n- Added a smooth 1.75px up/down sprite offset, twice per stride, to give the head a natural running bob. The sprite's dimensions and collision position are unchanged.\n- The eight run drawings, 12fps animation, 0.67-second stride, world movement, damage pose, controls, and progression remain unchanged.\n- **Verification:** pending regression, image-integrity, and actual Chromium mobile-render checks. Phone review remains the final animation-quality check.\n\n## v0.10.8 — Reaper Run Cycle Rework
+## v0.10.9 — Subtle Reaper Run Head Bob
+
+- Added a smooth 1.75px up/down sprite offset, twice per stride, to give the head a natural running bob. The sprite's dimensions and collision position are unchanged.
+- The eight run drawings, 12fps animation, 0.67-second stride, world movement, damage pose, controls, and progression remain unchanged.
+- **Verification:** local regression, image integrity, and actual Chromium mobile-render checks passed. Pages deployment passed. Phone review remains the final animation-quality check.
+
+## v0.10.8 — Reaper Run Cycle Rework
 
 - Replaced the uneven twelve-pose cycle with eight clearer alternating running positions, keeping the torso, eye, and scythe steadier between poses.
 - Plays at 12fps for a 0.67-second cycle, restoring the slower stride the user preferred while preserving world movement and the successful full-size damage pose.
@@ -339,7 +345,7 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Next: v0.10.4 landscape phone review of character scale, transparency and performance; then plan static-pose animation sequences, additional enemy art, illustrated biomes, and boss design.
+Next: phone-review the subtle v0.10.9 run bob, then continue the character animation and visual polish roadmap.
 
 ## Source and backups
 
