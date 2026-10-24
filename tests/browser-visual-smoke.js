@@ -31,7 +31,10 @@ const server=http.createServer((req,res)=>{
  const origin='http://127.0.0.1:'+server.address().port;
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
  try{
-  const page=await browser.newPage({viewport:{width:1400,height:750}});
+  // Create the game at phone dimensions from its first frame. Resizing a
+  // running Phaser canvas afterward leaves the scene's ground line at the old
+  // desktop height and makes mobile screenshots show the player clipped off.
+  const page=await browser.newPage({viewport:{width:950,height:430}});
   const errors=[];
   page.on('pageerror',e=>errors.push(String(e)));
   await page.goto(origin+'/?art=experimental&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
