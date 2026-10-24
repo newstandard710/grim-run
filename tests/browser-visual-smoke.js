@@ -249,8 +249,8 @@ const server=http.createServer((req,res)=>{
     renderedRunFrames.push(PNG.sync.read(canvasPng).data);
     await page.screenshot({path:path.join(artifactDir,'mobile-run-'+name+'.png')});
   }
-  assert.equal(new Set(renderedRunFrames.map(pixels=>crypto.createHash('sha256').update(pixels).digest('hex'))).size,8,
-    'actual mobile-sized Phaser canvas renders eight distinct Reaper poses');
+  assert.equal(new Set(renderedRunFrames.map(pixels=>crypto.createHash('sha256').update(pixels).digest('hex'))).size,12,
+    'actual mobile-sized Phaser canvas renders twelve distinct Reaper poses');
   for(let i=1;i<renderedRunFrames.length;i++){
     let changed=0;const a=renderedRunFrames[i-1],b=renderedRunFrames[i];
     for(let p=0;p<a.length;p+=4)if(Math.abs(a[p]-b[p])>18||Math.abs(a[p+1]-b[p+1])>18||Math.abs(a[p+2]-b[p+2])>18)changed++;
