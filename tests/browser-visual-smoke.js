@@ -297,9 +297,11 @@ const server=http.createServer((req,res)=>{
   // for that verified pose, then gameplay must begin with the Reaper visible
   // while action poses and Bat art are still loading.
   const earlyPage=await browser.newPage({viewport:{width:950,height:430}});
+  let releaseContact;
+  const contactGate=new Promise(resolve=>{releaseContact=resolve;});
   await earlyPage.route('**/assets/characters/illustrated-v2/**',async route=>{
-    if(!route.request().url().includes('run_contact_mobile_v1.png'))
-      await new Promise(resolve=>setTimeout(resolve,2500));
+    if(route.request().url().includes('run_contact_mobile_v1.png'))await contactGate;
+    else await new Promise(resolve=>setTimeout(resolve,6000));
     await route.continue();
   });
   await earlyPage.goto(origin+'/?seed=44',{waitUntil:'domcontentloaded',timeout:45000});
@@ -309,6 +311,7 @@ const server=http.createServer((req,res)=>{
   },null,{timeout:12000});
   assert.equal(await earlyPage.locator('#start-btn').isEnabled(),false,
     'Do not start a run before the first small Reaper image is ready');
+  releaseContact();
   await earlyPage.waitForFunction(()=>document.getElementById('start-btn')?.disabled===false,
     null,{timeout:12000});
   await earlyPage.click('#start-btn');
