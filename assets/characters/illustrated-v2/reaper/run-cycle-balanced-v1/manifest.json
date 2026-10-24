@@ -1,0 +1,149 @@
+{
+  "description": "Eight illustrated Reaper running positions. The face/scythe/cape are held to a consistent eye anchor while the legs alternate. Runtime PNGs are 360x360 with preserved transparency and a 256-color palette; common scale gives approximately 120 visible gameplay pixels.",
+  "source": "assets/visuals/review/character-motion-cycle-v3/reaper-source/reaper_run_cycle_8pose_source.png",
+  "runtime_folder": "assets/characters/illustrated-v2/reaper/run-cycle-balanced-v1",
+  "runtime_canvas": [
+    360,
+    360
+  ],
+  "anchor": [
+    300,
+    329
+  ],
+  "scale": 0.41522491349480967,
+  "stride_duration_ms": 666.667,
+  "review_board": "assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg",
+  "frames": [
+    {
+      "name": "reaper_run_pose_01_v1.png",
+      "bytes": 29605,
+      "sha256": "55a58a8d219173b0015aa4929678126c0b5c1b56469c6dcb58f20ba27093afc9",
+      "visible_bbox_alpha_gt_32": [
+        30,
+        39,
+        336,
+        329
+      ],
+      "visible_height_px": 290,
+      "cyan_eye_centroid_px": [
+        299.45,
+        172.73
+      ]
+    },
+    {
+      "name": "reaper_run_pose_02_v1.png",
+      "bytes": 29182,
+      "sha256": "3ce56b4a692484f16e99d69a8c57e821f9bbb0fdf64e40affb32ce3dce51fe17",
+      "visible_bbox_alpha_gt_32": [
+        29,
+        39,
+        337,
+        330
+      ],
+      "visible_height_px": 291,
+      "cyan_eye_centroid_px": [
+        297.33,
+        167.94
+      ]
+    },
+    {
+      "name": "reaper_run_pose_03_v1.png",
+      "bytes": 29272,
+      "sha256": "cd97845de4c75c322c8b3dbfd79e56c79c70b8c42608412a116e096f1275aa09",
+      "visible_bbox_alpha_gt_32": [
+        28,
+        40,
+        336,
+        329
+      ],
+      "visible_height_px": 289,
+      "cyan_eye_centroid_px": [
+        299.75,
+        173.1
+      ]
+    },
+    {
+      "name": "reaper_run_pose_04_v1.png",
+      "bytes": 29409,
+      "sha256": "513d6ede60ff71183e8bc114c29a4ffb8fbd67e9b8d5cffb7aa5a0ae435e49bf",
+      "visible_bbox_alpha_gt_32": [
+        29,
+        40,
+        337,
+        329
+      ],
+      "visible_height_px": 289,
+      "cyan_eye_centroid_px": [
+        300.14,
+        173.32
+      ]
+    },
+    {
+      "name": "reaper_run_pose_05_v1.png",
+      "bytes": 29144,
+      "sha256": "dfffb9a58ff7cf81661247da4f717d2a1d47aedacddd6486a99faab6cdf6c3ca",
+      "visible_bbox_alpha_gt_32": [
+        31,
+        41,
+        337,
+        325
+      ],
+      "visible_height_px": 284,
+      "cyan_eye_centroid_px": [
+        300.33,
+        173.33
+      ]
+    },
+    {
+      "name": "reaper_run_pose_06_v1.png",
+      "bytes": 28847,
+      "sha256": "568f752bc60b9040cd5c3b8511dc12127b4de6f54c447d8db69a2bb3b2d9ab40",
+      "visible_bbox_alpha_gt_32": [
+        28,
+        39,
+        337,
+        322
+      ],
+      "visible_height_px": 283,
+      "cyan_eye_centroid_px": [
+        300.0,
+        173.0
+      ]
+    },
+    {
+      "name": "reaper_run_pose_07_v1.png",
+      "bytes": 28290,
+      "sha256": "ce8bfa0ee2ba3ea175173d4fe06eb71d110fe29cc36adbfeb8225f7b6a1aecaa",
+      "visible_bbox_alpha_gt_32": [
+        34,
+        39,
+        337,
+        322
+      ],
+      "visible_height_px": 283,
+      "cyan_eye_centroid_px": [
+        299.94,
+        173.0
+      ]
+    },
+    {
+      "name": "reaper_run_pose_08_v1.png",
+      "bytes": 29307,
+      "sha256": "3e1462b285f0d9ce7bb716c0bb1895d944cf1fa15b51299c0ae281e5313aa4d8",
+      "visible_bbox_alpha_gt_32": [
+        32,
+        40,
+        337,
+        329
+      ],
+      "visible_height_px": 289,
+      "cyan_eye_centroid_px": [
+        299.94,
+        173.0
+      ]
+    }
+  ],
+  "source_bytes": 357229,
+  "source_sha256": "c17df8fdf60cca9284dcfd98efd640d5058aab05c10dd2e6f8256469a1142a60",
+  "source_notes": "Transparent 256-color indexed archival PNG. Original generated image is retained in the local generated-images workspace."
+}

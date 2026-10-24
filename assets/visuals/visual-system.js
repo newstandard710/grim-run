@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.7
+/* Grim Run — Macabre Storybook visual system, v0.10.8
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -60,33 +60,11 @@
   const V2_REAPER_BASE_SCALE=64/1111;
   const V2_REAPER_SCALE=120/1111;
   const V2_BAT_SCALE=52/766;
-  // Normalize the visible pixels to one 120px target and keep the cyan eye
-  // registered in screen space. The original run poses differed in both size
-  // and horizontal eye position despite sharing the same canvas dimensions.
-  const V2_REAPER_RUN_SCALES=Object.freeze({
-    run_contact:120/990,run_airborne:120/1071,run_recovery:120/1011,run:120/1110,
-    run_transition_01:120/1110,run_transition_02:120/1109,
-    run_transition_03:120/1110,run_transition_04:120/1110
-  });
-  const V2_REAPER_RUN_ANCHORS=Object.freeze({
-    run_contact:Object.freeze([1248,1330]),
-    run_airborne:Object.freeze([1271,1419]),
-    run_recovery:Object.freeze([1433,1413]),
-    run:Object.freeze([1256,1420]),
-    run_transition_01:Object.freeze([1251,1420]),
-    run_transition_02:Object.freeze([1251,1420]),
-    run_transition_03:Object.freeze([1250,1420]),
-    run_transition_04:Object.freeze([1250,1420])
-  });
+  // Eight new gait drawings share one eye and ground anchor. Their 12fps
+  // cadence keeps the complete stride at the former 0.67s duration.
+  const V2_REAPER_RUN_SCALE=120/289;
+  const V2_REAPER_RUN_ANCHOR=Object.freeze([300,329]);
   const V2_REAPER_BASE=Object.freeze(Object.fromEntries([
-    ['run','reaper_run_v1.png',V2_REAPER_SCALE],
-    ['run_contact','reaper_run_contact_v1.png',V2_REAPER_SCALE],
-    ['run_airborne','reaper_run_airborne_v1.png',V2_REAPER_SCALE],
-    ['run_recovery','reaper_run_recovery_v1.png',V2_REAPER_SCALE],
-    ['run_transition_01','reaper_run_transition_01_v1.png',V2_REAPER_SCALE],
-    ['run_transition_02','reaper_run_transition_02_v1.png',V2_REAPER_SCALE],
-    ['run_transition_03','reaper_run_transition_03_v1.png',V2_REAPER_SCALE],
-    ['run_transition_04','reaper_run_transition_04_v1.png',V2_REAPER_SCALE],
     ['idle','reaper_idle_v1.png',V2_REAPER_SCALE],
     ['jump','reaper_jump_v1.png',V2_REAPER_SCALE],
     ['fall','reaper_fall_v1.png',V2_REAPER_SCALE],
@@ -107,7 +85,7 @@
     ['death','reaper_death_v1.png',V2_REAPER_SCALE],
     ['hover','reaper_hover_v1.png',V2_REAPER_SCALE]
   ].map(([name,file,scale])=>[name,Object.freeze({
-    key:'gr_v2_reaper_'+name,file,scale:V2_REAPER_RUN_SCALES[name]||scale,anchor:V2_REAPER_RUN_ANCHORS[name]||Object.freeze([1250,1420])
+    key:'gr_v2_reaper_'+name,file,scale,anchor:Object.freeze([1250,1420])
   })])));
   const V2_REAPER_SWING=Object.freeze(['scythe_attack','scythe_attack_02','scythe_attack_03','scythe_attack_04']);
   const V2_REAPER_SWING_MS=260;
@@ -118,20 +96,14 @@
     scythe_attack_04:Object.freeze([311.7,407.0]),
     slide:Object.freeze([421.0,288.8])
   });
-  const V2_REAPER_RUN_MOBILE=Object.freeze({
-    run_contact:Object.freeze({key:'gr_v2_reaper_run_contact',file:'run-cycle-mobile-v1/run_contact_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.5,279.725])}),
-    run_contact_mid:Object.freeze({key:'gr_v2_reaper_run_contact_mid',file:'run-cycle-mobile-v1/run_contact_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([309.2,279.985])}),
-    run_transition_01:Object.freeze({key:'gr_v2_reaper_run_transition_01',file:'run-cycle-mobile-v1/run_transition_01_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.5,280.245])}),
-    run_airborne:Object.freeze({key:'gr_v2_reaper_run_airborne',file:'run-cycle-mobile-v1/run_airborne_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([297.154,286.135])}),
-    run_airborne_mid:Object.freeze({key:'gr_v2_reaper_run_airborne_mid',file:'run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([312.667,288.954])}),
-    run_transition_02:Object.freeze({key:'gr_v2_reaper_run_transition_02',file:'run-cycle-mobile-v1/run_transition_02_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([317.727,291.773])}),
-    run_recovery:Object.freeze({key:'gr_v2_reaper_run_recovery',file:'run-cycle-mobile-v1/run_recovery_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([287.5,300.198])}),
-    run_recovery_mid:Object.freeze({key:'gr_v2_reaper_run_recovery_mid',file:'run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([323.0,299.533])}),
-    run_transition_03:Object.freeze({key:'gr_v2_reaper_run_transition_03',file:'run-cycle-mobile-v1/run_transition_03_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([322.0,298.868])}),
-    run:Object.freeze({key:'gr_v2_reaper_run',file:'run-cycle-mobile-v1/run_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([273.857,280.0])}),
-    run_stride_mid:Object.freeze({key:'gr_v2_reaper_run_stride_mid',file:'run-cycle-mobile-v1/run_stride_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([310.0,280.245])}),
-    run_transition_04:Object.freeze({key:'gr_v2_reaper_run_transition_04',file:'run-cycle-mobile-v1/run_transition_04_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([305.0,280.49])})
-  });
+  const V2_REAPER_RUN_MOBILE=Object.freeze(Object.fromEntries(
+    Array.from({length:8},(_,i)=>{
+      const name='run_pose_'+String(i+1).padStart(2,'0');
+      return [name,Object.freeze({key:'gr_v2_reaper_'+name,
+        file:'run-cycle-balanced-v1/reaper_'+name+'_v1.png',
+        scale:V2_REAPER_RUN_SCALE,anchor:V2_REAPER_RUN_ANCHOR})];
+    })
+  ));
   const V2_REAPER=Object.freeze({...V2_REAPER_BASE,...V2_REAPER_RUN_MOBILE,
     ...Object.fromEntries([...V2_REAPER_SWING,'slide'].map(name=>[name,
       Object.freeze({...V2_REAPER_BASE[name],anchor:V2_REAPER_SWING_ANCHORS[name]})]))});
@@ -143,15 +115,11 @@
   ].map(([name,file])=>[name,Object.freeze({
     key:'gr_v2_bat_'+name,file,scale:V2_BAT_SCALE,anchor:Object.freeze([1500,720])
   })])));
-  // The main game uses the approved eight run poses plus four new in-between
-  // poses. Compact mobile PNGs keep the first pose and the full run cycle fast.
-  const V2_REAPER_RUN=Object.freeze([
-    'run_contact','run_contact_mid','run_transition_01','run_airborne',
-    'run_airborne_mid','run_transition_02','run_recovery','run_recovery_mid',
-    'run_transition_03','run','run_stride_mid','run_transition_04'
-  ]);
+  // Eight balanced gait poses alternate legs; no vertical scale changes.
+  const V2_REAPER_RUN=Object.freeze(Array.from({length:8},(_,i)=>'run_pose_'+String(i+1).padStart(2,'0')));
   const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
-  const V2_REAPER_RUN_FPS=24;
+  const V2_REAPER_RUN_FPS=12;
+  const V2_REAPER_RUN_CYCLE_MS=V2_REAPER_RUN.length/V2_REAPER_RUN_FPS*1000;
   const V2_BAT_FLAP_FPS=12;
   const snapFrame=(arr,time,fps)=>arr[Math.floor(Math.max(0,time)*fps)%arr.length];
 
@@ -190,6 +158,14 @@
   // rather than trusting an image load event (Chrome can display partial PNGs).
   const REVIEW_INTEGRITY_BASE=Object.freeze({"reaper_run_transition_01_v1.png":{"bytes":1432602,"sha256":"141cf50436a62789629cd8a488f6bc8da70992b442683572526f561711fc394a"},"reaper_run_transition_02_v1.png":{"bytes":1381487,"sha256":"6aa4b4f225bc67d702e16dc3d89a6a9f1d89c6b6cbd075efc9c4d53401d1216b"},"reaper_run_transition_03_v1.png":{"bytes":1521275,"sha256":"46e0e128ff50f2c988608eb92c8966ab3441bc396bcd2edb248ad96a224d3f70"},"reaper_run_transition_04_v1.png":{"bytes":1380002,"sha256":"c11a9085037ebbdacd2d18d2f74e61051af713d087f59b38a8c71713b37bf572"},"reaper_run_airborne_v1.png":{"bytes":1350570,"sha256":"3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"},"reaper_run_recovery_v1.png":{"bytes":1179770,"sha256":"0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"},"reaper_fall_v1.png":{"bytes":1404482,"sha256":"a1859b8b51dac28d3d08d04cf7aa3fe9fbf262676f12abeda91b12bf34eb6218"},"reaper_jump_v1.png":{"bytes":1350180,"sha256":"aecd58ad785f1cf5d0f08e8cd9489bc39be236e32fdffcd4c263796ccbb05d3f"},"reaper_death_v1.png":{"bytes":727130,"sha256":"f0b71de8c58a670ec85bd663d8e096d590fe864417df1e136cde70dba4333915"},"reaper_crossbow_fire_v1.png":{"bytes":820955,"sha256":"8df8c45253c880c2b2cec44bcd68c20a5b2ba0aa9781bf5c41e0955b03f06a09"},"reaper_run_contact_v1.png":{"bytes":1200830,"sha256":"976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"},"reaper_hover_v1.png":{"bytes":952384,"sha256":"de4a4a8ec36540bf06313b6d140351aa3ddc02871600de868aa13ad806d2eb1d"},"reaper_slide_v1.png":{"bytes":995383,"sha256":"70c9a7c6e13132801eb02939b7a9bc3d466aa6216bff759b2863e82aa059baa8"},"reaper_run_v1.png":{"bytes":1444963,"sha256":"873cd968a4b4c56e21d46d1db634bd0a602cbd9c212738f593fbcaf295f10243"},"reaper_idle_v1.png":{"bytes":1306891,"sha256":"253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"},"reaper_scythe_attack_v1.png":{"bytes":1167906,"sha256":"7b13d15a6b6de3f88a4d64a8d08b46325d227af68c31cc8018baa9ac320b866f"},"reaper_hurt_v1.png":{"bytes":1102948,"sha256":"5c091e89477790ba47e985e71abde99581b3b88854836f60e84c3b4fec3341bc"},"bat_neutral_v1.png":{"bytes":972200,"sha256":"91bd27d39d7fa71f698563fafbac02eeb40ee9e3fb8590ec13a8f587b182eb94"},"bat_wings_raised_v1.png":{"bytes":793683,"sha256":"4b818264821d70908bfb5f882ace67e509e0b334520c6d683dfe9becccd85cd9"},"bat_hit_v1.png":{"bytes":801324,"sha256":"86fbb1025e86e36e7cbfd81b6ccd71ce88fb866fadcdf6a3febf3b2d6e72407e"},"bat_death_v1.png":{"bytes":605422,"sha256":"e912d431c1614ad5127edbdf8b817e0ab6e16571f4e852b45503204dd219cfda"},"bat_flap_mid_down_v1.png":{"bytes":536563,"sha256":"c568978e463b93cea21af3ecf18b0322c88e99a4ed463582760442261e02dcd4"},"bat_wings_lowered_v1.png":{"bytes":875269,"sha256":"87cc9202294f325eea8bd2cf4e4fcf01018fbe191eef72492ba90522c428886a"},"bat_dive_v1.png":{"bytes":873768,"sha256":"d946f909b05d8f2d79b28275c1b654b4761c1a196a69e9d54dec27e7b201a18b"},"bat_flap_mid_up_v1.png":{"bytes":608831,"sha256":"952debf01be31561941e34adb3b7ce5b00f2364a1e7ed37ddf9bf32472df9b34"},"run-cycle-mobile-v1/run_contact_mobile_v1.png":{"bytes":24116,"sha256":"dc2e276c8535e2816d4bea34597b764697ab9a7a7fb210c28e72a13fa460b7f8"},"run-cycle-mobile-v1/run_contact_mid_mobile_v1.png":{"bytes":26157,"sha256":"6da0069905f2088ab880daa335771c41a0a4225da0927e84c19625149480830e"},"run-cycle-mobile-v1/run_transition_01_mobile_v1.png":{"bytes":25093,"sha256":"5126d1e2ad5423bdac383771b9c1f54edcd0cdd3351ae446cc2dabb8283c9aa3"},"run-cycle-mobile-v1/run_airborne_mobile_v1.png":{"bytes":24883,"sha256":"bc3fcbc9f58523400e857b59a409c63f6e062a172ea41669d32d5c5e7eab2e96"},"run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png":{"bytes":27005,"sha256":"57397cd636131afb3d0f95d6a279182fd87c256903b2d1895054b79cb0c7fd0a"},"run-cycle-mobile-v1/run_transition_02_mobile_v1.png":{"bytes":24601,"sha256":"50acb5314237c2b19085cc08f0713ec69db5d9b4414d8242892e0e4e44a08719"},"run-cycle-mobile-v1/run_recovery_mobile_v1.png":{"bytes":24186,"sha256":"a09b103aaa1857f56dbf5774d5486067bd17ecf5600c3670154d5c4094de25f3"},"run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png":{"bytes":26220,"sha256":"c46856e62a410e71382db84c673acf997f3ae4340c7cd79257f08a6e16851e58"},"run-cycle-mobile-v1/run_transition_03_mobile_v1.png":{"bytes":25816,"sha256":"02a7a71cb0ec6f914455b6902f4bde1d0f22c78e3cdfb12276722d9837707014"},"run-cycle-mobile-v1/run_mobile_v1.png":{"bytes":23318,"sha256":"ec02c70f52c9e380a8984c00ed05862d617f8fa378b94a0d61c2ea47411578c3"},"run-cycle-mobile-v1/run_stride_mid_mobile_v1.png":{"bytes":24973,"sha256":"54796f149b6864875a384bb2d45f8926d2f9ddfde33cbb7f12fcfcbf58b3c604"},"run-cycle-mobile-v1/run_transition_04_mobile_v1.png":{"bytes":24175,"sha256":"b0b4e671fe9a2f4160229b24db0d6cf0ae88b8ee9cd818a59b788d2256985651"}});
   const REVIEW_INTEGRITY=Object.freeze({...REVIEW_INTEGRITY_BASE,
+    'run-cycle-balanced-v1/reaper_run_pose_01_v1.png':{bytes:29605,sha256:'55a58a8d219173b0015aa4929678126c0b5c1b56469c6dcb58f20ba27093afc9'},
+    'run-cycle-balanced-v1/reaper_run_pose_02_v1.png':{bytes:29182,sha256:'3ce56b4a692484f16e99d69a8c57e821f9bbb0fdf64e40affb32ce3dce51fe17'},
+    'run-cycle-balanced-v1/reaper_run_pose_03_v1.png':{bytes:29272,sha256:'cd97845de4c75c322c8b3dbfd79e56c79c70b8c42608412a116e096f1275aa09'},
+    'run-cycle-balanced-v1/reaper_run_pose_04_v1.png':{bytes:29409,sha256:'513d6ede60ff71183e8bc114c29a4ffb8fbd67e9b8d5cffb7aa5a0ae435e49bf'},
+    'run-cycle-balanced-v1/reaper_run_pose_05_v1.png':{bytes:29144,sha256:'dfffb9a58ff7cf81661247da4f717d2a1d47aedacddd6486a99faab6cdf6c3ca'},
+    'run-cycle-balanced-v1/reaper_run_pose_06_v1.png':{bytes:28847,sha256:'568f752bc60b9040cd5c3b8511dc12127b4de6f54c447d8db69a2bb3b2d9ab40'},
+    'run-cycle-balanced-v1/reaper_run_pose_07_v1.png':{bytes:28290,sha256:'ce8bfa0ee2ba3ea175173d4fe06eb71d110fe29cc36adbfeb8225f7b6a1aecaa'},
+    'run-cycle-balanced-v1/reaper_run_pose_08_v1.png':{bytes:29307,sha256:'3e1462b285f0d9ce7bb716c0bb1895d944cf1fa15b51299c0ae281e5313aa4d8'},
     'slide-mobile-v1.png':{bytes:133909,sha256:'94d97b585cf72d133c6d7e5583bb11656db2c418391c83d07070f497a9d1457b'},
     'scythe-swing-v1/windup_mobile_v1.png':{bytes:197518,sha256:'639e7abcc00acd24ecdb85a6345d24c68e2f5b5fafe06b0c7c5d8d18ff66c854'},
     'scythe-swing-v1/sweep_mobile_v1.png':{bytes:184649,sha256:'147b2a799cb410f2d6bd05fa66ad87a776c99dc2ea45b5cd869157ac9de19d9f'},
@@ -399,6 +375,7 @@
       const fail=file=>{if(file&&file.key)errors.add(file.key);};
       const reaperBase='assets/characters/illustrated-v2/reaper/';
       const batBase='assets/enemies/illustrated-v2/bat/';
+      const firstRunPose=V2_REAPER_RUN[0];
       const fetchVerified=async(base,meta)=>{
         try{
           const url=await verifiedReviewURL(base+meta.file,REVIEW_INTEGRITY[meta.file]);
@@ -442,12 +419,12 @@
       this.reviewLoad=(async()=>{
         // Fetch and install a compact contact pose first. Do not let the other
         // large character and Bat images compete with the player's first image.
-        const initial=await fetchVerified(reaperBase,V2_REAPER.run_contact);
-        if(initial){await loadEntries([initial]);installReaper(['run_contact']);}
+        const initial=await fetchVerified(reaperBase,V2_REAPER[firstRunPose]);
+        if(initial){await loadEntries([initial]);installReaper([firstRunPose]);}
         if(this.disposed)return;
 
         // Finish all twelve compact run drawings before starting secondary art.
-        const runNames=V2_REAPER_RUN.filter(name=>name!=='run_contact');
+        const runNames=V2_REAPER_RUN.filter(name=>name!==firstRunPose);
         await loadNames(reaperBase,runNames.map(name=>[name,V2_REAPER[name]]));
         installReaper(V2_REAPER_RUN);
         if(this.disposed)return;
@@ -627,6 +604,6 @@
   scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED,
     ILLUSTRATED_RUN,ILLUSTRATED_BAT_FLAP,ILLUSTRATED_RUN_FPS,ILLUSTRATED_BAT_FPS,
     V2_REAPER,V2_BAT,V2_REAPER_RUN,V2_BAT_FLAP,V2_REAPER_SWING,V2_REAPER_SWING_MS,
-    V2_REAPER_RUN_FPS,V2_BAT_FLAP_FPS,
+    V2_REAPER_RUN_FPS,V2_REAPER_RUN_CYCLE_MS,V2_BAT_FLAP_FPS,
     V2_REAPER_SCALE,V2_BAT_SCALE,REVIEW_INTEGRITY,validateReviewPNG};
 })(typeof window!=='undefined'?window:globalThis);
