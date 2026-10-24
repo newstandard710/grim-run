@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.9
+/* Grim Run — Macabre Storybook visual system, v0.10.10 review build
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -115,6 +115,28 @@
   ].map(([name,file])=>[name,Object.freeze({
     key:'gr_v2_bat_'+name,file,scale:V2_BAT_SCALE,anchor:Object.freeze([1500,720])
   })])));
+  // Review-only Skeletal Bat atlas. The 2x4 source uses per-row integer frame
+  // heights because its 1254px canvas cannot be split into four equal rows.
+  // Its 58px silhouette target is intentionally a little larger than the
+  // regular Cavern Bat's 52px target; collision geometry stays in Combat.rectFor.
+  const V2_SKELETAL_BAT_ATLAS=Object.freeze({
+    key:'gr_v2_skeletal_bat_atlas',file:'skeletal_bat_atlas_v1.png',width:1254,height:1254,
+    scale:58/314,origin:Object.freeze([.5,.64])
+  });
+  const V2_SKELETAL_BAT_FRAMES=Object.freeze([
+    Object.freeze({name:'flap_raised',x:0,y:0,width:627,height:313}),
+    Object.freeze({name:'flap_mid_down',x:627,y:0,width:627,height:313}),
+    Object.freeze({name:'flap_lowered',x:0,y:313,width:627,height:314}),
+    Object.freeze({name:'flap_mid_up',x:627,y:313,width:627,height:314}),
+    Object.freeze({name:'telegraph',x:0,y:627,width:627,height:313}),
+    Object.freeze({name:'dive',x:627,y:627,width:627,height:313}),
+    Object.freeze({name:'hit',x:0,y:940,width:627,height:314}),
+    Object.freeze({name:'death',x:627,y:940,width:627,height:314})
+  ]);
+  const V2_SKELETAL_BAT_FLAP=Object.freeze([
+    'flap_raised','flap_mid_down','flap_lowered','flap_mid_up'
+  ]);
+  const V2_SKELETAL_BAT_FLAP_FPS=12;
   // Eight balanced gait poses alternate legs; no vertical scale changes.
   const V2_REAPER_RUN=Object.freeze(Array.from({length:8},(_,i)=>'run_pose_'+String(i+1).padStart(2,'0')));
   const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
@@ -173,7 +195,8 @@
     'scythe-swing-v1/sweep_mobile_v1.png':{bytes:184649,sha256:'147b2a799cb410f2d6bd05fa66ad87a776c99dc2ea45b5cd869157ac9de19d9f'},
     'scythe-swing-v1/impact_mobile_v1.png':{bytes:158943,sha256:'5f2be7931423f297cf6fd11c7a44214c3640c156e997e6a5a160772e0b98dca8'},
     'scythe-swing-v1/followthrough_mobile_v1.png':{bytes:158142,sha256:'e6e7eab949613908e9b444c941bf930c2149c1ccb8b99a3573e0990a943faa47'},
-    'scythe-swing-v2/sweep_tip-leading_v2.png':{bytes:178387,sha256:'ea7a1c5c9265c9da9a9b619e93e5932630e88a2252587919fb08638bbb056011'}
+    'scythe-swing-v2/sweep_tip-leading_v2.png':{bytes:178387,sha256:'ea7a1c5c9265c9da9a9b619e93e5932630e88a2252587919fb08638bbb056011'},
+    'skeletal_bat_atlas_v1.png':{bytes:1415766,sha256:'ccb5cee6b698f1233294cb41d7286fca43709d1346bee69438890f58794b8e1f'}
   });
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);
@@ -220,6 +243,10 @@
       this.reviewV2=false;
       this.disposed=false;
       this.reaperPoseSprites={};
+      this.skeletalBatReviewRequested=false;
+      this.skeletalBatReady=false;
+      this.skeletalBatPool=[];
+      this.skeletalBatVisualState=new WeakMap();
     }
     begin(){
       const s=this.scene;
@@ -377,6 +404,7 @@
       const fail=file=>{if(file&&file.key)errors.add(file.key);};
       const reaperBase='assets/characters/illustrated-v2/reaper/';
       const batBase='assets/enemies/illustrated-v2/bat/';
+      const skeletalBatBase='assets/enemies/illustrated-v2/skeletal-bat/';
       const firstRunPose=V2_REAPER_RUN[0];
       const fetchVerified=async(base,meta)=>{
         try{
@@ -451,6 +479,33 @@
             .setOrigin(0,0).setDepth(9).setVisible(false));
           this.batReady=true;
         }
+        if(this.skeletalBatReviewRequested){
+          const meta=V2_SKELETAL_BAT_ATLAS;
+          await loadNames(skeletalBatBase,[[meta.key,meta]]);
+          if(!this.disposed&&!errors.has(meta.key)&&s.textures.exists(meta.key)){
+            try{
+              const texture=s.textures.get(meta.key);
+              const source=texture.getSourceImage();
+              if(!source||source.width!==meta.width||source.height!==meta.height)
+                throw new Error('Skeletal Bat atlas dimensions do not match metadata');
+              for(const frame of V2_SKELETAL_BAT_FRAMES){
+                if(!texture.add(frame.name,0,frame.x,frame.y,frame.width,frame.height))
+                  throw new Error('Could not add Skeletal Bat frame '+frame.name);
+              }
+              if(!V2_SKELETAL_BAT_FRAMES.every(frame=>texture.has(frame.name)))
+                throw new Error('Skeletal Bat atlas is missing animation frames');
+              for(let i=0;i<12;i++)this.skeletalBatPool.push(
+                s.add.sprite(0,0,meta.key,'flap_raised')
+                  .setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
+                  .setDepth(9).setVisible(false));
+              this.skeletalBatReady=true;
+            }catch(e){
+              for(const sprite of this.skeletalBatPool)sprite.destroy();
+              this.skeletalBatPool=[];this.skeletalBatReady=false;
+              this.failedAssets.push('Skeletal Bat atlas: '+String(e));
+            }
+          }else this.failedAssets.push('Skeletal Bat atlas unavailable; procedural fallback remains active');
+        }
         this.loaded=true;
       })().catch(e=>{
         for(const url of urls)URL.revokeObjectURL(url);
@@ -513,6 +568,37 @@
       }
       for(let i=used;i<this.batPool.length;i++)this.batPool[i].setVisible(false);
     }
+    renderReviewSkeletalBats(){
+      const s=this.scene;
+      if(!this.skeletalBatReady)return;
+      let used=0;
+      if(!['menu','reliquary','refundConfirm'].includes(s.state)){
+        const left=s.cameraX-100,right=s.cameraX+s.width+100,now=Math.max(0,s.elapsed||0);
+        for(const e of s.enemies||[]){
+          if(e.kind!=='skeletalBat'||e.x<left||e.x>right||used>=this.skeletalBatPool.length)continue;
+          let state=this.skeletalBatVisualState.get(e);
+          if(!state){state={hp:e.hp,hitUntil:-1,deathUntil:-1};this.skeletalBatVisualState.set(e,state);}
+          if(e.dead&&state.deathUntil<0)state.deathUntil=now+.34;
+          else if(!e.dead&&e.hp<state.hp)state.hitUntil=now+.20;
+          state.hp=e.hp;
+          if(e.dead&&now>state.deathUntil)continue;
+          let frame='flap_raised';
+          if(e.dead)frame='death';
+          else if(now<state.hitUntil)frame='hit';
+          else if(e.mode==='telegraph')frame='telegraph';
+          else if(e.mode==='dive')frame='dive';
+          else frame=V2_SKELETAL_BAT_FLAP[
+            Math.floor(now*V2_SKELETAL_BAT_FLAP_FPS+(e.phase||0))%V2_SKELETAL_BAT_FLAP.length
+          ];
+          const sprite=this.skeletalBatPool[used++],meta=V2_SKELETAL_BAT_ATLAS;
+          sprite.setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
+            .setPosition(e.x,e.y).setFrame(frame).setVisible(true)
+            .setAlpha(1)
+            .setRotation(e.mode==='dive'?.10:0);
+        }
+      }
+      for(let i=used;i<this.skeletalBatPool.length;i++)this.skeletalBatPool[i].setVisible(false);
+    }
     renderReviewV2(){
       const s=this.scene,p=s.player;
       let pose=this.illustratedReaperPose();
@@ -556,6 +642,7 @@
         }
       }
       for(let i=used;i<this.batPool.length;i++)this.batPool[i].setVisible(false);
+      this.renderReviewSkeletalBats();
     }
     render(){
       const s=this.scene;
@@ -604,6 +691,8 @@
       this.reaperPoseSprites={};
       for(const sprite of this.batPool)sprite.destroy();
       this.batPool=[];
+      for(const sprite of this.skeletalBatPool)sprite.destroy();
+      this.skeletalBatPool=[];this.skeletalBatReady=false;
       this.reaperReady=false;this.batReady=false;
     }
   }
@@ -612,5 +701,6 @@
     V2_REAPER,V2_BAT,V2_REAPER_RUN,V2_BAT_FLAP,V2_REAPER_SWING,V2_REAPER_SWING_MS,
     V2_REAPER_RUN_FPS,V2_REAPER_RUN_CYCLE_MS,V2_REAPER_RUN_BOB_PX,
     V2_REAPER_RUN_BOBS_PER_CYCLE,V2_BAT_FLAP_FPS,
-    V2_REAPER_SCALE,V2_BAT_SCALE,REVIEW_INTEGRITY,validateReviewPNG};
+    V2_REAPER_SCALE,V2_BAT_SCALE,V2_SKELETAL_BAT_ATLAS,V2_SKELETAL_BAT_FRAMES,
+    V2_SKELETAL_BAT_FLAP,V2_SKELETAL_BAT_FLAP_FPS,REVIEW_INTEGRITY,validateReviewPNG};
 })(typeof window!=='undefined'?window:globalThis);

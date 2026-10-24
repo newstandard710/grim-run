@@ -4,12 +4,13 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.9-run-head-bob-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.10-skeletal-bat-review-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
 assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
 assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector atlas remains available');
+assert.ok(html.includes("get('enemyReview')==='skeletal-bat'"),'Skeletal Bat art stays behind its opt-in review query');
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
  assert.ok(svg.startsWith('<svg')&&svg.includes('width="'+width+'" height="'+height+'"'));
  assert.equal((svg.match(/<g(?:\s|>)/g)||[]).length,(svg.match(/<\/g>/g)||[]).length);
@@ -42,6 +43,16 @@ assert.ok(V.V2_REAPER.scythe_attack_02.file.includes('scythe-swing-v2/sweep_tip-
   'The first forward swing uses the point-leading scythe pose');
 assert.equal(V.V2_REAPER_SWING_MS,260,'The new scythe sequence uses the existing attack duration');
 assert.equal(V.V2_BAT_FLAP.length,8);assert.equal(V.V2_BAT_FLAP_FPS,12);
+assert.equal(V.V2_SKELETAL_BAT_ATLAS.width,1254);assert.equal(V.V2_SKELETAL_BAT_ATLAS.height,1254);
+assert.ok(Math.abs(314*V.V2_SKELETAL_BAT_ATLAS.scale-58)<.01,
+  'Skeletal Bat target silhouette is slightly larger than the 52px Cavern Bat');
+assert.equal(V.V2_SKELETAL_BAT_FRAMES.length,8);
+assert.deepEqual(Array.from(V.V2_SKELETAL_BAT_FLAP),['flap_raised','flap_mid_down','flap_lowered','flap_mid_up']);
+assert.equal(V.V2_SKELETAL_BAT_FLAP_FPS,12);
+for(const frame of V.V2_SKELETAL_BAT_FRAMES){
+ assert.ok(frame.x>=0&&frame.y>=0&&frame.x+frame.width<=1254&&frame.y+frame.height<=1254,
+   `Skeletal Bat frame ${frame.name} stays inside the source atlas`);
+}
 for(const pose of V.V2_REAPER_RUN)
  assert.ok(V.V2_REAPER[pose],`v2 Reaper cycle frame ${pose} has metadata`);
 for(const pose of V.V2_BAT_FLAP)
@@ -196,4 +207,28 @@ staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPos
 staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
 assert.equal(staticRenderer.illustratedReaperPose(),'fall');
 staticRenderer.shutdown();
-console.log('PASS v0.10.9: balanced eight-pose run cycle with subtle head bob, full-size damage pose, and anchored crouch slide.');
+
+const skeletalEnemy={kind:'skeletalBat',x:450,y:120,mode:'glide',hp:2,phase:0,dead:false};
+const skeletalScene={state:'playing',cameraX:0,width:950,elapsed:0,enemies:[skeletalEnemy]};
+const skeletonFrame=()=>({setOrigin(){return this},setScale(v){this.scale=v;return this},
+ setPosition(x,y){this.x=x;this.y=y;return this},setFrame(v){this.frame=v;return this},
+ setVisible(v){this.visible=v;return this},setAlpha(v){this.alpha=v;return this},
+ setRotation(v){this.rotation=v;return this},destroy(){this.destroyed=true}});
+const skeletalRenderer=new V.GrimVisualSystem(skeletalScene);
+skeletalRenderer.skeletalBatReady=true;
+skeletalRenderer.skeletalBatPool=Array.from({length:12},skeletonFrame);
+skeletalRenderer.renderReviewSkeletalBats();
+assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'flap_raised');
+assert.ok(Math.abs(314*skeletalRenderer.skeletalBatPool[0].scale-58)<.01);
+skeletalEnemy.mode='telegraph';skeletalRenderer.renderReviewSkeletalBats();
+assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'telegraph');
+skeletalEnemy.mode='dive';skeletalRenderer.renderReviewSkeletalBats();
+assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'dive');
+skeletalEnemy.hp=1;skeletalScene.elapsed=.04;skeletalRenderer.renderReviewSkeletalBats();
+assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'hit');
+skeletalEnemy.dead=true;skeletalScene.elapsed=.06;skeletalRenderer.renderReviewSkeletalBats();
+assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'death');
+skeletalScene.elapsed=.5;skeletalRenderer.renderReviewSkeletalBats();
+assert.equal(skeletalRenderer.skeletalBatPool[0].visible,false,'Defeat pose ends and returns the enemy to normal cleanup');
+skeletalRenderer.shutdown();
+console.log('PASS v0.10.10: accepted Reaper/Cavern Bat art unchanged; Skeletal Bat opt-in pose states and scale covered.');
