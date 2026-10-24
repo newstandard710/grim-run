@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.7 — Smoother Reaper Motion**
+**Current playable build: v0.10.8 — Reaper Run Cycle Rework**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -11,11 +11,17 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 
 ## Current Reaper art
 
-- The twelve-pose Reaper run cycle and the new slide and four-beat scythe attack appear in the main game. Bat wing animation and the approved standard poses remain unchanged.
+- The eight-pose Reaper run cycle and the new slide and four-beat scythe attack appear in the main game. Bat wing animation and the approved standard poses remain unchanged.
 - The slide pose preserves the Reaper's head and torso size and is about 74px tall. Low branches are raised to a 76px opening; the 79px standing collider still hits them, so the player must slide. The existing 56×29 slide collider is unchanged.
 - The scythe attack plays four drawn poses over the existing 260ms action window, with the pointed edge leading the forward sweep. Attack timing and damage remain unchanged.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
-- [Motion-cycle review sheets and source images](assets/visuals/review/character-motion-cycle-v1/README.md) document the twelve-pose Reaper run and eight-step Bat flap.
+- [Run-cycle review board and source image](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg) show the redesigned Reaper poses at phone scale. The [earlier motion-cycle review](assets/visuals/review/character-motion-cycle-v1/README.md) remains available.
+
+## v0.10.8: Reaper Run Cycle Rework
+
+- Replaced the visibly uneven run drawings with eight balanced poses. The eye and ground anchors stay registered; the torso and scythe hold steady while the legs alternate more clearly.
+- The eight poses play at 12fps for the same approximately 0.67-second stride as the former twelve-pose, 18fps cycle. The 24fps experiment is removed; world speed and gameplay timing do not change.
+- The new transparent runtime frames total about 233KB. Browser checks measure decoded character pixels, anchors, visible height and all eight poses on the mobile-sized game canvas.
 
 ## v0.10.7: Smoother Reaper Motion
 

@@ -1,33 +1,39 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.7 — *Smoother Reaper Motion* with the Reaper twelve-pose cycle active by default. A compact approved contact pose loads first; the Start control waits until it is ready. Previous illustrated art remains available with `?art=illustrated`.
+**Current build:** v0.10.8 — *Reaper Run Cycle Rework* with an eight-pose balanced run cycle active by default. The first pose loads before gameplay can start. Previous illustrated art remains available with `?art=illustrated`.
 
-The approved Reaper art and 76px slide opening are in `main`. This update normalizes the hit pose and increases the existing run cycle's display cadence. Phone review of the updated motion remains needed.
+The approved Reaper art and 76px slide opening are in `main`. This update redesigns the run positions and restores the previous 0.67-second stride duration. Phone review of the updated motion remains needed.
 
-**Release:** v0.10.7 — *Smoother Reaper Motion*  
+**Release:** v0.10.8 — *Reaper Run Cycle Rework*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local gameplay regression, asset integrity, and GitHub Actions Chromium rendering passed for v0.10.7; the Pages deployment succeeded. **Live Android visual and performance playtesting pending.**
+**Verification:** Local regression and PNG pixel checks pass. GitHub Actions Chromium rendering and Pages deployment are pending for v0.10.8. **Live Android animation-quality playtesting pending.**
 
-## Main Reaper motion cycle v3
+## Main Reaper motion cycle v4
 
-- The twelve-pose motion cycle is the normal game art. The compact contact pose appears before gameplay can start. It is loaded first, followed by the compact run cycle, then the larger action and Bat artwork.
-- Reaper ground movement now cycles twelve registered run drawings at 24 fps. Four original poses remain intact; four earlier transition drawings and four new in-between drawings reduce the movement jumps while keeping the same total stride timing. Ordinary Bat flight remains on its existing eight-pose cycle at 12 fps; dive remains on its existing pose.
-- The 12 compact run files total about 300 KB rather than more than 15 MB. The source artwork remains unchanged.
-- The Reaper's run poses now use matching visible pixel heights and measured eye/ground anchors. This corrects size pulsing and sideways head movement while leaving collision geometry untouched.
+- Eight new transparent run drawings replace the twelve-pose cycle that felt too fast and uneven. The first verified pose loads before gameplay can start; the remaining seven load next, followed by the larger action and Bat artwork.
+- The cycle advances through eight registered leg positions at 12 fps, for the same approximately 0.67-second stride as the earlier twelve-pose, 18fps cycle. Upper-body eye position and character scale stay nearly fixed while the feet alternate; world movement is unchanged.
+- The eight optimized runtime PNGs total about 233 KB. Their full transparent source sheet and a phone-scale review board are preserved under `assets/visuals/review/character-motion-cycle-v3/`.
+- The browser test decodes the actual PNG pixels and measures eye alignment, ground position, visible height, and eight distinct rendered poses at mobile gameplay scale. Collision geometry remains untouched.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
 - The slide pose now bends at the knees while keeping the head/torso at normal art scale. Its visible height is about 74px. Low branch openings are raised from 48px to 76px; standing still collides against the 79px standing body. The 42×79 standing and 56×29 sliding collision boxes remain unchanged.
 - The scythe strike uses four distinct drawings for wind-up, sweep, impact, and follow-through across the existing 260ms action window. The current v0.10.6 sweep pose leads with the sharp point. Damage, reach, controls, and progression are unchanged.
 - Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`.
-- The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [run/flap review sheets](assets/visuals/review/character-motion-cycle-v1/README.md), and source PNGs document the review art.
-- **Next:** phone-test the updated Reaper cadence, Bat flap, silhouette, and startup timing on the main game.
+- The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [new run-cycle review board](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg), and source PNG document the visual direction.
+- **Next:** phone-test the redesigned Reaper stride and hit pose on the main game.
+
+## v0.10.8 — Reaper Run Cycle Rework
+
+- Replaced the uneven twelve-pose cycle with eight clearer alternating running positions, keeping the torso, eye, and scythe steadier between poses.
+- Plays at 12fps for a 0.67-second cycle, restoring the slower stride the user preferred while preserving world movement and the successful full-size damage pose.
+- **Verification:** pending regression, PNG integrity, and actual Chromium pixel checks for all eight poses. Android phone review remains the final animation-quality check.
 
 ## v0.10.7 — Smoother Reaper Motion
 
 - Matched the hurt pose's visible pixel height to the normal 120px Reaper target while keeping its existing ground anchor and damage animation.
 - Increased the existing twelve-pose run cycle from 18 to 24 frames per second. Its images, stride distance, world movement, controls, and all gameplay timing remain unchanged.
-- **Verification:** gameplay regression, asset integrity, and actual Chromium pixel checks for the hurt and run poses passed; Pages deployment succeeded. Android phone review is the final appearance check.
+- **Verification:** regression, asset integrity, and actual Chromium pixel checks for the hurt and run poses passed. Phone testing later found the faster cadence felt worse; v0.10.8 replaces it.
 
 ## v0.10.6 — Tip-First Scythe Swing
 

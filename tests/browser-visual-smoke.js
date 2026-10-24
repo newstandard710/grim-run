@@ -155,7 +155,7 @@ const server=http.createServer((req,res)=>{
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:24,bats:12,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:20,bats:12,
     textures:true,failures:[]});
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
@@ -166,7 +166,7 @@ const server=http.createServer((req,res)=>{
     const slideVisible=slide.visible;
     const slideGround=Math.abs(slide.y+m.slide.anchor[1]*m.slide.scale-s.feetY);
     const slideHeight=179*m.slide.scale;
-    const runHeight=272*m.run.scale;
+    const runHeight=290*m.run_pose_01.scale;
     s.player.sliding=false;s.player.attackMs=120;v.render();
     const attackPose=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('scythe_attack')&&sprite.visible)?.[0];
@@ -177,7 +177,7 @@ const server=http.createServer((req,res)=>{
     s.player.attackMs=0;s.elapsed=0;
     v.render();const firstRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
-    s.elapsed=1/24;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+    s.elapsed=1/12;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
     s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];
     s.elapsed=0;v.render();const flying=v.batPool[0],firstBat=flying.texture.key;
@@ -196,8 +196,8 @@ const server=http.createServer((req,res)=>{
   assert.equal(v2Anchors.attackPose,'scythe_attack_03','Attack uses its impact drawing near the swing midpoint');
   assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
-  assert.equal(v2Anchors.runFrame1,'run_contact');
-  assert.equal(v2Anchors.runFrame2,'run_contact_mid','Reaper cycle advances to a new in-between pose');
+  assert.equal(v2Anchors.runFrame1,'run_pose_01');
+  assert.equal(v2Anchors.runFrame2,'run_pose_02','Reaper cycle advances one balanced gait position every 1/12 second');
   assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.firstBat,'gr_v2_bat_raised');
   assert.equal(v2Anchors.secondBat,'gr_v2_bat_mid_up','Bat flap advances through aligned in-between art');
   assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
@@ -223,9 +223,9 @@ const server=http.createServer((req,res)=>{
     });
   });
   for(const p of decoded){assert.ok(p.coverage>.025&&p.coverage<.8,p.key+' silhouette coverage');assert.ok(p.black<.5,p.key+' is not a black rectangle');assert.ok(p.height>20,p.key+' is not a flattened fragment');}
-  const runPixelBounds=decoded.filter(p=>p.name.startsWith('run_')||p.name==='run');
-  assert.equal(runPixelBounds.length,12,'all twelve run poses were decoded from PNG pixels');
-  assert.ok(runPixelBounds.every(p=>p.height>118&&p.height<122),'all run drawings keep the same visible height');
+  const runPixelBounds=decoded.filter(p=>p.name.startsWith('run_pose_'));
+  assert.equal(runPixelBounds.length,8,'all eight redesigned run poses were decoded from PNG pixels');
+  assert.ok(runPixelBounds.every(p=>p.height>117&&p.height<121),'all run drawings keep a consistent visible scale');
   const hurtPixelBounds=decoded.find(p=>p.name==='hurt');
   assert.ok(hurtPixelBounds&&hurtPixelBounds.height>119&&hurtPixelBounds.height<121,
     'decoded damage artwork keeps the Reaper at the standard 120px visible height');
@@ -235,20 +235,22 @@ const server=http.createServer((req,res)=>{
   const eyeCounts=attackPixelBounds.map(p=>p.eyeCount);
   assert.ok(Math.max(...eyeCounts)/Math.min(...eyeCounts)<1.3,
     'the Reaper head stays a consistent size through the scythe swing');
-  for(const name of ['run_contact','run','run_transition_01','run_transition_04']){
+  for(const name of ['run_pose_01','run_pose_02','run_pose_03','run_pose_04','run_pose_08']){
     const frame=runPixelBounds.find(p=>p.name===name);
     assert.ok(Math.abs(frame.feetY)<1,`${name} visibly reaches the ground line`);
   }
   const eyeOffsets=runPixelBounds.map(p=>p.eyeX).filter(Number.isFinite);
-  assert.equal(eyeOffsets.length,12,'all twelve run poses retain a visible cyan eye');
-  assert.ok(Math.max(...eyeOffsets)-Math.min(...eyeOffsets)<.35,
-    'decoded cyan-eye pixels stay registered across all running poses: '+JSON.stringify(eyeOffsets));
+  assert.equal(eyeOffsets.length,8,'all eight run poses retain a visible cyan eye');
+  assert.ok(Math.max(...eyeOffsets)-Math.min(...eyeOffsets)<1.5,
+    'decoded cyan-eye pixels stay aligned horizontally across the run cycle: '+JSON.stringify(eyeOffsets));
+  const eyeYOffsets=runPixelBounds.map(p=>p.eyeY).filter(Number.isFinite);
+  assert.ok(Math.max(...eyeYOffsets)-Math.min(...eyeYOffsets)<2.5,
+    'decoded cyan-eye pixels stay aligned vertically with only a small natural bounce: '+JSON.stringify(eyeYOffsets));
   const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
   await page.setViewportSize({width:950,height:430});
   const renderedRunFrames=[];
-  for(const [i,name] of ['contact','contact-mid','transition-01','airborne','airborne-mid','transition-02',
-    'recovery','recovery-mid','transition-03','run','stride-mid','transition-04'].entries()){
-    const time=i/24;
+  for(const [i,name] of Array.from({length:8},(_,i)=>[i,'pose-'+String(i+1).padStart(2,'0')])){
+    const time=i/12;
     await page.evaluate(t=>{
       const g=window.grimRun,s=g.scene.scenes[0];g.loop.stop();
       s.state='playing';s.elapsed=t;s.damageFlashMs=0;Object.assign(s.player,{grounded:true,onSoulPlatform:false,sliding:false,airTuck:false,attackMs:0,visualFireMs:0,invulMs:0,slowMs:0});
@@ -259,8 +261,8 @@ const server=http.createServer((req,res)=>{
     renderedRunFrames.push(PNG.sync.read(canvasPng).data);
     await page.screenshot({path:path.join(artifactDir,'mobile-run-'+name+'.png')});
   }
-  assert.equal(new Set(renderedRunFrames.map(pixels=>crypto.createHash('sha256').update(pixels).digest('hex'))).size,12,
-    'actual mobile-sized Phaser canvas renders twelve distinct Reaper poses');
+  assert.equal(new Set(renderedRunFrames.map(pixels=>crypto.createHash('sha256').update(pixels).digest('hex'))).size,8,
+    'actual mobile-sized Phaser canvas renders eight distinct redesigned Reaper poses');
   for(let i=1;i<renderedRunFrames.length;i++){
     let changed=0;const a=renderedRunFrames[i-1],b=renderedRunFrames[i];
     for(let p=0;p<a.length;p+=4)if(Math.abs(a[p]-b[p])>18||Math.abs(a[p+1]-b[p+1])>18||Math.abs(a[p+2]-b[p+2])>18)changed++;
@@ -300,10 +302,10 @@ const server=http.createServer((req,res)=>{
   // for that verified pose, then gameplay must begin with the Reaper visible
   // while action poses and Bat art are still loading.
   const earlyPage=await browser.newPage({viewport:{width:950,height:430}});
-  let releaseContact;
-  const contactGate=new Promise(resolve=>{releaseContact=resolve;});
+  let releaseFirstPose;
+  const firstPoseGate=new Promise(resolve=>{releaseFirstPose=resolve;});
   await earlyPage.route('**/assets/characters/illustrated-v2/**',async route=>{
-    if(route.request().url().includes('run_contact_mobile_v1.png'))await contactGate;
+    if(route.request().url().includes('reaper_run_pose_01_v1.png'))await firstPoseGate;
     else await new Promise(resolve=>setTimeout(resolve,6000));
     await route.continue();
   });
@@ -314,18 +316,18 @@ const server=http.createServer((req,res)=>{
   },null,{timeout:12000});
   assert.equal(await earlyPage.locator('#start-btn').isEnabled(),false,
     'Do not start a run before the first small Reaper image is ready');
-  releaseContact();
+  releaseFirstPose();
   await earlyPage.waitForFunction(()=>document.getElementById('start-btn')?.disabled===false,
     null,{timeout:12000});
   await earlyPage.click('#start-btn');
   await earlyPage.waitForFunction(()=>{
     const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return s?.state==='playing'&&v?.reviewV2===true&&
-      v.reaperPoseSprites.run_contact?.visible===true&&v.loaded===false&&s.distance<5;
+      v.reaperPoseSprites.run_pose_01?.visible===true&&v.loaded===false&&s.distance<5;
   },null,{timeout:12000});
   const earlySprite=await earlyPage.evaluate(()=>{
-    const s=window.grimRun.scene.scenes[0],v=s.visuals,p=v.reaperPoseSprites.run_contact;
-    return {visible:p.visible,texture:s.textures.exists('gr_v2_reaper_run_contact'),loading:!v.loaded,
+    const s=window.grimRun.scene.scenes[0],v=s.visuals,p=v.reaperPoseSprites.run_pose_01;
+    return {visible:p.visible,texture:s.textures.exists('gr_v2_reaper_run_pose_01'),loading:!v.loaded,
       distance:s.distance,buttonEnabled:!document.getElementById('start-btn').disabled};
   });
   assert.equal(earlySprite.visible,true);
@@ -335,13 +337,13 @@ const server=http.createServer((req,res)=>{
   assert.equal(earlySprite.buttonEnabled,true);
   await earlyPage.close();
   // A broken initial pose must not prevent the remaining valid motion art appearing.
-  const compactContact=path.join(root,'assets/characters/illustrated-v2/reaper/run-cycle-mobile-v1/run_contact_mobile_v1.png');
-  await page.route('**/run_contact_mobile_v1.png*',route=>route.fulfill({status:200,contentType:'image/png',body:fs.readFileSync(compactContact).subarray(0,Math.floor(fs.statSync(compactContact).size/2))}));
+  const compactFirstPose=path.join(root,'assets/characters/illustrated-v2/reaper/run-cycle-balanced-v1/reaper_run_pose_01_v1.png');
+  await page.route('**/reaper_run_pose_01_v1.png*',route=>route.fulfill({status:200,contentType:'image/png',body:fs.readFileSync(compactFirstPose).subarray(0,Math.floor(fs.statSync(compactFirstPose).size/2))}));
   await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.loaded);
-  const rejected=await page.evaluate(()=>{const v=window.grimRun.scene.scenes[0].visuals;return {ready:v.reaperReady,poses:Object.keys(v.reaperPoseSprites).length,contactPresent:Boolean(v.reaperPoseSprites.run_contact),failed:v.failedAssets.some(x=>x.includes('byte count'))};});
-  assert.deepEqual(rejected,{ready:true,poses:23,contactPresent:false,failed:true});
-  await page.unroute('**/run_contact_mobile_v1.png*');
+  const rejected=await page.evaluate(()=>{const v=window.grimRun.scene.scenes[0].visuals;return {ready:v.reaperReady,poses:Object.keys(v.reaperPoseSprites).length,firstPosePresent:Boolean(v.reaperPoseSprites.run_pose_01),failed:v.failedAssets.some(x=>x.includes('byte count'))};});
+  assert.deepEqual(rejected,{ready:true,poses:19,firstPosePresent:false,failed:true});
+  await page.unroute('**/reaper_run_pose_01_v1.png*');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:30000});
@@ -384,7 +386,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.7 damage-pose scale, 24fps twelve-pose Reaper run, slide clearance and tip-first scythe, mobile rendering, PNG pixel integrity, fallbacks and God Mode tools.');
+  console.log('PASS actual Chromium: v0.10.8 normalized damage pose, balanced eight-pose Reaper run at the previous stride duration, slide, scythe, PNG pixels, mobile rendering and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
