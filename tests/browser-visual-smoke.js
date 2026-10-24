@@ -154,12 +154,107 @@ const server=http.createServer((req,res)=>{
     const visuals=window.GRIM_VISUALS;
     return {ready:v.reaperReady&&v.batReady,reviewV2:v.reviewV2,
       reaperPoses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length,
+      skeletalBatReady:v.skeletalBatReady,
       textures:Object.values(visuals.V2_REAPER).every(m=>s.textures.exists(m.key))&&
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:20,bats:12,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:20,bats:12,skeletalBatReady:false,
     textures:true,failures:[]});
+
+  // Skeletal Bat art is deliberately absent from the default game and loads
+  // only in the opt-in review URL. Exercise all eight frames through Phaser at
+  // the same 950x430 phone canvas used for the other mobile render checks.
+  const skeletalPage=await browser.newPage({viewport:{width:950,height:430}});
+  skeletalPage.on('pageerror',e=>errors.push('Skeletal Bat review: '+String(e)));
+  await skeletalPage.goto(origin+'/?enemyReview=skeletal-bat&seed=33',
+    {waitUntil:'domcontentloaded',timeout:45000});
+  await skeletalPage.waitForFunction(()=>{
+    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    return v?.loaded===true&&v.skeletalBatReady===true;
+  },null,{timeout:45000});
+  const skeletalLoaded=await skeletalPage.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS,m=V.V2_SKELETAL_BAT_ATLAS;
+    const texture=s.textures.get(m.key),source=texture.getSourceImage();
+    return {ready:s.visuals.skeletalBatReady,pool:s.visuals.skeletalBatPool.length,
+      dimensions:[source.width,source.height],
+      frames:V.V2_SKELETAL_BAT_FRAMES.every(frame=>texture.has(frame.name)),
+      requested:new URLSearchParams(location.search).get('enemyReview')};
+  });
+  assert.deepEqual(skeletalLoaded,{ready:true,pool:12,dimensions:[1254,1254],frames:true,
+    requested:'skeletal-bat'});
+  await skeletalPage.click('#start-btn');
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
+    null,{timeout:15000});
+  await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0];
+    g.loop.stop();s.state='paused';s.elapsed=0;s.enemies=[];
+    s.drawScene();g.step(performance.now(),0);
+  });
+  const emptyCanvas=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot());
+  const skeletalRect=await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0],v=s.visuals;
+    const enemy={kind:'skeletalBat',x:s.cameraX+320,y:150,mode:'glide',hp:2,phase:0,dead:false};
+    s.enemies=[enemy];s.drawScene();g.step(performance.now(),0);
+    const sprite=v.skeletalBatPool[0];
+    return {frame:sprite.frame.name,visible:sprite.visible,
+      displayWidth:sprite.displayWidth,displayHeight:sprite.displayHeight,
+      screenX:Math.round(enemy.x-s.cameraX-sprite.displayWidth*.5),
+      screenY:Math.round(enemy.y-sprite.displayHeight*.64)};
+  });
+  assert.equal(skeletalRect.frame,'flap_raised');assert.equal(skeletalRect.visible,true);
+  assert.ok(skeletalRect.displayHeight>57&&skeletalRect.displayHeight<59,
+    'Skeletal Bat has the approved 58px target, slightly larger than the Cavern Bat');
+  const skeletalArtifactDir=path.join(root,'test-results');fs.mkdirSync(skeletalArtifactDir,{recursive:true});
+  await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'skeletal-bat-phone-scale.png')});
+  const skeletalStates=[
+    {elapsed:0,mode:'glide',hp:2,dead:false,frame:'flap_raised'},
+    {elapsed:1/12,mode:'glide',hp:2,dead:false,frame:'flap_mid_down'},
+    {elapsed:2/12,mode:'glide',hp:2,dead:false,frame:'flap_lowered'},
+    {elapsed:3/12,mode:'glide',hp:2,dead:false,frame:'flap_mid_up'},
+    {elapsed:1,mode:'telegraph',hp:2,dead:false,frame:'telegraph'},
+    {elapsed:1.1,mode:'dive',hp:2,dead:false,frame:'dive'},
+    {elapsed:1.2,mode:'glide',hp:1,dead:false,frame:'hit'},
+    {elapsed:1.3,mode:'glide',hp:1,dead:true,frame:'death'}
+  ];
+  const skeletalCropHashes=[];
+  for(let i=0;i<skeletalStates.length;i++){
+    const state=skeletalStates[i];
+    const rendered=await skeletalPage.evaluate(({elapsed,mode,hp,dead})=>{
+      const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.skeletalBatPool[0];
+      s.elapsed=elapsed;Object.assign(enemy,{mode,hp,dead});s.drawScene();g.step(performance.now(),0);
+      return {frame:sprite.frame.name,visible:sprite.visible};
+    },state);
+    assert.deepEqual(rendered,{frame:state.frame,visible:true},
+      'Phaser selects and displays the '+state.frame+' frame');
+    const canvas=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({
+      path:path.join(skeletalArtifactDir,'skeletal-bat-canvas-'+String(i+1).padStart(2,'0')+'.png')}));
+    const x=Math.max(0,Math.floor(skeletalRect.screenX)),y=Math.max(0,Math.floor(skeletalRect.screenY));
+    const width=Math.min(Math.ceil(skeletalRect.displayWidth),canvas.width-x);
+    const height=Math.min(Math.ceil(skeletalRect.displayHeight),canvas.height-y);
+    const crop=Buffer.alloc(width*height*4);let changed=0;
+    for(let row=0;row<height;row++){
+      const from=((y+row)*canvas.width+x)*4,to=row*width*4;
+      canvas.data.copy(crop,to,from,from+width*4);
+      for(let px=0;px<width*4;px+=4){
+        const offset=from+px;
+        if(Math.abs(canvas.data[offset]-emptyCanvas.data[offset])>14||
+           Math.abs(canvas.data[offset+1]-emptyCanvas.data[offset+1])>14||
+           Math.abs(canvas.data[offset+2]-emptyCanvas.data[offset+2])>14)changed++;
+      }
+    }
+    assert.ok(changed>100,'Rendered '+state.frame+' art changes visible pixels on the phone canvas');
+    skeletalCropHashes.push(crypto.createHash('sha256').update(crop).digest('hex'));
+  }
+  assert.equal(new Set(skeletalCropHashes).size,8,
+    'All four flight drawings and four action drawings produce distinct phone-scale pixels');
+  const afterDeath=await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.skeletalBatPool[0];
+    s.elapsed=1.7;s.drawScene();g.step(performance.now(),0);return sprite.visible;
+  });
+  assert.equal(afterDeath,false,'Defeat art clears after its short visual hold');
+  await skeletalPage.close();
+
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const v2Anchors=await page.evaluate(()=>{
@@ -399,7 +494,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.9 normalized damage pose, balanced eight-pose Reaper run at the previous stride duration, slide, scythe, PNG pixels, mobile rendering and fallbacks.');
+  console.log('PASS actual Chromium: v0.10.10 Reaper/Bat presentation, opt-in Skeletal Bat atlas states and phone-scale pixels, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

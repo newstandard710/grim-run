@@ -13,12 +13,15 @@ The approved simplified Reaper and Cavern Bat PNG artwork is authoritative for t
 The Reaper uses the existing (1250, 1420) anchor and 120/1111 normal scale. Sliding retains 80/1111 scale and its approximately 47px visible silhouette. The Bat uses (1500, 720) and 52/766 scale. These are visual settings, not collision geometry. Do not change controls, physics, God Mode, powers, vendors or progression for sprite recovery.
 
 ## Production approach and outstanding work
-Shared canvases and eye registration exist. A reusable layered component rig has not been established. Preserve successful PNGs and evaluate actual cycle consistency before deciding whether any new components are useful. Current run/flap cycles require phone approval; approved still poses are not approval of their motion.
+Shared canvases and eye registration exist. A reusable layered component rig has not been established. Preserve successful PNGs and evaluate actual cycle consistency before deciding whether any new components are useful. The Reaper and Cavern Bat cycles are accepted. New enemy art remains opt-in until reviewed in the actual game at phone scale.
 
-The current four-pose run is 10fps; the eight-step Bat sequence is 12fps and repeats five unique flight drawings. Review body/weapon consistency, foot placement, wing continuity, slide clearance, and transitions at gameplay size. Do not treat matching overall bounds as proof of identical body proportions.
+The approved Reaper run has eight poses at 12fps; the approved Cavern Bat cycle has eight steps at 12fps, including repeated transition poses. Review body/weapon consistency, foot placement, wing continuity, slide clearance, and transitions at gameplay size. Do not treat matching overall bounds as proof of identical body proportions.
+
+## Skeletal Bat review art
+The opt-in review atlas is `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, a transparent 1254 × 1254px, 2-column × 4-row sheet. It contains four flight poses, the existing dive telegraph and dive, a hit reaction, and a defeat pose. Render the visible silhouette at about 58px tall, slightly larger than the Cavern Bat's 52px target. Its 46 × 38 collision box and all combat timings remain unchanged. Load it only with `?enemyReview=skeletal-bat`; missing or invalid art keeps the procedural Skeletal Bat visible.
 
 ## Validation and deployment
-Review-only image loading checks exact byte counts and PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's review set and retains its procedural fallback. `tests/asset-integrity.cjs` always checks all 21 runtime SHA-256 hashes. Browser tests inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
+Review-only image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's review set and retains its procedural fallback. The asset integrity check covers all 28 existing Reaper and Cavern Bat runtime poses plus the opt-in Skeletal Bat atlas. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
 
 Original source images must remain byte-for-byte intact. Verify remote sizes, Git blob hashes and downloaded SHA-256 after transfer. Never publish damaged data or promote review art on the strength of texture names alone.
 

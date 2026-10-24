@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.9 — Reaper Run Cycle Head Bob**
+**Current playable build: v0.10.10 — Skeletal Bat Art Review**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -18,11 +18,12 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
 - [Run-cycle review board and source image](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg) show the redesigned Reaper poses at phone scale. The [earlier motion-cycle review](assets/visuals/review/character-motion-cycle-v1/README.md) remains available.
 
-## v0.10.9: Subtle Reaper Run Head Bob
+## Skeletal Bat art review
 
-- Adds a small, smooth vertical bob to the Reaper during the eight-pose run cycle so the head does not look locked in place.
-- The bob is 1.75px in either direction and follows both steps of the stride. It changes only the drawn sprite; character size, collision, world speed, and the 0.67-second cycle stay unchanged.
-- Chromium checks measure the bob across the complete run cycle at phone dimensions, alongside the existing rendered-pixel and registration checks.
+- The eight-pose Skeletal Bat atlas is opt-in at `?enemyReview=skeletal-bat`; the normal Bat and Reaper art remain the default.
+- Its target visible height is about 58px, slightly larger than the regular Cavern Bat's 52px target.
+- The review atlas changes only the Skeletal Bat drawing. Its existing 2 HP, flight and dive behavior, telegraph timing, and collision box stay unchanged. Procedural art remains the fallback.
+- [Open the Skeletal Bat phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=skeletal-bat).
 
 ## v0.10.9: Subtle Reaper Run Head Bob
 
@@ -172,4 +173,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: v0.10.4 landscape phone review; then refine static-pose animation sequences, additional enemies/combat effects, illustrated biomes and final boss.
+Next: review the Skeletal Bat in the opt-in landscape phone view; then finish the Bone Crawler and Ember Imp art before v0.11 World & Atmosphere.

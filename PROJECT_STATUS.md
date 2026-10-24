@@ -1,14 +1,20 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.9 — *Reaper Run Cycle Head Bob* with a subtle head bob added to the eight-pose run cycle. Previous illustrated art remains available with `?art=illustrated`.
+**Current build:** v0.10.10 — *Skeletal Bat Art Review*. Current development phase: opt-in art review for the remaining enemies.
 
-The approved Reaper art and 76px slide opening are in `main`. v0.10.9 adds a 1.75px vertical bob twice per stride to the drawn Reaper during runs. Size, collision, world movement, and the 0.67-second stride remain unchanged. Phone review is still needed.
+The user accepted the current Reaper and regular Cavern Bat animations on October 24, 2026. Their art, timing, scale and collision behavior stay unchanged during the enemy-sprite phase.
 
-**Release:** v0.10.9 — *Reaper Run Cycle Head Bob*  
+**Release:** v0.10.10 — *Skeletal Bat Art Review*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression, image integrity, actual phone-sized Chromium rendering, and GitHub Pages deployment passed. **Live Android animation-quality playtesting pending.**
+**Verification:** Regression, exact PNG integrity, and actual 950 × 430 Chromium/Phaser rendering passed in GitHub Actions. The Pages review deployment is pending merge; the Skeletal Bat remains opt-in at `?enemyReview=skeletal-bat`.
+
+## Remaining enemy sprite phase
+
+- **Skeletal Bat:** eight-frame art set in `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, loaded only with `?enemyReview=skeletal-bat`. Its visible target is about 58px, slightly larger than the regular Cavern Bat's 52px target.
+- The atlas covers four flap poses, the existing dive tell and dive, hit recoil, and defeat. The current 2 HP, flight/dive behavior, telegraph timing, collision box and fallback art are unchanged.
+- **Next:** review the Skeletal Bat in the opt-in game view; then create Bone Crawler and Ember Imp sprites. Begin v0.11 World & Atmosphere only after the enemy-sprite phase.
 
 ## Main Reaper motion cycle v4
 
@@ -21,19 +27,26 @@ The approved Reaper art and 76px slide opening are in `main`. v0.10.9 adds a 1.7
 - The scythe strike uses four distinct drawings for wind-up, sweep, impact, and follow-through across the existing 260ms action window. The current v0.10.6 sweep pose leads with the sharp point. Damage, reach, controls, and progression are unchanged.
 - Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [new run-cycle review board](assets/visuals/review/character-motion-cycle-v3/reaper_run_cycle_balanced_phone_scale.jpg), and source PNG document the visual direction.
-- **Next:** phone-test the run cycle's subtle head bob on the main game.
+- Reaper and regular Cavern Bat animation quality accepted by the user on October 24, 2026.
 
 ## v0.10.9 — Subtle Reaper Run Head Bob
 
 - Added a smooth 1.75px up/down sprite offset, twice per stride, to give the head a natural running bob. The sprite's dimensions and collision position are unchanged.
 - The eight run drawings, 12fps animation, 0.67-second stride, world movement, damage pose, controls, and progression remain unchanged.
-- **Verification:** local regression, image integrity, and actual Chromium mobile-render checks passed. Pages deployment passed. Phone review remains the final animation-quality check.
+- The user accepted the Reaper run cycle and regular Cavern Bat animation on October 24, 2026.
+- **Verification:** local regression, image integrity, actual Chromium mobile-render checks, and Pages deployment passed.
+
+## v0.10.10 — Skeletal Bat Art Review
+
+- Added an eight-pose Skeletal Bat atlas for the four-frame flight cycle, telegraph, dive, hit reaction, and defeat.
+- The sprite is available only through `?enemyReview=skeletal-bat` until reviewed. Its visible target is 58px, slightly larger than the regular Cavern Bat's 52px; its 2 HP, attack behavior, collision box, and procedural fallback stay intact.
+- **Verification:** Regression, exact PNG integrity, and phone-sized Chromium/Phaser rendering passed on PR #26. Pages review deployment follows merge.
 
 ## v0.10.8 — Reaper Run Cycle Rework
 
 - Replaced the uneven twelve-pose cycle with eight clearer alternating running positions, keeping the torso, eye, and scythe steadier between poses.
 - Plays at 12fps for a 0.67-second cycle, restoring the slower stride the user preferred while preserving world movement and the successful full-size damage pose.
-- **Verification:** regression, PNG integrity, and actual Chromium pixel checks for all eight poses passed. Android phone review remains the final animation-quality check.
+- **Verification:** regression, PNG integrity, actual Chromium pixel checks for all eight poses, and the user's phone review passed. The user accepted the Reaper and Cavern Bat art on October 24, 2026.
 
 ## v0.10.7 — Smoother Reaper Motion
 
@@ -345,7 +358,7 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Next: phone-review the subtle v0.10.9 run bob, then continue the character animation and visual polish roadmap.
+Next: finish the remaining enemy sprites, then begin v0.11 World & Atmosphere.
 
 ## Source and backups
 
