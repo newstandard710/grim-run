@@ -23,6 +23,7 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The eight-pose Skeletal Bat atlas is opt-in at `?enemyReview=skeletal-bat`; the normal Bat and Reaper art remain the default.
 - Its target visible height is about 58px, slightly larger than the regular Cavern Bat's 52px target.
 - The review atlas changes only the Skeletal Bat drawing. Its existing 2 HP, flight and dive behavior, telegraph timing, and collision box stay unchanged. Procedural art remains the fallback.
+- [Open the Skeletal Bat phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=skeletal-bat).
 
 ## v0.10.9: Subtle Reaper Run Head Bob
 

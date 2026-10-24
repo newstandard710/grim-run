@@ -8,7 +8,7 @@ The user accepted the current Reaper and regular Cavern Bat animations on Octobe
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The opt-in Skeletal Bat art is review-only at `?enemyReview=skeletal-bat`; baseline Reaper and Cavern Bat art remain unchanged. Regression, image integrity, phone-sized Chromium rendering, and Pages review deployment are being verified for v0.10.10.
+**Verification:** Regression, exact PNG integrity, and actual 950 × 430 Chromium/Phaser rendering passed in GitHub Actions. The Pages review deployment is pending merge; the Skeletal Bat remains opt-in at `?enemyReview=skeletal-bat`.
 
 ## Remaining enemy sprite phase
 
@@ -40,7 +40,7 @@ The user accepted the current Reaper and regular Cavern Bat animations on Octobe
 
 - Added an eight-pose Skeletal Bat atlas for the four-frame flight cycle, telegraph, dive, hit reaction, and defeat.
 - The sprite is available only through `?enemyReview=skeletal-bat` until reviewed. Its visible target is 58px, slightly larger than the regular Cavern Bat's 52px; its 2 HP, attack behavior, collision box, and procedural fallback stay intact.
-- **Verification:** pending regression, exact PNG integrity, phone-sized Chromium rendering, and Pages review deployment.
+- **Verification:** Regression, exact PNG integrity, and phone-sized Chromium/Phaser rendering passed on PR #26. Pages review deployment follows merge.
 
 ## v0.10.8 — Reaper Run Cycle Rework
 
