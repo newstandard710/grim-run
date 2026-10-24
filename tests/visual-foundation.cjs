@@ -4,7 +4,8 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.4-main-run-cycle-v4"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.5-reaper-action-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
 assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
@@ -31,6 +32,8 @@ assert.equal(V.ILLUSTRATED_RUN.length,4);assert.equal(V.ILLUSTRATED_BAT_FLAP.len
 assert.equal(V.ILLUSTRATED_RUN_FPS,10);assert.equal(V.ILLUSTRATED_BAT_FPS,9);
 assert.deepEqual(Array.from(V.V2_REAPER_RUN),['run_contact','run_contact_mid','run_transition_01','run_airborne','run_airborne_mid','run_transition_02','run_recovery','run_recovery_mid','run_transition_03','run','run_stride_mid','run_transition_04']);
 assert.equal(V.V2_REAPER_RUN_FPS,18);
+assert.deepEqual(Array.from(V.V2_REAPER_SWING),['scythe_attack','scythe_attack_02','scythe_attack_03','scythe_attack_04']);
+assert.equal(V.V2_REAPER_SWING_MS,260,'The new scythe sequence uses the existing attack duration');
 assert.equal(V.V2_BAT_FLAP.length,8);assert.equal(V.V2_BAT_FLAP_FPS,12);
 for(const pose of V.V2_REAPER_RUN)
  assert.ok(V.V2_REAPER[pose],`v2 Reaper cycle frame ${pose} has metadata`);
@@ -66,6 +69,15 @@ vm.createContext(scope);
 for(const [,attrs,code] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(code,scope,{filename:'index.html'});
 scope.GrimUI=scope.window.GrimUI; // Node VM global binding for the game's constructor.
+const CoreApi=scope.window.GRIM_CORE,slideClearance=scope.window.GRIM_CONFIG.slideClearancePx;
+const testBranch=CoreApi.obstacle('branch',180,300,0,slideClearance,430);
+assert.equal(testBranch.y+testBranch.height,300-slideClearance,'Raised branch is positioned 76px above ground');
+assert.equal(CoreApi.branchHits(CoreApi.collisionBox(200,300,false),testBranch,()=>300,slideClearance,false),true,
+ 'Standing Reaper still collides with the raised branch');
+assert.equal(CoreApi.branchHits(CoreApi.collisionBox(200,300,true),testBranch,()=>300,slideClearance,true),false,
+ 'Ground slide still passes under the raised branch without changing collision boxes');
+assert.equal(JSON.stringify(CoreApi.collisionBox(200,300,false)),JSON.stringify({x:180,y:221,width:42,height:79}));
+assert.equal(JSON.stringify(CoreApi.collisionBox(200,300,true)),JSON.stringify({x:173,y:271,width:56,height:29}));
 const Game=scope.window.GrimGameScene;
 const game=new Game();game.scale={width:950,height:430,on(){},off(){}};
 game.events={once(){}};game.add={graphics:gfx,text:gfx};game.cameras={main:{setScroll(){}}};
@@ -177,4 +189,4 @@ staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPos
 staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
 assert.equal(staticRenderer.illustratedReaperPose(),'fall');
 staticRenderer.shutdown();
-console.log('PASS v0.10.4: 18 runtime illustrated PNG textures load with movement cycles and anchored crouch slide.');
+console.log('PASS v0.10.5: 18 runtime illustrated PNG textures load with movement cycles and anchored crouch slide.');

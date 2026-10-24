@@ -1,7 +1,7 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.4
+/* Grim Run — Macabre Storybook visual system, v0.10.5
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
- * NO movement, collision, currency or gameplay changes.
+ * No player movement, collision-box, currency or progression changes.
  */
 (function(scope){
   'use strict';
@@ -54,8 +54,9 @@
   // run and flap cycles are opt-in until phone playtesting accepts them.
   // Phone playtest showed the review Reaper read too small next to low
   // overhead hazards. Enlarge standard poses to the existing 120px target
-  // (1.875×) while preserving the shared ground anchor; the crouched slide
-  // pose is independently sized to stay inside the unchanged 48px clearance.
+  // (1.875×) while preserving the shared ground anchor. The replacement slide
+  // drawing bends at the knees while retaining the head/torso size; branch
+  // openings are raised to 76px, still below the 79px standing collider.
   const V2_REAPER_BASE_SCALE=64/1111;
   const V2_REAPER_SCALE=120/1111;
   const V2_BAT_SCALE=52/766;
@@ -89,8 +90,14 @@
     ['idle','reaper_idle_v1.png',V2_REAPER_SCALE],
     ['jump','reaper_jump_v1.png',V2_REAPER_SCALE],
     ['fall','reaper_fall_v1.png',V2_REAPER_SCALE],
-    ['slide','reaper_slide_v1.png',V2_REAPER_BASE_SCALE*1.25],
-    ['scythe_attack','reaper_scythe_attack_v1.png',V2_REAPER_SCALE],
+    // Action drawings use the same character-size reference as the run cycle.
+    // The slide is a bent pose; its head/torso retain normal size while the
+    // lower silhouette stays inside the raised branch opening.
+    ['slide','slide-mobile-v1.png',0.414],
+    ['scythe_attack','scythe-swing-v1/windup_mobile_v1.png',0.44117647],
+    ['scythe_attack_02','scythe-swing-v1/sweep_mobile_v1.png',0.44117647],
+    ['scythe_attack_03','scythe-swing-v1/impact_mobile_v1.png',0.44117647],
+    ['scythe_attack_04','scythe-swing-v1/followthrough_mobile_v1.png',0.44117647],
     ['crossbow_fire','reaper_crossbow_fire_v1.png',V2_REAPER_SCALE],
     ['hurt','reaper_hurt_v1.png',V2_REAPER_SCALE],
     ['death','reaper_death_v1.png',V2_REAPER_SCALE],
@@ -98,6 +105,15 @@
   ].map(([name,file,scale])=>[name,Object.freeze({
     key:'gr_v2_reaper_'+name,file,scale:V2_REAPER_RUN_SCALES[name]||scale,anchor:V2_REAPER_RUN_ANCHORS[name]||Object.freeze([1250,1420])
   })])));
+  const V2_REAPER_SWING=Object.freeze(['scythe_attack','scythe_attack_02','scythe_attack_03','scythe_attack_04']);
+  const V2_REAPER_SWING_MS=260;
+  const V2_REAPER_SWING_ANCHORS=Object.freeze({
+    scythe_attack:Object.freeze([399.5,448.2]),
+    scythe_attack_02:Object.freeze([342.3,435.8]),
+    scythe_attack_03:Object.freeze([298.0,398.6]),
+    scythe_attack_04:Object.freeze([311.7,407.0]),
+    slide:Object.freeze([421.0,288.8])
+  });
   const V2_REAPER_RUN_MOBILE=Object.freeze({
     run_contact:Object.freeze({key:'gr_v2_reaper_run_contact',file:'run-cycle-mobile-v1/run_contact_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.5,279.725])}),
     run_contact_mid:Object.freeze({key:'gr_v2_reaper_run_contact_mid',file:'run-cycle-mobile-v1/run_contact_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([309.2,279.985])}),
@@ -112,7 +128,9 @@
     run_stride_mid:Object.freeze({key:'gr_v2_reaper_run_stride_mid',file:'run-cycle-mobile-v1/run_stride_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([310.0,280.245])}),
     run_transition_04:Object.freeze({key:'gr_v2_reaper_run_transition_04',file:'run-cycle-mobile-v1/run_transition_04_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([305.0,280.49])})
   });
-  const V2_REAPER=Object.freeze({...V2_REAPER_BASE,...V2_REAPER_RUN_MOBILE});
+  const V2_REAPER=Object.freeze({...V2_REAPER_BASE,...V2_REAPER_RUN_MOBILE,
+    ...Object.fromEntries([...V2_REAPER_SWING,'slide'].map(name=>[name,
+      Object.freeze({...V2_REAPER_BASE[name],anchor:V2_REAPER_SWING_ANCHORS[name]})]))});
   const V2_BAT=Object.freeze(Object.fromEntries([
     ['neutral','bat_neutral_v1.png'],['raised','bat_wings_raised_v1.png'],
     ['mid_up','bat_flap_mid_up_v1.png'],['mid_down','bat_flap_mid_down_v1.png'],
@@ -166,7 +184,14 @@
 
   // Review-only integrity gate. Validate the exact bytes handed to Phaser,
   // rather than trusting an image load event (Chrome can display partial PNGs).
-  const REVIEW_INTEGRITY=Object.freeze({"reaper_run_transition_01_v1.png":{"bytes":1432602,"sha256":"141cf50436a62789629cd8a488f6bc8da70992b442683572526f561711fc394a"},"reaper_run_transition_02_v1.png":{"bytes":1381487,"sha256":"6aa4b4f225bc67d702e16dc3d89a6a9f1d89c6b6cbd075efc9c4d53401d1216b"},"reaper_run_transition_03_v1.png":{"bytes":1521275,"sha256":"46e0e128ff50f2c988608eb92c8966ab3441bc396bcd2edb248ad96a224d3f70"},"reaper_run_transition_04_v1.png":{"bytes":1380002,"sha256":"c11a9085037ebbdacd2d18d2f74e61051af713d087f59b38a8c71713b37bf572"},"reaper_run_airborne_v1.png":{"bytes":1350570,"sha256":"3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"},"reaper_run_recovery_v1.png":{"bytes":1179770,"sha256":"0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"},"reaper_fall_v1.png":{"bytes":1404482,"sha256":"a1859b8b51dac28d3d08d04cf7aa3fe9fbf262676f12abeda91b12bf34eb6218"},"reaper_jump_v1.png":{"bytes":1350180,"sha256":"aecd58ad785f1cf5d0f08e8cd9489bc39be236e32fdffcd4c263796ccbb05d3f"},"reaper_death_v1.png":{"bytes":727130,"sha256":"f0b71de8c58a670ec85bd663d8e096d590fe864417df1e136cde70dba4333915"},"reaper_crossbow_fire_v1.png":{"bytes":820955,"sha256":"8df8c45253c880c2b2cec44bcd68c20a5b2ba0aa9781bf5c41e0955b03f06a09"},"reaper_run_contact_v1.png":{"bytes":1200830,"sha256":"976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"},"reaper_hover_v1.png":{"bytes":952384,"sha256":"de4a4a8ec36540bf06313b6d140351aa3ddc02871600de868aa13ad806d2eb1d"},"reaper_slide_v1.png":{"bytes":995383,"sha256":"70c9a7c6e13132801eb02939b7a9bc3d466aa6216bff759b2863e82aa059baa8"},"reaper_run_v1.png":{"bytes":1444963,"sha256":"873cd968a4b4c56e21d46d1db634bd0a602cbd9c212738f593fbcaf295f10243"},"reaper_idle_v1.png":{"bytes":1306891,"sha256":"253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"},"reaper_scythe_attack_v1.png":{"bytes":1167906,"sha256":"7b13d15a6b6de3f88a4d64a8d08b46325d227af68c31cc8018baa9ac320b866f"},"reaper_hurt_v1.png":{"bytes":1102948,"sha256":"5c091e89477790ba47e985e71abde99581b3b88854836f60e84c3b4fec3341bc"},"bat_neutral_v1.png":{"bytes":972200,"sha256":"91bd27d39d7fa71f698563fafbac02eeb40ee9e3fb8590ec13a8f587b182eb94"},"bat_wings_raised_v1.png":{"bytes":793683,"sha256":"4b818264821d70908bfb5f882ace67e509e0b334520c6d683dfe9becccd85cd9"},"bat_hit_v1.png":{"bytes":801324,"sha256":"86fbb1025e86e36e7cbfd81b6ccd71ce88fb866fadcdf6a3febf3b2d6e72407e"},"bat_death_v1.png":{"bytes":605422,"sha256":"e912d431c1614ad5127edbdf8b817e0ab6e16571f4e852b45503204dd219cfda"},"bat_flap_mid_down_v1.png":{"bytes":536563,"sha256":"c568978e463b93cea21af3ecf18b0322c88e99a4ed463582760442261e02dcd4"},"bat_wings_lowered_v1.png":{"bytes":875269,"sha256":"87cc9202294f325eea8bd2cf4e4fcf01018fbe191eef72492ba90522c428886a"},"bat_dive_v1.png":{"bytes":873768,"sha256":"d946f909b05d8f2d79b28275c1b654b4761c1a196a69e9d54dec27e7b201a18b"},"bat_flap_mid_up_v1.png":{"bytes":608831,"sha256":"952debf01be31561941e34adb3b7ce5b00f2364a1e7ed37ddf9bf32472df9b34"},"run-cycle-mobile-v1/run_contact_mobile_v1.png":{"bytes":24116,"sha256":"dc2e276c8535e2816d4bea34597b764697ab9a7a7fb210c28e72a13fa460b7f8"},"run-cycle-mobile-v1/run_contact_mid_mobile_v1.png":{"bytes":26157,"sha256":"6da0069905f2088ab880daa335771c41a0a4225da0927e84c19625149480830e"},"run-cycle-mobile-v1/run_transition_01_mobile_v1.png":{"bytes":25093,"sha256":"5126d1e2ad5423bdac383771b9c1f54edcd0cdd3351ae446cc2dabb8283c9aa3"},"run-cycle-mobile-v1/run_airborne_mobile_v1.png":{"bytes":24883,"sha256":"bc3fcbc9f58523400e857b59a409c63f6e062a172ea41669d32d5c5e7eab2e96"},"run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png":{"bytes":27005,"sha256":"57397cd636131afb3d0f95d6a279182fd87c256903b2d1895054b79cb0c7fd0a"},"run-cycle-mobile-v1/run_transition_02_mobile_v1.png":{"bytes":24601,"sha256":"50acb5314237c2b19085cc08f0713ec69db5d9b4414d8242892e0e4e44a08719"},"run-cycle-mobile-v1/run_recovery_mobile_v1.png":{"bytes":24186,"sha256":"a09b103aaa1857f56dbf5774d5486067bd17ecf5600c3670154d5c4094de25f3"},"run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png":{"bytes":26220,"sha256":"c46856e62a410e71382db84c673acf997f3ae4340c7cd79257f08a6e16851e58"},"run-cycle-mobile-v1/run_transition_03_mobile_v1.png":{"bytes":25816,"sha256":"02a7a71cb0ec6f914455b6902f4bde1d0f22c78e3cdfb12276722d9837707014"},"run-cycle-mobile-v1/run_mobile_v1.png":{"bytes":23318,"sha256":"ec02c70f52c9e380a8984c00ed05862d617f8fa378b94a0d61c2ea47411578c3"},"run-cycle-mobile-v1/run_stride_mid_mobile_v1.png":{"bytes":24973,"sha256":"54796f149b6864875a384bb2d45f8926d2f9ddfde33cbb7f12fcfcbf58b3c604"},"run-cycle-mobile-v1/run_transition_04_mobile_v1.png":{"bytes":24175,"sha256":"b0b4e671fe9a2f4160229b24db0d6cf0ae88b8ee9cd818a59b788d2256985651"}});
+  const REVIEW_INTEGRITY_BASE=Object.freeze({"reaper_run_transition_01_v1.png":{"bytes":1432602,"sha256":"141cf50436a62789629cd8a488f6bc8da70992b442683572526f561711fc394a"},"reaper_run_transition_02_v1.png":{"bytes":1381487,"sha256":"6aa4b4f225bc67d702e16dc3d89a6a9f1d89c6b6cbd075efc9c4d53401d1216b"},"reaper_run_transition_03_v1.png":{"bytes":1521275,"sha256":"46e0e128ff50f2c988608eb92c8966ab3441bc396bcd2edb248ad96a224d3f70"},"reaper_run_transition_04_v1.png":{"bytes":1380002,"sha256":"c11a9085037ebbdacd2d18d2f74e61051af713d087f59b38a8c71713b37bf572"},"reaper_run_airborne_v1.png":{"bytes":1350570,"sha256":"3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"},"reaper_run_recovery_v1.png":{"bytes":1179770,"sha256":"0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"},"reaper_fall_v1.png":{"bytes":1404482,"sha256":"a1859b8b51dac28d3d08d04cf7aa3fe9fbf262676f12abeda91b12bf34eb6218"},"reaper_jump_v1.png":{"bytes":1350180,"sha256":"aecd58ad785f1cf5d0f08e8cd9489bc39be236e32fdffcd4c263796ccbb05d3f"},"reaper_death_v1.png":{"bytes":727130,"sha256":"f0b71de8c58a670ec85bd663d8e096d590fe864417df1e136cde70dba4333915"},"reaper_crossbow_fire_v1.png":{"bytes":820955,"sha256":"8df8c45253c880c2b2cec44bcd68c20a5b2ba0aa9781bf5c41e0955b03f06a09"},"reaper_run_contact_v1.png":{"bytes":1200830,"sha256":"976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"},"reaper_hover_v1.png":{"bytes":952384,"sha256":"de4a4a8ec36540bf06313b6d140351aa3ddc02871600de868aa13ad806d2eb1d"},"reaper_slide_v1.png":{"bytes":995383,"sha256":"70c9a7c6e13132801eb02939b7a9bc3d466aa6216bff759b2863e82aa059baa8"},"reaper_run_v1.png":{"bytes":1444963,"sha256":"873cd968a4b4c56e21d46d1db634bd0a602cbd9c212738f593fbcaf295f10243"},"reaper_idle_v1.png":{"bytes":1306891,"sha256":"253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"},"reaper_scythe_attack_v1.png":{"bytes":1167906,"sha256":"7b13d15a6b6de3f88a4d64a8d08b46325d227af68c31cc8018baa9ac320b866f"},"reaper_hurt_v1.png":{"bytes":1102948,"sha256":"5c091e89477790ba47e985e71abde99581b3b88854836f60e84c3b4fec3341bc"},"bat_neutral_v1.png":{"bytes":972200,"sha256":"91bd27d39d7fa71f698563fafbac02eeb40ee9e3fb8590ec13a8f587b182eb94"},"bat_wings_raised_v1.png":{"bytes":793683,"sha256":"4b818264821d70908bfb5f882ace67e509e0b334520c6d683dfe9becccd85cd9"},"bat_hit_v1.png":{"bytes":801324,"sha256":"86fbb1025e86e36e7cbfd81b6ccd71ce88fb866fadcdf6a3febf3b2d6e72407e"},"bat_death_v1.png":{"bytes":605422,"sha256":"e912d431c1614ad5127edbdf8b817e0ab6e16571f4e852b45503204dd219cfda"},"bat_flap_mid_down_v1.png":{"bytes":536563,"sha256":"c568978e463b93cea21af3ecf18b0322c88e99a4ed463582760442261e02dcd4"},"bat_wings_lowered_v1.png":{"bytes":875269,"sha256":"87cc9202294f325eea8bd2cf4e4fcf01018fbe191eef72492ba90522c428886a"},"bat_dive_v1.png":{"bytes":873768,"sha256":"d946f909b05d8f2d79b28275c1b654b4761c1a196a69e9d54dec27e7b201a18b"},"bat_flap_mid_up_v1.png":{"bytes":608831,"sha256":"952debf01be31561941e34adb3b7ce5b00f2364a1e7ed37ddf9bf32472df9b34"},"run-cycle-mobile-v1/run_contact_mobile_v1.png":{"bytes":24116,"sha256":"dc2e276c8535e2816d4bea34597b764697ab9a7a7fb210c28e72a13fa460b7f8"},"run-cycle-mobile-v1/run_contact_mid_mobile_v1.png":{"bytes":26157,"sha256":"6da0069905f2088ab880daa335771c41a0a4225da0927e84c19625149480830e"},"run-cycle-mobile-v1/run_transition_01_mobile_v1.png":{"bytes":25093,"sha256":"5126d1e2ad5423bdac383771b9c1f54edcd0cdd3351ae446cc2dabb8283c9aa3"},"run-cycle-mobile-v1/run_airborne_mobile_v1.png":{"bytes":24883,"sha256":"bc3fcbc9f58523400e857b59a409c63f6e062a172ea41669d32d5c5e7eab2e96"},"run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png":{"bytes":27005,"sha256":"57397cd636131afb3d0f95d6a279182fd87c256903b2d1895054b79cb0c7fd0a"},"run-cycle-mobile-v1/run_transition_02_mobile_v1.png":{"bytes":24601,"sha256":"50acb5314237c2b19085cc08f0713ec69db5d9b4414d8242892e0e4e44a08719"},"run-cycle-mobile-v1/run_recovery_mobile_v1.png":{"bytes":24186,"sha256":"a09b103aaa1857f56dbf5774d5486067bd17ecf5600c3670154d5c4094de25f3"},"run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png":{"bytes":26220,"sha256":"c46856e62a410e71382db84c673acf997f3ae4340c7cd79257f08a6e16851e58"},"run-cycle-mobile-v1/run_transition_03_mobile_v1.png":{"bytes":25816,"sha256":"02a7a71cb0ec6f914455b6902f4bde1d0f22c78e3cdfb12276722d9837707014"},"run-cycle-mobile-v1/run_mobile_v1.png":{"bytes":23318,"sha256":"ec02c70f52c9e380a8984c00ed05862d617f8fa378b94a0d61c2ea47411578c3"},"run-cycle-mobile-v1/run_stride_mid_mobile_v1.png":{"bytes":24973,"sha256":"54796f149b6864875a384bb2d45f8926d2f9ddfde33cbb7f12fcfcbf58b3c604"},"run-cycle-mobile-v1/run_transition_04_mobile_v1.png":{"bytes":24175,"sha256":"b0b4e671fe9a2f4160229b24db0d6cf0ae88b8ee9cd818a59b788d2256985651"}});
+  const REVIEW_INTEGRITY=Object.freeze({...REVIEW_INTEGRITY_BASE,
+    'slide-mobile-v1.png':{bytes:133909,sha256:'94d97b585cf72d133c6d7e5583bb11656db2c418391c83d07070f497a9d1457b'},
+    'scythe-swing-v1/windup_mobile_v1.png':{bytes:197518,sha256:'639e7abcc00acd24ecdb85a6345d24c68e2f5b5fafe06b0c7c5d8d18ff66c854'},
+    'scythe-swing-v1/sweep_mobile_v1.png':{bytes:184649,sha256:'147b2a799cb410f2d6bd05fa66ad87a776c99dc2ea45b5cd869157ac9de19d9f'},
+    'scythe-swing-v1/impact_mobile_v1.png':{bytes:158943,sha256:'5f2be7931423f297cf6fd11c7a44214c3640c156e997e6a5a160772e0b98dca8'},
+    'scythe-swing-v1/followthrough_mobile_v1.png':{bytes:158142,sha256:'e6e7eab949613908e9b444c941bf930c2149c1ccb8b99a3573e0990a943faa47'}
+  });
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);
     if(b.length!==meta.bytes)throw new Error('PNG byte count mismatch');
@@ -510,6 +535,11 @@
       if(pose==='run'){
         const frame=Math.floor(Math.max(0,s.elapsed||0)*V2_REAPER_RUN_FPS)%V2_REAPER_RUN.length;
         pose=V2_REAPER_RUN[frame];
+      }else if(pose==='scythe_attack'){
+        const duration=s.attackDurationMs||V2_REAPER_SWING_MS;
+        const progress=Math.max(0,Math.min(.999999,1-p.attackMs/duration));
+        pose=V2_REAPER_SWING[Math.min(V2_REAPER_SWING.length-1,
+          Math.floor(progress*V2_REAPER_SWING.length))];
       }
       if(!this.reaperPoseSprites[pose])pose=this.reaperPoseSprites.idle?'idle':
         (V2_REAPER_RUN.find(name=>this.reaperPoseSprites[name])||Object.keys(this.reaperPoseSprites)[0]);
@@ -591,6 +621,7 @@
   }
   scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED,
     ILLUSTRATED_RUN,ILLUSTRATED_BAT_FLAP,ILLUSTRATED_RUN_FPS,ILLUSTRATED_BAT_FPS,
-    V2_REAPER,V2_BAT,V2_REAPER_RUN,V2_BAT_FLAP,V2_REAPER_RUN_FPS,V2_BAT_FLAP_FPS,
+    V2_REAPER,V2_BAT,V2_REAPER_RUN,V2_BAT_FLAP,V2_REAPER_SWING,V2_REAPER_SWING_MS,
+    V2_REAPER_RUN_FPS,V2_BAT_FLAP_FPS,
     V2_REAPER_SCALE,V2_BAT_SCALE,REVIEW_INTEGRITY,validateReviewPNG};
 })(typeof window!=='undefined'?window:globalThis);

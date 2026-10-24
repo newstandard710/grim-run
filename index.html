@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.10.4</title>
+  <title>GRIM RUN — v0.10.5</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.10.4 · SPRITE MOTION POLISH</div>
+      <div class="mini">v0.10.5 · REAPER ACTION POLISH</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.10.4',
+  version: '0.10.5',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -396,7 +396,7 @@ window.GRIM_CONFIG = Object.freeze({
   attackCooldownMs: 405,
   slideMaxMs: 850,
   slideMinMs: 150,
-  slideClearancePx: 48,          // sloping ceiling: 29px slide collider + 19px visible safety margin
+  slideClearancePx: 76,          // raised branch opening: still below the 79px standing collider
   damageInvulnerabilityMs: 1100,
   startingHP: 3,
   coinScore: 5,
@@ -439,7 +439,7 @@ window.GRIM_CONFIG = Object.freeze({
   function score(distance, souls, soulScore, coins = 0, coinScore = 5) {
     return Math.max(0, Math.floor(distance)) + Math.max(0, souls) * soulScore + Math.max(0, coins) * coinScore;
   }
-  function obstacle(type, x, groundY, variant = 0, clearance = 35, viewHeight = 440) {
+  function obstacle(type, x, groundY, variant = 0, clearance = 76, viewHeight = 440) {
     // Hanging branches extend above the camera. Their AABB is a coarse
     // container only: the actual underside and hit detection follow the hill.
     // Other obstacle types retain their normal axis-aligned hitboxes.
@@ -456,7 +456,7 @@ window.GRIM_CONFIG = Object.freeze({
   // at its left edge. The higher neighboring surface is used to allow room
   // for the Reaper's 56px-wide sliding body at hill crests and sharp climbs.
   // Rendering and gameplay both use this SAME contour function.
-  function slideCeilingBottomAt(groundAt, x, clearance = 48) {
+  function slideCeilingBottomAt(groundAt, x, clearance = 76) {
     let highest = Infinity;
     for (let offset = -32; offset <= 32; offset += 8) {
       const ground = groundAt(x + offset);
@@ -464,7 +464,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     return Number.isFinite(highest) ? highest - clearance : null;
   }
-  function branchHits(box, ob, groundAt, clearance = 48, groundedSlide = false) {
+  function branchHits(box, ob, groundAt, clearance = 76, groundedSlide = false) {
     const left = Math.max(box.x, ob.x), right = Math.min(box.x + box.width, ob.x + ob.width);
     if (!(left < right) || box.y + box.height <= ob.y) return false;
     // Sliding along solid ground is the explicit safe counter to a branch.
@@ -1447,7 +1447,7 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/visual-system.js?v=0.10.4-main-run-cycle-v4"></script>
+  <script src="assets/visuals/visual-system.js?v=0.10.5-reaper-action-v1"></script>
   <script>
 (function(scope) {
   'use strict';

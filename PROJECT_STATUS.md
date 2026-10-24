@@ -1,14 +1,14 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.4 — *Sprite Motion Polish* with the Reaper twelve-pose cycle active by default. A compact approved contact pose loads first; the Start control waits until it is ready. Previous illustrated art remains available with `?art=illustrated`.
+**Current build:** v0.10.5 — *Reaper Action Polish* with the Reaper twelve-pose cycle active by default. A compact approved contact pose loads first; the Start control waits until it is ready. Previous illustrated art remains available with `?art=illustrated`.
 
 The repaired Reaper files are in `main`; the actual Chromium checks pass. Phone review of startup timing and motion quality is still needed.
 
-**Release:** v0.10.4 — *Sprite Motion Polish*  
+**Release:** v0.10.5 — *Reaper Action Polish*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** All Node regression suites and the GitHub Actions real Chromium sprite smoke pass. **Live Android visual and performance playtesting pending.**
+**Verification:** Local regression suites pass. The GitHub Actions real Chromium sprite smoke is pending for this revision. **Live Android visual and performance playtesting pending.**
 
 ## Main Reaper motion cycle v3
 
@@ -17,9 +17,18 @@ The repaired Reaper files are in `main`; the actual Chromium checks pass. Phone 
 - The 12 compact run files total about 300 KB rather than more than 15 MB. The source artwork remains unchanged.
 - The Reaper's run poses now use matching visible pixel heights and measured eye/ground anchors. This corrects size pulsing and sideways head movement while leaving collision geometry untouched.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
-- Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`. No collision boxes, game balance, controls, or progression changed.
+- The slide pose now bends at the knees while keeping the head/torso at normal art scale. Its visible height is about 74px. Low branch openings are raised from 48px to 76px; standing still collides against the 79px standing body. The 42×79 standing and 56×29 sliding collision boxes remain unchanged.
+- The scythe strike now uses four distinct drawings for wind-up, sweep, impact, and follow-through across the existing 260ms action window. Damage, reach, controls, and progression are unchanged.
+- Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [run/flap review sheets](assets/visuals/review/character-motion-cycle-v1/README.md), and source PNGs document the review art.
 - **Next:** phone-test the updated Reaper cadence, Bat flap, silhouette, and startup timing on the main game.
+
+## v0.10.5 — Reaper Action Polish
+
+- Replaced the undersized slide artwork with a natural low slide; the head and torso keep their normal game size while the knees bend. The scythe trails low behind the cloak.
+- Raised low branch openings to 76px to fit the new 74px slide silhouette with a small visual margin. The opening remains smaller than the 79px standing collider, so the player must slide; standing/sliding collision boxes are unchanged.
+- Rebuilt the scythe strike as four visually distinct poses over the same 260ms attack period. Attack timing, reach, damage, and input behavior are unchanged.
+- **Verification:** Local regression suites pass, including 300 seeded gameplay worlds; actual Chromium rendering is pending in GitHub Actions. Main-page and phone checks follow after CI passes.
 
 ## v0.10.4 — Sprite Motion Polish
 

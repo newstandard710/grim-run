@@ -2,20 +2,27 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.4 — Sprite Motion Polish**
+**Current playable build: v0.10.5 — Reaper Action Polish**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
 
-## Character art review v2 (opt-in)
+## Current Reaper art
 
-- Open `index.html?art=review-v2` to inspect the transparent pose set and new Reaper run/Bat wing cycles in the actual Phaser scene.
-- The preview leaves the current default, `?art=procedural` fallback, collisions, and gameplay unchanged. New run-cycle frames are not promoted to default pending phone review.
-- Phone feedback prompted a scale correction: standard Reaper poses render at 120px visible height; the slide pose stays at 47px to fit the unchanged 48px overhead clearance.
+- The twelve-pose Reaper run cycle and the new slide and four-beat scythe attack appear in the main game. Bat wing animation and the approved standard poses remain unchanged.
+- The slide pose preserves the Reaper's head and torso size and is about 74px tall. Low branches are raised to a 76px opening; the 79px standing collider still hits them, so the player must slide. The existing 56×29 slide collider is unchanged.
+- The scythe attack plays four drawn poses over the existing 260ms action window. Attack timing and damage remain unchanged.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
 - [Motion-cycle review sheets and source images](assets/visuals/review/character-motion-cycle-v1/README.md) document the four-pose Reaper run and eight-step Bat flap.
+
+## v0.10.5: Reaper Action Polish
+
+- Replaced the too-small slide drawing with a natural knee-bent pose that keeps the hood, head and torso at normal game scale. Raised low branch openings from 48px to 76px; standing still collides while the unchanged 56×29 ground-slide collider clears.
+- Rebuilt the scythe strike with four distinct wind-up, sweep, impact and follow-through drawings. The sequence uses the existing 260ms action window; attack timing, reach and damage are unchanged.
+- The twelve-pose run cycle, Bat art, controls and progression are unchanged. New action PNGs have transparent backgrounds and per-file size/SHA-256 checks.
+- Regression and real-Chromium tests verify slide clearance, unchanged collision boxes, each scythe frame's pixels, anchors and visible movement on a phone-sized game canvas.
 
 ## v0.10.4: Sprite Motion Polish
 

@@ -155,7 +155,7 @@ const server=http.createServer((req,res)=>{
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:21,bats:12,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:24,bats:12,
     textures:true,failures:[]});
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
@@ -165,12 +165,15 @@ const server=http.createServer((req,res)=>{
     const slide=v.reaperPoseSprites.slide;
     const slideVisible=slide.visible;
     const slideGround=Math.abs(slide.y+m.slide.anchor[1]*m.slide.scale-s.feetY);
-    const slideHeight=651*m.slide.scale;
+    const slideHeight=179*m.slide.scale;
     const runHeight=272*m.run.scale;
     s.player.sliding=false;s.player.attackMs=120;v.render();
-    const attack=v.reaperPoseSprites.scythe_attack;
+    const attackPose=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+      name.startsWith('scythe_attack')&&sprite.visible)?.[0];
+    const attack=v.reaperPoseSprites[attackPose];
     const attackVisible=attack.visible;
-    const attackGround=Math.abs(attack.y+m.scythe_attack.anchor[1]*m.scythe_attack.scale-s.feetY);
+    const attackMeta=m[attackPose];
+    const attackGround=Math.abs(attack.y+attackMeta.anchor[1]*attackMeta.scale-s.feetY);
     s.player.attackMs=0;s.elapsed=0;
     v.render();const firstRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
@@ -181,14 +184,16 @@ const server=http.createServer((req,res)=>{
     s.elapsed=.09;v.render();const secondBat=flying.texture.key;
     s.enemies[0].mode='dive';v.render();
     return {slideVisible,slideGround,slideHeight,attackVisible,
-      attackGround,runHeight,
+      attackGround,attackPose,runHeight,slideClearance:window.GRIM_CONFIG.slideClearancePx,
       runFrame1:firstRun,runFrame2:secondRun,batVisible:flying.visible,
       firstBat,secondBat,diveKey:flying.texture.key};
   });
   assert.equal(v2Anchors.slideVisible,true);assert.ok(v2Anchors.slideGround<.1);
-  assert.ok(v2Anchors.slideHeight>46&&v2Anchors.slideHeight<48,
-    'v2 slide artwork fills but stays inside the unchanged 48px clearance');
+  assert.ok(v2Anchors.slideHeight>72&&v2Anchors.slideHeight<76&&
+    v2Anchors.slideHeight<v2Anchors.slideClearance-1,
+    'Reaper keeps full-size head/torso art inside the raised 76px opening');
   assert.equal(v2Anchors.attackVisible,true);assert.ok(v2Anchors.attackGround<.1);
+  assert.equal(v2Anchors.attackPose,'scythe_attack_03','Attack uses its impact drawing near the swing midpoint');
   assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
   assert.equal(v2Anchors.runFrame1,'run_contact');
@@ -210,7 +215,7 @@ const server=http.createServer((req,res)=>{
         if(d[i+3]>32){opaque++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);if(d[i]+d[i+1]+d[i+2]<6)black++;}
         if(d[i+3]>100&&d[i+1]>150&&d[i+2]>160&&d[i+1]>d[i]*1.25&&d[i+2]>d[i]*1.2){eyeX+=x;eyeY+=y;eyeCount++;}
       }
-      return {name,key:m.key,coverage:opaque/(c.width*c.height),black:black/Math.max(1,opaque),
+      return {name,key:m.key,coverage:opaque/(c.width*c.height),black:black/Math.max(1,opaque),eyeCount,
         height:(maxY-minY+1)*m.scale,width:(maxX-minX+1)*m.scale,
         feetY:(maxY-m.anchor[1])*m.scale,
         eyeX:eyeCount?((eyeX/eyeCount)-m.anchor[0])*m.scale:null,
@@ -221,10 +226,12 @@ const server=http.createServer((req,res)=>{
   const runPixelBounds=decoded.filter(p=>p.name.startsWith('run_')||p.name==='run');
   assert.equal(runPixelBounds.length,12,'all twelve run poses were decoded from PNG pixels');
   assert.ok(runPixelBounds.every(p=>p.height>118&&p.height<122),'all run drawings keep the same visible height');
-  const attackPixels=decoded.find(p=>p.name==='scythe_attack');
-  const runningHeight=runPixelBounds.find(p=>p.name==='run').height;
-  assert.ok(attackPixels.height<=runningHeight+1&&attackPixels.height>runningHeight-7,
-    'scythe pose remains close in size and does not grow beyond the run pose');
+  const attackPixelBounds=decoded.filter(p=>p.name.startsWith('scythe_attack'));
+  assert.equal(attackPixelBounds.length,4,'four scythe attack drawings decode from actual PNG pixels');
+  assert.ok(attackPixelBounds.every(p=>p.eyeCount>=10),'all four swing frames retain the Reaper eye and head');
+  const eyeCounts=attackPixelBounds.map(p=>p.eyeCount);
+  assert.ok(Math.max(...eyeCounts)/Math.min(...eyeCounts)<1.3,
+    'the Reaper head stays a consistent size through the scythe swing');
   for(const name of ['run_contact','run','run_transition_01','run_transition_04']){
     const frame=runPixelBounds.find(p=>p.name===name);
     assert.ok(Math.abs(frame.feetY)<1,`${name} visibly reaches the ground line`);
@@ -255,6 +262,36 @@ const server=http.createServer((req,res)=>{
     let changed=0;const a=renderedRunFrames[i-1],b=renderedRunFrames[i];
     for(let p=0;p<a.length;p+=4)if(Math.abs(a[p]-b[p])>18||Math.abs(a[p+1]-b[p+1])>18||Math.abs(a[p+2]-b[p+2])>18)changed++;
     assert.ok(changed>100,'adjacent run poses create visible pixel movement on the game canvas');
+  }
+  const renderedAttackFrames=[],attackPoseChecks=[];
+  for(const attackMs of [230,165,100,35]){
+    const check=await page.evaluate(ms=>{
+      const g=window.grimRun,s=g.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_REAPER;
+      g.loop.stop();s.state='playing';s.damageFlashMs=0;
+      Object.assign(s.player,{grounded:true,onSoulPlatform:false,sliding:false,airTuck:false,
+        attackMs:ms,visualFireMs:0,invulMs:0,slowMs:0});
+      s.drawScene();g.step(performance.now(),0);
+      const pair=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+        name.startsWith('scythe_attack')&&sprite.visible);
+      const [name,sprite]=pair,meta=m[name];
+      return {name,visible:sprite.visible,feetError:Math.abs(sprite.y+meta.anchor[1]*meta.scale-s.feetY),
+        xError:Math.abs(sprite.x+meta.anchor[0]*meta.scale-s.player.x)};
+    },attackMs);
+    attackPoseChecks.push(check);
+    renderedAttackFrames.push(await page.locator('#game canvas').screenshot({
+      path:path.join(artifactDir,'canvas-scythe-'+String(attackPoseChecks.length)+'.png')}));
+  }
+  assert.deepEqual(attackPoseChecks.map(x=>x.name),[
+    'scythe_attack','scythe_attack_02','scythe_attack_03','scythe_attack_04']);
+  assert.ok(attackPoseChecks.every(x=>x.visible&&x.feetError<.1&&x.xError<.1),
+    'all swing poses stay attached to the player at the same ground and movement anchors');
+  const attackPixelHashes=renderedAttackFrames.map(image=>
+    crypto.createHash('sha256').update(PNG.sync.read(image).data).digest('hex'));
+  assert.equal(new Set(attackPixelHashes).size,4,'mobile-sized Phaser canvas visibly renders four distinct swing poses');
+  for(let i=1;i<renderedAttackFrames.length;i++){
+    const a=PNG.sync.read(renderedAttackFrames[i-1]).data,b=PNG.sync.read(renderedAttackFrames[i]).data;let changed=0;
+    for(let p=0;p<a.length;p+=4)if(Math.abs(a[p]-b[p])>18||Math.abs(a[p+1]-b[p+1])>18||Math.abs(a[p+2]-b[p+2])>18)changed++;
+    assert.ok(changed>100,'adjacent swing poses create visible pixel movement on the game canvas');
   }
   // Delay the art after its compact contact pose. The start control must wait
   // for that verified pose, then gameplay must begin with the Reaper visible
@@ -297,7 +334,7 @@ const server=http.createServer((req,res)=>{
   await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.loaded);
   const rejected=await page.evaluate(()=>{const v=window.grimRun.scene.scenes[0].visuals;return {ready:v.reaperReady,poses:Object.keys(v.reaperPoseSprites).length,contactPresent:Boolean(v.reaperPoseSprites.run_contact),failed:v.failedAssets.some(x=>x.includes('byte count'))};});
-  assert.deepEqual(rejected,{ready:true,poses:20,contactPresent:false,failed:true});
+  assert.deepEqual(rejected,{ready:true,poses:23,contactPresent:false,failed:true});
   await page.unroute('**/run_contact_mobile_v1.png*');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
@@ -341,7 +378,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.4 main-game motion art, early Reaper visibility, PNG pixel integrity, previous-art comparison, procedural fallback, legacy atlas and God Mode tools.');
+  console.log('PASS actual Chromium: v0.10.5 slide scale/clearance, four-frame scythe swing, twelve-pose run cycle, early Reaper visibility, PNG pixel integrity, fallbacks and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
