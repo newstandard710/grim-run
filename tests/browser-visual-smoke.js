@@ -230,7 +230,7 @@ const server=http.createServer((req,res)=>{
     assert.ok(Math.abs(frame.feetY)<1,`${name} visibly reaches the ground line`);
   }
   const eyeOffsets=runPixelBounds.map(p=>p.eyeX).filter(Number.isFinite);
-  assert.equal(eyeOffsets.length,8,'all eight run poses retain a visible cyan eye');
+  assert.equal(eyeOffsets.length,12,'all twelve run poses retain a visible cyan eye');
   assert.ok(Math.max(...eyeOffsets)-Math.min(...eyeOffsets)<.35,
     'decoded cyan-eye pixels stay registered across all running poses');
   const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
