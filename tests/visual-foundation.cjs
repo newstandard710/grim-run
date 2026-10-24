@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.8-balanced-run-cycle-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.9-run-head-bob-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
@@ -33,6 +33,8 @@ assert.equal(V.ILLUSTRATED_RUN_FPS,10);assert.equal(V.ILLUSTRATED_BAT_FPS,9);
 assert.deepEqual(Array.from(V.V2_REAPER_RUN),Array.from({length:8},(_,i)=>'run_pose_'+String(i+1).padStart(2,'0')));
 assert.equal(V.V2_REAPER_RUN_FPS,12);
 assert.ok(Math.abs(V.V2_REAPER_RUN_CYCLE_MS-666.667)<.01,'Run stride duration stays at the previous 0.67 seconds');
+assert.equal(V.V2_REAPER_RUN_BOB_PX,1.75,'Run bob stays within a subtle 1.75px range');
+assert.equal(V.V2_REAPER_RUN_BOBS_PER_CYCLE,2,'Head bob follows both steps of each stride');
 assert.ok(Math.abs((1421-430)*(V.V2_REAPER.hurt.scale)-120)<.2,
  'Damage pose is normalized to the same 120px visible height as the standard Reaper');
 assert.deepEqual(Array.from(V.V2_REAPER_SWING),['scythe_attack','scythe_attack_02','scythe_attack_03','scythe_attack_04']);
@@ -194,4 +196,4 @@ staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPos
 staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
 assert.equal(staticRenderer.illustratedReaperPose(),'fall');
 staticRenderer.shutdown();
-console.log('PASS v0.10.8: balanced eight-pose run cycle, full-size damage pose, and anchored crouch slide.');
+console.log('PASS v0.10.9: balanced eight-pose run cycle with subtle head bob, full-size damage pose, and anchored crouch slide.');

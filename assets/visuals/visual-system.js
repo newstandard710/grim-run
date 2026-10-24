@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.8
+/* Grim Run — Macabre Storybook visual system, v0.10.9
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -120,6 +120,8 @@
   const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
   const V2_REAPER_RUN_FPS=12;
   const V2_REAPER_RUN_CYCLE_MS=V2_REAPER_RUN.length/V2_REAPER_RUN_FPS*1000;
+  const V2_REAPER_RUN_BOB_PX=1.75;
+  const V2_REAPER_RUN_BOBS_PER_CYCLE=2;
   const V2_BAT_FLAP_FPS=12;
   const snapFrame=(arr,time,fps)=>arr[Math.floor(Math.max(0,time)*fps)%arr.length];
 
@@ -531,7 +533,11 @@
       const image=this.reaperPoseSprites[pose],meta=V2_REAPER[pose];
       if(image&&meta&&p&&playerVisible){
         const scale=meta.scale,[ax,ay]=meta.anchor;
-        image.setScale(scale).setPosition(p.x-ax*scale,(s.feetY||p.y)-ay*scale)
+        const runBob=V2_REAPER_RUN.includes(pose)
+          ?-Math.sin(2*Math.PI*V2_REAPER_RUN_BOBS_PER_CYCLE*
+            Math.max(0,s.elapsed||0)/(V2_REAPER_RUN_CYCLE_MS/1000))*V2_REAPER_RUN_BOB_PX
+          :0;
+        image.setScale(scale).setPosition(p.x-ax*scale,(s.feetY||p.y)-ay*scale+runBob)
           .setVisible(true).setAlpha(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1)
           .setTint(p.slowMs>0?0xb9ecff:0xffffff);
       }
@@ -604,6 +610,7 @@
   scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED,
     ILLUSTRATED_RUN,ILLUSTRATED_BAT_FLAP,ILLUSTRATED_RUN_FPS,ILLUSTRATED_BAT_FPS,
     V2_REAPER,V2_BAT,V2_REAPER_RUN,V2_BAT_FLAP,V2_REAPER_SWING,V2_REAPER_SWING_MS,
-    V2_REAPER_RUN_FPS,V2_REAPER_RUN_CYCLE_MS,V2_BAT_FLAP_FPS,
+    V2_REAPER_RUN_FPS,V2_REAPER_RUN_CYCLE_MS,V2_REAPER_RUN_BOB_PX,
+    V2_REAPER_RUN_BOBS_PER_CYCLE,V2_BAT_FLAP_FPS,
     V2_REAPER_SCALE,V2_BAT_SCALE,REVIEW_INTEGRITY,validateReviewPNG};
 })(typeof window!=='undefined'?window:globalThis);
