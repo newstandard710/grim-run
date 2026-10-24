@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.10 review build
+/* Grim Run — Macabre Storybook visual system, v0.10.11 review build
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -115,7 +115,7 @@
   ].map(([name,file])=>[name,Object.freeze({
     key:'gr_v2_bat_'+name,file,scale:V2_BAT_SCALE,anchor:Object.freeze([1500,720])
   })])));
-  // Review-only Skeletal Bat atlas. The 2x4 source uses per-row integer frame
+  // Approved Skeletal Bat atlas. The 2x4 source uses per-row integer frame
   // heights because its 1254px canvas cannot be split into four equal rows.
   // Its 58px silhouette target is intentionally a little larger than the
   // regular Cavern Bat's 52px target; collision geometry stays in Combat.rectFor.
@@ -137,6 +137,14 @@
     'flap_raised','flap_mid_down','flap_lowered','flap_mid_up'
   ]);
   const V2_SKELETAL_BAT_FLAP_FPS=12;
+  const V2_BONE_CRAWLER_FPS=8;
+  const V2_BONE_CRAWLER_SCALE=40/1065;
+  const V2_BONE_CRAWLER_FRAMES=Object.freeze(Array.from({length:4},(_,i)=>{
+    const number=String(i+1).padStart(2,'0');
+    return Object.freeze({name:'crawl_'+number,key:'gr_v2_crawler_crawl_'+number,
+      file:'crawler_crawl_'+number+'_v1.png',width:1477,height:1065,
+      scale:V2_BONE_CRAWLER_SCALE,origin:Object.freeze([.5,.5])});
+  }));
   // Eight balanced gait poses alternate legs; no vertical scale changes.
   const V2_REAPER_RUN=Object.freeze(Array.from({length:8},(_,i)=>'run_pose_'+String(i+1).padStart(2,'0')));
   const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
@@ -196,7 +204,11 @@
     'scythe-swing-v1/impact_mobile_v1.png':{bytes:158943,sha256:'5f2be7931423f297cf6fd11c7a44214c3640c156e997e6a5a160772e0b98dca8'},
     'scythe-swing-v1/followthrough_mobile_v1.png':{bytes:158142,sha256:'e6e7eab949613908e9b444c941bf930c2149c1ccb8b99a3573e0990a943faa47'},
     'scythe-swing-v2/sweep_tip-leading_v2.png':{bytes:178387,sha256:'ea7a1c5c9265c9da9a9b619e93e5932630e88a2252587919fb08638bbb056011'},
-    'skeletal_bat_atlas_v1.png':{bytes:1415766,sha256:'ccb5cee6b698f1233294cb41d7286fca43709d1346bee69438890f58794b8e1f'}
+    'skeletal_bat_atlas_v1.png':{bytes:1415766,sha256:'ccb5cee6b698f1233294cb41d7286fca43709d1346bee69438890f58794b8e1f'},
+    'crawler_crawl_01_v1.png':{bytes:784355,sha256:'9096e505ba2deb821818963a03607572e43f7d828d17ecb7cceae8b0ed8e1db2'},
+    'crawler_crawl_02_v1.png':{bytes:644258,sha256:'5e0aea0c0dce9cc4c30675ab5e3f89c0ca148dffb6160f8095ae4d1505b8d2b0'},
+    'crawler_crawl_03_v1.png':{bytes:691099,sha256:'8599c38234f8295f906df46d5f6bbc2b84569937fe0a80896f30a61494ec64b9'},
+    'crawler_crawl_04_v1.png':{bytes:759683,sha256:'c553ee9797f533486e8cfcf2a736f5fbb6efda8aca616d91668acdaed1ef86e2'}
   });
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);
@@ -243,10 +255,13 @@
       this.reviewV2=false;
       this.disposed=false;
       this.reaperPoseSprites={};
-      this.skeletalBatReviewRequested=false;
+      this.skeletalBatArtEnabled=false;
       this.skeletalBatReady=false;
       this.skeletalBatPool=[];
       this.skeletalBatVisualState=new WeakMap();
+      this.boneCrawlerReviewRequested=false;
+      this.boneCrawlerReady=false;
+      this.boneCrawlerPool=[];
     }
     begin(){
       const s=this.scene;
@@ -405,6 +420,7 @@
       const reaperBase='assets/characters/illustrated-v2/reaper/';
       const batBase='assets/enemies/illustrated-v2/bat/';
       const skeletalBatBase='assets/enemies/illustrated-v2/skeletal-bat/';
+      const boneCrawlerBase='assets/enemies/illustrated-v2/bone-crawler/';
       const firstRunPose=V2_REAPER_RUN[0];
       const fetchVerified=async(base,meta)=>{
         try{
@@ -479,7 +495,7 @@
             .setOrigin(0,0).setDepth(9).setVisible(false));
           this.batReady=true;
         }
-        if(this.skeletalBatReviewRequested){
+        if(this.skeletalBatArtEnabled){
           const meta=V2_SKELETAL_BAT_ATLAS;
           await loadNames(skeletalBatBase,[[meta.key,meta]]);
           if(!this.disposed&&!errors.has(meta.key)&&s.textures.exists(meta.key)){
@@ -505,6 +521,29 @@
               this.failedAssets.push('Skeletal Bat atlas: '+String(e));
             }
           }else this.failedAssets.push('Skeletal Bat atlas unavailable; procedural fallback remains active');
+        }
+        if(this.boneCrawlerReviewRequested){
+          const entries=V2_BONE_CRAWLER_FRAMES.map(meta=>[meta.key,meta]);
+          await loadNames(boneCrawlerBase,entries);
+          if(!this.disposed&&V2_BONE_CRAWLER_FRAMES.every(meta=>
+            !errors.has(meta.key)&&s.textures.exists(meta.key))){
+            try{
+              for(const meta of V2_BONE_CRAWLER_FRAMES){
+                const texture=s.textures.get(meta.key),source=texture.getSourceImage();
+                if(!source||source.width!==meta.width||source.height!==meta.height)
+                  throw new Error('Bone Crawler frame dimensions do not match metadata: '+meta.file);
+              }
+              const first=V2_BONE_CRAWLER_FRAMES[0];
+              for(let i=0;i<12;i++)this.boneCrawlerPool.push(
+                s.add.image(0,0,first.key).setOrigin(first.origin[0],first.origin[1])
+                  .setScale(first.scale).setDepth(9).setVisible(false));
+              this.boneCrawlerReady=true;
+            }catch(e){
+              for(const sprite of this.boneCrawlerPool)sprite.destroy();
+              this.boneCrawlerPool=[];this.boneCrawlerReady=false;
+              this.failedAssets.push('Bone Crawler sprite set: '+String(e));
+            }
+          }else this.failedAssets.push('Bone Crawler PNG set unavailable; procedural fallback remains active');
         }
         this.loaded=true;
       })().catch(e=>{
@@ -568,7 +607,7 @@
       }
       for(let i=used;i<this.batPool.length;i++)this.batPool[i].setVisible(false);
     }
-    renderReviewSkeletalBats(){
+    renderSkeletalBats(){
       const s=this.scene;
       if(!this.skeletalBatReady)return;
       let used=0;
@@ -598,6 +637,23 @@
         }
       }
       for(let i=used;i<this.skeletalBatPool.length;i++)this.skeletalBatPool[i].setVisible(false);
+    }
+    renderBoneCrawlers(){
+      const s=this.scene,frames=V2_BONE_CRAWLER_FRAMES;
+      if(!this.boneCrawlerReady)return;
+      let used=0;
+      if(!['menu','reliquary','refundConfirm'].includes(s.state)){
+        const left=s.cameraX-100,right=s.cameraX+s.width+100,now=Math.max(0,s.elapsed||0);
+        for(const e of s.enemies||[]){
+          if(e.kind!=='crawler'||e.dead||e.x<left||e.x>right||used>=this.boneCrawlerPool.length)continue;
+          const index=Math.floor(now*V2_BONE_CRAWLER_FPS+(e.phase||0))%frames.length;
+          const meta=frames[index],sprite=this.boneCrawlerPool[used++];
+          sprite.setTexture(meta.key).setOrigin(meta.origin[0],meta.origin[1])
+            .setScale(meta.scale).setPosition(e.x,e.y).setVisible(true)
+            .setAlpha(1).setRotation(0);
+        }
+      }
+      for(let i=used;i<this.boneCrawlerPool.length;i++)this.boneCrawlerPool[i].setVisible(false);
     }
     renderReviewV2(){
       const s=this.scene,p=s.player;
@@ -642,7 +698,8 @@
         }
       }
       for(let i=used;i<this.batPool.length;i++)this.batPool[i].setVisible(false);
-      this.renderReviewSkeletalBats();
+      this.renderSkeletalBats();
+      this.renderBoneCrawlers();
     }
     render(){
       const s=this.scene;
@@ -693,6 +750,8 @@
       this.batPool=[];
       for(const sprite of this.skeletalBatPool)sprite.destroy();
       this.skeletalBatPool=[];this.skeletalBatReady=false;
+      for(const sprite of this.boneCrawlerPool)sprite.destroy();
+      this.boneCrawlerPool=[];this.boneCrawlerReady=false;
       this.reaperReady=false;this.batReady=false;
     }
   }
@@ -702,5 +761,7 @@
     V2_REAPER_RUN_FPS,V2_REAPER_RUN_CYCLE_MS,V2_REAPER_RUN_BOB_PX,
     V2_REAPER_RUN_BOBS_PER_CYCLE,V2_BAT_FLAP_FPS,
     V2_REAPER_SCALE,V2_BAT_SCALE,V2_SKELETAL_BAT_ATLAS,V2_SKELETAL_BAT_FRAMES,
-    V2_SKELETAL_BAT_FLAP,V2_SKELETAL_BAT_FLAP_FPS,REVIEW_INTEGRITY,validateReviewPNG};
+    V2_SKELETAL_BAT_FLAP,V2_SKELETAL_BAT_FLAP_FPS,
+    V2_BONE_CRAWLER_FRAMES,V2_BONE_CRAWLER_FPS,V2_BONE_CRAWLER_SCALE,
+    REVIEW_INTEGRITY,validateReviewPNG};
 })(typeof window!=='undefined'?window:globalThis);

@@ -1,10 +1,12 @@
 # Grim Run — Approved illustrated character direction
 
-The approved simplified Reaper and Cavern Bat PNG artwork is authoritative for the opt-in review. Preserve its gothic cartoon/storybook appearance, silhouettes, costume, weapons and colors. Do not regenerate accepted poses merely to recreate a production stage.
+The approved Reaper, Cavern Bat and Skeletal Bat PNG artwork is authoritative. Preserve its gothic cartoon/storybook appearance, silhouettes, shapes, costume, weapons and colors. Do not regenerate accepted poses merely to recreate a production stage.
 
 ## Current production assets
 - Reaper: `assets/characters/illustrated-v2/reaper/`, 13 transparent poses, 1792 × 1536 canvas.
 - Bat: `assets/enemies/illustrated-v2/bat/`, eight transparent poses, 2304 × 1280 canvas.
+- Skeletal Bat: `assets/enemies/illustrated-v2/skeletal-bat/`, approved eight-pose atlas, 1254 × 1254 canvas.
+- Bone Crawler: `assets/enemies/illustrated-v2/bone-crawler/`, four opt-in crawl poses, 1477 × 1065 canvas per frame.
 - Runtime metadata and state mapping: `assets/visuals/visual-system.js`.
 - Original motion sources: `assets/visuals/review/character-motion-cycle-v1/`.
 - Original static sources and additional review sheets remain preserved in the supplied handoff archive; not all were previously committed to GitHub.
@@ -13,15 +15,18 @@ The approved simplified Reaper and Cavern Bat PNG artwork is authoritative for t
 The Reaper uses the existing (1250, 1420) anchor and 120/1111 normal scale. Sliding retains 80/1111 scale and its approximately 47px visible silhouette. The Bat uses (1500, 720) and 52/766 scale. These are visual settings, not collision geometry. Do not change controls, physics, God Mode, powers, vendors or progression for sprite recovery.
 
 ## Production approach and outstanding work
-Shared canvases and eye registration exist. A reusable layered component rig has not been established. Preserve successful PNGs and evaluate actual cycle consistency before deciding whether any new components are useful. The Reaper and Cavern Bat cycles are accepted. New enemy art remains opt-in until reviewed in the actual game at phone scale.
+Shared canvases and eye registration exist. A reusable layered component rig has not been established. Preserve successful PNGs and evaluate actual cycle consistency before deciding whether any new components are useful. The Reaper, Cavern Bat and Skeletal Bat art are accepted. Bone Crawler art remains opt-in until reviewed in the actual game at phone scale; Ember Imp art is next.
 
 The approved Reaper run has eight poses at 12fps; the approved Cavern Bat cycle has eight steps at 12fps, including repeated transition poses. Review body/weapon consistency, foot placement, wing continuity, slide clearance, and transitions at gameplay size. Do not treat matching overall bounds as proof of identical body proportions.
 
-## Skeletal Bat review art
-The opt-in review atlas is `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, a transparent 1254 × 1254px, 2-column × 4-row sheet. It contains four flight poses, the existing dive telegraph and dive, a hit reaction, and a defeat pose. Render the visible silhouette at about 58px tall, slightly larger than the Cavern Bat's 52px target. Its 46 × 38 collision box and all combat timings remain unchanged. Load it only with `?enemyReview=skeletal-bat`; missing or invalid art keeps the procedural Skeletal Bat visible.
+## Skeletal Bat approved art
+The approved atlas is `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, a transparent 1254 × 1254px, 2-column × 4-row sheet. It contains four flight poses, the existing dive telegraph and dive, a hit reaction, and a defeat pose. Render the visible silhouette at about 58px tall, slightly larger than the Cavern Bat's 52px target. Its 46 × 38 collision box and all combat timings remain unchanged. The art is now the default; missing or invalid data keeps the procedural Skeletal Bat visible.
+
+## Bone Crawler phone-review art
+The four frames are `crawler_crawl_01_v1.png` through `crawler_crawl_04_v1.png` under `assets/enemies/illustrated-v2/bone-crawler/`. Each transparent frame is 1477 × 1065px and shares a center origin and foot baseline. The cycle plays at 8fps. The visible silhouette varies with the stride from about 34–37px tall and 45–52px wide; keep it low beside the existing 38 × 42 collision box. Load the set only with `?enemyReview=bone-crawler`. Preserve its one HP, ground movement, ledge stopping, spawn schedule, contact damage and collision box. Missing or invalid files leave the procedural crawler visible.
 
 ## Validation and deployment
-Review-only image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's review set and retains its procedural fallback. The asset integrity check covers all 28 existing Reaper and Cavern Bat runtime poses plus the opt-in Skeletal Bat atlas. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
+Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers 28 Reaper and Cavern Bat runtime poses, the approved Skeletal Bat atlas, and four opt-in Bone Crawler poses. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
 
 Original source images must remain byte-for-byte intact. Verify remote sizes, Git blob hashes and downloaded SHA-256 after transfer. Never publish damaged data or promote review art on the strength of texture names alone.
 

@@ -14,7 +14,7 @@ w.window=w;vm.createContext(w);
 for(const [,attrs,script] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(script,w,{filename:'index.html'});
 const C=w.GRIM_CONFIG,Core=w.GRIM_CORE,M=w.GRIM_META,P=w.GRIM_POWERS;
-assert.equal(C.version,'0.10.10');let power=P.makePowerManager();
+assert.equal(C.version,'0.10.11');let power=P.makePowerManager();
 for(const distance of [150,200,250,300]){
  power.apply('brittleBones',{},()=>{},1);
  assert.equal(power.brittleRangeMeters(),distance);
@@ -78,4 +78,4 @@ for(let seed=1;seed<=75;seed++){
 assert.ok(accepted>800,'Keep ordinary rock obstacles');
 assert.ok(rejected>100,'Reject impossible placements');
 assert.ok(uphillRejected>10,'Reject steep uphill placements');
-console.log('PASS v0.10.10: Soul refund precondition, persistence, confirmations, brittle ranges, 75-seed base jump checks: '+accepted+' accepted; '+rejected+' rejected; '+uphillRejected+' steep uphill rejected.');
+console.log('PASS v0.10.11: Soul refund precondition, persistence, confirmations, brittle ranges, 75-seed base jump checks: '+accepted+' accepted; '+rejected+' rejected; '+uphillRejected+' steep uphill rejected.');
