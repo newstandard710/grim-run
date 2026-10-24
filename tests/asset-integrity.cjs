@@ -18,3 +18,15 @@ for(const [base,poses] of [['assets/characters/illustrated-v2/reaper/',V.V2_REAP
  }
 }
 console.log('PASS '+count+' review PNGs: exact SHA-256, sizes, PNG chunk checksums; truncated and same-size corrupted images rejected.');
+
+const originals=require('./recovery-originals.json');
+for(const [name,expected] of Object.entries(originals)){
+ const b=fs.readFileSync(path.join(root,name)),actual=crypto.createHash('sha256').update(b).digest('hex');
+ assert.equal(b.length,expected.bytes,name+' size');assert.equal(actual,expected.sha256,name+' SHA-256');
+ V.validateReviewPNG(toArray(b),expected);
+ const chunks=[];let pos=8;
+ while(pos+12<=b.length){const n=b.readUInt32BE(pos),type=b.toString('ascii',pos+4,pos+8);if(type==='IDAT')chunks.push(b.subarray(pos+8,pos+8+n));pos+=n+12;}
+ const pixels=require('zlib').inflateSync(Buffer.concat(chunks));
+ assert.ok(pixels.length>0,name+' image decompression');
+ console.log('VERIFIED ORIGINAL '+name+' '+b.length+' bytes SHA256 '+actual);
+}
