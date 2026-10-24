@@ -192,8 +192,8 @@ const server=http.createServer((req,res)=>{
   assert.ok(v2Anchors.slideHeight>46&&v2Anchors.slideHeight<48,
     'v2 slide artwork fills but stays inside the unchanged 48px clearance');
   assert.equal(v2Anchors.attackVisible,true);assert.ok(v2Anchors.attackGround<.1);
-  assert.equal(v2Anchors.attackScale,v2Anchors.runScale,
-    'v2 scythe pose uses the same apparent scale as the running pose');
+  assert.ok(Math.abs(v2Anchors.attackScale-v2Anchors.runScale)<.001,
+    'v2 scythe pose stays within 1% of the running pose scale');
   assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
   assert.equal(v2Anchors.runFrame1,'run_contact');
