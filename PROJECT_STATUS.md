@@ -8,7 +8,7 @@ The approved Reaper art and 76px slide opening are in `main`. This update redesi
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression and PNG pixel checks pass. GitHub Actions Chromium rendering and Pages deployment are pending for v0.10.8. **Live Android animation-quality playtesting pending.**
+**Verification:** Local regression, PNG integrity, actual Chromium pixel/render checks, and GitHub Pages deployment passed. **Live Android animation-quality playtesting pending.**
 
 ## Main Reaper motion cycle v4
 
@@ -27,7 +27,7 @@ The approved Reaper art and 76px slide opening are in `main`. This update redesi
 
 - Replaced the uneven twelve-pose cycle with eight clearer alternating running positions, keeping the torso, eye, and scythe steadier between poses.
 - Plays at 12fps for a 0.67-second cycle, restoring the slower stride the user preferred while preserving world movement and the successful full-size damage pose.
-- **Verification:** pending regression, PNG integrity, and actual Chromium pixel checks for all eight poses. Android phone review remains the final animation-quality check.
+- **Verification:** regression, PNG integrity, and actual Chromium pixel checks for all eight poses passed. Android phone review remains the final animation-quality check.
 
 ## v0.10.7 — Smoother Reaper Motion
 
