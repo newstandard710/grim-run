@@ -177,7 +177,7 @@ const server=http.createServer((req,res)=>{
     s.player.attackMs=0;s.elapsed=0;
     v.render();const firstRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
-    s.elapsed=1/18;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+    s.elapsed=1/24;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
       name.startsWith('run')&&sprite.visible)?.[0];
     s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];
     s.elapsed=0;v.render();const flying=v.batPool[0],firstBat=flying.texture.key;
@@ -226,6 +226,9 @@ const server=http.createServer((req,res)=>{
   const runPixelBounds=decoded.filter(p=>p.name.startsWith('run_')||p.name==='run');
   assert.equal(runPixelBounds.length,12,'all twelve run poses were decoded from PNG pixels');
   assert.ok(runPixelBounds.every(p=>p.height>118&&p.height<122),'all run drawings keep the same visible height');
+  const hurtPixelBounds=decoded.find(p=>p.name==='hurt');
+  assert.ok(hurtPixelBounds&&hurtPixelBounds.height>119&&hurtPixelBounds.height<121,
+    'decoded damage artwork keeps the Reaper at the standard 120px visible height');
   const attackPixelBounds=decoded.filter(p=>p.name.startsWith('scythe_attack'));
   assert.equal(attackPixelBounds.length,4,'four scythe attack drawings decode from actual PNG pixels');
   assert.ok(attackPixelBounds.every(p=>p.eyeCount>=10),'all four swing frames retain the Reaper eye and head');
@@ -245,7 +248,7 @@ const server=http.createServer((req,res)=>{
   const renderedRunFrames=[];
   for(const [i,name] of ['contact','contact-mid','transition-01','airborne','airborne-mid','transition-02',
     'recovery','recovery-mid','transition-03','run','stride-mid','transition-04'].entries()){
-    const time=i/18;
+    const time=i/24;
     await page.evaluate(t=>{
       const g=window.grimRun,s=g.scene.scenes[0];g.loop.stop();
       s.state='playing';s.elapsed=t;s.damageFlashMs=0;Object.assign(s.player,{grounded:true,onSoulPlatform:false,sliding:false,airTuck:false,attackMs:0,visualFireMs:0,invulMs:0,slowMs:0});
@@ -381,7 +384,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.6 slide scale/clearance and tip-first scythe sweep, four-frame scythe swing, twelve-pose run cycle, early Reaper visibility, PNG pixel integrity, fallbacks and God Mode tools.');
+  console.log('PASS actual Chromium: v0.10.7 damage-pose scale, 24fps twelve-pose Reaper run, slide clearance and tip-first scythe, mobile rendering, PNG pixel integrity, fallbacks and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
