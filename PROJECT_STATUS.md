@@ -8,7 +8,7 @@ The approved Reaper art and 76px slide opening are in `main`. This update normal
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Pending local regression, asset integrity, and GitHub Actions real Chromium rendering for v0.10.7. **Live Android visual and performance playtesting pending.**
+**Verification:** Local gameplay regression, asset integrity, and GitHub Actions Chromium rendering passed for v0.10.7; the Pages deployment succeeded. **Live Android visual and performance playtesting pending.**
 
 ## Main Reaper motion cycle v3
 
@@ -27,7 +27,7 @@ The approved Reaper art and 76px slide opening are in `main`. This update normal
 
 - Matched the hurt pose's visible pixel height to the normal 120px Reaper target while keeping its existing ground anchor and damage animation.
 - Increased the existing twelve-pose run cycle from 18 to 24 frames per second. Its images, stride distance, world movement, controls, and all gameplay timing remain unchanged.
-- **Verification:** pending regression, asset integrity, and actual Chromium pixel checks for the hurt and run poses. Android phone review follows publication.
+- **Verification:** gameplay regression, asset integrity, and actual Chromium pixel checks for the hurt and run poses passed; Pages deployment succeeded. Android phone review is the final appearance check.
 
 ## v0.10.6 — Tip-First Scythe Swing
 
