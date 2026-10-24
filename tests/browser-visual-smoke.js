@@ -6,6 +6,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
 const {chromium}=require('playwright');
+require('./asset-integrity.cjs');
 
 const root=path.resolve(__dirname,'..');
 const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8',
@@ -198,6 +199,37 @@ const server=http.createServer((req,res)=>{
   assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.firstBat,'gr_v2_bat_raised');
   assert.equal(v2Anchors.secondBat,'gr_v2_bat_mid_up','Bat flap advances through aligned in-between art');
   assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
+  // Check decoded pixels, not only texture keys or metadata constants.
+  const decoded=await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS;
+    return [...Object.values(V.V2_REAPER),...Object.values(V.V2_BAT)].map(m=>{
+      const image=s.textures.get(m.key).getSourceImage(),c=document.createElement('canvas');
+      c.width=image.width;c.height=image.height;const ctx=c.getContext('2d');ctx.drawImage(image,0,0);
+      const d=ctx.getImageData(0,0,c.width,c.height).data;
+      let opaque=0,black=0,minY=c.height,maxY=-1;
+      for(let i=0;i<d.length;i+=4)if(d[i+3]>32){opaque++;const y=Math.floor(i/4/c.width);minY=Math.min(minY,y);maxY=Math.max(maxY,y);if(d[i]+d[i+1]+d[i+2]<6)black++;}
+      return {key:m.key,coverage:opaque/(c.width*c.height),black:black/Math.max(1,opaque),height:(maxY-minY+1)*m.scale};
+    });
+  });
+  for(const p of decoded){assert.ok(p.coverage>.025&&p.coverage<.8,p.key+' silhouette coverage');assert.ok(p.black<.5,p.key+' is not a black rectangle');assert.ok(p.height>20,p.key+' is not a flattened fragment');}
+  const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
+  await page.setViewportSize({width:950,height:430});
+  for(const [name,time] of [['contact',0],['airborne',.11],['recovery',.21],['master',.31]]){
+    await page.evaluate(t=>{
+      const g=window.grimRun,s=g.scene.scenes[0];g.loop.stop();
+      s.state='playing';s.elapsed=t;s.damageFlashMs=0;Object.assign(s.player,{grounded:true,onSoulPlatform:false,sliding:false,airTuck:false,attackMs:0,visualFireMs:0,invulMs:0,slowMs:0});
+      s.enemies=[{kind:'bat',x:s.cameraX+600,y:150,mode:'glide',hp:2,phase:0,dead:false}];
+      s.drawScene();g.step(performance.now(),0);
+    },time);
+    await page.screenshot({path:path.join(artifactDir,'mobile-'+name+'.png')});
+  }
+  // A broken download must leave gameplay on the complete procedural Reaper.
+  await page.route('**/reaper_run_contact_v1.png*',route=>route.fulfill({status:200,contentType:'image/png',body:fs.readFileSync(path.join(root,'assets/characters/illustrated-v2/reaper/reaper_run_contact_v1.png')).subarray(0,786444)}));
+  await page.goto(origin+'/?art=review-v2&seed=33',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.loaded);
+  const rejected=await page.evaluate(()=>{const v=window.grimRun.scene.scenes[0].visuals;return {ready:v.reaperReady,poses:Object.keys(v.reaperPoseSprites).length,failed:v.failedAssets.some(x=>x.includes('byte count'))};});
+  assert.deepEqual(rejected,{ready:false,poses:0,failed:true});
+  await page.unroute('**/reaper_run_contact_v1.png*');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:30000});

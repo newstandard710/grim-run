@@ -122,6 +122,41 @@
     return snapFrame(BAT.flap,elapsed+(enemy.phase||0),9);
   }
 
+
+  // Review-only integrity gate. Validate the exact bytes handed to Phaser,
+  // rather than trusting an image load event (Chrome can display partial PNGs).
+  const REVIEW_INTEGRITY=Object.freeze({"reaper_run_airborne_v1.png":{"bytes":1350570,"sha256":"3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"},"reaper_run_recovery_v1.png":{"bytes":1179770,"sha256":"0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"},"reaper_fall_v1.png":{"bytes":1404482,"sha256":"a1859b8b51dac28d3d08d04cf7aa3fe9fbf262676f12abeda91b12bf34eb6218"},"reaper_jump_v1.png":{"bytes":1350180,"sha256":"aecd58ad785f1cf5d0f08e8cd9489bc39be236e32fdffcd4c263796ccbb05d3f"},"reaper_death_v1.png":{"bytes":727130,"sha256":"f0b71de8c58a670ec85bd663d8e096d590fe864417df1e136cde70dba4333915"},"reaper_crossbow_fire_v1.png":{"bytes":820955,"sha256":"8df8c45253c880c2b2cec44bcd68c20a5b2ba0aa9781bf5c41e0955b03f06a09"},"reaper_run_contact_v1.png":{"bytes":1200830,"sha256":"976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"},"reaper_hover_v1.png":{"bytes":952384,"sha256":"de4a4a8ec36540bf06313b6d140351aa3ddc02871600de868aa13ad806d2eb1d"},"reaper_slide_v1.png":{"bytes":995383,"sha256":"70c9a7c6e13132801eb02939b7a9bc3d466aa6216bff759b2863e82aa059baa8"},"reaper_run_v1.png":{"bytes":1444963,"sha256":"873cd968a4b4c56e21d46d1db634bd0a602cbd9c212738f593fbcaf295f10243"},"reaper_idle_v1.png":{"bytes":1306891,"sha256":"253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"},"reaper_scythe_attack_v1.png":{"bytes":1167906,"sha256":"7b13d15a6b6de3f88a4d64a8d08b46325d227af68c31cc8018baa9ac320b866f"},"reaper_hurt_v1.png":{"bytes":1102948,"sha256":"5c091e89477790ba47e985e71abde99581b3b88854836f60e84c3b4fec3341bc"},"bat_neutral_v1.png":{"bytes":972200,"sha256":"91bd27d39d7fa71f698563fafbac02eeb40ee9e3fb8590ec13a8f587b182eb94"},"bat_wings_raised_v1.png":{"bytes":793683,"sha256":"4b818264821d70908bfb5f882ace67e509e0b334520c6d683dfe9becccd85cd9"},"bat_hit_v1.png":{"bytes":801324,"sha256":"86fbb1025e86e36e7cbfd81b6ccd71ce88fb866fadcdf6a3febf3b2d6e72407e"},"bat_death_v1.png":{"bytes":605422,"sha256":"e912d431c1614ad5127edbdf8b817e0ab6e16571f4e852b45503204dd219cfda"},"bat_flap_mid_down_v1.png":{"bytes":536563,"sha256":"c568978e463b93cea21af3ecf18b0322c88e99a4ed463582760442261e02dcd4"},"bat_wings_lowered_v1.png":{"bytes":875269,"sha256":"87cc9202294f325eea8bd2cf4e4fcf01018fbe191eef72492ba90522c428886a"},"bat_dive_v1.png":{"bytes":873768,"sha256":"d946f909b05d8f2d79b28275c1b654b4761c1a196a69e9d54dec27e7b201a18b"},"bat_flap_mid_up_v1.png":{"bytes":608831,"sha256":"952debf01be31561941e34adb3b7ce5b00f2364a1e7ed37ddf9bf32472df9b34"}});
+  function validateReviewPNG(buffer,meta){
+    const b=new Uint8Array(buffer),v=new DataView(buffer);
+    if(b.length!==meta.bytes)throw new Error('PNG byte count mismatch');
+    if(b.length<33||v.getUint32(0)!==0x89504e47||v.getUint32(4)!==0x0d0a1a0a)throw new Error('Invalid PNG signature');
+    let p=8,end=false;
+    while(p+12<=b.length){
+      const n=v.getUint32(p);if(n>b.length-p-12)throw new Error('Incomplete PNG chunk');
+      let crc=0xffffffff;
+      for(let i=p+4;i<p+8+n;i++){crc^=b[i];for(let k=0;k<8;k++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}
+      if(((crc^0xffffffff)>>>0)!==v.getUint32(p+8+n))throw new Error('PNG checksum mismatch');
+      const type=String.fromCharCode(...b.subarray(p+4,p+8));p+=n+12;
+      if(type==='IEND'){end=true;break;}
+    }
+    if(!end||p!==b.length)throw new Error('PNG end marker missing or trailing data');
+    return true;
+  }
+  async function verifiedReviewURL(path,meta){
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+    try{
+      const response=await fetch(path+'?sha256='+meta.sha256,{cache:'no-store',signal:controller.signal});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const buffer=await response.arrayBuffer();validateReviewPNG(buffer,meta);
+      if(scope.crypto&&scope.crypto.subtle){
+        const digest=await scope.crypto.subtle.digest('SHA-256',buffer);
+        const hex=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+        if(hex!==meta.sha256)throw new Error('PNG SHA-256 mismatch');
+      }
+      return URL.createObjectURL(new Blob([buffer],{type:'image/png'}));
+    }finally{clearTimeout(timeout);}
+  }
+
   class GrimVisualSystem{
     constructor(scene){
       this.scene=scene;
@@ -134,6 +169,7 @@
       this.loadRequested=false;
       this.illustrated=false;
       this.reviewV2=false;
+      this.disposed=false;
       this.reaperPoseSprites={};
     }
     begin(){
@@ -279,23 +315,27 @@
          typeof s.textures.exists!=='function'||!s.add||typeof s.add.image!=='function')return false;
       if(this.loadRequested)return true;
       this.loadRequested=true;this.reviewV2=true;
-      const errors=new Set();
+      const errors=new Set(),urls=[];
       const fail=file=>{if(file&&file.key)errors.add(file.key);};
       const done=()=>{
         if(typeof s.load.off==='function')s.load.off('loaderror',fail);
+        for(const url of urls)URL.revokeObjectURL(url);
         try{
           for(const [name,meta] of Object.entries(V2_REAPER)){
             if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
             this.reaperPoseSprites[name]=s.add.image(0,0,meta.key)
               .setOrigin(0,0).setDepth(12).setVisible(false);
           }
-          if(this.reaperPoseSprites.idle&&this.reaperPoseSprites.run){
+          if(Object.keys(V2_REAPER).every(name=>this.reaperPoseSprites[name])){
             this.reaper=this.reaperPoseSprites.idle;this.reaperReady=true;
-          }else this.failedAssets.push('v2 Reaper PNGs unavailable');
+          }else {
+            for(const sprite of Object.values(this.reaperPoseSprites))sprite.destroy();
+            this.reaperPoseSprites={};this.failedAssets.push('Review Reaper incomplete; procedural fallback active');
+          }
           for(const [name,meta] of Object.entries(V2_BAT))
             if(errors.has(meta.key)||!s.textures.exists(meta.key))
               this.failedAssets.push('v2 Bat PNG unavailable: '+name);
-          if(s.textures.exists(V2_BAT.neutral.key)&&!errors.has(V2_BAT.neutral.key)){
+          if(Object.values(V2_BAT).every(meta=>s.textures.exists(meta.key)&&!errors.has(meta.key))){
             for(let i=0;i<12;i++)this.batPool.push(s.add.image(0,0,V2_BAT.neutral.key)
               .setOrigin(0,0).setDepth(9).setVisible(false));
             this.batReady=true;
@@ -308,15 +348,23 @@
           this.failedAssets.push('v2 sprite creation: '+String(e));
         }
       };
-      try{
+      const groups=[['assets/characters/illustrated-v2/reaper/',V2_REAPER],
+                    ['assets/enemies/illustrated-v2/bat/',V2_BAT]];
+      // Every pose is checked before any review sprites can become ready.
+      this.reviewLoad=Promise.all(groups.flatMap(([base,poses])=>Object.values(poses).map(async meta=>{
+        try{const url=await verifiedReviewURL(base+meta.file,REVIEW_INTEGRITY[meta.file]);
+          urls.push(url);return {meta,url};
+        }catch(e){errors.add(meta.key);this.failedAssets.push(meta.file+': '+String(e));return null;}
+      }))).then(entries=>{
         if(typeof s.load.on==='function')s.load.on('loaderror',fail);
         s.load.once('complete',done);
-        for(const [name,meta] of Object.entries(V2_REAPER))
-          s.load.image(meta.key,'assets/characters/illustrated-v2/reaper/'+meta.file);
-        for(const [name,meta] of Object.entries(V2_BAT))
-          s.load.image(meta.key,'assets/enemies/illustrated-v2/bat/'+meta.file);
+        if(this.disposed){for(const url of urls)URL.revokeObjectURL(url);return;}
+        const valid=entries.filter(Boolean);
+        if(!valid.length){done();return;}
+        for(const {meta,url} of valid)s.load.image(meta.key,url);
         s.load.start();
-      }catch(e){this.failedAssets.push('v2 loader: '+String(e));return false;}
+      }).catch(e=>{for(const url of urls)URL.revokeObjectURL(url);
+        this.failedAssets.push('v2 loader: '+String(e));this.loaded=true;});
       return true;
     }
     illustratedReaperPose(){
@@ -448,6 +496,7 @@
         this.batPool[i].setVisible(false);
     }
     shutdown(){
+      this.disposed=true;
       if(this.reaper){this.reaper.destroy();this.reaper=null;}
       for(const sprite of Object.values(this.reaperPoseSprites))if(sprite!==this.reaper)sprite.destroy();
       this.reaperPoseSprites={};
@@ -459,5 +508,5 @@
   scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED,
     ILLUSTRATED_RUN,ILLUSTRATED_BAT_FLAP,ILLUSTRATED_RUN_FPS,ILLUSTRATED_BAT_FPS,
     V2_REAPER,V2_BAT,V2_REAPER_RUN,V2_BAT_FLAP,V2_REAPER_RUN_FPS,V2_BAT_FLAP_FPS,
-    V2_REAPER_SCALE,V2_BAT_SCALE};
+    V2_REAPER_SCALE,V2_BAT_SCALE,REVIEW_INTEGRITY,validateReviewPNG};
 })(typeof window!=='undefined'?window:globalThis);

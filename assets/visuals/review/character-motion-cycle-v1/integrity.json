@@ -1,0 +1,86 @@
+{
+  "reaper_run_airborne_v1.png": {
+    "bytes": 1350570,
+    "sha256": "3bdb142a58b89d59014e0b8ccbda9cafdcfb130844d5a741f52491a06c8687b4"
+  },
+  "reaper_run_recovery_v1.png": {
+    "bytes": 1179770,
+    "sha256": "0fe01ec415e4f3af63a9db4bbb0adf2dfef8a220c517fd44d9eeef3cc6ffef10"
+  },
+  "reaper_fall_v1.png": {
+    "bytes": 1404482,
+    "sha256": "a1859b8b51dac28d3d08d04cf7aa3fe9fbf262676f12abeda91b12bf34eb6218"
+  },
+  "reaper_jump_v1.png": {
+    "bytes": 1350180,
+    "sha256": "aecd58ad785f1cf5d0f08e8cd9489bc39be236e32fdffcd4c263796ccbb05d3f"
+  },
+  "reaper_death_v1.png": {
+    "bytes": 727130,
+    "sha256": "f0b71de8c58a670ec85bd663d8e096d590fe864417df1e136cde70dba4333915"
+  },
+  "reaper_crossbow_fire_v1.png": {
+    "bytes": 820955,
+    "sha256": "8df8c45253c880c2b2cec44bcd68c20a5b2ba0aa9781bf5c41e0955b03f06a09"
+  },
+  "reaper_run_contact_v1.png": {
+    "bytes": 1200830,
+    "sha256": "976dd7516acd5fe8a9f44dcb339b3284186360f323a89e9e573f3801aed3521a"
+  },
+  "reaper_hover_v1.png": {
+    "bytes": 952384,
+    "sha256": "de4a4a8ec36540bf06313b6d140351aa3ddc02871600de868aa13ad806d2eb1d"
+  },
+  "reaper_slide_v1.png": {
+    "bytes": 995383,
+    "sha256": "70c9a7c6e13132801eb02939b7a9bc3d466aa6216bff759b2863e82aa059baa8"
+  },
+  "reaper_run_v1.png": {
+    "bytes": 1444963,
+    "sha256": "873cd968a4b4c56e21d46d1db634bd0a602cbd9c212738f593fbcaf295f10243"
+  },
+  "reaper_idle_v1.png": {
+    "bytes": 1306891,
+    "sha256": "253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"
+  },
+  "reaper_scythe_attack_v1.png": {
+    "bytes": 1167906,
+    "sha256": "7b13d15a6b6de3f88a4d64a8d08b46325d227af68c31cc8018baa9ac320b866f"
+  },
+  "reaper_hurt_v1.png": {
+    "bytes": 1102948,
+    "sha256": "5c091e89477790ba47e985e71abde99581b3b88854836f60e84c3b4fec3341bc"
+  },
+  "bat_neutral_v1.png": {
+    "bytes": 972200,
+    "sha256": "91bd27d39d7fa71f698563fafbac02eeb40ee9e3fb8590ec13a8f587b182eb94"
+  },
+  "bat_wings_raised_v1.png": {
+    "bytes": 793683,
+    "sha256": "4b818264821d70908bfb5f882ace67e509e0b334520c6d683dfe9becccd85cd9"
+  },
+  "bat_hit_v1.png": {
+    "bytes": 801324,
+    "sha256": "86fbb1025e86e36e7cbfd81b6ccd71ce88fb866fadcdf6a3febf3b2d6e72407e"
+  },
+  "bat_death_v1.png": {
+    "bytes": 605422,
+    "sha256": "e912d431c1614ad5127edbdf8b817e0ab6e16571f4e852b45503204dd219cfda"
+  },
+  "bat_flap_mid_down_v1.png": {
+    "bytes": 536563,
+    "sha256": "c568978e463b93cea21af3ecf18b0322c88e99a4ed463582760442261e02dcd4"
+  },
+  "bat_wings_lowered_v1.png": {
+    "bytes": 875269,
+    "sha256": "87cc9202294f325eea8bd2cf4e4fcf01018fbe191eef72492ba90522c428886a"
+  },
+  "bat_dive_v1.png": {
+    "bytes": 873768,
+    "sha256": "d946f909b05d8f2d79b28275c1b654b4761c1a196a69e9d54dec27e7b201a18b"
+  },
+  "bat_flap_mid_up_v1.png": {
+    "bytes": 608831,
+    "sha256": "952debf01be31561941e34adb3b7ce5b00f2364a1e7ed37ddf9bf32472df9b34"
+  }
+}

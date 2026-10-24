@@ -1,3 +1,32 @@
+# Grim Run — Approved illustrated character direction
+
+The approved simplified Reaper and Cavern Bat PNG artwork is authoritative for the opt-in review. Preserve its gothic cartoon/storybook appearance, silhouettes, costume, weapons and colors. Do not regenerate accepted poses merely to recreate a production stage.
+
+## Current production assets
+- Reaper: `assets/characters/illustrated-v2/reaper/`, 13 transparent poses, 1792 × 1536 canvas.
+- Bat: `assets/enemies/illustrated-v2/bat/`, eight transparent poses, 2304 × 1280 canvas.
+- Runtime metadata and state mapping: `assets/visuals/visual-system.js`.
+- Original motion sources: `assets/visuals/review/character-motion-cycle-v1/`.
+- Original static sources and additional review sheets remain preserved in the supplied handoff archive; not all were previously committed to GitHub.
+
+## Preserve during recovery
+The Reaper uses the existing (1250, 1420) anchor and 120/1111 normal scale. Sliding retains 80/1111 scale and its approximately 47px visible silhouette. The Bat uses (1500, 720) and 52/766 scale. These are visual settings, not collision geometry. Do not change controls, physics, God Mode, powers, vendors or progression for sprite recovery.
+
+## Production approach and outstanding work
+Shared canvases and eye registration exist. A reusable layered component rig has not been established. Preserve successful PNGs and evaluate actual cycle consistency before deciding whether any new components are useful. Current run/flap cycles require phone approval; approved still poses are not approval of their motion.
+
+The current four-pose run is 10fps; the eight-step Bat sequence is 12fps and repeats five unique flight drawings. Review body/weapon consistency, foot placement, wing continuity, slide clearance, and transitions at gameplay size. Do not treat matching overall bounds as proof of identical body proportions.
+
+## Validation and deployment
+Review-only image loading checks exact byte counts and PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's review set and retains its procedural fallback. `tests/asset-integrity.cjs` always checks all 21 runtime SHA-256 hashes. Browser tests inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
+
+Original source images must remain byte-for-byte intact. Verify remote sizes, Git blob hashes and downloaded SHA-256 after transfer. Never publish damaged data or promote review art on the strength of texture names alone.
+
+## Legacy guide
+The prior guide below documents the rejected experimental SVG path, not the approved PNG production direction.
+
+---
+
 # Grim Run — Macabre Storybook Fantasy Art Guide
 
 **Master art concept:** The Little Harbinger — stylized, illustrated dark fantasy, with an expressive hooded Reaper, bright spectral eyes, a layered weathered robe, and bold hand-painted silhouettes.
