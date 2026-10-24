@@ -83,9 +83,8 @@ const server=http.createServer((req,res)=>{
   assert.equal(playing.spriteX,playing.playerX,'Player sprite must follow collision origin');
   assert.ok(Math.abs(playing.spriteY-playing.footY)<=13);
   assert.deepEqual(errors,[],'Browser console errors');
-  // Review the painted, transparent PNGs in the real Phaser runtime without
-  // changing the default release path or using any animated frame sequence.
-  await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  // The previous illustrated PNG art remains available for comparison.
+  await page.goto(origin+'/?art=illustrated&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.loaded===true,null,{timeout:45000});
   const illustratedLoaded=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
@@ -141,10 +140,8 @@ const server=http.createServer((req,res)=>{
     'Scythe attack art stays the same apparent height as idle');
   assert.equal(staticReview.batVisible,true);assert.equal(staticReview.firstBat,'gr_ill_bat_raised');
   assert.equal(staticReview.batKey,'gr_ill_bat_midstroke','Bat wings visibly advance during flight');
-  // New transparent PNG pose set is available only through its static review
-  // path; verify the shared anchors/scales in actual Phaser without changing
-  // the v0.10.4 default or introducing an animation cycle.
-  await page.goto(origin+'/?art=review-v2&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
+  // The main game now uses the transparent PNG pose set by default.
+  await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>{
     const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
     return v?.loaded===true&&v.reviewV2===true;
@@ -256,12 +253,34 @@ const server=http.createServer((req,res)=>{
     for(let p=0;p<a.length;p+=4)if(Math.abs(a[p]-b[p])>18||Math.abs(a[p+1]-b[p+1])>18||Math.abs(a[p+2]-b[p+2])>18)changed++;
     assert.ok(changed>100,'adjacent run poses create visible pixel movement on the game canvas');
   }
-  // A broken download must leave gameplay on the complete procedural Reaper.
+  // Delay the full cycle except its contact pose. The main game must keep the
+  // verified Reaper visible while the remaining large images are loading.
+  const earlyPage=await browser.newPage({viewport:{width:950,height:430}});
+  await earlyPage.route('**/assets/characters/illustrated-v2/**',async route=>{
+    if(!route.request().url().includes('reaper_run_contact_v1.png'))
+      await new Promise(resolve=>setTimeout(resolve,2500));
+    await route.continue();
+  });
+  await earlyPage.goto(origin+'/?seed=44',{waitUntil:'domcontentloaded',timeout:45000});
+  await earlyPage.click('#start-btn');
+  await earlyPage.waitForFunction(()=>{
+    const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
+    return s?.state==='playing'&&v?.reviewV2===true&&
+      v.reaperPoseSprites.run_contact?.visible===true&&v.loaded===false;
+  },null,{timeout:12000});
+  const earlySprite=await earlyPage.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],v=s.visuals,p=v.reaperPoseSprites.run_contact;
+    return {visible:p.visible,texture:s.textures.exists('gr_v2_reaper_run_contact'),loading:!v.loaded};
+  });
+  assert.deepEqual(earlySprite,{visible:true,texture:true,loading:true},
+    'The Reaper stays visible while the remaining full-size art loads');
+  await earlyPage.close();
+  // A broken initial pose must not prevent the remaining valid motion art appearing.
   await page.route('**/reaper_run_contact_v1.png*',route=>route.fulfill({status:200,contentType:'image/png',body:fs.readFileSync(path.join(root,'assets/characters/illustrated-v2/reaper/reaper_run_contact_v1.png')).subarray(0,786444)}));
-  await page.goto(origin+'/?art=review-v2&seed=33',{waitUntil:'domcontentloaded'});
+  await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.loaded);
-  const rejected=await page.evaluate(()=>{const v=window.grimRun.scene.scenes[0].visuals;return {ready:v.reaperReady,poses:Object.keys(v.reaperPoseSprites).length,failed:v.failedAssets.some(x=>x.includes('byte count'))};});
-  assert.deepEqual(rejected,{ready:false,poses:0,failed:true});
+  const rejected=await page.evaluate(()=>{const v=window.grimRun.scene.scenes[0].visuals;return {ready:v.reaperReady,poses:Object.keys(v.reaperPoseSprites).length,contactPresent:Boolean(v.reaperPoseSprites.run_contact),failed:v.failedAssets.some(x=>x.includes('byte count'))};});
+  assert.deepEqual(rejected,{ready:true,poses:16,contactPresent:false,failed:true});
   await page.unroute('**/reaper_run_contact_v1.png*');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
@@ -305,7 +324,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.4 default, static v2 art preview anchors/scales, run/flap cycles, slide profile, procedural fallback, legacy atlas and God Mode tools.');
+  console.log('PASS actual Chromium: v0.10.4 main-game motion art, early Reaper visibility, PNG pixel integrity, previous-art comparison, procedural fallback, legacy atlas and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
