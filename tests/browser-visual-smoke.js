@@ -155,7 +155,7 @@ const server=http.createServer((req,res)=>{
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:10,bats:12,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:13,bats:12,
     textures:true,failures:[]});
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
@@ -171,12 +171,19 @@ const server=http.createServer((req,res)=>{
     const attack=v.reaperPoseSprites.scythe_attack;
     const attackVisible=attack.visible;
     const attackGround=Math.abs(attack.y+m.scythe_attack.anchor[1]*m.scythe_attack.scale-s.feetY);
-    s.player.attackMs=0;s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];v.render();
-    const flying=v.batPool[0];const flightKey=flying.texture.key;
+    s.player.attackMs=0;s.elapsed=0;
+    v.render();const firstRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+      name.startsWith('run')&&sprite.visible)?.[0];
+    s.elapsed=.11;v.render();const secondRun=Object.entries(v.reaperPoseSprites).find(([name,sprite])=>
+      name.startsWith('run')&&sprite.visible)?.[0];
+    s.enemies=[{kind:'bat',x:s.cameraX+320,y:160,mode:'glide',hp:2,phase:0,dead:false}];
+    s.elapsed=0;v.render();const flying=v.batPool[0],firstBat=flying.texture.key;
+    s.elapsed=.09;v.render();const secondBat=flying.texture.key;
     s.enemies[0].mode='dive';v.render();
     return {slideVisible,slideGround,slideHeight,attackVisible,
       attackGround,attackScale:attack.scale,runScale:m.run.scale,runHeight,
-      batVisible:flying.visible,flightKey,diveKey:flying.texture.key};
+      runFrame1:firstRun,runFrame2:secondRun,batVisible:flying.visible,
+      firstBat,secondBat,diveKey:flying.texture.key};
   });
   assert.equal(v2Anchors.slideVisible,true);assert.ok(v2Anchors.slideGround<.1);
   assert.ok(v2Anchors.slideHeight>46&&v2Anchors.slideHeight<48,
@@ -186,7 +193,10 @@ const server=http.createServer((req,res)=>{
     'v2 scythe pose uses the same apparent scale as the running pose');
   assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
-  assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.flightKey,'gr_v2_bat_neutral');
+  assert.equal(v2Anchors.runFrame1,'run_contact');
+  assert.equal(v2Anchors.runFrame2,'run_airborne','Reaper cycle advances between authored strides');
+  assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.firstBat,'gr_v2_bat_raised');
+  assert.equal(v2Anchors.secondBat,'gr_v2_bat_mid_up','Bat flap advances through aligned in-between art');
   assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
   // The prior procedural presentation remains an explicit fallback option.
   await page.goto(origin+'/?art=procedural&seed=33',{waitUntil:'domcontentloaded',timeout:45000});

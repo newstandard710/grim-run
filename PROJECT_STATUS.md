@@ -6,14 +6,15 @@
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
 **Verification:** All Node regression suites and the GitHub Actions real Chromium sprite smoke pass. **Live Android visual and performance playtesting pending.**
 
-## Character art review v2 — static Phaser preview
+## Character art review v2 — motion-cycle Phaser preview
 
 - Added a separate opt-in path: `?art=review-v2`. It loads the new transparent Reaper and Bat PNGs into the actual Phaser scene using fixed shared canvases, anchors, and scales.
-- Reaper state poses and Bat neutral/dive stills are mapped to existing visual states. Run and ordinary flight deliberately remain single stills in this review path; no animation frames have been added.
+- Reaper ground movement now cycles four anchored run drawings at 10 fps. Ordinary Bat flight cycles eight eye-aligned wing positions at 12 fps; dive remains on its existing pose.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
 - Default v0.10.4 art and the procedural fallback remain available. This preview does not change collision boxes, game balance, controls, or progression.
-- The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html) and light/dark contact sheets are in `assets/visuals/review/character-overhaul-v2/`.
-- **Next:** validate the new character scale and slide clearance in the real Phaser scene, then produce and tune the Reaper run and Bat wing cycles before considering a default-art replacement.
+- The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [run/flap review sheets](assets/visuals/review/character-motion-cycle-v1/README.md), and source PNGs document the review art.
+- Motion cycles are opt-in only; the default art is unchanged. Collision boxes, game balance, controls, and progression are unchanged.
+- **Next:** phone-test the Reaper cadence, Bat flap, silhouette, and performance. Promote cycles only after the in-game review passes.
 
 ## v0.10.4 — Sprite Motion Polish
 

@@ -50,10 +50,8 @@
       death:{key:'gr_ill_bat_death',file:'bat_death.png',scale:.167987,anchor:[512,320]}
     }
   });
-  // Static v2 art review. All Reaper poses share a 1792×1536 transparent
-  // canvas and one origin; Bat poses share a 2304×1280 canvas and eye pivot.
-  // This mode deliberately uses one run pose and one neutral flight pose so
-  // art scale/anchors can be checked before new animation frames are built.
+  // v2 review art uses shared transparent canvases and visual anchors. Its
+  // run and flap cycles are opt-in until phone playtesting accepts them.
   // Phone playtest showed the review Reaper read too small next to low
   // overhead hazards. Enlarge standard poses to the existing 120px target
   // (1.875×) while preserving the shared ground anchor; the crouched slide
@@ -63,6 +61,9 @@
   const V2_BAT_SCALE=52/766;
   const V2_REAPER=Object.freeze(Object.fromEntries([
     ['run','reaper_run_v1.png',V2_REAPER_SCALE],
+    ['run_contact','reaper_run_contact_v1.png',V2_REAPER_SCALE],
+    ['run_airborne','reaper_run_airborne_v1.png',V2_REAPER_SCALE],
+    ['run_recovery','reaper_run_recovery_v1.png',V2_REAPER_SCALE],
     ['idle','reaper_idle_v1.png',V2_REAPER_SCALE],
     ['jump','reaper_jump_v1.png',V2_REAPER_SCALE],
     ['fall','reaper_fall_v1.png',V2_REAPER_SCALE],
@@ -77,11 +78,18 @@
   })])));
   const V2_BAT=Object.freeze(Object.fromEntries([
     ['neutral','bat_neutral_v1.png'],['raised','bat_wings_raised_v1.png'],
+    ['mid_up','bat_flap_mid_up_v1.png'],['mid_down','bat_flap_mid_down_v1.png'],
     ['lowered','bat_wings_lowered_v1.png'],['dive','bat_dive_v1.png'],
     ['hit','bat_hit_v1.png'],['death','bat_death_v1.png']
   ].map(([name,file])=>[name,Object.freeze({
     key:'gr_v2_bat_'+name,file,scale:V2_BAT_SCALE,anchor:Object.freeze([1500,720])
   })])));
+  // The v2 review uses four distinct Reaper run drawings and an eight-step
+  // Bat flap assembled from its approved extremes plus two aligned in-betweens.
+  const V2_REAPER_RUN=Object.freeze(['run_contact','run_airborne','run_recovery','run']);
+  const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
+  const V2_REAPER_RUN_FPS=10;
+  const V2_BAT_FLAP_FPS=12;
   const snapFrame=(arr,time,fps)=>arr[Math.floor(Math.max(0,time)*fps)%arr.length];
 
   function reaperPose(scene){
@@ -368,6 +376,10 @@
     renderReviewV2(){
       const s=this.scene,p=s.player;
       let pose=this.illustratedReaperPose();
+      if(pose==='run'){
+        const frame=Math.floor(Math.max(0,s.elapsed||0)*V2_REAPER_RUN_FPS)%V2_REAPER_RUN.length;
+        pose=V2_REAPER_RUN[frame];
+      }
       if(!this.reaperPoseSprites[pose])pose=this.reaperPoseSprites.idle?'idle':'run';
       const playerVisible=Boolean(p)&&!['reliquary','refundConfirm'].includes(s.state);
       for(const [name,sprite] of Object.entries(this.reaperPoseSprites))
@@ -384,7 +396,9 @@
         const left=s.cameraX-100,right=s.cameraX+s.width+100;
         for(const e of s.enemies||[]){
           if(e.kind!=='bat'||e.dead||e.x<left||e.x>right||used>=this.batPool.length)continue;
-          const name=e.mode==='dive'?'dive':'neutral';
+          const flapFrame=Math.floor(Math.max(0,s.elapsed||0)*V2_BAT_FLAP_FPS+
+            (e.phase||0))%V2_BAT_FLAP.length;
+          const name=e.mode==='dive'?'dive':V2_BAT_FLAP[flapFrame];
           const bm=V2_BAT[name],sprite=this.batPool[used++],[ax,ay]=bm.anchor;
           sprite.setTexture(bm.key).setOrigin(0,0).setScale(bm.scale)
             .setPosition(e.x-ax*bm.scale,e.y-ay*bm.scale).setVisible(true)
@@ -444,5 +458,6 @@
   }
   scope.GRIM_VISUALS={GrimVisualSystem,reaperPose,cavernBatFrame,REAPER,BAT,CDN_PATHS,ILLUSTRATED,
     ILLUSTRATED_RUN,ILLUSTRATED_BAT_FLAP,ILLUSTRATED_RUN_FPS,ILLUSTRATED_BAT_FPS,
-    V2_REAPER,V2_BAT,V2_REAPER_SCALE,V2_BAT_SCALE};
+    V2_REAPER,V2_BAT,V2_REAPER_RUN,V2_BAT_FLAP,V2_REAPER_RUN_FPS,V2_BAT_FLAP_FPS,
+    V2_REAPER_SCALE,V2_BAT_SCALE};
 })(typeof window!=='undefined'?window:globalThis);
