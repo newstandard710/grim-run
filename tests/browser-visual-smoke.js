@@ -381,7 +381,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.5 slide scale/clearance, four-frame scythe swing, twelve-pose run cycle, early Reaper visibility, PNG pixel integrity, fallbacks and God Mode tools.');
+  console.log('PASS actual Chromium: v0.10.6 slide scale/clearance and tip-first scythe sweep, four-frame scythe swing, twelve-pose run cycle, early Reaper visibility, PNG pixel integrity, fallbacks and God Mode tools.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
