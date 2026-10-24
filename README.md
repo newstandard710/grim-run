@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.6 — Tip-First Scythe Swing**
+**Current playable build: v0.10.7 — Smoother Reaper Motion**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -15,7 +15,13 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The slide pose preserves the Reaper's head and torso size and is about 74px tall. Low branches are raised to a 76px opening; the 79px standing collider still hits them, so the player must slide. The existing 56×29 slide collider is unchanged.
 - The scythe attack plays four drawn poses over the existing 260ms action window, with the pointed edge leading the forward sweep. Attack timing and damage remain unchanged.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [Reaper dark](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/reaper_static_pose_review_light.jpg) sheets, and [Bat dark](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_dark.jpg) and [light](assets/visuals/review/character-overhaul-v2/bat_static_pose_review_light.jpg) sheets show the poses at review scale.
-- [Motion-cycle review sheets and source images](assets/visuals/review/character-motion-cycle-v1/README.md) document the four-pose Reaper run and eight-step Bat flap.
+- [Motion-cycle review sheets and source images](assets/visuals/review/character-motion-cycle-v1/README.md) document the twelve-pose Reaper run and eight-step Bat flap.
+
+## v0.10.7: Smoother Reaper Motion
+
+- The damage pose now renders at the same 120px visible height as the normal Reaper, so the Reaper no longer appears to shrink when hit.
+- The existing twelve-pose run cycle now plays at 24 frames per second instead of 18. The same artwork is reused; this changes only the visual cadence, not player speed or gameplay timing.
+- Chromium checks measure decoded hurt/run pixels at phone gameplay scale and verify all twelve running poses. Damage rules, controls, collisions, and progression remain unchanged.
 
 ## v0.10.6: Tip-First Scythe Swing
 

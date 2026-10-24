@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.6
+/* Grim Run — Macabre Storybook visual system, v0.10.7
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -101,7 +101,9 @@
     ['scythe_attack_03','scythe-swing-v1/impact_mobile_v1.png',0.44117647],
     ['scythe_attack_04','scythe-swing-v1/followthrough_mobile_v1.png',0.44117647],
     ['crossbow_fire','reaper_crossbow_fire_v1.png',V2_REAPER_SCALE],
-    ['hurt','reaper_hurt_v1.png',V2_REAPER_SCALE],
+    // The hurt drawing's opaque silhouette is 991px tall on the shared
+    // 1536px canvas, so normalize it to the same 120px visible height as run.
+    ['hurt','reaper_hurt_v1.png',120/991],
     ['death','reaper_death_v1.png',V2_REAPER_SCALE],
     ['hover','reaper_hover_v1.png',V2_REAPER_SCALE]
   ].map(([name,file,scale])=>[name,Object.freeze({
@@ -149,7 +151,7 @@
     'run_transition_03','run','run_stride_mid','run_transition_04'
   ]);
   const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
-  const V2_REAPER_RUN_FPS=18;
+  const V2_REAPER_RUN_FPS=24;
   const V2_BAT_FLAP_FPS=12;
   const snapFrame=(arr,time,fps)=>arr[Math.floor(Math.max(0,time)*fps)%arr.length];
 
