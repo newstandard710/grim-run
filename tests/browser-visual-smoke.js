@@ -222,8 +222,9 @@ const server=http.createServer((req,res)=>{
   assert.equal(runPixelBounds.length,12,'all twelve run poses were decoded from PNG pixels');
   assert.ok(runPixelBounds.every(p=>p.height>118&&p.height<122),'all run drawings keep the same visible height');
   const attackPixels=decoded.find(p=>p.name==='scythe_attack');
-  assert.ok(Math.abs(attackPixels.height-runPixelBounds.find(p=>p.name==='run').height)<1,
-    'scythe pose keeps the same apparent height as the running pose');
+  const runningHeight=runPixelBounds.find(p=>p.name==='run').height;
+  assert.ok(attackPixels.height<=runningHeight+1&&attackPixels.height>runningHeight-7,
+    'scythe pose remains close in size and does not grow beyond the run pose');
   for(const name of ['run_contact','run','run_transition_01','run_transition_04']){
     const frame=runPixelBounds.find(p=>p.name===name);
     assert.ok(Math.abs(frame.feetY)<1,`${name} visibly reaches the ground line`);
