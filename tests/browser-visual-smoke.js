@@ -231,8 +231,9 @@ const server=http.createServer((req,res)=>{
   }
   const eyeOffsets=runPixelBounds.map(p=>p.eyeX).filter(Number.isFinite);
   assert.equal(eyeOffsets.length,12,'all twelve run poses retain a visible cyan eye');
+  console.log('Measured run-frame eye offsets:',JSON.stringify(eyeOffsets));
   assert.ok(Math.max(...eyeOffsets)-Math.min(...eyeOffsets)<.35,
-    'decoded cyan-eye pixels stay registered across all running poses');
+    'decoded cyan-eye pixels stay registered across all running poses: '+JSON.stringify(eyeOffsets));
   const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
   await page.setViewportSize({width:950,height:430});
   const renderedRunFrames=[];
