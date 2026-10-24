@@ -348,15 +348,14 @@
         try{
           for(const [name,meta] of Object.entries(V2_REAPER)){
             if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
+            if(this.reaperPoseSprites[name])continue;
             this.reaperPoseSprites[name]=s.add.image(0,0,meta.key)
               .setOrigin(0,0).setDepth(12).setVisible(false);
           }
-          if(Object.keys(V2_REAPER).every(name=>this.reaperPoseSprites[name])){
-            this.reaper=this.reaperPoseSprites.idle;this.reaperReady=true;
-          }else {
-            for(const sprite of Object.values(this.reaperPoseSprites))sprite.destroy();
-            this.reaperPoseSprites={};this.failedAssets.push('Review Reaper incomplete; procedural fallback active');
-          }
+          const completeReaper=Object.keys(V2_REAPER).every(name=>this.reaperPoseSprites[name]);
+          this.reaper=this.reaperPoseSprites.idle||this.reaperPoseSprites.run_contact||null;
+          this.reaperReady=Boolean(this.reaper);
+          if(!completeReaper)this.failedAssets.push('Review Reaper incomplete; keeping the verified contact pose visible');
           for(const [name,meta] of Object.entries(V2_BAT))
             if(errors.has(meta.key)||!s.textures.exists(meta.key))
               this.failedAssets.push('v2 Bat PNG unavailable: '+name);
@@ -373,22 +372,54 @@
           this.failedAssets.push('v2 sprite creation: '+String(e));
         }
       };
-      const groups=[['assets/characters/illustrated-v2/reaper/',V2_REAPER],
-                    ['assets/enemies/illustrated-v2/bat/',V2_BAT]];
-      // Every pose is checked before any review sprites can become ready.
-      this.reviewLoad=Promise.all(groups.flatMap(([base,poses])=>Object.values(poses).map(async meta=>{
-        try{const url=await verifiedReviewURL(base+meta.file,REVIEW_INTEGRITY[meta.file]);
+      const reaperBase='assets/characters/illustrated-v2/reaper/';
+      const batBase='assets/enemies/illustrated-v2/bat/';
+      const initialMeta=V2_REAPER.run_contact;
+      const fetchVerified=async(base,meta)=>{
+        try{
+          const url=await verifiedReviewURL(base+meta.file,REVIEW_INTEGRITY[meta.file]);
           urls.push(url);return {meta,url};
         }catch(e){errors.add(meta.key);this.failedAssets.push(meta.file+': '+String(e));return null;}
-      }))).then(entries=>{
-        if(typeof s.load.on==='function')s.load.on('loaderror',fail);
-        s.load.once('complete',done);
+      };
+      // Start every download together, but put the contact pose into Phaser
+      // as soon as its own integrity check finishes. It keeps the Reaper
+      // visible while the larger set of review images is still loading.
+      const initialFetch=fetchVerified(reaperBase,initialMeta);
+      const remainingFetch=Promise.all([
+        ...Object.entries(V2_REAPER).filter(([name])=>name!=='run_contact')
+          .map(([,meta])=>fetchVerified(reaperBase,meta)),
+        ...Object.values(V2_BAT).map(meta=>fetchVerified(batBase,meta))
+      ]);
+      const installInitial=async()=>{
+        const entry=await initialFetch;
+        if(!entry||this.disposed)return;
+        await new Promise(resolve=>{
+          if(typeof s.load.on==='function')s.load.on('loaderror',fail);
+          s.load.once('complete',()=>{
+            if(typeof s.load.off==='function')s.load.off('loaderror',fail);
+            if(!this.disposed&&s.textures.exists(initialMeta.key)){
+              this.reaperPoseSprites.run_contact=s.add.image(0,0,initialMeta.key)
+                .setOrigin(0,0).setDepth(12).setVisible(false);
+              this.reaper=this.reaperPoseSprites.run_contact;
+              this.reaperReady=true;
+            }
+            resolve();
+          });
+          s.load.image(initialMeta.key,entry.url);
+          s.load.start();
+        });
+      };
+      this.reviewLoad=(async()=>{
+        await installInitial();
+        const entries=await remainingFetch;
         if(this.disposed){for(const url of urls)URL.revokeObjectURL(url);return;}
         const valid=entries.filter(Boolean);
+        if(typeof s.load.on==='function')s.load.on('loaderror',fail);
+        s.load.once('complete',done);
         if(!valid.length){done();return;}
         for(const {meta,url} of valid)s.load.image(meta.key,url);
         s.load.start();
-      }).catch(e=>{for(const url of urls)URL.revokeObjectURL(url);
+      })().catch(e=>{for(const url of urls)URL.revokeObjectURL(url);
         this.failedAssets.push('v2 loader: '+String(e));this.loaded=true;});
       return true;
     }
@@ -453,7 +484,8 @@
         const frame=Math.floor(Math.max(0,s.elapsed||0)*V2_REAPER_RUN_FPS)%V2_REAPER_RUN.length;
         pose=V2_REAPER_RUN[frame];
       }
-      if(!this.reaperPoseSprites[pose])pose=this.reaperPoseSprites.idle?'idle':'run';
+      if(!this.reaperPoseSprites[pose])pose=this.reaperPoseSprites.idle?'idle':
+        (V2_REAPER_RUN.find(name=>this.reaperPoseSprites[name])||Object.keys(this.reaperPoseSprites)[0]);
       const playerVisible=Boolean(p)&&!['reliquary','refundConfirm'].includes(s.state);
       for(const [name,sprite] of Object.entries(this.reaperPoseSprites))
         sprite.setVisible(name===pose&&playerVisible);
