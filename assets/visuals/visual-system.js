@@ -99,18 +99,18 @@
     key:'gr_v2_reaper_'+name,file,scale:V2_REAPER_RUN_SCALES[name]||scale,anchor:V2_REAPER_RUN_ANCHORS[name]||Object.freeze([1250,1420])
   })])));
   const V2_REAPER_RUN_MOBILE=Object.freeze({
-    run_contact:Object.freeze({key:'gr_v2_reaper_run_contact',file:'run-cycle-mobile-v1/run_contact_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.731,279.725])}),
-    run_contact_mid:Object.freeze({key:'gr_v2_reaper_run_contact_mid',file:'run-cycle-mobile-v1/run_contact_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.691,279.985])}),
-    run_transition_01:Object.freeze({key:'gr_v2_reaper_run_transition_01',file:'run-cycle-mobile-v1/run_transition_01_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([309.06,280.245])}),
-    run_airborne:Object.freeze({key:'gr_v2_reaper_run_airborne',file:'run-cycle-mobile-v1/run_airborne_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([297.511,286.135])}),
-    run_airborne_mid:Object.freeze({key:'gr_v2_reaper_run_airborne_mid',file:'run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([313.025,288.954])}),
-    run_transition_02:Object.freeze({key:'gr_v2_reaper_run_transition_02',file:'run-cycle-mobile-v1/run_transition_02_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([318.195,291.773])}),
-    run_recovery:Object.freeze({key:'gr_v2_reaper_run_recovery',file:'run-cycle-mobile-v1/run_recovery_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([287.722,300.198])}),
-    run_recovery_mid:Object.freeze({key:'gr_v2_reaper_run_recovery_mid',file:'run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([323.607,299.533])}),
-    run_transition_03:Object.freeze({key:'gr_v2_reaper_run_transition_03',file:'run-cycle-mobile-v1/run_transition_03_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([322.193,298.868])}),
-    run:Object.freeze({key:'gr_v2_reaper_run',file:'run-cycle-mobile-v1/run_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([274.082,280.0])}),
-    run_stride_mid:Object.freeze({key:'gr_v2_reaper_run_stride_mid',file:'run-cycle-mobile-v1/run_stride_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([310.48,280.245])}),
-    run_transition_04:Object.freeze({key:'gr_v2_reaper_run_transition_04',file:'run-cycle-mobile-v1/run_transition_04_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([305.245,280.49])})
+    run_contact:Object.freeze({key:'gr_v2_reaper_run_contact',file:'run-cycle-mobile-v1/run_contact_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.5,279.725])}),
+    run_contact_mid:Object.freeze({key:'gr_v2_reaper_run_contact_mid',file:'run-cycle-mobile-v1/run_contact_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([309.2,279.985])}),
+    run_transition_01:Object.freeze({key:'gr_v2_reaper_run_transition_01',file:'run-cycle-mobile-v1/run_transition_01_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([308.5,280.245])}),
+    run_airborne:Object.freeze({key:'gr_v2_reaper_run_airborne',file:'run-cycle-mobile-v1/run_airborne_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([297.154,286.135])}),
+    run_airborne_mid:Object.freeze({key:'gr_v2_reaper_run_airborne_mid',file:'run-cycle-mobile-v1/run_airborne_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([312.667,288.954])}),
+    run_transition_02:Object.freeze({key:'gr_v2_reaper_run_transition_02',file:'run-cycle-mobile-v1/run_transition_02_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([317.727,291.773])}),
+    run_recovery:Object.freeze({key:'gr_v2_reaper_run_recovery',file:'run-cycle-mobile-v1/run_recovery_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([287.5,300.198])}),
+    run_recovery_mid:Object.freeze({key:'gr_v2_reaper_run_recovery_mid',file:'run-cycle-mobile-v1/run_recovery_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([323.0,299.533])}),
+    run_transition_03:Object.freeze({key:'gr_v2_reaper_run_transition_03',file:'run-cycle-mobile-v1/run_transition_03_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([322.0,298.868])}),
+    run:Object.freeze({key:'gr_v2_reaper_run',file:'run-cycle-mobile-v1/run_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([273.857,280.0])}),
+    run_stride_mid:Object.freeze({key:'gr_v2_reaper_run_stride_mid',file:'run-cycle-mobile-v1/run_stride_mid_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([310.0,280.245])}),
+    run_transition_04:Object.freeze({key:'gr_v2_reaper_run_transition_04',file:'run-cycle-mobile-v1/run_transition_04_mobile_v1.png',scale:0.44117647,anchor:Object.freeze([305.0,280.49])})
   });
   const V2_REAPER=Object.freeze({...V2_REAPER_BASE,...V2_REAPER_RUN_MOBILE});
   const V2_BAT=Object.freeze(Object.fromEntries([
