@@ -13,12 +13,13 @@ See `RECOVERY_STATUS.md`. Six damaged Reaper PNGs restored in the recovery branc
 ## Character art review v2 — motion-cycle Phaser preview
 
 - Added a separate opt-in path: `?art=review-v2`. It loads the new transparent Reaper and Bat PNGs into the actual Phaser scene using fixed shared canvases, anchors, and scales.
-- Reaper ground movement now cycles four anchored run drawings at 10 fps. Ordinary Bat flight cycles eight eye-aligned wing positions at 12 fps; dive remains on its existing pose.
+- Reaper ground movement now cycles eight registered run drawings at 12 fps. Four original poses remain intact; four transition drawings were added after phone review found abrupt pose changes. Ordinary Bat flight cycles eight eye-aligned wing positions at 12 fps; dive remains on its existing pose.
+- The Reaper's run poses now use matching visible pixel heights and measured eye/ground anchors. This corrects size pulsing and sideways head movement while leaving collision geometry untouched.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
 - Default v0.10.4 art and the procedural fallback remain available. This preview does not change collision boxes, game balance, controls, or progression.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [run/flap review sheets](assets/visuals/review/character-motion-cycle-v1/README.md), and source PNGs document the review art.
 - Motion cycles are opt-in only; the default art is unchanged. Collision boxes, game balance, controls, and progression are unchanged.
-- **Next:** phone-test the Reaper cadence, Bat flap, silhouette, and performance. Promote cycles only after the in-game review passes.
+- **Next:** phone-test the Reaper cadence, Bat flap, silhouette, and performance. Reaper run-cycle v2 remains an opt-in preview until the phone review passes.
 
 ## v0.10.4 — Sprite Motion Polish
 

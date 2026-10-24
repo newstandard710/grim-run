@@ -1,0 +1,87 @@
+{
+  "cycle": "eight poses at 12 fps; original four v1 poses retained",
+  "canvas": [
+    1792,
+    1536
+  ],
+  "target_visual_height_px": 1111,
+  "eye_anchor_x": 1400,
+  "transitions": [
+    {
+      "runtime": "assets/characters/illustrated-v2/reaper/reaper_run_transition_01_v1.png",
+      "source": "assets/visuals/review/character-motion-cycle-v2/reaper-source/reaper_run_transition_01_source.png",
+      "source_file": "exec-6be0fbe6-2ec7-40ed-adb7-b1cce5dd190c.png",
+      "bytes": 1432602,
+      "sha256": "141cf50436a62789629cd8a488f6bc8da70992b442683572526f561711fc394a",
+      "visible_bounds_alpha16": [
+        172,
+        308,
+        1543,
+        1419
+      ],
+      "eye_registration": [
+        1400,
+        834
+      ],
+      "source_bytes": 1001099,
+      "source_sha256": "d4a6e43c1e46962da63bd7af5358bbc786c3ab8eff06948c8f8178d2db4f67d4"
+    },
+    {
+      "runtime": "assets/characters/illustrated-v2/reaper/reaper_run_transition_02_v1.png",
+      "source": "assets/visuals/review/character-motion-cycle-v2/reaper-source/reaper_run_transition_02_source.png",
+      "source_file": "exec-6a85c34c-fa79-4408-ad9e-8a7913e029cd.png",
+      "bytes": 1381487,
+      "sha256": "6aa4b4f225bc67d702e16dc3d89a6a9f1d89c6b6cbd075efc9c4d53401d1216b",
+      "visible_bounds_alpha16": [
+        136,
+        262,
+        1562,
+        1372
+      ],
+      "eye_registration": [
+        1400,
+        807
+      ],
+      "source_bytes": 827318,
+      "source_sha256": "d716473a0782df5e26e33c67e1a3b949894078f63044d7b177358eca3281a6ad"
+    },
+    {
+      "runtime": "assets/characters/illustrated-v2/reaper/reaper_run_transition_03_v1.png",
+      "source": "assets/visuals/review/character-motion-cycle-v2/reaper-source/reaper_run_transition_03_source.png",
+      "source_file": "exec-4d886cf2-070b-4035-8aad-b9d2e3075ef8.png",
+      "bytes": 1521275,
+      "sha256": "46e0e128ff50f2c988608eb92c8966ab3441bc396bcd2edb248ad96a224d3f70",
+      "visible_bounds_alpha16": [
+        117,
+        233,
+        1566,
+        1343
+      ],
+      "eye_registration": [
+        1400,
+        805
+      ],
+      "source_bytes": 953820,
+      "source_sha256": "b7cef1d9dd859379e29cb8e32c2ef288ee11e61d53f00d3b6a995c2eb4096d86"
+    },
+    {
+      "runtime": "assets/characters/illustrated-v2/reaper/reaper_run_transition_04_v1.png",
+      "source": "assets/visuals/review/character-motion-cycle-v2/reaper-source/reaper_run_transition_04_source.png",
+      "source_file": "exec-60a5ef72-86c3-4eb6-ad8f-9b3b0c3b5b86.png",
+      "bytes": 1380002,
+      "sha256": "c11a9085037ebbdacd2d18d2f74e61051af713d087f59b38a8c71713b37bf572",
+      "visible_bounds_alpha16": [
+        187,
+        307,
+        1562,
+        1418
+      ],
+      "eye_registration": [
+        1400,
+        833
+      ],
+      "source_bytes": 976149,
+      "source_sha256": "21b683101a7dc3ad267032f1ae9906a36288587b1db481afeb8ee339d4f60a8c"
+    }
+  ]
+}
