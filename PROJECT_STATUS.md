@@ -1,25 +1,24 @@
-## Recovery preview — pending phone acceptance
-
-See `RECOVERY_STATUS.md`. Six damaged Reaper PNGs restored in the recovery branch; integrity checks and complete-character fallback added. Earlier passing browser tests did not establish visual correctness. Default gameplay and art remain unchanged.
-
 # Grim Run — Project Status and Roadmap
+
+**Current build:** v0.10.4 — *Sprite Motion Polish* with the Reaper eight-pose cycle active by default. The verified contact pose appears first while the remaining art loads. Previous illustrated art remains available with `?art=illustrated`.
+
+The repaired Reaper files are in `main`; the actual Chromium checks pass. Phone review of startup timing and motion quality is still needed.
 
 **Release:** v0.10.4 — *Sprite Motion Polish*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
-**Source:** `main/index.html` once promoted to main  
+**Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
 **Verification:** All Node regression suites and the GitHub Actions real Chromium sprite smoke pass. **Live Android visual and performance playtesting pending.**
 
-## Character art review v2 — motion-cycle Phaser preview
+## Main Reaper motion cycle v2
 
-- Added a separate opt-in path: `?art=review-v2`. It loads the new transparent Reaper and Bat PNGs into the actual Phaser scene using fixed shared canvases, anchors, and scales.
+- The eight-pose motion cycle is now the normal game art. The verified contact pose appears while the remaining large images are checked and loaded, preventing a blank character during startup.
 - Reaper ground movement now cycles eight registered run drawings at 12 fps. Four original poses remain intact; four transition drawings were added after phone review found abrupt pose changes. Ordinary Bat flight cycles eight eye-aligned wing positions at 12 fps; dive remains on its existing pose.
 - The Reaper's run poses now use matching visible pixel heights and measured eye/ground anchors. This corrects size pulsing and sideways head movement while leaving collision geometry untouched.
 - After phone review found the Reaper too small, standard poses now render at the established 120px target (about 1.9× the prior review scale); the slide pose is 47px tall inside the unchanged 48px clearance. All poses retain the shared ground anchor.
-- Default v0.10.4 art and the procedural fallback remain available. This preview does not change collision boxes, game balance, controls, or progression.
+- Previous illustrated art remains available through `?art=illustrated`; procedural fallback remains available through `?art=procedural`. No collision boxes, game balance, controls, or progression changed.
 - The [interactive pose preview](assets/visuals/review/character-overhaul-v2/preview.html), [run/flap review sheets](assets/visuals/review/character-motion-cycle-v1/README.md), and source PNGs document the review art.
-- Motion cycles are opt-in only; the default art is unchanged. Collision boxes, game balance, controls, and progression are unchanged.
-- **Next:** phone-test the Reaper cadence, Bat flap, silhouette, and performance. Reaper run-cycle v2 remains an opt-in preview until the phone review passes.
+- **Next:** phone-test the Reaper cadence, Bat flap, silhouette, and startup timing on the main game.
 
 ## v0.10.4 — Sprite Motion Polish
 
@@ -63,10 +62,10 @@ See `RECOVERY_STATUS.md`. Six damaged Reaper PNGs restored in the recovery branc
 - **God Mode Distance Teleport:** From Pause, reveal slider and ±500m controls, selecting **500m to 9,500m in 500m increments**. Confirmation required. Cancel returns to pause. Confirm puts the Reaper onto safe ground near the target **without countdown**. Teleports are limited to an active run with God Mode enabled.
 - **World-state synchronization:** Portal boundary at 5,000m is traversed programmatically, giving the crossbow and using Underworld terrain/background; no portal/chest animation. Prior vendors are marked passed so no skipped upgrades or healing deals are granted. Enemies, active projectiles, generated ordinary obstacles and visual warnings are cleared near relocation; new spawn cursors are placed safely ahead. Rewind snapshots cannot cross teleport. Existing banked Souls are never duplicated; skipped pickups are not collected, and **any Soul touched later in a teleport-assisted test run remains visual-only and cannot add to the persistent Soul wallet or revival balance**.
 - **Scores:** Teleport-assisted runs are disqualified from writing `grim-run-v03-best` on death or victory. Other persistent Soul/reliquary records retain their normal rules. The cheat flag resets on a new run.
-- **Art fallback by default:** v0.10.1's character drawings were rejected. Until the replacement art is genuinely game-ready, the prior procedural Reaper and Bat show by default. Add `?art=experimental` only if you want to inspect the previously rejected SVG art; the opt-in does not affect saved data.
+- **At v0.10.2:** v0.10.1's character drawings were rejected, so the procedural Reaper and Bat showed by default. The later illustrated PNGs and the v2 motion cycle supersede that temporary art fallback.
 - **QA:** `tests/godmode-tools.cjs` passes 64 destinations across eight procedural seeds, forbidden destinations, UI confirmation/cancel, God Mode scope, 50% simulated clock/movement, portal/crossbow synchronization and score protections. All existing gameplay regression suites pass. Real Chromium game/Pause controls are additionally tested in `tests/browser-visual-smoke.js` on CI.
 
-### Artwork in development, NOT shipped yet
+### Original v0.10.2 art status (superseded)
 
 The new design target is a **lean, frightening, painted Grim Reaper with a legible scythe and expressive trailing fabrics**, and an **organic membranous Cavern Bat with anatomically readable body and wings**. The game-art production pipeline must yield distinct consistent transparent sprites for running/jumping/sliding/scythe and bat flapping/diving before the visual replacement is allowed. Concept-only art and frame extraction samples remain separate until that bar is met. This reverses the v0.10.0 mistake of shipping unattractive artwork on technical correctness alone.
 
