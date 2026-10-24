@@ -5,7 +5,9 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
+const crypto=require('node:crypto');
 const {chromium}=require('playwright');
+const {PNG}=require('pngjs');
 require('./asset-integrity.cjs');
 
 const root=path.resolve(__dirname,'..');
@@ -156,7 +158,7 @@ const server=http.createServer((req,res)=>{
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:13,bats:12,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:17,bats:12,
     textures:true,failures:[]});
   await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
@@ -195,33 +197,64 @@ const server=http.createServer((req,res)=>{
   assert.ok(v2Anchors.runHeight>119&&v2Anchors.runHeight<121,
     'v2 standard Reaper pose is enlarged to the approved phone-review scale');
   assert.equal(v2Anchors.runFrame1,'run_contact');
-  assert.equal(v2Anchors.runFrame2,'run_airborne','Reaper cycle advances between authored strides');
+  assert.equal(v2Anchors.runFrame2,'run_transition_01','Reaper cycle includes registered in-between poses');
   assert.equal(v2Anchors.batVisible,true);assert.equal(v2Anchors.firstBat,'gr_v2_bat_raised');
   assert.equal(v2Anchors.secondBat,'gr_v2_bat_mid_up','Bat flap advances through aligned in-between art');
   assert.equal(v2Anchors.diveKey,'gr_v2_bat_dive');
   // Check decoded pixels, not only texture keys or metadata constants.
   const decoded=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS;
-    return [...Object.values(V.V2_REAPER),...Object.values(V.V2_BAT)].map(m=>{
+    return [...Object.entries(V.V2_REAPER).map(([name,m])=>({name,m})),
+      ...Object.entries(V.V2_BAT).map(([name,m])=>({name,m}))].map(({name,m})=>{
       const image=s.textures.get(m.key).getSourceImage(),c=document.createElement('canvas');
       c.width=image.width;c.height=image.height;const ctx=c.getContext('2d');ctx.drawImage(image,0,0);
       const d=ctx.getImageData(0,0,c.width,c.height).data;
-      let opaque=0,black=0,minY=c.height,maxY=-1;
-      for(let i=0;i<d.length;i+=4)if(d[i+3]>32){opaque++;const y=Math.floor(i/4/c.width);minY=Math.min(minY,y);maxY=Math.max(maxY,y);if(d[i]+d[i+1]+d[i+2]<6)black++;}
-      return {key:m.key,coverage:opaque/(c.width*c.height),black:black/Math.max(1,opaque),height:(maxY-minY+1)*m.scale};
+      let opaque=0,black=0,minX=c.width,maxX=-1,minY=c.height,maxY=-1,eyeX=0,eyeY=0,eyeCount=0;
+      for(let i=0;i<d.length;i+=4){
+        const x=(i/4)%c.width,y=Math.floor(i/4/c.width);
+        if(d[i+3]>32){opaque++;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);if(d[i]+d[i+1]+d[i+2]<6)black++;}
+        if(d[i+3]>100&&d[i+1]>150&&d[i+2]>160&&d[i+1]>d[i]*1.25&&d[i+2]>d[i]*1.2){eyeX+=x;eyeY+=y;eyeCount++;}
+      }
+      return {name,key:m.key,coverage:opaque/(c.width*c.height),black:black/Math.max(1,opaque),
+        height:(maxY-minY+1)*m.scale,width:(maxX-minX+1)*m.scale,
+        feetY:(maxY-m.anchor[1])*m.scale,
+        eyeX:eyeCount?((eyeX/eyeCount)-m.anchor[0])*m.scale:null,
+        eyeY:eyeCount?((eyeY/eyeCount)-m.anchor[1])*m.scale:null};
     });
   });
   for(const p of decoded){assert.ok(p.coverage>.025&&p.coverage<.8,p.key+' silhouette coverage');assert.ok(p.black<.5,p.key+' is not a black rectangle');assert.ok(p.height>20,p.key+' is not a flattened fragment');}
+  const runPixelBounds=decoded.filter(p=>p.name.startsWith('run_')||p.name==='run');
+  assert.equal(runPixelBounds.length,8,'all eight run poses were decoded from PNG pixels');
+  assert.ok(runPixelBounds.every(p=>p.height>118&&p.height<122),'all run drawings keep the same visible height');
+  for(const name of ['run_contact','run','run_transition_01','run_transition_04']){
+    const frame=runPixelBounds.find(p=>p.name===name);
+    assert.ok(Math.abs(frame.feetY)<1,`${name} visibly reaches the ground line`);
+  }
+  const eyeOffsets=runPixelBounds.map(p=>p.eyeX).filter(Number.isFinite);
+  assert.equal(eyeOffsets.length,8,'all eight run poses retain a visible cyan eye');
+  assert.ok(Math.max(...eyeOffsets)-Math.min(...eyeOffsets)<.35,
+    'decoded cyan-eye pixels stay registered across all running poses');
   const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
   await page.setViewportSize({width:950,height:430});
-  for(const [name,time] of [['contact',0],['airborne',.11],['recovery',.21],['master',.31]]){
+  const renderedRunFrames=[];
+  for(const [i,name] of ['contact','transition-01','airborne','transition-02','recovery','transition-03','run','transition-04'].entries()){
+    const time=i/12;
     await page.evaluate(t=>{
       const g=window.grimRun,s=g.scene.scenes[0];g.loop.stop();
       s.state='playing';s.elapsed=t;s.damageFlashMs=0;Object.assign(s.player,{grounded:true,onSoulPlatform:false,sliding:false,airTuck:false,attackMs:0,visualFireMs:0,invulMs:0,slowMs:0});
-      s.enemies=[{kind:'bat',x:s.cameraX+600,y:150,mode:'glide',hp:2,phase:0,dead:false}];
+      s.enemies=[];
       s.drawScene();g.step(performance.now(),0);
     },time);
-    await page.screenshot({path:path.join(artifactDir,'mobile-'+name+'.png')});
+    const canvasPng=await page.locator('#game canvas').screenshot({path:path.join(artifactDir,'canvas-run-'+String(i+1).padStart(2,'0')+'.png')});
+    renderedRunFrames.push(PNG.sync.read(canvasPng).data);
+    await page.screenshot({path:path.join(artifactDir,'mobile-run-'+name+'.png')});
+  }
+  assert.equal(new Set(renderedRunFrames.map(pixels=>crypto.createHash('sha256').update(pixels).digest('hex'))).size,8,
+    'actual mobile-sized Phaser canvas renders eight distinct Reaper poses');
+  for(let i=1;i<renderedRunFrames.length;i++){
+    let changed=0;const a=renderedRunFrames[i-1],b=renderedRunFrames[i];
+    for(let p=0;p<a.length;p+=4)if(Math.abs(a[p]-b[p])>18||Math.abs(a[p+1]-b[p+1])>18||Math.abs(a[p+2]-b[p+2])>18)changed++;
+    assert.ok(changed>100,'adjacent run poses create visible pixel movement on the game canvas');
   }
   // A broken download must leave gameplay on the complete procedural Reaper.
   await page.route('**/reaper_run_contact_v1.png*',route=>route.fulfill({status:200,contentType:'image/png',body:fs.readFileSync(path.join(root,'assets/characters/illustrated-v2/reaper/reaper_run_contact_v1.png')).subarray(0,786444)}));

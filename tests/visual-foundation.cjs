@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.4-recovery1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.4-run-cycle-v2"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('else this.visuals.beginIllustrated()'),'Illustrated sprites are the current default');
 assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
 assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector atlas remains available');
@@ -28,8 +28,8 @@ assert.ok(Object.keys(V.ILLUSTRATED.reaper).includes('slide'));
 assert.ok(Math.abs(511*V.ILLUSTRATED.reaper.slide.scale-40)<.2,'Crouch art uses the revised 40px profile');
 assert.equal(V.ILLUSTRATED_RUN.length,4);assert.equal(V.ILLUSTRATED_BAT_FLAP.length,4);
 assert.equal(V.ILLUSTRATED_RUN_FPS,10);assert.equal(V.ILLUSTRATED_BAT_FPS,9);
-assert.deepEqual(Array.from(V.V2_REAPER_RUN),['run_contact','run_airborne','run_recovery','run']);
-assert.equal(V.V2_REAPER_RUN_FPS,10);
+assert.deepEqual(Array.from(V.V2_REAPER_RUN),['run_contact','run_transition_01','run_airborne','run_transition_02','run_recovery','run_transition_03','run','run_transition_04']);
+assert.equal(V.V2_REAPER_RUN_FPS,12);
 assert.equal(V.V2_BAT_FLAP.length,8);assert.equal(V.V2_BAT_FLAP_FPS,12);
 for(const pose of V.V2_REAPER_RUN)
  assert.ok(V.V2_REAPER[pose],`v2 Reaper cycle frame ${pose} has metadata`);
