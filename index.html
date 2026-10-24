@@ -1447,7 +1447,7 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/visual-system.js?v=0.10.4-run-cycle-v2"></script>
+  <script src="assets/visuals/visual-system.js?v=0.10.4-main-run-cycle-v3"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1556,8 +1556,8 @@ window.GRIM_CONFIG = Object.freeze({
         if(artMode==='procedural'){
           // Keep Phaser's original procedural Reaper/Bat renderers active.
         }else if(artMode==='experimental')this.visuals.begin();
-        else if(artMode==='review-v2')this.visuals.beginReviewV2();
-        else this.visuals.beginIllustrated();
+        else if(artMode==='illustrated')this.visuals.beginIllustrated();
+        else this.visuals.beginReviewV2();
         this.events.once('shutdown',()=>this.visuals.shutdown());
       }
       this.drawScene();

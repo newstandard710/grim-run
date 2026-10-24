@@ -4,8 +4,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.4-run-cycle-v2"></script>'), 'Versioned art JS avoids stale mobile cached loader');
-assert.ok(html.includes('else this.visuals.beginIllustrated()'),'Illustrated sprites are the current default');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.4-main-run-cycle-v3"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Eight-pose Reaper motion art is the main-game default');
+assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
 assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
 assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector atlas remains available');
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
@@ -152,7 +153,7 @@ assert.equal(invalid.batReady,false,'Failure must leave procedural Bat enabled')
 assert.ok(invalid.failedAssets.length>=2);
 console.log('PASS v0.10.3: vector atlas poses, static PNG mapping, safe procedural fallback, bat pool and anchored slide.');
 
-// Production PNG review mode loads only static images, and the menu/default path stays unchanged.
+// Previous illustrated art remains available as an explicit comparison mode.
 const staticTextures=new Map(),staticNodes=[];let staticDone;
 const staticScene={
  load:{image(key,file){staticTextures.set(key,{file});return this;},on(){},off(){},once(_key,fn){staticDone=fn;},start(){staticDone();}},
