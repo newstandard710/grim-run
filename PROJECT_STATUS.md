@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Pending v0.11.12 build and phone-size Chromium checks. The v0.11.11 ground-tile implementation has been removed after the user found it unlike the approved concepts. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Local transition, visual-foundation and encounter checks pass. Phone-size Chromium captures confirm the approved Forest foreground and the crystal concept at 6,494m, visible through the terrain with no repeating ground texture layer or obsolete ground tiles. The browser workflow later fails at the separate Reaper run-pose height assertion, and the regression workflow fails at the separate seed 1 run-completion assertion. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
 
 ## v0.11.12 — Concept Foregrounds
 
