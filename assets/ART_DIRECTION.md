@@ -7,6 +7,7 @@ The approved Reaper, Cavern Bat and Skeletal Bat PNG artwork is authoritative. P
 - Bat: `assets/enemies/illustrated-v2/bat/`, eight transparent poses, 2304 × 1280 canvas.
 - Skeletal Bat: `assets/enemies/illustrated-v2/skeletal-bat/`, approved eight-pose atlas, 1254 × 1254 canvas.
 - Bone Crawler: `assets/enemies/illustrated-v2/bone-crawler/`, four opt-in crawl poses, 1477 × 1065 canvas per frame, scaled for an 85–93px silhouette and mirrored rightward at runtime.
+- Ember Imp: `assets/enemies/illustrated-v2/ember-imp/ember_imp_atlas_v1.png`, six opt-in 256 × 256 frames in a 768 × 512 atlas.
 - Runtime metadata and state mapping: `assets/visuals/visual-system.js`.
 - Original motion sources: `assets/visuals/review/character-motion-cycle-v1/`.
 - Original static sources and additional review sheets remain preserved in the supplied handoff archive; not all were previously committed to GitHub.
@@ -15,7 +16,7 @@ The approved Reaper, Cavern Bat and Skeletal Bat PNG artwork is authoritative. P
 The Reaper uses the existing (1250, 1420) anchor and 120/1111 normal scale. Sliding retains 80/1111 scale and its approximately 47px visible silhouette. The Bat uses (1500, 720) and 52/766 scale. These are visual settings, not collision geometry. Do not change controls, physics, God Mode, powers, vendors or progression for sprite recovery.
 
 ## Production approach and outstanding work
-Shared canvases and eye registration exist. A reusable layered component rig has not been established. Preserve successful PNGs and evaluate actual cycle consistency before deciding whether any new components are useful. The Reaper, Cavern Bat and Skeletal Bat art are accepted. Bone Crawler art remains opt-in until reviewed in the actual game at phone scale; Ember Imp art is next.
+Shared canvases and eye registration exist. A reusable layered component rig has not been established. Preserve successful PNGs and evaluate actual cycle consistency before deciding whether any new components are useful. The Reaper, Cavern Bat and Skeletal Bat art are accepted. Bone Crawler and Ember Imp art remain opt-in until reviewed in the actual game at phone scale.
 
 The approved Reaper run has eight poses at 12fps; the approved Cavern Bat cycle has eight steps at 12fps, including repeated transition poses. Review body/weapon consistency, foot placement, wing continuity, slide clearance, and transitions at gameplay size. Do not treat matching overall bounds as proof of identical body proportions.
 
@@ -25,8 +26,11 @@ The approved atlas is `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_a
 ## Bone Crawler phone-review art
 The four frames are `crawler_crawl_01_v1.png` through `crawler_crawl_04_v1.png` under `assets/enemies/illustrated-v2/bone-crawler/`. Each transparent frame is 1477 × 1065px and shares a center origin and foot baseline. The cycle plays at 8fps. At 2.5× the initial review scale, the visible silhouette varies from about 85–93px tall and 112–131px wide, close to a large dog beside the Reaper's 120px visible target. The runtime mirrors each pose horizontally so the crawler faces right; source PNGs are unchanged. Its 95 × 105 collision box is 2.5× the original box and rests on the same ground line. Load the set only with `?enemyReview=bone-crawler`. Preserve its one HP, ground movement, ledge stopping, spawn schedule and contact-damage behavior. Missing or invalid files leave the enlarged procedural crawler visible.
 
+## Ember Imp review art
+The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames and a shared foot baseline. Frames 1–3 and 6 form a four-pose run cycle facing right at 8fps; frames 4–5 show its existing fire warning and release poses turning toward the Reaper. The visible silhouette target is about 55px tall. Load it only with `?enemyReview=ember-imp`. Preserve the 2 HP, 38 × 42 collision box, movement, 470ms warning, fireball launch/cooldown, and separate projectile effect. Missing or invalid art leaves the procedural Imp visible.
+
 ## Validation and deployment
-Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers 28 Reaper and Cavern Bat runtime poses, the approved Skeletal Bat atlas, and four opt-in Bone Crawler poses. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
+Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses, the approved Skeletal Bat atlas, four opt-in Bone Crawler poses, and the opt-in Ember Imp atlas. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
 
 Original source images must remain byte-for-byte intact. Verify remote sizes, Git blob hashes and downloaded SHA-256 after transfer. Never publish damaged data or promote review art on the strength of texture names alone.
 

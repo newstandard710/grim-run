@@ -6,7 +6,8 @@ vm.runInNewContext(fs.readFileSync(path.join(root,'assets/visuals/visual-system.
 const V=w.GRIM_VISUALS,toArray=b=>b.buffer.slice(b.byteOffset,b.byteOffset+b.length);
 const skeletalBatOnly=process.argv.includes('--skeletal-bat-only');
 const boneCrawlerOnly=process.argv.includes('--bone-crawler-only');
-const focusedEnemyOnly=skeletalBatOnly||boneCrawlerOnly;
+const emberImpOnly=process.argv.includes('--ember-imp-only');
+const focusedEnemyOnly=skeletalBatOnly||boneCrawlerOnly||emberImpOnly;
 let count=0;
 if(!focusedEnemyOnly)for(const [base,poses] of [['assets/characters/illustrated-v2/reaper/',V.V2_REAPER],['assets/enemies/illustrated-v2/bat/',V.V2_BAT]]){
  for(const meta of Object.values(poses)){
@@ -20,7 +21,7 @@ if(!focusedEnemyOnly)for(const [base,poses] of [['assets/characters/illustrated-
   count++;
  }
 }
-if(!boneCrawlerOnly){
+if(!boneCrawlerOnly&&!emberImpOnly){
  const meta=V.V2_SKELETAL_BAT_ATLAS,b=fs.readFileSync(path.join(root,'assets/enemies/illustrated-v2/skeletal-bat/',meta.file));
  const expected=V.REVIEW_INTEGRITY[meta.file];
  assert.equal(b.length,expected.bytes,meta.file+' size');
@@ -33,7 +34,7 @@ if(!boneCrawlerOnly){
  assert.equal(b.readUInt32BE(20),meta.height,'Skeletal Bat PNG height');
  count++;
 }
-if(!skeletalBatOnly){
+if(!skeletalBatOnly&&!emberImpOnly){
  for(const meta of V.V2_BONE_CRAWLER_FRAMES){
   const b=fs.readFileSync(path.join(root,'assets/enemies/illustrated-v2/bone-crawler/',meta.file));
   const expected=V.REVIEW_INTEGRITY[meta.file];
@@ -49,6 +50,21 @@ if(!skeletalBatOnly){
     'same-size corrupted Bone Crawler PNG must fail');
   count++;
  }
+}
+if(!skeletalBatOnly&&!boneCrawlerOnly){
+ const meta=V.V2_EMBER_IMP_ATLAS,b=fs.readFileSync(path.join(root,'assets/enemies/illustrated-v2/ember-imp/',meta.file));
+ const expected=V.REVIEW_INTEGRITY[meta.file];
+ assert.equal(b.length,expected.bytes,meta.file+' size');
+ assert.equal(crypto.createHash('sha256').update(b).digest('hex'),expected.sha256,meta.file+' SHA-256');
+ assert.equal(V.validateReviewPNG(toArray(b),expected),true);
+ assert.equal(b.readUInt32BE(16),meta.width,'Ember Imp atlas width');
+ assert.equal(b.readUInt32BE(20),meta.height,'Ember Imp atlas height');
+ assert.throws(()=>V.validateReviewPNG(toArray(b.subarray(0,Math.floor(b.length/2))),expected),
+   'truncated Ember Imp atlas must fail');
+ const corrupt=Buffer.from(b);corrupt[Math.floor(b.length/2)]^=1;
+ assert.throws(()=>V.validateReviewPNG(toArray(corrupt),expected),
+   'same-size corrupted Ember Imp atlas must fail');
+ count++;
 }
 console.log('PASS '+count+' review PNGs: exact SHA-256, sizes, PNG chunk checksums; truncated and same-size corrupted images rejected.');
 

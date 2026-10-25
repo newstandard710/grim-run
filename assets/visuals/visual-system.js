@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.13 review build
+/* Grim Run — Macabre Storybook visual system, v0.10.14 review build
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -145,6 +145,22 @@
       file:'crawler_crawl_'+number+'_v1.png',width:1477,height:1065,
       scale:V2_BONE_CRAWLER_SCALE,origin:Object.freeze([.5,.5])});
   }));
+  // The Ember Imp atlas has four right-facing run poses, then its warning and
+  // release poses. Each normalized 256px cell shares a 245px foot baseline.
+  const V2_EMBER_IMP_ATLAS=Object.freeze({
+    key:'gr_v2_ember_imp_atlas',file:'ember_imp_atlas_v1.png',width:768,height:512,
+    frameWidth:256,frameHeight:256,scale:55/175,origin:Object.freeze([.5,245/256])
+  });
+  const V2_EMBER_IMP_FRAMES=Object.freeze([
+    Object.freeze({name:'run_01',x:0,y:0,width:256,height:256}),
+    Object.freeze({name:'run_02',x:256,y:0,width:256,height:256}),
+    Object.freeze({name:'run_03',x:512,y:0,width:256,height:256}),
+    Object.freeze({name:'warning',x:0,y:256,width:256,height:256}),
+    Object.freeze({name:'release',x:256,y:256,width:256,height:256}),
+    Object.freeze({name:'run_04',x:512,y:256,width:256,height:256})
+  ]);
+  const V2_EMBER_IMP_RUN=Object.freeze(['run_01','run_02','run_03','run_04']);
+  const V2_EMBER_IMP_FPS=8;
   // Eight balanced gait poses alternate legs; no vertical scale changes.
   const V2_REAPER_RUN=Object.freeze(Array.from({length:8},(_,i)=>'run_pose_'+String(i+1).padStart(2,'0')));
   const V2_BAT_FLAP=Object.freeze(['raised','mid_up','neutral','mid_down','lowered','mid_down','neutral','mid_up']);
@@ -208,7 +224,8 @@
     'crawler_crawl_01_v1.png':{bytes:784355,sha256:'9096e505ba2deb821818963a03607572e43f7d828d17ecb7cceae8b0ed8e1db2'},
     'crawler_crawl_02_v1.png':{bytes:644258,sha256:'5e0aea0c0dce9cc4c30675ab5e3f89c0ca148dffb6160f8095ae4d1505b8d2b0'},
     'crawler_crawl_03_v1.png':{bytes:691099,sha256:'8599c38234f8295f906df46d5f6bbc2b84569937fe0a80896f30a61494ec64b9'},
-    'crawler_crawl_04_v1.png':{bytes:759683,sha256:'c553ee9797f533486e8cfcf2a736f5fbb6efda8aca616d91668acdaed1ef86e2'}
+    'crawler_crawl_04_v1.png':{bytes:759683,sha256:'c553ee9797f533486e8cfcf2a736f5fbb6efda8aca616d91668acdaed1ef86e2'},
+    'ember_imp_atlas_v1.png':{bytes:282882,sha256:'e07deb8e2b82355c8b89333d8aec3f1c98fcc4a411828128623d90874f1f194c'}
   });
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);
@@ -262,6 +279,9 @@
       this.boneCrawlerReviewRequested=false;
       this.boneCrawlerReady=false;
       this.boneCrawlerPool=[];
+      this.emberImpReviewRequested=false;
+      this.emberImpReady=false;
+      this.emberImpPool=[];
     }
     begin(){
       const s=this.scene;
@@ -421,6 +441,7 @@
       const batBase='assets/enemies/illustrated-v2/bat/';
       const skeletalBatBase='assets/enemies/illustrated-v2/skeletal-bat/';
       const boneCrawlerBase='assets/enemies/illustrated-v2/bone-crawler/';
+      const emberImpBase='assets/enemies/illustrated-v2/ember-imp/';
       const firstRunPose=V2_REAPER_RUN[0];
       const fetchVerified=async(base,meta)=>{
         try{
@@ -545,6 +566,32 @@
             }
           }else this.failedAssets.push('Bone Crawler PNG set unavailable; procedural fallback remains active');
         }
+        if(this.emberImpReviewRequested){
+          const meta=V2_EMBER_IMP_ATLAS;
+          await loadNames(emberImpBase,[[meta.key,meta]]);
+          if(!this.disposed&&!errors.has(meta.key)&&s.textures.exists(meta.key)){
+            try{
+              const texture=s.textures.get(meta.key),source=texture.getSourceImage();
+              if(!source||source.width!==meta.width||source.height!==meta.height)
+                throw new Error('Ember Imp atlas dimensions do not match metadata');
+              for(const frame of V2_EMBER_IMP_FRAMES){
+                if(!texture.add(frame.name,0,frame.x,frame.y,frame.width,frame.height))
+                  throw new Error('Could not add Ember Imp frame '+frame.name);
+              }
+              if(!V2_EMBER_IMP_FRAMES.every(frame=>texture.has(frame.name)))
+                throw new Error('Ember Imp atlas is missing pose frames');
+              for(let i=0;i<12;i++)this.emberImpPool.push(
+                s.add.sprite(0,0,meta.key,'run_01')
+                  .setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
+                  .setDepth(9).setVisible(false));
+              this.emberImpReady=true;
+            }catch(e){
+              for(const sprite of this.emberImpPool)sprite.destroy();
+              this.emberImpPool=[];this.emberImpReady=false;
+              this.failedAssets.push('Ember Imp atlas: '+String(e));
+            }
+          }else this.failedAssets.push('Ember Imp atlas unavailable; procedural fallback remains active');
+        }
         this.loaded=true;
       })().catch(e=>{
         for(const url of urls)URL.revokeObjectURL(url);
@@ -655,6 +702,26 @@
       }
       for(let i=used;i<this.boneCrawlerPool.length;i++)this.boneCrawlerPool[i].setVisible(false);
     }
+    renderEmberImps(){
+      const s=this.scene,meta=V2_EMBER_IMP_ATLAS;
+      if(!this.emberImpReady)return;
+      let used=0;
+      if(!['menu','reliquary','refundConfirm'].includes(s.state)){
+        const left=s.cameraX-100,right=s.cameraX+s.width+100,now=Math.max(0,s.elapsed||0);
+        for(const e of s.enemies||[]){
+          if(e.kind!=='imp'||e.dead||e.x<left||e.x>right||used>=this.emberImpPool.length)continue;
+          const launched=(s.fireballs||[]).some(ball=>ball.owner===e&&!ball.dead&&ball.ageMs<=260);
+          const frame=e.warningMs>0?'warning':launched?'release':
+            V2_EMBER_IMP_RUN[Math.floor(now*V2_EMBER_IMP_FPS+(e.phase||0))%V2_EMBER_IMP_RUN.length];
+          const sprite=this.emberImpPool[used++];
+          // The atlas is anchored to the existing 38x42 imp collision footprint.
+          sprite.setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
+            .setPosition(e.x,e.y+22).setFrame(frame).setVisible(true)
+            .setAlpha(1).setRotation(0);
+        }
+      }
+      for(let i=used;i<this.emberImpPool.length;i++)this.emberImpPool[i].setVisible(false);
+    }
     renderReviewV2(){
       const s=this.scene,p=s.player;
       let pose=this.illustratedReaperPose();
@@ -700,6 +767,7 @@
       for(let i=used;i<this.batPool.length;i++)this.batPool[i].setVisible(false);
       this.renderSkeletalBats();
       this.renderBoneCrawlers();
+      this.renderEmberImps();
     }
     render(){
       const s=this.scene;
@@ -752,6 +820,8 @@
       this.skeletalBatPool=[];this.skeletalBatReady=false;
       for(const sprite of this.boneCrawlerPool)sprite.destroy();
       this.boneCrawlerPool=[];this.boneCrawlerReady=false;
+      for(const sprite of this.emberImpPool)sprite.destroy();
+      this.emberImpPool=[];this.emberImpReady=false;
       this.reaperReady=false;this.batReady=false;
     }
   }
@@ -763,5 +833,6 @@
     V2_REAPER_SCALE,V2_BAT_SCALE,V2_SKELETAL_BAT_ATLAS,V2_SKELETAL_BAT_FRAMES,
     V2_SKELETAL_BAT_FLAP,V2_SKELETAL_BAT_FLAP_FPS,
     V2_BONE_CRAWLER_FRAMES,V2_BONE_CRAWLER_FPS,V2_BONE_CRAWLER_SCALE,
+    V2_EMBER_IMP_ATLAS,V2_EMBER_IMP_FRAMES,V2_EMBER_IMP_RUN,V2_EMBER_IMP_FPS,
     REVIEW_INTEGRITY,validateReviewPNG};
 })(typeof window!=='undefined'?window:globalThis);
