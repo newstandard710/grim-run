@@ -1,4 +1,4 @@
-/* Grim Run — Opening Forest World Art, v0.11.0 preview
+/* Grim Run — Forest and Foothills World Art, v0.11.1 review
  * Pure presentation helpers. They never write terrain, collision or game state.
  */
 (function(scope){
@@ -62,6 +62,31 @@
     }
   }
 
+  function drawRollingHills(scene,g,w,baseY,spacing,factor,amplitude,color,alpha,highlight,seed){
+    const offset=scene.cameraX*factor;
+    const first=Math.floor(offset/spacing)-2;
+    const last=first+Math.ceil(w/spacing)+4;
+    for(let n=first;n<last;n++){
+      const x=n*spacing-offset;
+      const variation=(Math.sin(n*13.37+seed)+1)*.5;
+      const rise=amplitude*(.48+variation*.42);
+      const peakX=x+spacing*(.34+variation*.18);
+      const peakY=baseY-rise;
+      g.fillStyle(color,alpha);
+      g.fillPoints([
+        {x:x-spacing*.12,y:baseY+22},
+        {x:x-spacing*.08,y:baseY-rise*.18},
+        {x:x+spacing*.16,y:baseY-rise*.68},
+        {x:peakX,y:peakY},
+        {x:x+spacing*.73,y:baseY-rise*.73},
+        {x:x+spacing*1.08,y:baseY+22}
+      ],true);
+      g.lineStyle(1.4,highlight,alpha*.32);
+      g.lineBetween(x-spacing*.08,baseY-rise*.18,peakX,peakY+rise*.06);
+      g.lineBetween(peakX,peakY+rise*.06,x+spacing*.73,baseY-rise*.73);
+    }
+  }
+
   function drawOpeningForest(scene,g,w,h,groundY){
     const meters=clamp(scene.distance||0,0,1200);
     const climb=clamp(meters/1200,0,1);
@@ -113,8 +138,74 @@
     }
   }
 
+  function drawFoothills(scene,g,w,h,groundY){
+    const meters=clamp(scene.distance||0,900,2300);
+    const climb=clamp((meters-900)/1300,0,1);
+    const pines=.72-climb*.55;
+    const top=mix(0x0b1524,0x111b2b,climb);
+    const low=mix(0x26383b,0x34414b,climb);
+    for(let band=0;band<10;band++){
+      const t=band/9;
+      g.fillStyle(mix(top,low,t*.86),1);
+      g.fillRect(0,h*band/10,w,h/10+1);
+    }
+    const moonX=w*.76-scene.cameraX*.004;
+    const moonY=h*.215;
+    g.fillStyle(0xb6cad0,.07);
+    g.fillCircle(moonX,moonY,49);
+    g.fillStyle(0xced8d1,.9-climb*.18);
+    g.fillCircle(moonX,moonY,24);
+    g.fillStyle(0x34434a,.92);
+    g.fillCircle(moonX-9,moonY-7,21);
+    for(let i=0;i<24;i++){
+      const x=((i*173+53-scene.cameraX*.012)%(w+80)+(w+80))%(w+80)-40;
+      const y=(i*97+31)%(Math.max(1,groundY*.77));
+      g.fillStyle(i%4===0?0xe0e6d8:0xa8bac0,.12+(i%3)*.025);
+      g.fillCircle(x,y,i%7===0?1.7:1);
+    }
+    // The old tree line thins as rounded foothills and sharper mountain ridges rise behind it.
+    drawRidge(scene,g,w,groundY*.87,355,.035,mix(0x34464a,0x3a4758,climb),.5,.7);
+    drawRidge(scene,g,w,groundY*.91,280,.075,mix(0x2b3d42,0x2a3949,climb),.66,1.9);
+    const peaks=clamp((meters-1100)/1150,0,1);
+    drawRidge(scene,g,w,groundY*.94,330,.12,
+      mix(0x27383e,0x344155,peaks),.66,.3);
+    drawRollingHills(scene,g,w,groundY*.88,420,.08,groundY*.20,
+      mix(0x293c3e,0x34424d,climb),.68,0x718076,1.4);
+    drawRollingHills(scene,g,w,groundY*.97,310,.20,groundY*.14,
+      mix(0x233638,0x2b3944,climb),.88,0x65746f,2.2);
+    drawPines(scene,g,w,groundY*.96,groundY*.39,270,.15,0x2a3d3d,.55*pines,0x738276);
+    drawPines(scene,g,w,groundY+12,groundY*.47,330,.29,0x1d3032,.75*pines,0x596c62);
+    // Pale rock faces mark the higher slopes without resembling gameplay hazards.
+    for(let i=0;i<8;i++){
+      const period=w+180;
+      const x=((i*227-scene.cameraX*.115+period)%period)-90;
+      const y=groundY*(.67+(i%3)*.055);
+      const scale=.55+(i%4)*.12;
+      const alpha=(.13+peaks*.12)*(i%2===0?1:.72);
+      g.fillStyle(mix(0x77847d,0x89929b,climb),alpha);
+      g.fillTriangle(x,y,x+18*scale,y-31*scale,x+39*scale,y+2*scale);
+      g.fillStyle(0xc0c4ba,alpha*.68);
+      g.fillTriangle(x+18*scale,y-31*scale,x+27*scale,y-18*scale,x+13*scale,y-16*scale);
+    }
+    for(let i=0;i<5;i++){
+      const period=w+260;
+      const x=((i*239-scene.cameraX*(.018+i*.003)+period)%period)-130;
+      const y=h*(.31+(i%3)*.10);
+      g.fillStyle(0x89958f,.03+(i%2)*.012);
+      g.fillEllipse(x,y,180+(i%3)*44,17+(i%2)*7);
+      g.fillEllipse(x+58,y+4,116,12);
+    }
+  }
+
   function openingGroundPalette(){
     return [0x202a28,0x52675a,0x87947a,0x39433d];
+  }
+
+  function foothillsGroundPalette(meters){
+    const t=clamp((meters-900)/1200,0,1);
+    const forest=openingGroundPalette();
+    const stone=[0x242e31,0x687a78,0xa1ada0,0x4c5757];
+    return forest.map((color,i)=>mix(color,stone[i],t));
   }
 
   function drawOpeningGround(scene,g,from,to){
@@ -139,7 +230,34 @@
     }
   }
 
+  function drawFoothillsGround(scene,g,from,to){
+    const first=Math.ceil(from/76)*76;
+    const startX=scene.startX??200;
+    for(let x=first;x<to-10;x+=76){
+      const y=scene.terrain.groundAt(x);
+      if(y===null||!Number.isFinite(y))continue;
+      const n=Math.floor(x/76);
+      const variation=(Math.sin(n*8.17)+1)*.5;
+      const meters=(x-startX)/(scope.GRIM_CONFIG?.pxPerMeter||12);
+      const scrub=1-clamp((meters-950)/1000,0,1);
+      g.fillStyle(0x182326,.36);
+      g.fillTriangle(x+16,y+12,x+22+variation*5,y+18,x+29,y+12);
+      g.fillStyle(0x89938a,.29);
+      g.fillEllipse(x+21+variation*7,y+14,5+variation*3,2.3);
+      g.fillStyle(0x56625c,.31);
+      g.fillEllipse(x+52,y+28+(1-variation)*7,8+variation*5,3);
+      g.lineStyle(1.35,0x111c1e,.32);
+      g.lineBetween(x+38,y+18,x+41+variation*4,y+33);
+      if(n%3===0&&scrub>.02){
+        g.lineStyle(1.4,0x9da589,.27*scrub);
+        g.lineBetween(x+5,y-2,x+8,y-5-variation*3);
+        g.lineBetween(x+8,y-2,x+13,y-4-variation*3);
+      }
+    }
+  }
+
   scope.GRIM_WORLD_ART=Object.freeze({
-    drawOpeningForest,openingGroundPalette,drawOpeningGround
+    drawOpeningForest,openingGroundPalette,drawOpeningGround,
+    drawFoothills,foothillsGroundPalette,drawFoothillsGround
   });
 })(typeof window!=='undefined'?window:globalThis);
