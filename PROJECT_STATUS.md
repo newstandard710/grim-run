@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.8 — *Runtime Loop Guard*. Vendor exits now wake and redraw the gameplay scene. A visible-page watchdog restarts Phaser when an active scene stops producing update heartbeats, including when Phaser's running flag is stale. Staged biome texture loading remains enabled.
+**Current build:** v0.11.9 — *Biome Render Fix*. Biome blending now has its own easing helper, fixing the runtime error that stopped backdrop and ground drawing at crossfades. Optional biome loading also returns safely when a reduced host has no Phaser texture loader.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.8 — *Runtime Loop Guard*  
+**Release:** v0.11.9 — *Biome Render Fix*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** v0.11.7 did not fix the recurring phone freeze. The user has reproduced it at varying distances, including shortly after a vendor reward following a teleport to 6,500m; controls and pause have sometimes remained responsive while the Reaper, backdrop, and resume countdown stopped. A missing wake/redraw on the vendor exit was found, and v0.11.8 now recovers that handoff and watches for a stalled Phaser update heartbeat on visible pages. The phone trigger and recovery still need device confirmation. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** The live v0.11.8 reproduction produced `ReferenceError: smooth is not defined` in the biome-weight renderer. The regression test exercises actual backdrop and ground drawing helpers at every surface and Underworld fade, the 641m location, and the direct 5,000m portal handoff; it passes in the Node VM. The God Mode test now covers 20,000m, and the encounter suite checks God Mode continuing past 9,999m. Chromium and Android device validation remain pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.9 — Biome Render Fix
+
+- Added the easing helper inside the World Art module. The old crossfade code called `smooth()` even though the only same-named helper lived inside a separate script scope. At biome fades, the resulting `ReferenceError` aborted `drawScene()` before it could paint the background and Reaper.
+- Made optional backdrop creation/loading return safely when a reduced test host has no Phaser texture manager or loader. The watchdog now checks timer API availability before starting or clearing its interval.
+- Added `tests/world-biome-transitions.cjs`, covering every biome fade, the 5,000m portal hard cut, ground palettes, and the reported 641m location.
+- **Next:** phone-review a fresh run around the first vendor and a God Mode run through the 6,500–7,200m crystal-to-Ashlands fade; verify movement, backdrop, and pause/countdown remain responsive.
 
 ## v0.11.8 — Runtime Loop Guard
 

@@ -5,9 +5,9 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.2-tundra-review-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.9-biome-render-fix-v1"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.2-tundra-review-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.9-biome-render-fix-v1"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
@@ -332,4 +332,4 @@ assert.equal(CombatApi.rectFor(impEnemy).width,38);assert.equal(CombatApi.rectFo
 impEnemy.dead=true;impRenderer.renderEmberImps();
 assert.equal(impRenderer.emberImpPool[0].visible,false,'Dead Imp returns to normal cleanup');
 impRenderer.shutdown();assert.equal(impRenderer.emberImpReady,false);
-console.log('PASS v0.11.2 preview: accepted forest and foothills art are default; Tundra art is opt-in and keeps gameplay geometry unchanged.');
+console.log('PASS v0.11.9 preview: accepted forest and foothills art are default; Tundra art is opt-in and keeps gameplay geometry unchanged.');

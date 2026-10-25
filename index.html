@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.11.8</title>
+  <title>GRIM RUN — v0.11.9</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.8 · LOOP GUARD</div>
+      <div class="mini">v0.11.9 · BIOME RENDER FIX</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.8-loop-guard-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.8-loop-guard-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.9-biome-render-fix-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.11.9-biome-render-fix-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1506,6 +1506,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.fallFeedbackMs=0;
       this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
       this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
+      // Phaser calls preload before create. Keep art loading optional for
+      // reduced/headless scene hosts so a missing loader never stops gameplay.
+      this.biomeBackdropGroup??='surface';
+      this.biomeBackdropPendingGroup??=null;
+      this.biomeBackdropFailedGroups??=new Set();
       this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];
       this.nextEnemySpawnX=0;this.nextGroundSpawnX=0;this.nextSnapSpawnX=0;this.swingSequence=0;
@@ -1971,24 +1976,27 @@ window.GRIM_CONFIG = Object.freeze({
       window.addEventListener('pageshow',recover);
       window.addEventListener('focus',recover);
       this.lastUpdateHeartbeatAt=Date.now();
-      this.loopWatchdogId=window.setInterval(()=>{
-        if(document.hidden||!['playing','countdown','portal','chest','rewinding','upgrade'].includes(this.state))return;
-        if(Date.now()-this.lastUpdateHeartbeatAt<2500)return;
-        // A renderer callback can stop being scheduled while leaving Phaser's
-        // running flag set. Restart the timestep when an active scene has had
-        // no update heartbeat for 2.5 seconds on a visible page.
-        this.lastUpdateHeartbeatAt=Date.now();
-        const loop=this.game?.loop;
-        if(loop&&typeof loop.sleep==='function'&&typeof loop.wake==='function'){
-          loop.sleep();loop.wake();
-        }else this.wakeGameLoop();
-        if(this.bg)this.drawScene();
-      },1000);
+      if(typeof window.setInterval==='function'){
+        this.loopWatchdogId=window.setInterval(()=>{
+          if(document.hidden||!['playing','countdown','portal','chest','rewinding','upgrade'].includes(this.state))return;
+          if(Date.now()-this.lastUpdateHeartbeatAt<2500)return;
+          // A renderer callback can stop being scheduled while leaving Phaser's
+          // running flag set. Restart the timestep when an active scene has had
+          // no update heartbeat for 2.5 seconds on a visible page.
+          this.lastUpdateHeartbeatAt=Date.now();
+          const loop=this.game?.loop;
+          if(loop&&typeof loop.sleep==='function'&&typeof loop.wake==='function'){
+            loop.sleep();loop.wake();
+          }else this.wakeGameLoop();
+          if(this.bg)this.drawScene();
+        },1000);
+      }
       this.events.once('shutdown',()=>{
         document.removeEventListener('visibilitychange',recover);
         window.removeEventListener('pageshow',recover);
         window.removeEventListener('focus',recover);
-        if(this.loopWatchdogId!==undefined)window.clearInterval(this.loopWatchdogId);
+        if(this.loopWatchdogId!==undefined&&typeof window.clearInterval==='function')
+          window.clearInterval(this.loopWatchdogId);
       });
     }
     rewind(){
@@ -3189,6 +3197,7 @@ window.GRIM_CONFIG = Object.freeze({
     createBiomeBackdropSet(group){
       const files=BIOME_BACKDROP_GROUPS[group];
       if(!files)return false;
+      if(!this.textures||typeof this.textures.exists!=='function'||!this.add?.image)return false;
       if(!this.biomeBackdrops)this.biomeBackdrops={};
       const ids=new Set(files.map(([id])=>id));
       for(const biome of scope.GRIM_WORLD_ART?.WORLD_BIOMES||[]){
@@ -3215,6 +3224,7 @@ window.GRIM_CONFIG = Object.freeze({
     ensureBiomeBackdropGroup(group){
       const files=BIOME_BACKDROP_GROUPS[group];
       if(!files)return false;
+      if(!this.textures||typeof this.textures.exists!=='function'||!this.load?.image)return false;
       if(this.biomeBackdropGroup===group&&this.biomeBackdropReady)return true;
       if(this.biomeBackdropPendingGroup||this.biomeBackdropFailedGroups.has(group))return false;
       const missing=files.filter(([id])=>!this.textures.exists('biome-'+id));

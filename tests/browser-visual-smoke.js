@@ -820,7 +820,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.11.2 accepted forest and foothills art defaults, anchored Tundra mountains render at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.11.9 accepted forest and foothills art defaults, anchored Tundra mountains render at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

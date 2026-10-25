@@ -1,9 +1,13 @@
-/* Grim Run — Full Route World Art, v0.11.6
+/* Grim Run — Full Route World Art, v0.11.9
  * Pure presentation helpers. They never write terrain, collision or game state.
  */
 (function(scope){
   'use strict';
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+  const smooth=t=>{
+    const v=clamp(t,0,1);
+    return v*v*(3-2*v);
+  };
   const mix=(a,b,t)=>{
     const v=clamp(t,0,1),channel=shift=>
       Math.round(((a>>shift)&255)*(1-v)+((b>>shift)&255)*v);
