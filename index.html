@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.11.2</title>
+  <title>GRIM RUN — v0.11.7</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.6 · MOBILE BIOME LOADING</div>
+      <div class="mini">v0.11.7 · LOOP RECOVERY</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.6-mobile-biome-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.6-mobile-biome-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.7-loop-recovery-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.11.7-loop-recovery-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1578,6 +1578,7 @@ window.GRIM_CONFIG = Object.freeze({
         rewind: () => this.rewind(),
         finishChest: () => this.finishChest()
       });
+      this.installLoopRecovery();
       this.meta=Meta.load();
       this.totalSouls=this.meta.souls;
       this.ui.setMode('menu');
@@ -1950,6 +1951,28 @@ window.GRIM_CONFIG = Object.freeze({
         this.puff(this.player.x,this.player.y-55,0xd5a8ff,20);
       }
     }
+    wakeGameLoop(){
+      if(typeof document!=='undefined'&&document.hidden)return;
+      if(this.game?.isPaused&&typeof this.game.resume==='function')this.game.resume();
+      if(this.sys&&typeof this.sys.isSleeping==='function'&&this.sys.isSleeping())this.sys.wake();
+      const loop=this.game?.loop;
+      if(loop&&typeof loop.wake==='function'&&loop.running!==true)loop.wake();
+    }
+    installLoopRecovery(){
+      const recover=()=>{
+        if(document.hidden)return;
+        this.wakeGameLoop();
+        if(this.bg)this.drawScene();
+      };
+      document.addEventListener('visibilitychange',recover);
+      window.addEventListener('pageshow',recover);
+      window.addEventListener('focus',recover);
+      this.events.once('shutdown',()=>{
+        document.removeEventListener('visibilitychange',recover);
+        window.removeEventListener('pageshow',recover);
+        window.removeEventListener('focus',recover);
+      });
+    }
     rewind(){
       if(this.state!=='playing'||this.rewindLevel()<=0||
         (!this.godMode&&this.rewindCooldownMs>0))return false;
@@ -1974,6 +1997,7 @@ window.GRIM_CONFIG = Object.freeze({
       return true;
     }
     startRun() {
+      this.wakeGameLoop();
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
@@ -1995,6 +2019,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.player = {x:200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:startingHP, maxHp:startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false, airTuck:false, slideReleaseBufferMs:0, jumpsUsed:0,
         attackMs:0,attackCooldownMs:0,slideMs:0,sliding:false,holdSlide:false,jumpHeld:false,jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0};
       this.startX = this.player.x;
+      this.cameraX=this.player.x-this.width*C.reaperXRatio;
+      this.cameraY=0;
+      this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.nextEnemySpawnX=this.startX+5070*C.pxPerMeter;
       this.nextGroundSpawnX=this.startX+5140*C.pxPerMeter;
       this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
@@ -2035,8 +2062,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showGodMode(false);this.ui.showGun(false);
       this.ui.rewindFlash(false);this.ui.showRewindPlayback(false);this.captureRewind();this.updateRewindButton();
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
+      this.drawScene();
+      this.wakeGameLoop();
     }
     goToMenu() {
+      this.wakeGameLoop();
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
@@ -2044,8 +2074,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);this.ui.showGodMode(false);
       this.rewindFrames=[];this.rewindFlashMs=0;
       this.ui.rewindFlash(false);this.ui.showRewindPlayback(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
+      this.drawScene();
+      this.wakeGameLoop();
     }
     togglePause() {
+      this.wakeGameLoop();
       if(this.state==='playing' || this.state==='countdown'){
         this.state='paused';this.countdownMs=0;this.goFlashMs=0;
         this.player.holdSlide=false;this.player.jumpHeld=false;this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
@@ -2062,6 +2095,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.updateRewindButton();
     }
     beginCountdown(){
+      this.wakeGameLoop();
       this.state='countdown'; this.countdownMs=C.resumeCountdownMs;this.goFlashMs=0;
       this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
       this.ui.setMode('countdown');this.ui.updateCountdown(this.countdownMs/1000);

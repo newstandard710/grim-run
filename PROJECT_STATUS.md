@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.6 — *Mobile Biome Loading*. Surface and Underworld art loads in separate groups; the Underworld group is requested during the portal and chest sequence, and the previous group's textures are released after the new group is ready. Biome crossfades remain smooth except for the direct Tundra-to-Caves portal switch.
+**Current build:** v0.11.7 — *Frame Loop Recovery*. The frame loop is explicitly woken on page return and before pause, resume, menu, and new-run transitions. Starting a run resets the camera to the Reaper's starting position. Staged biome texture loading remains enabled.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.6 — *Mobile Biome Loading*  
+**Release:** v0.11.7 — *Frame Loop Recovery*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The user reported a phone freeze around 648m, before the first vendor at 666m. The eight full-screen textures are now loaded as a three-image Surface set first, with the five-image Underworld set deferred until the 5,000m portal sequence; old textures are released after a successful swap. The HUD now refreshes before the vendor pause, so its meter should show the actual stop distance. Phone review is pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m. Terrain and collision rules are unchanged.
+**Verification:** The staged image loading did not fix the reported phone freeze, now around 641m. The user reports the pause control still responds, but the Reaper, backdrop, and resume countdown stop; returning to the menu and starting again leaves the same frozen canvas. This points to a sleeping or interrupted Phaser loop, though the exact device trigger is unconfirmed. v0.11.7 explicitly wakes the game loop on page return and UI state transitions, and resets the camera on a fresh run. Phone review is pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.7 — Frame Loop Recovery
+
+- Explicitly wake Phaser's loop on page visibility return, focus, and pageshow events, and before pause, resume countdown, menu, and new-run transitions.
+- Redraw the scene on page return and menu/new-run transitions so a stopped loop cannot leave the previous canvas frame visible after the DOM changes.
+- Reset the camera to the Reaper's starting position whenever a fresh run begins.
+- The freeze trigger on the user's phone is still unconfirmed; the earlier staged texture loading did not resolve it. Next step is phone review of pause, resume, and starting a second run.
 
 ## v0.11.6 — Mobile Biome Loading
 
