@@ -3371,7 +3371,7 @@ window.GRIM_CONFIG = Object.freeze({
         for(let cell=first;cell<=last;cell++){
           if(groundAccentNoise(cell,0)<.28)continue;
           const x=cell*cellWidth+24+groundAccentNoise(cell,1)*136;
-          if(x<from+6||x>to-44)continue;
+          if(x<from+6||x>to-72)continue;
           const y=this.terrain.groundAt(x);
           const before=this.terrain.groundAt(x-16),after=this.terrain.groundAt(x+30);
           if(y===null||before===null||after===null||Math.abs(after-before)>36)continue;
