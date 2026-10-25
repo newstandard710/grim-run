@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.7 — *Frame Loop Recovery*. The frame loop is explicitly woken on page return and before pause, resume, menu, and new-run transitions. Starting a run resets the camera to the Reaper's starting position. Staged biome texture loading remains enabled.
+**Current build:** v0.11.8 — *Runtime Loop Guard*. Vendor exits now wake and redraw the gameplay scene. A visible-page watchdog restarts Phaser when an active scene stops producing update heartbeats, including when Phaser's running flag is stale. Staged biome texture loading remains enabled.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.7 — *Frame Loop Recovery*  
+**Release:** v0.11.8 — *Runtime Loop Guard*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The staged image loading did not fix the reported phone freeze, now around 641m. The user reports the pause control still responds, but the Reaper, backdrop, and resume countdown stop; returning to the menu and starting again leaves the same frozen canvas. This points to a sleeping or interrupted Phaser loop, though the exact device trigger is unconfirmed. v0.11.7 explicitly wakes the game loop on page return and UI state transitions, and resets the camera on a fresh run. Phone review is pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** v0.11.7 did not fix the recurring phone freeze. The user has reproduced it at varying distances, including shortly after a vendor reward following a teleport to 6,500m; controls and pause have sometimes remained responsive while the Reaper, backdrop, and resume countdown stopped. A missing wake/redraw on the vendor exit was found, and v0.11.8 now recovers that handoff and watches for a stalled Phaser update heartbeat on visible pages. The phone trigger and recovery still need device confirmation. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.8 — Runtime Loop Guard
+
+- Vendor reward purchase or dismissal now wakes the Phaser loop, redraws the world after gameplay resumes, and refreshes the watchdog heartbeat.
+- The existing recovery path now resumes a Phaser-paused scene as well as a sleeping scene.
+- A one-second watchdog checks active gameplay states while the page is visible. After 2.5 seconds without an update heartbeat, it restarts the Phaser timestep and redraws the scene. It is removed when the scene shuts down.
+- **Next:** phone-review a fresh run and a 6,500m God Mode teleport, including continuing after a vendor reward. This is the first fix aimed at the reported vendor-to-run handoff; user-device confirmation is still needed.
 
 ## v0.11.7 — Frame Loop Recovery
 
