@@ -592,7 +592,8 @@ const server=http.createServer((req,res)=>{
         key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
       const platformMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
         key.startsWith('platform:')&&view.id===id&&view.sprite.visible&&
-        view.sprite.displayTexture?.key==='terrain-material-'+id).length;
+        (view.sprite.displayTexture?.key==='terrain-material-'+id||
+          (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)))).length;
       const platformFace=sections.filter(section=>section.kind==='platform').map(section=>{
         const from=Math.max(section.start,scene.cameraX+140);
         const to=Math.min(section.end,scene.cameraX+scene.width-140);
