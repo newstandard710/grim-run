@@ -92,6 +92,14 @@ const server=http.createServer((req,res)=>{
     groundArtVisible:s.groundArtSprites.forest?.some(sprite=>sprite.visible),
     groundArtSpriteCount:s.groundArtSprites.forest?.length,
     groundArtVisibleCount:s.groundArtSprites.forest?.filter(sprite=>sprite.visible).length,
+    groundArtFrameCount:s.groundArtFrames.forest?.length,
+    groundSpriteTexture:s.textures.exists('ground-sprites-forest'),
+    surfaceWeights:window.GRIM_WORLD_ART.biomeWeights(s.distance),
+    terrainSections:s.terrain.visibleSections(s.cameraX-140,s.cameraX+s.width+170)
+     .map(section=>({kind:section.kind,width:Math.round(section.end-section.start),
+      visibleWidth:Math.round(Math.min(s.cameraX+s.width+170,section.end)-Math.max(s.cameraX-140,section.start)),
+      centerDelta:Math.round(Math.abs((s.terrain.groundAt((section.start+section.end)/2-38)||0)-
+       (s.terrain.groundAt((section.start+section.end)/2+42)||0)))})),
     groundArtKey:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.texture?.key,
     groundArtWorldAnchored:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.scrollFactorX===1,
     groundArtFrame:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.frame?.name,
