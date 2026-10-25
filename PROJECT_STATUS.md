@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.5 — *Portal Biome Handoff*. All eight approved surface and Underworld concepts are integrated as moving scenery, with gradual crossfades except for the direct Tundra-to-Caves portal switch. Terrain extends in bounded chunks as the runner approaches.
+**Current build:** v0.11.6 — *Mobile Biome Loading*. Surface and Underworld art loads in separate groups; the Underworld group is requested during the portal and chest sequence, and the previous group's textures are released after the new group is ready. Biome crossfades remain smooth except for the direct Tundra-to-Caves portal switch.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.5 — *Portal Biome Handoff*  
+**Release:** v0.11.6 — *Mobile Biome Loading*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Awaiting landscape phone review of the full biome route and the reported freeze near 630m. The first vendor pause is triggered at 666m; confirm whether its upgrade panel appeared. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m. Terrain and collision rules are unchanged.
+**Verification:** The user reported a phone freeze around 648m, before the first vendor at 666m. The eight full-screen textures are now loaded as a three-image Surface set first, with the five-image Underworld set deferred until the 5,000m portal sequence; old textures are released after a successful swap. The HUD now refreshes before the vendor pause, so its meter should show the actual stop distance. Phone review is pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m. Terrain and collision rules are unchanged.
+
+## v0.11.6 — Mobile Biome Loading
+
+- Reduced the initial full-screen biome texture load from all eight backgrounds to the three Surface backgrounds. The five Underworld backgrounds load while the portal and chest sequence is playing, then replace and release the Surface textures.
+- Backgrounds retain the existing drift and crossfades within each group. The Tundra-to-Caves boundary remains a direct portal handoff.
+- Refresh the distance HUD before opening a vendor so the first vendor stop reports its actual meter value.
+- **Next:** phone-review a run through the first vendor, then the portal handoff and later Underworld transitions. The reported freeze near 648m still needs user-device confirmation after this change.
 
 ## v0.11.5 — Portal Biome Handoff
 

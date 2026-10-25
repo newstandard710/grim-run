@@ -1,4 +1,4 @@
-/* Grim Run — Full Route World Art, v0.11.5
+/* Grim Run — Full Route World Art, v0.11.6
  * Pure presentation helpers. They never write terrain, collision or game state.
  */
 (function(scope){

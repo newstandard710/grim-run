@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.5 · PORTAL BIOME HANDOFF</div>
+      <div class="mini">v0.11.6 · MOBILE BIOME LOADING</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.5-portal-biome-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.5-portal-biome-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.6-mobile-biome-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.11.6-mobile-biome-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1473,21 +1473,29 @@ window.GRIM_CONFIG = Object.freeze({
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const BIOME_BACKDROP_GROUPS={
+    surface:[
+      ['forest','forest.webp'],
+      ['foothills','foothills.webp'],
+      ['tundra','tundra.webp']
+    ],
+    underworld:[
+      ['caves','underground-caves.webp'],
+      ['crystals','deep-underground.webp'],
+      ['ashlands','ashlands.webp'],
+      ['lava','lava.webp'],
+      ['boss','boss-castle.webp']
+    ]
+  };
 
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
     preload(){
-      const files=[
-        ['forest','forest.webp'],
-        ['foothills','foothills.webp'],
-        ['tundra','tundra.webp'],
-        ['caves','underground-caves.webp'],
-        ['crystals','deep-underground.webp'],
-        ['ashlands','ashlands.webp'],
-        ['lava','lava.webp'],
-        ['boss','boss-castle.webp']
-      ];
-      for(const [id,file] of files)this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
+      this.biomeBackdropGroup='surface';
+      this.biomeBackdropPendingGroup=null;
+      this.biomeBackdropFailedGroups=new Set();
+      for(const [id,file] of BIOME_BACKDROP_GROUPS.surface)
+        this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
     }
     create() {
       this.width = this.scale.width;
@@ -1506,15 +1514,7 @@ window.GRIM_CONFIG = Object.freeze({
         kills:0,byKind:{}};
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.biomeBackdrops={};
-      for(const biome of scope.GRIM_WORLD_ART?.WORLD_BIOMES||[]){
-        const key='biome-'+biome.id;
-        if(!this.textures.exists(key))continue;
-        this.biomeBackdrops[biome.id]=this.add.image(this.width*.5,this.height*.5,key)
-          .setOrigin(.5).setScrollFactor(0).setDepth(-30+biome.start/100000)
-          .setAlpha(0).setVisible(false);
-      }
-      this.biomeBackdropReady=Object.keys(this.biomeBackdrops).length===
-        (scope.GRIM_WORLD_ART?.WORLD_BIOMES?.length||0);
+      this.biomeBackdropReady=this.createBiomeBackdropSet('surface');
       this.resizeBiomeBackdrops();
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -2620,6 +2620,8 @@ window.GRIM_CONFIG = Object.freeze({
         }
         const reachedVendor=Math.floor(this.distance/C.vendorEveryMeters);
         if(reachedVendor>=this.nextVendorNumber&&this.nextVendorNumber<=14){
+          this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,
+            this.points,this.powerManager.summary());
           const target=this.nextVendorNumber++;
           this.triggerVendor(target);this.drawScene();return;
         }
@@ -3126,6 +3128,65 @@ window.GRIM_CONFIG = Object.freeze({
         this.particles.push({x,y,vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity-35,life,maxLife:life,color,radius:2+this.rng.next()*3});
       }
     }
+    createBiomeBackdropSet(group){
+      const files=BIOME_BACKDROP_GROUPS[group];
+      if(!files)return false;
+      if(!this.biomeBackdrops)this.biomeBackdrops={};
+      const ids=new Set(files.map(([id])=>id));
+      for(const biome of scope.GRIM_WORLD_ART?.WORLD_BIOMES||[]){
+        if(!ids.has(biome.id))continue;
+        const key='biome-'+biome.id;
+        if(!this.textures.exists(key))continue;
+        if(!this.biomeBackdrops[biome.id]){
+          this.biomeBackdrops[biome.id]=this.add.image(this.width*.5,this.height*.5,key)
+            .setOrigin(.5).setScrollFactor(0).setDepth(-30+biome.start/100000)
+            .setAlpha(0).setVisible(false);
+        }
+      }
+      this.biomeBackdropGroup=group;
+      return files.every(([id])=>Boolean(this.biomeBackdrops[id]));
+    }
+    destroyBiomeBackdropSet(group){
+      for(const [id] of BIOME_BACKDROP_GROUPS[group]||[]){
+        this.biomeBackdrops[id]?.destroy();
+        delete this.biomeBackdrops[id];
+        const key='biome-'+id;
+        if(this.textures.exists(key))this.textures.remove(key);
+      }
+    }
+    ensureBiomeBackdropGroup(group){
+      const files=BIOME_BACKDROP_GROUPS[group];
+      if(!files)return false;
+      if(this.biomeBackdropGroup===group&&this.biomeBackdropReady)return true;
+      if(this.biomeBackdropPendingGroup||this.biomeBackdropFailedGroups.has(group))return false;
+      const missing=files.filter(([id])=>!this.textures.exists('biome-'+id));
+      if(missing.length===0){
+        const previous=this.biomeBackdropGroup;
+        if(previous!==group)this.destroyBiomeBackdropSet(previous);
+        this.biomeBackdropReady=this.createBiomeBackdropSet(group);
+        this.resizeBiomeBackdrops();
+        return this.biomeBackdropReady;
+      }
+      this.biomeBackdropPendingGroup=group;
+      this.biomeBackdropReady=false;
+      for(const [id,file] of missing)
+        this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
+      this.load.once('complete',()=>{
+        this.biomeBackdropPendingGroup=null;
+        if(!files.every(([id])=>this.textures.exists('biome-'+id))){
+          this.biomeBackdropFailedGroups.add(group);
+          return;
+        }
+        const previous=this.biomeBackdropGroup;
+        if(previous!==group)this.destroyBiomeBackdropSet(previous);
+        this.biomeBackdropReady=this.createBiomeBackdropSet(group);
+        if(!this.biomeBackdropReady)this.biomeBackdropFailedGroups.add(group);
+        this.resizeBiomeBackdrops();
+        this.drawScene();
+      });
+      if(!this.load.isLoading())this.load.start();
+      return false;
+    }
     resizeBiomeBackdrops(){
       if(!this.biomeBackdrops)return;
       const scale=Math.max(this.width/1536,this.height/864)*1.25;
@@ -3158,6 +3219,7 @@ window.GRIM_CONFIG = Object.freeze({
       if (!this.bg) return;
       const w=this.width,h=this.height,gy=this.groundY,g=this.bg;
       g.clear();
+      this.ensureBiomeBackdropGroup(this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
       this.drawAtmosphere(g,w,h,gy);
       this.drawGround();
