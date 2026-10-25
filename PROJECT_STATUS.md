@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The live v0.11.8 reproduction produced `ReferenceError: smooth is not defined` in the biome-weight renderer. The regression test exercises actual backdrop and ground drawing helpers at every surface and Underworld fade, the 641m location, and the direct 5,000m portal handoff; it passes in the Node VM. The God Mode test now covers 20,000m, and the encounter suite checks God Mode continuing past 9,999m. Chromium and Android device validation remain pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** The live v0.11.8 reproduction produced `ReferenceError: smooth is not defined` in the biome-weight renderer. The regression test exercises actual backdrop and ground drawing helpers at every surface and Underworld fade, the 641m location, and the direct 5,000m portal handoff; it passes in the Node VM. In the published v0.11.9 Chrome smoke test, the scene rendered through 7,000m with an animated background and no current-build console errors; the run also reached the first vendor at 666m and resumed to 709m. The God Mode test covers 20,000m, and the encounter suite checks continued play beyond 9,999m. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
 
 ## v0.11.9 — Biome Render Fix
 
