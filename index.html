@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.11.0</title>
+  <title>GRIM RUN — v0.11.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.0 · WORLD ART REVIEW</div>
+      <div class="mini">v0.11.1 · FOOTHILLS ART REVIEW</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1451,8 +1451,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.0-opening-forest-review-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.0-opening-forest-review-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.1-foothills-review-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.11.1-foothills-review-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1554,8 +1554,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.scale.on('resize', this.handleResize, this);
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
       this.visuals=scope.GRIM_VISUALS?new scope.GRIM_VISUALS.GrimVisualSystem(this):null;
-      this.openingWorldArtReviewRequested=
-        new URLSearchParams(location.search).get('worldReview')==='opening';
+      const worldReviewMode=new URLSearchParams(location.search).get('worldReview');
+      this.openingWorldArtReviewRequested=worldReviewMode==='opening'; // Legacy review-route alias.
+      this.foothillsWorldArtReviewRequested=worldReviewMode==='foothills';
       if(this.visuals){
         // All three enemy illustrations are approved for the main game. The
         // individual and combined enemyReview URLs remain valid review aliases.
@@ -3109,10 +3110,21 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawAtmosphere(g,w,h,gy){
       const m=this.distance,underworld=this.hasTeleported;
-      if(this.openingWorldArtReviewRequested&&!underworld&&m<=1200&&
-        scope.GRIM_WORLD_ART?.drawOpeningForest){
-        scope.GRIM_WORLD_ART.drawOpeningForest(this,g,w,h,gy);
-        return;
+      if(!underworld&&scope.GRIM_WORLD_ART){
+        if(this.foothillsWorldArtReviewRequested&&m>=900&&m<=2300&&
+          scope.GRIM_WORLD_ART.drawFoothills){
+          scope.GRIM_WORLD_ART.drawFoothills(this,g,w,h,gy);
+          return;
+        }
+        if(m<=1200&&scope.GRIM_WORLD_ART.drawOpeningForest){
+          scope.GRIM_WORLD_ART.drawOpeningForest(this,g,w,h,gy);
+          return;
+        }
+        if(this.foothillsWorldArtReviewRequested&&m<=2300&&
+          scope.GRIM_WORLD_ART.drawFoothills){
+          scope.GRIM_WORLD_ART.drawFoothills(this,g,w,h,gy);
+          return;
+        }
       }
       const blend=(a,b,t)=>{
         const v=clamp(t,0,1),r0=(a>>16)&255,g0=(a>>8)&255,b0=a&255;
@@ -3325,11 +3337,13 @@ window.GRIM_CONFIG = Object.freeze({
         if(to<=from)continue;
         const h0=this.terrain.groundAt(from),h1=this.terrain.groundAt(to-.001);
         const m=(from+to-2*startX)/(2*C.pxPerMeter);
-        const openingWorldArt=this.openingWorldArtReviewRequested&&!this.hasTeleported&&
-          m>=-40&&m<=1200&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
-        const [body,edge,sheen,detail]=openingWorldArt
-          ?scope.GRIM_WORLD_ART.openingGroundPalette()
-          :this.groundPalette(m);
+        const openingWorldArt=!this.hasTeleported&&m>=-40&&m<=1200&&
+          section.kind!=='platform'&&scope.GRIM_WORLD_ART;
+        const foothillsWorldArt=this.foothillsWorldArtReviewRequested&&!this.hasTeleported&&
+          m>=900&&m<=2300&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
+        const [body,edge,sheen,detail]=foothillsWorldArt
+          ?scope.GRIM_WORLD_ART.foothillsGroundPalette(m)
+          :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette():this.groundPalette(m);
         const underside=section.kind==='platform'?Math.max(h0,h1)+68:depth;
         g.fillStyle(body);
         g.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
@@ -3340,9 +3354,10 @@ window.GRIM_CONFIG = Object.freeze({
         if(section.kind==='platform'){
           g.lineStyle(3,detail,.6);g.lineBetween(from+5,underside-3,to-5,underside-3);
         }
-        g.lineStyle(openingWorldArt?5:7,edge,openingWorldArt?.9:.95);
+        const customWorldGround=openingWorldArt||foothillsWorldArt;
+        g.lineStyle(customWorldGround?5:7,edge,customWorldGround?.9:.95);
         g.lineBetween(from,h0-2,to,h1-2);
-        g.lineStyle(openingWorldArt?2:3,sheen,openingWorldArt?.42:.54);
+        g.lineStyle(customWorldGround?2:3,sheen,customWorldGround?.42:.54);
         g.lineBetween(from,h0+4,to,h1+4);
         const cliff=sections.some(t=>t.kind==='gap'&&(Math.abs(t.start-section.end)<.02||Math.abs(t.end-section.start)<.02));
         if(cliff){
@@ -3350,7 +3365,8 @@ window.GRIM_CONFIG = Object.freeze({
           const y=this.terrain.anchorAt(x+.01)??h0;
           g.lineStyle(4,detail,.66);g.lineBetween(x,y+7,x,y+105);
         }
-        if(openingWorldArt)scope.GRIM_WORLD_ART.drawOpeningGround(this,g,from,to);
+        if(foothillsWorldArt)scope.GRIM_WORLD_ART.drawFoothillsGround(this,g,from,to);
+        else if(openingWorldArt)scope.GRIM_WORLD_ART.drawOpeningGround(this,g,from,to);
         else for(let x=Math.ceil(from/59)*59;x<to-5;x+=59){
           const y=this.terrain.groundAt(x);if(y===null)continue;
           const variation=(Math.sin(Math.floor(x/59)*12.8)+1)*.5;
