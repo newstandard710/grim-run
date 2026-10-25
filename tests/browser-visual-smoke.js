@@ -589,7 +589,8 @@ const server=http.createServer((req,res)=>{
       const visible=[...scene.terrainTextureViews.values()].filter(view=>view.sprite.visible);
       const sections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
       const surfaceViews=[...scene.terrainSurfaceViews.entries()].filter(([,view])=>view.sprite.visible);
-      const walkable=sections.filter(section=>section.kind==='ground'||section.kind==='rubble')
+      const walkable=sections.filter(section=>section.kind==='ground'||section.kind==='rubble'||
+        section.kind==='platform')
         .map(section=>({section,span:Math.min(section.end,scene.cameraX+scene.width+170)-
           Math.max(section.start,scene.cameraX-140)}))
         .filter(item=>item.span>=80)
