@@ -12,7 +12,18 @@ require('./asset-integrity.cjs');
 
 const root=path.resolve(__dirname,'..');
 const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8',
- '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png'};
+ '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp'};
+function groundPixelDifference(first,second){
+ const a=PNG.sync.read(first),b=PNG.sync.read(second);
+ assert.equal(a.width,b.width);assert.equal(a.height,b.height);
+ let changed=0;
+ for(let y=Math.floor(a.height*.83);y<a.height;y++)for(let x=0;x<a.width;x++){
+  const i=(y*a.width+x)*4;
+  if(Math.abs(a.data[i]-b.data[i])+Math.abs(a.data[i+1]-b.data[i+1])+
+    Math.abs(a.data[i+2]-b.data[i+2])>8)changed++;
+ }
+ return changed;
+}
 const server=http.createServer((req,res)=>{
  try{
   const url=new URL(req.url,'http://localhost');
@@ -85,6 +96,61 @@ const server=http.createServer((req,res)=>{
   assert.ok([2,3,4,5,15].includes(playing.frame),'Not running through Reaper art frames');
   assert.equal(playing.spriteX,playing.playerX,'Player sprite must follow collision origin');
   assert.ok(Math.abs(playing.spriteY-playing.footY)<=13);
+  const surfaceGround=await page.evaluate(()=>{
+   const s=window.grimRun.scene.scenes[0];
+   return {ids:Object.keys(s.groundTextureSprites||{}),
+    loaded:['forest','foothills','tundra'].every(id=>s.textures.exists('ground-'+id)),
+    mask:Boolean(s.groundTextureMask),forestMask:s.groundTextureSprites.forest?.mask===s.groundTextureMask,
+    forestVisible:s.groundTextureSprites.forest?.visible,
+    forestAlpha:s.groundTextureSprites.forest?.alpha,
+    baseDepth:s.groundBase?.depth,gameplayDepth:s.world?.depth,
+    maskCommands:s.groundMaskGraphics?.commandBuffer?.length||0};
+  });
+  console.log('Phone-scale surface ground layer:',JSON.stringify(surfaceGround));
+  assert.deepEqual(surfaceGround.ids,['forest','foothills','tundra']);
+  assert.equal(surfaceGround.loaded,true,'surface ground WebPs loaded through Phaser');
+  assert.equal(surfaceGround.mask,true,'ground tiles use the live terrain geometry mask');
+  assert.equal(surfaceGround.forestMask,true,'forest texture is clipped by the terrain mask');
+  assert.equal(surfaceGround.forestVisible,true);
+  assert.ok(surfaceGround.forestAlpha>.19&&surfaceGround.forestAlpha<.21);
+  assert.ok(surfaceGround.maskCommands>0,'terrain polygons update the texture mask');
+  assert.ok(surfaceGround.baseDepth<surfaceGround.gameplayDepth,
+    'ground art stays below gameplay drawing');
+  const surfaceArtifactDir=path.join(root,'test-results');fs.mkdirSync(surfaceArtifactDir,{recursive:true});
+  const texturedGround=await page.locator('#game canvas').screenshot({
+   path:path.join(surfaceArtifactDir,'ground-forest-phone-scale.png')});
+  await page.evaluate(()=>window.grimRun.scene.scenes[0].groundTextureSprites.forest.setVisible(false));
+  await page.waitForTimeout(100);
+  const flatGround=await page.locator('#game canvas').screenshot();
+  const texturePixels=groundPixelDifference(texturedGround,flatGround);
+  assert.ok(texturePixels>500,'painted texture changes visible pixels inside the ground');
+  await page.evaluate(()=>window.grimRun.scene.scenes[0].groundTextureSprites.forest.setVisible(true));
+  console.log('Phone-scale ground texture pixel difference:',texturePixels);
+  await page.evaluate(()=>{
+   const s=window.grimRun.scene.scenes[0];s.hasTeleported=true;s.distance=6500;s.drawScene();
+  });
+  await page.waitForFunction(()=>{
+   const s=window.grimRun?.scene?.scenes?.[0];
+   return s?.biomeBackdropGroup==='underworld'&&s.biomeBackdropReady===true&&
+    Object.keys(s.groundTextureSprites||{}).length===5;
+  },null,{timeout:45000});
+  const underworldGround=await page.evaluate(()=>{
+   const s=window.grimRun.scene.scenes[0];s.distance=6500;s.drawScene();
+   return {ids:Object.keys(s.groundTextureSprites),
+    loaded:['caves','crystals','ashlands','lava','boss'].every(id=>s.textures.exists('ground-'+id)),
+    crystalAlpha:s.groundTextureSprites.crystals.alpha,crystalVisible:s.groundTextureSprites.crystals.visible,
+    caveAtPortal:window.GRIM_WORLD_ART.groundTextureWeights(5000).caves,
+    tundraBeforePortal:window.GRIM_WORLD_ART.groundTextureWeights(4999.99).tundra};
+  });
+  console.log('Phone-scale Underworld ground layer:',JSON.stringify(underworldGround));
+  assert.deepEqual(underworldGround.ids,['caves','crystals','ashlands','lava','boss']);
+  assert.equal(underworldGround.loaded,true,'all five Underworld ground WebPs loaded');
+  assert.equal(underworldGround.crystalVisible,true);
+  assert.ok(underworldGround.crystalAlpha>.11&&underworldGround.crystalAlpha<.13);
+  assert.ok(underworldGround.caveAtPortal>.17&&underworldGround.tundraBeforePortal>.13,
+    'ground material changes directly from Tundra to Caves at the portal');
+  await page.locator('#game canvas').screenshot({
+   path:path.join(surfaceArtifactDir,'ground-crystals-phone-scale.png')});
   assert.deepEqual(errors,[],'Browser console errors');
   // The previous illustrated PNG art remains available for comparison.
   await page.goto(origin+'/?art=illustrated&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
