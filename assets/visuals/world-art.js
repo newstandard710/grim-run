@@ -190,100 +190,17 @@
   }
 
   function drawTundraGround(scene,g,from,to){
-    const first=Math.ceil(from/72)*72;
-    for(let x=first;x<to-12;x+=72){
+    // A few soft frost strokes sit just below the tiled material's snow crust.
+    const first=Math.ceil(from/132)*132,startX=scene.startX??200;
+    for(let x=first;x<to-22;x+=132){
       const y=scene.terrain.groundAt(x);
       if(y===null||!Number.isFinite(y))continue;
-      const n=Math.floor(x/72);
-      const variation=(Math.sin(n*10.41)+1)*.5;
-      g.fillStyle(0x1c2831,.38);
-      g.fillTriangle(x+14,y+13,x+22+variation*6,y+19,x+31,y+13);
-      g.fillStyle(0x8598a0,.3);
-      g.fillEllipse(x+21+variation*6,y+15,6+variation*4,2.2);
-      g.fillStyle(0x465660,.38);
-      g.fillEllipse(x+51,y+29+(1-variation)*6,8+variation*5,3);
-      g.lineStyle(1.2,0xa8bac2,.17);
-      g.lineBetween(x+5,y+5,x+22+variation*4,y+6);
-      g.lineStyle(1.35,0x101b22,.34);
-      g.lineBetween(x+36,y+18,x+40+variation*4,y+33);
-    }
-  }
-
-  function drawTundraPlatformGround(scene,g,from,to){
-    const first=Math.ceil(from/84)*84;
-    for(let x=first;x<to-38;x+=84){
-      const y=scene.terrain.groundAt(x);
-      if(y===null||!Number.isFinite(y))continue;
-      const n=Math.floor(x/84),variation=(Math.sin(n*8.91)+1)*.5;
-      const width=Math.min(80,to-x-3);
-      if(width<38)continue;
-      const right=x+width;
-      // Broken snow shelves cap each exposed rock face.
-      g.fillStyle(0xdaf5ff,.82);
-      g.fillPoints([
-        {x:x+2,y:y+3},{x:x+10,y:y-1-variation*2},
-        {x:x+width*.34,y:y+1},{x:x+width*.59,y:y-1+(1-variation)*2},
-        {x:right,y:y+2},{x:right-4,y:y+7},
-        {x:x+width*.62,y:y+5},{x:x+width*.32,y:y+7},{x:x+10,y:y+5}
-      ],true);
-      g.lineStyle(1.8,0xf1fcff,.92);
-      g.lineBetween(x+5,y+2,x+width*.28,y+1-variation*2);
-      g.lineBetween(x+width*.58,y+2,x+width*.9,y+2+(1-variation)*2);
-
-      // Overlapping slate facets cover the full ledge face and catch cold light.
-      g.fillStyle(n%2===0?0x506a77:0x3c5662,.80);
-      g.fillPoints([
-        {x:x+4,y:y+10},{x:x+width*.31,y:y+9+variation*3},
-        {x:x+width*.46,y:y+22},{x:x+width*.39,y:y+37},
-        {x:x+width*.44,y:y+51},{x:x+7,y:y+48}
-      ],true);
-      g.fillStyle(0x93b2bd,.56);
-      g.fillTriangle(x+6,y+11,x+width*.29,y+10+variation*2,x+width*.40,y+19);
-      g.lineStyle(1.4,0xa5c5cf,.56);
-      g.lineBetween(x+8,y+12,x+width*.28,y+11+variation*2);
-
-      g.fillStyle(n%2===0?0x334a56:0x425b67,.83);
-      g.fillPoints([
-        {x:x+width*.52,y:y+15},{x:x+width*.91,y:y+10},
-        {x:right-3,y:y+30},{x:x+width*.77,y:y+45},
-        {x:x+width*.55,y:y+40}
-      ],true);
-      g.fillStyle(0x75929e,.52);
-      g.fillTriangle(x+width*.58,y+17,x+width*.88,y+12,x+width*.77,y+26);
-      g.lineStyle(1.2,0x172833,.66);
-      g.lineBetween(x+width*.48,y+12,x+width*.51,y+42);
-      g.lineBetween(x+width*.79,y+32,right-5,y+37);
-
-      g.fillStyle(0x293f4a,.86);
-      g.fillPoints([
-        {x:x+5,y:y+47},{x:x+width*.39,y:y+43},
-        {x:x+width*.51,y:y+56},{x:x+width*.38,y:y+63},
-        {x:x+4,y:y+60}
-      ],true);
-      g.fillStyle(0x58717d,.62);
-      g.fillPoints([
-        {x:x+width*.53,y:y+44},{x:right-5,y:y+38},
-        {x:right-2,y:y+59},{x:x+width*.66,y:y+63}
-      ],true);
-      g.lineStyle(1.4,0x8cb3c0,.42);
-      g.lineBetween(x+9,y+51,x+width*.34,y+48);
-      g.lineBetween(x+width*.68,y+51,right-8,y+45);
-
-      // Branching blue ice seams split the stone and catch the snow light.
-      const seam=x+width*(.28+variation*.32);
-      g.lineStyle(2.6,0x73d9f3,.96);
-      g.lineBetween(seam,y+10,seam-5,y+24);
-      g.lineBetween(seam-5,y+24,seam+2,y+36);
-      g.lineBetween(seam+2,y+36,seam-2,y+52);
-      g.lineStyle(1.4,0xe0faff,.82);
-      g.lineBetween(seam+4,y+14,seam+1,y+26);
-      g.lineBetween(seam-1,y+38,seam+2,y+49);
-      g.lineStyle(1.3,0x172833,.56);
-      g.lineBetween(x+4,y+56,right-5,y+57);
-      if(n%3===0){
-        const icicleX=x+width*.79;
-        g.fillStyle(0xc8f0fa,.92);
-        g.fillTriangle(icicleX-3,y+4,icicleX+3,y+4,icicleX,y+15+variation*5);
+      const n=Math.floor(x/132),variation=(Math.sin(n*6.73)+1)*.5;
+      g.lineStyle(1.5,0xc7dce5,.22);
+      g.lineBetween(x+8,y+5,x+28+variation*8,y+6);
+      if(n%2===0){
+        g.lineStyle(1,0xe1edf1,.18);
+        g.lineBetween(x+52,y+8,x+62+variation*5,y+8);
       }
     }
   }
@@ -291,7 +208,7 @@
   scope.GRIM_WORLD_ART=Object.freeze({
     openingGroundPalette,drawOpeningGround,
     foothillsGroundPalette,drawFoothillsGround,
-    tundraGroundPalette,drawTundraGround,drawTundraPlatformGround,
+    tundraGroundPalette,drawTundraGround,
     SURFACE_BIOMES,UNDERWORLD_BIOMES,WORLD_BIOMES,biomeWeights,underworldWeights,
     worldGroundPalette,underworldGroundPalette,
     drawUnderworldGround

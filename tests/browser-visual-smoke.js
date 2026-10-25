@@ -624,9 +624,9 @@ const server=http.createServer((req,res)=>{
         const i=(y*image.width+x)*4;
         colors.add((image.data[i]<<16)|(image.data[i+1]<<8)|image.data[i+2]);
       }
-      assert.ok(colors.size>=50,
-        'Tundra ledge face renders visible rock facets and ice detail; sampled '+colors.size+' colors');
-      console.log('Tundra ledge face pixel colors: '+colors.size);
+      assert.ok(colors.size>=150,
+        'Tundra ledge face renders the painted rock-and-snow material; sampled '+colors.size+' colors');
+      console.log('Tundra ledge material pixel colors: '+colors.size);
     }
     console.log('Rendered '+biome+' ground material at '+meters+'m');
   }
