@@ -27,7 +27,7 @@ assert.ok(!html.includes("this.load.image('ground-'+id"),'Only approved biome pa
 assert.ok(html.includes('WORLD_GROUND_BODY_ALPHA'),'Terrain body uses the biome art as its own moving surface');
 assert.ok(html.includes('createBiomeGroundArt'),'Each biome has a distinct moving foreground sprite layer');
 assert.ok(html.includes('this.load.spritesheet(\'ground-sprites-\''),'Biome foreground atlases load as real sprite sheets');
-assert.ok(html.includes('const GROUND_ART_CELL_WIDTH=420;'),'Foreground clusters use the underlying terrain sections as irregular world anchors');
+assert.ok(html.includes('const GROUND_ART_SECTION_KEY_WIDTH=64;'),'Foreground clusters use independently seeded terrain segments as world anchors');
 assert.ok(html.includes('.setMask(this.groundArtMask)'),'Foreground sprites are clipped to the real solid terrain shape');
 assert.ok(html.includes('.setScrollFactor(1).setDepth(2)'),'Foreground sprites move with the gameplay camera');
 assert.ok(!html.includes('GROUND_ART_CROP_START'),'Foreground accents no longer reuse broad background crops');

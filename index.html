@@ -1475,7 +1475,7 @@ window.GRIM_CONFIG = Object.freeze({
   const GROUND_ART_ATLAS_FRAME_SIZE=627;
   const GROUND_ART_VARIANTS=4;
   const GROUND_ART_SPRITES_PER_BIOME=12;
-  const GROUND_ART_CELL_WIDTH=420;
+  const GROUND_ART_SECTION_KEY_WIDTH=64;
   const GROUND_ART_BAND_DEPTH=176;
   const GROUND_ART_BAND_ABOVE=150;
   const groundAccentNoise=(cell,salt=0)=>{
@@ -3354,7 +3354,7 @@ window.GRIM_CONFIG = Object.freeze({
         :worldArt?.biomeWeights?.(this.distance)||{};
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const sections=this.terrain.visibleSections(left,right);
-      const cellWidth=GROUND_ART_CELL_WIDTH,startX=this.startX??200;
+      const cellWidth=GROUND_ART_SECTION_KEY_WIDTH,startX=this.startX??200;
       for(const [id,sprites] of Object.entries(this.groundArtSprites||{})){
         const weight=weights[id]||0;
         const placements=[];
