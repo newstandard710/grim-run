@@ -5,8 +5,25 @@ const source=fs.readFileSync(path.join(__dirname,'..','assets/visuals/world-art.
 const scope={};
 vm.runInNewContext(source,{window:scope,globalThis:scope});
 const art=scope.GRIM_WORLD_ART;
+const root=path.join(__dirname,'..');
+const biomeIds=['forest','foothills','tundra','caves','crystals','ashlands','lava','boss'];
+assert.deepEqual(Object.keys(art.GROUND_TEXTURES),biomeIds,'all eight biomes have ground textures');
+for(const id of biomeIds){
+  const meta=art.GROUND_TEXTURES[id],file=path.join(root,'assets/visuals/ground',meta.file);
+  const bytes=fs.readFileSync(file);
+  assert.ok(bytes.length>50_000&&bytes.length<250_000,`${id} tile stays compact for mobile`);
+  assert.equal(bytes.subarray(0,4).toString(),'RIFF',`${id} tile has RIFF header`);
+  assert.equal(bytes.subarray(8,12).toString(),'WEBP',`${id} tile decodes as WebP`);
+  assert.ok(meta.opacity>0&&meta.opacity<=.2,`${id} texture opacity stays subdued`);
+}
 const near=(actual,expected,label)=>assert.ok(Math.abs(actual-expected)<1e-9,`${label}: expected ${expected}, got ${actual}`);
 const total=weights=>Object.values(weights).reduce((sum,value)=>sum+value,0);
+near(art.groundTextureWeights(900).forest,.10,'Forest ground texture fade midpoint');
+near(art.groundTextureWeights(900).foothills,.09,'Foothills ground texture fade midpoint');
+near(art.groundTextureWeights(4999.99).tundra,.14,'Tundra ground texture before portal');
+near(art.groundTextureWeights(4999.99).caves,0,'Caves texture stays beyond portal');
+near(art.groundTextureWeights(5000).caves,.18,'Caves texture appears on portal arrival');
+near(art.groundTextureWeights(5000).tundra,0,'Tundra texture ends at portal');
 
 // Exercise every live crossfade at its entrance, midpoint, and exit. This calls
 // the real helpers used by both the backdrop and ground renderers.

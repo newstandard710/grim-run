@@ -42,6 +42,15 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - Layer distant ranges, exposed rock faces, restrained frost, a sparse treeline that fades with altitude, and thin windblown snow well away from the play surface. Keep backgrounds and ground texture below foreground sprites and preserve a readable contrast with enemy and hazard cues.
 - Keep the 3,000–5,000m summit/stars treatment in the existing ascent. The user approved the complete post-portal concept set below for implementation as one world-art update.
 
+## Ground and foreground texture
+
+- Use the eight concept-matched tiles in `assets/visuals/ground/`, one for Forest, Foothills, Tundra, Underground Caves, Deep Underground, Ashlands, Lava and Boss Castle.
+- Keep each material painterly and subdued at landscape-phone scale. Forest uses weathered stone, moss and small leaf/root marks; Foothills uses exposed rock and gravel; Tundra uses restrained frost; Caves use stratified stone; Deep Underground uses dim cyan and violet crystal chips; Ashlands use charred basalt and ash; Lava uses dark cooled crust with restrained molten seams; Boss Castle uses dark worn masonry.
+- Clip the material layer to solid terrain polygons and draw it below ground details, hazards, pickups, enemies and the Reaper. Keep gaps clear so the lava below them remains visible.
+- Apply the same biome fade weights as the approved backgrounds and ground palettes. Keep the 5,000m portal boundary a hard cut.
+- Do not alter the approved concept backgrounds, generated terrain, ground heights, collision shapes, enemy behavior or gameplay timing.
+- Load and release ground textures with their corresponding three-image Surface or five-image Underworld backdrop group to limit phone memory use. If a ground tile fails, preserve the existing palette and procedural ground details.
+
 ## Underworld Biomes
 
 - **5,000–6,000m — Underground Caves:** enclosed natural rock caverns with layered arches and stalactites.

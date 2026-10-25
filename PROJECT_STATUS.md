@@ -1,14 +1,22 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.10 — *Background Art Cleanup*. The approved biome images are now the only background art; all legacy procedural atmosphere routines have been removed, and the image crossfades remain fully opaque.
+**Current build:** v0.11.11 — *Painted Ground*. Eight concept-matched ground textures now follow the existing terrain shape under the gameplay art.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.10 — *Background Art Cleanup*  
+**Release:** v0.11.11 — *Painted Ground*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The live v0.11.10 Chrome page was checked at phone-landscape size (844×390): God Mode reached 7,510m in Ashlands, showing the approved full-screen artwork and drift with no legacy overlay or browser console errors. The GitHub Regression and Chromium Rendering workflows still fail on the same baseline assertions that failed on v0.11.9 (seed 1 full-run completion and Reaper `run_03` height); these are outside the background cleanup. The previous v0.11.9 Chrome smoke test reached 7,000m without current-build console errors. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Ground texture asset integrity, all eight biome weights, terrain masking, phone-size Chromium rendering and the existing gameplay regression suites are being checked for this release. The v0.11.10 live Chrome check reached 7,510m in Ashlands with no background-rendering console errors. Two existing GitHub workflow assertions were already failing before this update (seed 1 full-run completion and Reaper `run_03` height); see the release note below for current results. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.11 — Painted Ground
+
+- Added one compact, 768×768 WebP ground material for each approved biome, painted to match the concept art: mossy forest stone, mountain gravel and frost, cave rock, crystal-flecked stone, ash and basalt, lava crust, and castle masonry.
+- Texture tiles are clipped to the existing solid-terrain polygons. The unchanged ground outlines and gameplay drawing stay above the textures, and gaps remain untextured.
+- The ground layer follows the existing 360m fades; the Tundra-to-Caves transition at 5,000m remains a hard portal cut.
+- Surface tiles load with the three surface backdrops. Underworld tiles load with the five Underworld backdrops, then the prior group is released to limit phone memory use.
+- No terrain generation, ground heights, collision shapes, hazards, controls or character art changed.
 
 ## v0.11.10 — Background Art Cleanup
 

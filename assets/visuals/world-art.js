@@ -1,5 +1,6 @@
-/* Grim Run — Biome Transitions and Ground Art, v0.11.10
- * Backgrounds use the approved biome images; these helpers draw only ground details.
+/* Grim Run — Biome Transitions and Ground Art, v0.11.11
+ * Approved biome images provide the backdrops; painted ground textures are
+ * clipped to the existing terrain surface and layered beneath gameplay art.
  */
 (function(scope){
   'use strict';
@@ -28,6 +29,16 @@
   ]);
   const WORLD_BIOMES=Object.freeze([...SURFACE_BIOMES,...UNDERWORLD_BIOMES]);
   const BIOME_FADE_HALF_WIDTH=180;
+  const GROUND_TEXTURES=Object.freeze({
+    forest:Object.freeze({file:'forest-ground.webp',opacity:.20}),
+    foothills:Object.freeze({file:'foothills-ground.webp',opacity:.18}),
+    tundra:Object.freeze({file:'tundra-ground.webp',opacity:.14}),
+    caves:Object.freeze({file:'caves-ground.webp',opacity:.18}),
+    crystals:Object.freeze({file:'crystals-ground.webp',opacity:.12}),
+    ashlands:Object.freeze({file:'ashlands-ground.webp',opacity:.12}),
+    lava:Object.freeze({file:'lava-ground.webp',opacity:.10}),
+    boss:Object.freeze({file:'boss-ground.webp',opacity:.16})
+  });
   const UNDERWORLD_PALETTES=Object.freeze({
     caves:[0x171821,0x414555,0x818495,0x343844],
     crystals:[0x17212a,0x4a6475,0x87c8d8,0x354c5c],
@@ -63,6 +74,13 @@
     }
     const index=m<6000?0:m<7000?1:m<8000?2:m<9999?3:4;
     return {[UNDERWORLD_BIOMES[index].id]:1};
+  }
+
+  function groundTextureWeights(meters){
+    const weights=biomeWeights(meters),layers={};
+    for(const [id,texture] of Object.entries(GROUND_TEXTURES))
+      layers[id]=(weights[id]||0)*texture.opacity;
+    return layers;
   }
 
   function underworldGroundPalette(meters){
@@ -214,6 +232,7 @@
     foothillsGroundPalette,drawFoothillsGround,
     tundraGroundPalette,drawTundraGround,
     SURFACE_BIOMES,UNDERWORLD_BIOMES,WORLD_BIOMES,biomeWeights,underworldWeights,
+    GROUND_TEXTURES,groundTextureWeights,
     worldGroundPalette,underworldGroundPalette,
     drawUnderworldGround
   });

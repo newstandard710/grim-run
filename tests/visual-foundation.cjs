@@ -5,9 +5,9 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.10-background-art-cleanup-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.11-painted-ground-v1"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.10-background-art-cleanup-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.11-painted-ground-v1"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
@@ -24,6 +24,8 @@ assert.ok(!html.includes('worldReviewMode'),'Old background review routes are re
 assert.ok(html.includes('scope.GRIM_WORLD_ART.drawOpeningGround'),'Opening-forest ground art remains a drawing-only layer');
 assert.ok(html.includes('scope.GRIM_WORLD_ART.drawFoothillsGround'),'Foothills ground art remains a drawing-only layer');
 assert.ok(html.includes('scope.GRIM_WORLD_ART.drawTundraGround'),'Tundra ground art remains a drawing-only layer');
+assert.ok(html.includes("this.load.image('ground-'+id"),'Ground textures load with the biome backdrops');
+assert.ok(html.includes('setMask(this.groundTextureMask)'),'Ground art is clipped to solid terrain');
 const worldScope={};vm.runInNewContext(worldArt,{window:worldScope,globalThis:worldScope});
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawOpeningGround,'function');
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawFoothillsGround,'function');
