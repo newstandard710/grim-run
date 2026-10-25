@@ -49,9 +49,15 @@ for(const meters of [0,641,1200,4200,5500,6500,9000,15000,20000]){
   assert.equal(palette.length,4,`${meters}m palette length`);
 }
 
-// Exercise the same backdrop and ground drawing helpers called by GameScene,
-// with the actual World Art module sharing the game's script scope.
+// Exercise the actual ground drawing helper and confirm all legacy background
+// drawing routines are removed from GameScene and the World Art module.
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
+assert.ok(!html.includes('drawAtmosphere('),'GameScene does not render the legacy atmosphere');
+for(const legacyBackground of ['drawRidge','drawPines','drawRollingHills','drawMountainRange',
+  'drawOpeningForest','drawFoothills(','drawTundra(','drawCavernSilhouettes',
+  'drawAshlandSilhouettes','drawLavaAtmosphere','drawCastleSilhouettes',
+  'drawUnderworldDetails','drawSurfaceDetails','drawWorldDetails'])
+  assert.ok(!source.includes(legacyBackground),`World Art removed ${legacyBackground}`);
 const storage=new Map(),nodes=new Map();
 function node(){
   let value;
@@ -78,14 +84,8 @@ graphics=new Proxy({}, {get(_target,key){
   if(key==='commands')return commands;
   return (...args)=>{commands.push([key,args]);return graphics;};
 }});
-const artScene={cameraX:6400,elapsed:2,width:950,height:430};
 for(const meters of [641,720,900,1080,2120,2300,2480,4820,4999.99,5000,
   5820,6000,6180,6820,7000,7180,7820,8000,8180,9819,9999,10179,15000,20000]){
-  const weights=art.biomeWeights(meters);
-  commands.length=0;
-  art.drawWorldDetails(artScene,graphics,950,430,330,weights);
-  assert.ok(commands.length>0,`${meters}m backdrop renderer produced drawing commands`);
-
   const from=200+meters*12-5,to=from+10;
   drawGame.width=950;drawGame.height=430;drawGame.groundY=330;drawGame.cameraY=0;
   drawGame.cameraX=from-100;drawGame.startX=200;drawGame.distance=meters;
@@ -99,4 +99,4 @@ for(const meters of [641,720,900,1080,2120,2300,2480,4820,4999.99,5000,
   assert.ok(commands.length>0,`${meters}m ground renderer produced drawing commands`);
 }
 
-console.log('PASS: actual backdrop and ground render helpers, surface and Underworld fades, portal handoff, and ground palettes');
+console.log('PASS: approved image backdrops only; actual ground rendering, biome fades, portal handoff, and palettes');

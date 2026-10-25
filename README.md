@@ -2,12 +2,12 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.11.9 — Biome Render Fix**
+**Current playable build: v0.11.10 — Background Art Cleanup**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
-- All eight approved biome concepts are used as gently drifting backdrops. Neighboring regions crossfade over 360m; at 5,000m the portal switches directly from Tundra to Caves. Ground colors follow the same transitions.
+- All eight approved biome concepts are the only background art. The old procedural sky, mountain, tree, cave, ash, and lava overlays have been removed. Image layers stay fully opaque through the gently drifting 360m crossfades; at 5,000m the portal switches directly from Tundra to Caves. Ground colors follow the same transitions.
 - Biome crossfades define their own easing helper, preventing an out-of-scope function error from aborting background and ground rendering at fade boundaries.
 - Surface backgrounds load first. Underworld backgrounds are loaded during the portal sequence, then replace and release the Surface textures to reduce memory use on phones.
 - The game wakes Phaser's frame loop when returning to the page and before pause, resume, menu, new-run, and vendor-exit transitions. A visible-page watchdog restarts Phaser if active gameplay stops receiving update heartbeats. Starting a run also resets the camera to the Reaper's starting position.

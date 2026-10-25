@@ -5,9 +5,9 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.9-biome-render-fix-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.10-background-art-cleanup-v1"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.9-biome-render-fix-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.10-background-art-cleanup-v1"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
@@ -17,27 +17,22 @@ assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector
 assert.ok(html.includes('this.visuals.skeletalBatArtEnabled=true'),'Approved Skeletal Bat art is the default');
 assert.ok(html.includes('this.visuals.boneCrawlerReviewRequested=true'),'Approved Bone Crawler art is the default');
 assert.ok(html.includes('this.visuals.emberImpReviewRequested=true'),'Approved Ember Imp art is the default');
-assert.ok(html.includes("worldReviewMode==='tundra'"),'Tundra art stays behind its review route');
-assert.ok(html.includes('if(m<=900&&scope.GRIM_WORLD_ART.drawOpeningForest)'),'Approved forest art is the default through the opening stretch');
-assert.ok(html.includes('if(m<=2300&&\n          scope.GRIM_WORLD_ART.drawFoothills)'),'Approved foothills art is now the default through the foothill stretch');
-assert.ok(html.includes('this.tundraWorldArtReviewRequested&&m>=1900&&m<=3400'),'Tundra preview is limited to its transition range');
-assert.ok(html.includes('scope.GRIM_WORLD_ART.drawOpeningForest'),'Opening-forest art replaces only the background renderer');
+assert.ok(html.includes('this.updateBiomeBackdrops();'),'Approved biome image layers draw in the main scene');
+assert.ok(!html.includes('drawAtmosphere('),'Legacy procedural skies and silhouettes are removed from the renderer');
+assert.ok(!html.includes('drawWorldDetails'),'Legacy procedural overlays are not called over the biome images');
+assert.ok(!html.includes('worldReviewMode'),'Old background review routes are removed');
 assert.ok(html.includes('scope.GRIM_WORLD_ART.drawOpeningGround'),'Opening-forest ground art remains a drawing-only layer');
-assert.ok(html.includes('scope.GRIM_WORLD_ART.drawFoothills'),'Approved foothills art replaces only the background renderer');
 assert.ok(html.includes('scope.GRIM_WORLD_ART.drawFoothillsGround'),'Foothills ground art remains a drawing-only layer');
-assert.ok(html.includes('scope.GRIM_WORLD_ART.drawTundra'),'Tundra preview replaces only the background renderer');
 assert.ok(html.includes('scope.GRIM_WORLD_ART.drawTundraGround'),'Tundra ground art remains a drawing-only layer');
 const worldScope={};vm.runInNewContext(worldArt,{window:worldScope,globalThis:worldScope});
-assert.equal(typeof worldScope.GRIM_WORLD_ART.drawOpeningForest,'function');
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawOpeningGround,'function');
-assert.equal(typeof worldScope.GRIM_WORLD_ART.drawFoothills,'function');
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawFoothillsGround,'function');
-assert.equal(typeof worldScope.GRIM_WORLD_ART.drawTundra,'function');
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawTundraGround,'function');
-assert.ok(worldArt.includes('The compact cap shares the apex and remains within both rising slopes.'),
- 'Snow caps are anchored to their mountain silhouettes');
-assert.ok(worldArt.includes('const capWidth=Math.min(spacing*.08'),
- 'Snow caps stay narrow enough to remain inside the mountain slopes');
+for(const legacyBackground of ['drawRidge','drawPines','drawRollingHills','drawMountainRange',
+ 'drawOpeningForest','drawFoothills(','drawTundra(','drawCavernSilhouettes',
+ 'drawAshlandSilhouettes','drawLavaAtmosphere','drawCastleSilhouettes',
+ 'drawUnderworldDetails','drawSurfaceDetails','drawWorldDetails'])
+ assert.ok(!worldArt.includes(legacyBackground),`Legacy background routine ${legacyBackground} is removed`);
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
  assert.ok(svg.startsWith('<svg')&&svg.includes('width="'+width+'" height="'+height+'"'));
  assert.equal((svg.match(/<g(?:\s|>)/g)||[]).length,(svg.match(/<\/g>/g)||[]).length);
@@ -332,4 +327,4 @@ assert.equal(CombatApi.rectFor(impEnemy).width,38);assert.equal(CombatApi.rectFo
 impEnemy.dead=true;impRenderer.renderEmberImps();
 assert.equal(impRenderer.emberImpPool[0].visible,false,'Dead Imp returns to normal cleanup');
 impRenderer.shutdown();assert.equal(impRenderer.emberImpReady,false);
-console.log('PASS v0.11.9 preview: accepted forest and foothills art are default; Tundra art is opt-in and keeps gameplay geometry unchanged.');
+console.log('PASS v0.11.10 preview: approved biome images are the only backdrop art; ground art and gameplay geometry remain intact.');

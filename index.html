@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.11.9</title>
+  <title>GRIM RUN — v0.11.10</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.9 · BIOME RENDER FIX</div>
+      <div class="mini">v0.11.10 · BACKGROUND ART CLEANUP</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.9-biome-render-fix-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.9-biome-render-fix-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.10-background-art-cleanup-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.11.10-background-art-cleanup-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1469,7 +1469,6 @@ window.GRIM_CONFIG = Object.freeze({
   const Meta = scope.GRIM_META;
   const Combat = scope.GRIM_COMBAT;
   const Terrain = scope.GRIM_TERRAIN;
-  const SKY = [0x0b1021,0x101b31,0x1c2942,0x29384b];
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -1591,10 +1590,6 @@ window.GRIM_CONFIG = Object.freeze({
       this.scale.on('resize', this.handleResize, this);
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
       this.visuals=scope.GRIM_VISUALS?new scope.GRIM_VISUALS.GrimVisualSystem(this):null;
-      const worldReviewMode=new URLSearchParams(location.search).get('worldReview');
-      this.openingWorldArtReviewRequested=worldReviewMode==='opening'; // Legacy review-route alias.
-      this.foothillsWorldArtReviewRequested=worldReviewMode==='foothills'; // Accepted art is now default.
-      this.tundraWorldArtReviewRequested=worldReviewMode==='tundra';
       if(this.visuals){
         // All three enemy illustrations are approved for the main game. The
         // individual and combined enemyReview URLs remain valid review aliases.
@@ -3280,16 +3275,15 @@ window.GRIM_CONFIG = Object.freeze({
         const drift=this.width*(.10*progress+Math.sin(this.elapsed*.12+i*1.7)*.004);
         const float=Math.sin(this.elapsed*.20+i*1.9)*this.height*.003;
         image.setPosition(this.width*.5-drift,this.height*.5+float);
-        image.setAlpha(alpha*.96).setVisible(true);
+        image.setAlpha(alpha).setVisible(true);
       }
     }
     drawScene() {
       if (!this.bg) return;
-      const w=this.width,h=this.height,gy=this.groundY,g=this.bg;
+      const g=this.bg;
       g.clear();
       this.ensureBiomeBackdropGroup(this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
-      this.drawAtmosphere(g,w,h,gy);
       this.drawGround();
       this.drawPortals();
       this.drawVendors();
@@ -3301,122 +3295,6 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawReaper();
       this.drawForeground();
       if(this.visuals)this.visuals.render();
-    }
-    drawAtmosphere(g,w,h,gy){
-      const m=this.distance,underworld=this.hasTeleported;
-      if(this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.drawWorldDetails){
-        const weights=scope.GRIM_WORLD_ART.biomeWeights(m);
-        scope.GRIM_WORLD_ART.drawWorldDetails(this,g,w,h,gy,weights);
-        return;
-      }
-      if(!underworld&&scope.GRIM_WORLD_ART){
-        if(this.tundraWorldArtReviewRequested&&m>=1900&&m<=3400&&
-          scope.GRIM_WORLD_ART.drawTundra){
-          scope.GRIM_WORLD_ART.drawTundra(this,g,w,h,gy);
-          return;
-        }
-        if(m<=900&&scope.GRIM_WORLD_ART.drawOpeningForest){
-          scope.GRIM_WORLD_ART.drawOpeningForest(this,g,w,h,gy);
-          return;
-        }
-        if(m<=2300&&
-          scope.GRIM_WORLD_ART.drawFoothills){
-          scope.GRIM_WORLD_ART.drawFoothills(this,g,w,h,gy);
-          return;
-        }
-        if(this.tundraWorldArtReviewRequested&&m<=3400&&
-          scope.GRIM_WORLD_ART.drawTundra){
-          scope.GRIM_WORLD_ART.drawTundra(this,g,w,h,gy);
-          return;
-        }
-      }
-      const blend=(a,b,t)=>{
-        const v=clamp(t,0,1),r0=(a>>16)&255,g0=(a>>8)&255,b0=a&255;
-        const r1=(b>>16)&255,g1=(b>>8)&255,b1=b&255;
-        return ((Math.round(r0+(r1-r0)*v)<<16)|(Math.round(g0+(g1-g0)*v)<<8)|Math.round(b0+(b1-b0)*v));
-      };
-      if(!underworld){
-        const mountain=clamp((m-880)/1150,0,1),stars=clamp((m-2580)/1350,0,1);
-        const high=blend(0x0c1c30,0x040718,stars);
-        for(let band=0;band<6;band++){
-          const color=blend(SKY[Math.min(3,Math.floor(band*4/6))],high,.23+mountain*.4+stars*.3);
-          g.fillStyle(color);g.fillRect(0,h*band/6,w,h/6+1);
-        }
-        const moonX=w*.74,moonY=h*.19;
-        g.fillStyle(0xb2d1dc,.18*(1-stars*.25));g.fillCircle(moonX,moonY,46);
-        g.fillStyle(0xe1e9e2,.65+stars*.18);g.fillCircle(moonX,moonY,23);
-        // As the world climbs above the tree line, the sky becomes an actual starfield.
-        for(let i=0;i<76;i++){
-          const x=((i*197+73-this.cameraX*.009)%(w+100)+(w+100))%(w+100)-50;
-          const y=((i*131+37) % Math.max(gy*.96,1));
-          g.fillStyle(i%4===0?0xa9ebff:0xe0f3fc,(.12+stars*.76)*(i%3===0?.72:1));
-          g.fillCircle(x,y, i%9===0?2.2:1.15);
-        }
-        // Mountain ranges build naturally as the canopy falls below camera view.
-        if(mountain>0){
-          this.drawMountainLayer(g,w,h,.05,0x29374d,.5*mountain,-90);
-          this.drawMountainLayer(g,w,h,.12,0x1c2d42,.8*mountain,0);
-          this.drawMountainLayer(g,w,h,.22,0x101d31,mountain,90);
-        }
-        const trees=clamp(1-(m-1350)/1100,0,1);
-        if(trees>.005){
-          g.setAlpha(trees);
-          this.drawTrees(g,.09,130,gy*.38,0x1d3144);
-          this.drawTrees(g,.22,110,gy*.54,0x15283a);
-          for(let i=0;i<3;i++){g.fillStyle(0x7dabc0,.027+i*.008);g.fillRect(0,gy-34+i*16,w,23);}
-          this.drawTrees(g,.43,144,gy*.66,0x101e2b);
-          g.setAlpha(1);
-        }
-      }else{
-        const lava=clamp((m-7600)/900,0,1);
-        const c0=blend(0x141c32,0x260b17,lava),c1=blend(0x111729,0x3c1415,lava);
-        for(let i=0;i<6;i++){
-          g.fillStyle(blend(c0,c1,i/5));g.fillRect(0,h*i/6,w,h/6+1);
-        }
-        // Cavern walls and hanging silhouettes scroll at different parallax rates.
-        for(let layer=0;layer<3;layer++){
-          const factor=.10+layer*.09,spacing=130-layer*19,off=this.cameraX*factor;
-          g.fillStyle(blend([0x263247,0x1b2a37,0x121c27][layer],0x4c1f20,lava),.88);
-          for(let n=Math.floor(off/spacing)-2;n<Math.ceil((off+w)/spacing)+2;n++){
-            const x=n*spacing-off,amp=((Math.sin(n*42.7+layer*9)+1)*.5);
-            const y=-15+amp*(55+layer*25);
-            g.fillTriangle(x-30,-2,x+spacing*.8,-2,x+spacing*.38,y+18+amp*78);
-            if(layer===2){g.fillTriangle(x+spacing*.2,-3,x+spacing*.66,-3,x+spacing*.52,y+70);}
-          }
-        }
-        for(let i=0;i<13;i++){
-          const x=((i*191-this.cameraX*.13)%(w+200)+(w+200))%(w+200)-100;
-          const y=h*.23+(Math.sin(i*2.37)*.5+.5)*h*.54;
-          g.fillStyle(blend(0x7c81e8,0xff7129,lava),.09+lava*.09);
-          g.fillCircle(x,y,10+(i%4)*7);
-        }
-        if(lava>.005){
-          // Lava glow slowly overtakes the lowest part of the cavern.
-          for(let i=0;i<6;i++){
-            g.fillStyle(blend(0xa94a2b,0xf44719,i/6),lava*(.035+.02*i));
-            g.fillRect(0,h*(.68+i*.055),w,h*.057+1);
-          }
-          const level=h*(.90-.11*lava);
-          g.fillStyle(0xa62a16,.18+lava*.25);g.fillRect(0,level,w,h-level);
-          g.lineStyle(3,0xff6734,.2+lava*.45);
-          for(let x=-25;x<w+25;x+=25){const y=level+Math.sin(x*.026+this.elapsed*1.1)*4;g.lineBetween(x,y,x+23,y+1);}
-        }
-      }
-    }
-    drawMountainLayer(g,w,h,factor,color,alpha,shift){
-      g.fillStyle(color,alpha);
-      const spacing=160,off=this.cameraX*factor;
-      for(let n=Math.floor(off/spacing)-2;n<Math.ceil((off+w)/spacing)+2;n++){
-        const x=n*spacing-off;
-        const peakY=h*.25+shift+(Math.sin(n*11.7+factor*73)+1)*h*.12-this.cameraY*.03;
-        const low=h+110;
-        g.fillTriangle(x-spacing*.65,low,x+spacing*.52,peakY,x+spacing*1.25,low);
-        if(factor>.10){
-          g.fillStyle(0xa6b8c2,alpha*.36);
-          g.fillTriangle(x+spacing*.52,peakY,x+spacing*.35,peakY+32,x+spacing*.67,peakY+36);
-          g.fillStyle(color,alpha);
-        }
-      }
     }
     drawPortals(){
       const g=this.world;
@@ -3457,51 +3335,6 @@ window.GRIM_CONFIG = Object.freeze({
         }
         g.fillStyle(devil?0x922d2b:0x776342,.88);g.fillRoundedRect(x-31,y-120,62,17,4);
         g.lineStyle(2,aura,.95);g.strokeRoundedRect(x-31,y-120,62,17,4);
-      }
-    }
-    drawTrees(g,factor,spacing,maxTreeHeight,color) {
-      // Keep v0.1's layer spacing and parallax, but vary trunks, crowns and branch structure.
-      const offset=this.cameraX*factor;
-      const first=Math.floor(offset/spacing)-1;
-      const last=first+Math.ceil(this.width/spacing)+3;
-      for(let n=first;n<last;n++) {
-        const x=n*spacing-offset;
-        const mod=(Math.sin(n*62.17+factor*57)+1)/2;
-        const kind=((n*7+Math.round(factor*100))%5+5)%5;
-        const ground=this.groundY-12-this.cameraY*.72;
-        const height=maxTreeHeight*(.67+.46*mod);
-        const thick=7+Math.floor(mod*9);
-        const crownY=ground-height;
-        g.fillStyle(color,.97);g.fillRect(x-thick*.5,crownY,thick,height+23);
-        // Roots at the base and a forked trunk for some trees.
-        g.lineStyle(Math.max(3,thick*.45),color,.95);
-        g.lineBetween(x,ground-12,x-spacing*(kind%2?.12:.21),ground+8);
-        g.lineBetween(x,ground-12,x+spacing*(kind%2?.24:.12),ground+11);
-        const branches=kind===3?5:3;
-        for(let k=0;k<branches;k++){
-          const h=.29+k*.135+(mod-.5)*.06;
-          const y=ground-height*h;
-          const side=k%2===0?-1:1;
-          const far=spacing*(.2+.095*mod)*(k===0?1.1:.89);
-          g.lineStyle(Math.max(2,thick*.5-k*.6),color,.94);
-          g.lineBetween(x,y,x+side*far,y-height*(.14+.06*mod));
-          g.lineStyle(2,color,.78);
-          g.lineBetween(x+side*far*.7,y-height*.1,x+side*far*1.1,y-height*.21);
-        }
-        if(kind===0 || kind===4){
-          g.fillStyle(color,.91);
-          g.fillEllipse(x-7,crownY+12,25+mod*18,26+mod*24);
-          g.fillEllipse(x+10,crownY+8,27,19+mod*23);
-          g.fillEllipse(x,crownY-1,19+mod*13,32);
-        } else if(kind===2){
-          g.lineStyle(3,color,.9);g.lineBetween(x,crownY+19,x-14,crownY-8);
-          g.lineBetween(x-12,crownY-6,x-26,crownY-18);
-        }
-        if(kind===1 && factor>.2){
-          // A sparse trailing vine in the near tree layer.
-          g.lineStyle(1.4,0x385451,.5);
-          g.lineBetween(x+7,crownY+height*.35,x+12,crownY+height*.65);
-        }
       }
     }
     groundPalette(m) {

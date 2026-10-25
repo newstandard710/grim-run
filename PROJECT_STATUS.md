@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.9 — *Biome Render Fix*. Biome blending now has its own easing helper, fixing the runtime error that stopped backdrop and ground drawing at crossfades. Optional biome loading also returns safely when a reduced host has no Phaser texture loader.
+**Current build:** v0.11.10 — *Background Art Cleanup*. The approved biome images are now the only background art; all legacy procedural atmosphere routines have been removed, and the image crossfades remain fully opaque.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.9 — *Biome Render Fix*  
+**Release:** v0.11.10 — *Background Art Cleanup*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
 **Verification:** The live v0.11.8 reproduction produced `ReferenceError: smooth is not defined` in the biome-weight renderer. The regression test exercises actual backdrop and ground drawing helpers at every surface and Underworld fade, the 641m location, and the direct 5,000m portal handoff; it passes in the Node VM. In the published v0.11.9 Chrome smoke test, the scene rendered through 7,000m with an animated background and no current-build console errors; the run also reached the first vendor at 666m and resumed to 709m. The God Mode test covers 20,000m, and the encounter suite checks continued play beyond 9,999m. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.10 — Background Art Cleanup
+
+- Removed the old procedural sky, stars, moon, ridgelines, trees, snow peaks, cave silhouettes, crystals, ash trees, lava falls, and castle silhouettes from the World Art module.
+- Removed the legacy renderer from the active scene; the approved biome images now provide the full background across the route.
+- Biome image opacity now reaches 100%, preventing any underlayer from showing through during single-biome views or transitions. Slow drift and 360m crossfades remain; the Tundra-to-Caves portal stays a hard cut.
+- Preserved all ground palettes and ground-detail drawing helpers.
 
 ## v0.11.9 — Biome Render Fix
 
