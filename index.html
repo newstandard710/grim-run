@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.10.14</title>
+  <title>GRIM RUN — v0.10.15</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.10.14 · ENEMY ART REVIEW</div>
+      <div class="mini">v0.10.15 · ENEMY ART REVIEW</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.10.14',
+  version: '0.10.15',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1451,7 +1451,7 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/visual-system.js?v=0.10.14-ember-imp-review-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.10.15-enemy-review-both-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1554,12 +1554,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
       this.visuals=scope.GRIM_VISUALS?new scope.GRIM_VISUALS.GrimVisualSystem(this):null;
       if(this.visuals){
-        // The user-approved Skeletal Bat art is now the default. The Bone
-        // Crawler remains opt-in until its phone-scale art review is accepted.
+        // The Skeletal Bat is approved. Bone Crawler and Ember Imp stay
+        // opt-in; ?enemyReview=both enables both sprites in one playtest.
         this.visuals.skeletalBatArtEnabled=true;
-        const enemyReview=new URLSearchParams(location.search).get('enemyReview');
-        this.visuals.boneCrawlerReviewRequested=enemyReview==='bone-crawler';
-        this.visuals.emberImpReviewRequested=enemyReview==='ember-imp';
+        const enemyReviews=(new URLSearchParams(location.search).get('enemyReview')||'')
+          .split(',').map(value=>value.trim());
+        const reviewBoth=enemyReviews.includes('both');
+        this.visuals.boneCrawlerReviewRequested=reviewBoth||enemyReviews.includes('bone-crawler');
+        this.visuals.emberImpReviewRequested=reviewBoth||enemyReviews.includes('ember-imp');
         // The eight-pose Reaper motion cycle is the main game art. Keep the
         // previous illustrated art and procedural art available for comparison.
         const artMode=new URLSearchParams(location.search).get('art');

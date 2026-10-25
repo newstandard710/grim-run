@@ -442,6 +442,43 @@ const server=http.createServer((req,res)=>{
     enemy.dead=true;s.drawScene();g.step(performance.now(),0);return sprite.visible;
   });
   assert.equal(impAfterDeath,false,'Dead Imps return to ordinary enemy cleanup');
+
+  // The combined review link must load and render both opt-in ground enemies.
+  await skeletalPage.goto(origin+'/?enemyReview=both&seed=33',
+    {waitUntil:'domcontentloaded',timeout:45000});
+  await skeletalPage.waitForFunction(()=>{
+    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    return v?.loaded===true&&v.boneCrawlerReady===true&&v.emberImpReady===true;
+  },null,{timeout:45000});
+  const bothLoaded=await skeletalPage.evaluate(()=>{
+    const v=window.grimRun.scene.scenes[0].visuals;
+    return {crawler:v.boneCrawlerReady,imp:v.emberImpReady,
+      crawlerPool:v.boneCrawlerPool.length,impPool:v.emberImpPool.length,
+      flag:new URLSearchParams(location.search).get('enemyReview')};
+  });
+  assert.deepEqual(bothLoaded,{crawler:true,imp:true,crawlerPool:12,impPool:12,flag:'both'});
+  await skeletalPage.click('#start-btn');
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
+    null,{timeout:15000});
+  const bothRendered=await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0];
+    g.loop.stop();s.state='paused';s.elapsed=0;
+    const crawlerX=s.cameraX+280,impX=s.cameraX+620;
+    const crawlerGround=s.terrain.groundAt(crawlerX),impGround=s.terrain.groundAt(impX);
+    const crawler={kind:'crawler',x:crawlerX,
+      y:crawlerGround-window.GRIM_COMBAT.CRAWLER_HITBOX.footOffset,
+      phase:0,dead:false,hp:1};
+    const imp={kind:'imp',x:impX,y:impGround-30,homeY:impGround-30,
+      phase:0,dead:false,hp:2,warningMs:0};
+    s.enemies=[crawler,imp];s.fireballs=[];s.drawScene();g.step(performance.now(),0);
+    const crawlerSprite=s.visuals.boneCrawlerPool[0],impSprite=s.visuals.emberImpPool[0];
+    return {crawlerVisible:crawlerSprite.visible,crawlerFrame:crawlerSprite.texture.key,
+      crawlerFacesRight:crawlerSprite.flipX,impVisible:impSprite.visible,impFrame:impSprite.frame.name};
+  });
+  assert.deepEqual(bothRendered,{crawlerVisible:true,crawlerFrame:'gr_v2_crawler_crawl_01',
+    crawlerFacesRight:true,impVisible:true,impFrame:'run_01'},
+    'Both review sprites render in the same gameplay scene');
+  await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'combined-enemy-phone-scale.png')});
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -683,7 +720,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.14 Reaper/Bat/Skeletal Bat defaults, opt-in right-facing Bone Crawler 2.5x and Ember Imp six-pose phone renders, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.10.15 Reaper/Bat/Skeletal Bat defaults, opt-in Bone Crawler and Ember Imp renders individually and together, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

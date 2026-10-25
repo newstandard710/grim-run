@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.14 — Ember Imp Art Review**
+**Current playable build: v0.10.15 — Combined Enemy Art Review**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -41,6 +41,11 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The warning and release are character poses; the launched fireball remains a separate effect. Missing or invalid art keeps the procedural Imp visible.
 - To reach one quickly, use Pause → God Mode → Teleport to 7,500m, then continue into the Underworld until an Imp enters view.
 - [Open the Ember Imp phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=ember-imp).
+
+## Combined enemy-art review
+
+- The Bone Crawler and Ember Imp each have their own opt-in review links above. Use the combined route to see both sprites in the same run.
+- [Open the combined Bone Crawler and Ember Imp phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=both).
 
 ## v0.10.9: Subtle Reaper Run Head Bob
 
