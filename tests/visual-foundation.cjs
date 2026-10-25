@@ -5,7 +5,7 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.11-painted-ground-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.12-concept-foreground-v1"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
 assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.11-painted-ground-v1"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
@@ -21,15 +21,13 @@ assert.ok(html.includes('this.updateBiomeBackdrops();'),'Approved biome image la
 assert.ok(!html.includes('drawAtmosphere('),'Legacy procedural skies and silhouettes are removed from the renderer');
 assert.ok(!html.includes('drawWorldDetails'),'Legacy procedural overlays are not called over the biome images');
 assert.ok(!html.includes('worldReviewMode'),'Old background review routes are removed');
-assert.ok(html.includes('scope.GRIM_WORLD_ART.drawOpeningGround'),'Opening-forest ground art remains a drawing-only layer');
-assert.ok(html.includes('scope.GRIM_WORLD_ART.drawFoothillsGround'),'Foothills ground art remains a drawing-only layer');
-assert.ok(html.includes('scope.GRIM_WORLD_ART.drawTundraGround'),'Tundra ground art remains a drawing-only layer');
-assert.ok(html.includes("this.load.image('ground-'+id"),'Ground textures load with the biome backdrops');
-assert.ok(html.includes('setMask(this.groundTextureMask)'),'Ground art is clipped to solid terrain');
+assert.ok(!html.includes('groundTextureSprites'),'Repeated ground texture tiles are not created');
+assert.ok(!html.includes('groundTextureMask'),'Concept foregrounds are not hidden behind a texture mask');
+assert.ok(!html.includes("this.load.image('ground-'+id"),'Only approved biome paintings load');
+assert.ok(html.includes('WORLD_GROUND_BODY_ALPHA'),'Terrain keeps concept foreground visible through its body');
 const worldScope={};vm.runInNewContext(worldArt,{window:worldScope,globalThis:worldScope});
-assert.equal(typeof worldScope.GRIM_WORLD_ART.drawOpeningGround,'function');
-assert.equal(typeof worldScope.GRIM_WORLD_ART.drawFoothillsGround,'function');
-assert.equal(typeof worldScope.GRIM_WORLD_ART.drawTundraGround,'function');
+assert.equal(worldScope.GRIM_WORLD_ART.WORLD_GROUND_BODY_ALPHA,.22);
+assert.equal(worldScope.GRIM_WORLD_ART.WORLD_GROUND_SHADE_ALPHA,.08);
 for(const legacyBackground of ['drawRidge','drawPines','drawRollingHills','drawMountainRange',
  'drawOpeningForest','drawFoothills(','drawTundra(','drawCavernSilhouettes',
  'drawAshlandSilhouettes','drawLavaAtmosphere','drawCastleSilhouettes',
@@ -329,4 +327,4 @@ assert.equal(CombatApi.rectFor(impEnemy).width,38);assert.equal(CombatApi.rectFo
 impEnemy.dead=true;impRenderer.renderEmberImps();
 assert.equal(impRenderer.emberImpPool[0].visible,false,'Dead Imp returns to normal cleanup');
 impRenderer.shutdown();assert.equal(impRenderer.emberImpReady,false);
-console.log('PASS v0.11.10 preview: approved biome images are the only backdrop art; ground art and gameplay geometry remain intact.');
+console.log('PASS v0.11.12: approved biome images provide the visible foreground; terrain geometry remains intact.');

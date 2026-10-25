@@ -1,6 +1,6 @@
-/* Grim Run — Biome Transitions and Ground Art, v0.11.11
- * Approved biome images provide the backdrops; painted ground textures are
- * clipped to the existing terrain surface and layered beneath gameplay art.
+/* Grim Run — Biome Transitions and Concept Foregrounds, v0.11.12
+ * Approved biome paintings supply both the distant view and the natural
+ * foreground visible through the lightly shaded gameplay terrain.
  */
 (function(scope){
   'use strict';
@@ -29,16 +29,8 @@
   ]);
   const WORLD_BIOMES=Object.freeze([...SURFACE_BIOMES,...UNDERWORLD_BIOMES]);
   const BIOME_FADE_HALF_WIDTH=180;
-  const GROUND_TEXTURES=Object.freeze({
-    forest:Object.freeze({file:'forest-ground.webp',opacity:.20}),
-    foothills:Object.freeze({file:'foothills-ground.webp',opacity:.18}),
-    tundra:Object.freeze({file:'tundra-ground.webp',opacity:.14}),
-    caves:Object.freeze({file:'caves-ground.webp',opacity:.18}),
-    crystals:Object.freeze({file:'crystals-ground.webp',opacity:.12}),
-    ashlands:Object.freeze({file:'ashlands-ground.webp',opacity:.12}),
-    lava:Object.freeze({file:'lava-ground.webp',opacity:.10}),
-    boss:Object.freeze({file:'boss-ground.webp',opacity:.16})
-  });
+  const WORLD_GROUND_BODY_ALPHA=.22;
+  const WORLD_GROUND_SHADE_ALPHA=.08;
   const UNDERWORLD_PALETTES=Object.freeze({
     caves:[0x171821,0x414555,0x818495,0x343844],
     crystals:[0x17212a,0x4a6475,0x87c8d8,0x354c5c],
@@ -76,13 +68,6 @@
     return {[UNDERWORLD_BIOMES[index].id]:1};
   }
 
-  function groundTextureWeights(meters){
-    const weights=biomeWeights(meters),layers={};
-    for(const [id,texture] of Object.entries(GROUND_TEXTURES))
-      layers[id]=(weights[id]||0)*texture.opacity;
-    return layers;
-  }
-
   function underworldGroundPalette(meters){
     const weights=underworldWeights(meters);
     return blendGroundPalettes(weights,id=>UNDERWORLD_PALETTES[id]);
@@ -111,36 +96,6 @@
     });
   }
 
-  function drawUnderworldGround(scene,g,from,to){
-    const startX=scene.startX||200,pxPerMeter=scope.GRIM_CONFIG?.pxPerMeter||12;
-    for(let x=Math.ceil(from/64)*64;x<to-10;x+=64){
-      const y=scene.terrain.groundAt(x);
-      if(y===null||!Number.isFinite(y))continue;
-      const meters=(x-startX)/pxPerMeter,n=Math.floor(x/64),v=(Math.sin(n*8.37)+1)*.5;
-      if(meters<6000){
-        g.lineStyle(1.5,0x9aa0ad,.20);g.lineBetween(x+12,y+10,x+18+v*8,y+21);
-        g.fillStyle(0x080d14,.34);g.fillEllipse(x+43,y+29+v*6,8+v*4,3);
-      }else if(meters<7000){
-        if(n%3===0){
-          g.fillStyle(n%2?0x60b9d1:0x8d80c7,.45);
-          g.fillPoints([{x:x+28,y:y+2},{x:x+32,y:y-9-v*8},
-            {x:x+36,y:y+2}],true);
-        }
-        g.lineStyle(1.2,0xaee8f2,.24);g.lineBetween(x+8,y+8,x+26,y+9);
-      }else if(meters<8000){
-        g.fillStyle(0x120d10,.40);g.fillEllipse(x+25,y+10+v*3,18+v*12,4+v*2);
-        g.lineStyle(1.4,0xff7448,.15);g.lineBetween(x+48,y+15,x+56,y+21);
-      }else if(meters<9999){
-        g.lineStyle(2.2,0xff7136,.44);g.lineBetween(x+13,y+16,x+20+v*7,y+25);
-        g.lineBetween(x+20+v*7,y+25,x+28,y+18);
-      }else{
-        g.lineStyle(1.3,0x9c766c,.29);g.lineBetween(x+7,y+13,x+21,y+12);
-        g.lineBetween(x+21,y+12,x+21,y+26);
-        if(n%4===0){g.fillStyle(0xff8a52,.30);g.fillRoundedRect(x+42,y+11,3,8,1);}
-      }
-    }
-  }
-
   function openingGroundPalette(){
     return [0x202a28,0x52675a,0x87947a,0x39433d];
   }
@@ -159,81 +114,12 @@
     return foothills.map((color,i)=>mix(color,frost[i],t));
   }
 
-  function drawOpeningGround(scene,g,from,to){
-    const first=Math.ceil(from/58)*58;
-    for(let x=first;x<to-8;x+=58){
-      const y=scene.terrain.groundAt(x);
-      if(y===null||!Number.isFinite(y))continue;
-      const n=Math.floor(x/58);
-      const variation=(Math.sin(n*12.8)+1)*.5;
-      g.lineStyle(1.7,0xa1a884,.57);
-      g.lineBetween(x+7,y-2,x+9,y-7-variation*4);
-      g.lineBetween(x+10,y-2,x+14,y-5-variation*5);
-      if(n%2===0)g.lineBetween(x+13,y-2,x+18,y-6-variation*3);
-      g.fillStyle(0x687368,.36);
-      g.fillEllipse(x+31,y+17+variation*7,8+variation*6,3.3);
-      g.fillStyle(0x3c4742,.58);
-      g.fillEllipse(x+45,y+26+(1-variation)*8,5+variation*4,2.6);
-      g.lineStyle(1.7,0x101a19,.39);
-      g.lineBetween(x+17,y+12,x+20+variation*3,y+30);
-      g.lineStyle(1.2,0x849082,.19);
-      g.lineBetween(x+26,y+45+variation*5,x+42,y+48+(1-variation)*5);
-    }
-  }
-
-  function drawFoothillsGround(scene,g,from,to){
-    const first=Math.ceil(from/76)*76;
-    const startX=scene.startX??200;
-    for(let x=first;x<to-10;x+=76){
-      const y=scene.terrain.groundAt(x);
-      if(y===null||!Number.isFinite(y))continue;
-      const n=Math.floor(x/76);
-      const variation=(Math.sin(n*8.17)+1)*.5;
-      const meters=(x-startX)/(scope.GRIM_CONFIG?.pxPerMeter||12);
-      const scrub=1-clamp((meters-950)/1000,0,1);
-      g.fillStyle(0x182326,.36);
-      g.fillTriangle(x+16,y+12,x+22+variation*5,y+18,x+29,y+12);
-      g.fillStyle(0x89938a,.29);
-      g.fillEllipse(x+21+variation*7,y+14,5+variation*3,2.3);
-      g.fillStyle(0x56625c,.31);
-      g.fillEllipse(x+52,y+28+(1-variation)*7,8+variation*5,3);
-      g.lineStyle(1.35,0x111c1e,.32);
-      g.lineBetween(x+38,y+18,x+41+variation*4,y+33);
-      if(n%3===0&&scrub>.02){
-        g.lineStyle(1.4,0x9da589,.27*scrub);
-        g.lineBetween(x+5,y-2,x+8,y-5-variation*3);
-        g.lineBetween(x+8,y-2,x+13,y-4-variation*3);
-      }
-    }
-  }
-
-  function drawTundraGround(scene,g,from,to){
-    const first=Math.ceil(from/72)*72;
-    for(let x=first;x<to-12;x+=72){
-      const y=scene.terrain.groundAt(x);
-      if(y===null||!Number.isFinite(y))continue;
-      const n=Math.floor(x/72);
-      const variation=(Math.sin(n*10.41)+1)*.5;
-      g.fillStyle(0x1c2831,.38);
-      g.fillTriangle(x+14,y+13,x+22+variation*6,y+19,x+31,y+13);
-      g.fillStyle(0x8598a0,.3);
-      g.fillEllipse(x+21+variation*6,y+15,6+variation*4,2.2);
-      g.fillStyle(0x465660,.38);
-      g.fillEllipse(x+51,y+29+(1-variation)*6,8+variation*5,3);
-      g.lineStyle(1.2,0xa8bac2,.17);
-      g.lineBetween(x+5,y+5,x+22+variation*4,y+6);
-      g.lineStyle(1.35,0x101b22,.34);
-      g.lineBetween(x+36,y+18,x+40+variation*4,y+33);
-    }
-  }
-
   scope.GRIM_WORLD_ART=Object.freeze({
-    openingGroundPalette,drawOpeningGround,
-    foothillsGroundPalette,drawFoothillsGround,
-    tundraGroundPalette,drawTundraGround,
+    WORLD_GROUND_BODY_ALPHA,WORLD_GROUND_SHADE_ALPHA,
+    openingGroundPalette,
+    foothillsGroundPalette,
+    tundraGroundPalette,
     SURFACE_BIOMES,UNDERWORLD_BIOMES,WORLD_BIOMES,biomeWeights,underworldWeights,
-    GROUND_TEXTURES,groundTextureWeights,
     worldGroundPalette,underworldGroundPalette,
-    drawUnderworldGround
   });
 })(typeof window!=='undefined'?window:globalThis);

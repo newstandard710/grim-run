@@ -7,26 +7,19 @@ vm.runInNewContext(source,{window:scope,globalThis:scope});
 const art=scope.GRIM_WORLD_ART;
 const root=path.join(__dirname,'..');
 const biomeIds=['forest','foothills','tundra','caves','crystals','ashlands','lava','boss'];
-assert.deepEqual(Object.keys(art.GROUND_TEXTURES),biomeIds,'all eight biomes have ground textures');
-for(const id of biomeIds){
-  const meta=art.GROUND_TEXTURES[id],file=path.join(root,'assets/visuals/ground',meta.file);
-  const bytes=fs.readFileSync(file);
-  assert.ok(bytes.length>50_000&&bytes.length<250_000,`${id} tile stays compact for mobile`);
-  assert.equal(bytes.subarray(0,4).toString(),'RIFF',`${id} tile has RIFF header`);
-  assert.equal(bytes.subarray(8,12).toString(),'WEBP',`${id} tile decodes as WebP`);
-  assert.ok(meta.opacity>0&&meta.opacity<=.2,`${id} texture opacity stays subdued`);
-}
+assert.equal(art.GROUND_TEXTURES,undefined,'no tiled ground textures can cover the concept foregrounds');
+assert.equal(art.groundTextureWeights,undefined,'ground does not switch to repeated biome texture tiles');
+assert.ok(art.WORLD_GROUND_BODY_ALPHA>.1&&art.WORLD_GROUND_BODY_ALPHA<.3,
+  'terrain body stays translucent so the approved concept foreground remains visible');
+assert.ok(art.WORLD_GROUND_SHADE_ALPHA>=0&&art.WORLD_GROUND_SHADE_ALPHA<.1,
+  'background shade beneath the terrain stays light');
+assert.equal(fs.existsSync(path.join(root,'assets/visuals/ground')),false,
+  'obsolete repeating ground tile assets are removed');
 const near=(actual,expected,label)=>assert.ok(Math.abs(actual-expected)<1e-9,`${label}: expected ${expected}, got ${actual}`);
 const total=weights=>Object.values(weights).reduce((sum,value)=>sum+value,0);
-near(art.groundTextureWeights(900).forest,.10,'Forest ground texture fade midpoint');
-near(art.groundTextureWeights(900).foothills,.09,'Foothills ground texture fade midpoint');
-near(art.groundTextureWeights(4999.99).tundra,.14,'Tundra ground texture before portal');
-near(art.groundTextureWeights(4999.99).caves,0,'Caves texture stays beyond portal');
-near(art.groundTextureWeights(5000).caves,.18,'Caves texture appears on portal arrival');
-near(art.groundTextureWeights(5000).tundra,0,'Tundra texture ends at portal');
 
-// Exercise every live crossfade at its entrance, midpoint, and exit. This calls
-// the real helpers used by both the backdrop and ground renderers.
+// Exercise every live crossfade at its entrance, midpoint, and exit. Ground
+// appearance now follows the same concept image visible behind the terrain.
 for(const [edge,leftId,rightId] of [
   [900,'forest','foothills'],[2300,'foothills','tundra'],
   [6000,'caves','crystals'],[7000,'crystals','ashlands'],
@@ -114,6 +107,10 @@ for(const meters of [641,720,900,1080,2120,2300,2480,4820,4999.99,5000,
   commands.length=0;
   drawGame.drawGround();
   assert.ok(commands.length>0,`${meters}m ground renderer produced drawing commands`);
+  assert.ok(commands.some(([name,args])=>name==='fillStyle'&&args[1]===art.WORLD_GROUND_BODY_ALPHA),
+    `${meters}m terrain keeps the approved concept foreground visible through its body`);
+  assert.ok(commands.some(([name])=>name==='lineBetween'),
+    `${meters}m collision path keeps a light surface contour`);
 }
 
-console.log('PASS: approved image backdrops only; actual ground rendering, biome fades, portal handoff, and palettes');
+console.log('PASS: concept foreground blend, translucent terrain drawing, biome fades, portal handoff, and palettes');

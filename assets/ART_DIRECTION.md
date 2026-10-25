@@ -39,17 +39,16 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - Foothills are the next stretch: use a gradual forest-to-hills transition from about 900m through 2,300m, with sparse pines, rounded slopes, increasingly visible mountain ridges, muted stone, small gravel and fading brush.
 - The accepted foothills art is the default. Existing terrain, ground heights, collision shapes, object placement and enemy behavior remain unchanged.
 - Preview the Tundra mountain ascent through `?worldReview=tundra` from 1,900–3,400m. Keep the 2,000–3,000m ridges broad and visibly rooted in the horizon; every snow cap must share its mountain's apex and stay within the rock face. Avoid detached peaks or snow fragments that read as floating.
-- Layer distant ranges, exposed rock faces, restrained frost, a sparse treeline that fades with altitude, and thin windblown snow well away from the play surface. Keep backgrounds and ground texture below foreground sprites and preserve a readable contrast with enemy and hazard cues.
+- Layer distant ranges, exposed rock faces, restrained frost, a sparse treeline that fades with altitude, and thin windblown snow well away from the play surface. Let the approved painting provide the natural ground and foreground; preserve readable contrast with enemy and hazard cues.
 - Keep the 3,000–5,000m summit/stars treatment in the existing ascent. The user approved the complete post-portal concept set below for implementation as one world-art update.
 
-## Ground and foreground texture
+## Foreground and ground treatment
 
-- Use the eight concept-matched tiles in `assets/visuals/ground/`, one for Forest, Foothills, Tundra, Underground Caves, Deep Underground, Ashlands, Lava and Boss Castle.
-- Keep each material painterly and subdued at landscape-phone scale. Forest uses weathered stone, moss and small leaf/root marks; Foothills uses exposed rock and gravel; Tundra uses restrained frost; Caves use stratified stone; Deep Underground uses dim cyan and violet crystal chips; Ashlands use charred basalt and ash; Lava uses dark cooled crust with restrained molten seams; Boss Castle uses dark worn masonry.
-- Clip the material layer to solid terrain polygons and draw it below ground details, hazards, pickups, enemies and the Reaper. Keep gaps clear so the lava below them remains visible.
-- Apply the same biome fade weights as the approved backgrounds and ground palettes. Keep the 5,000m portal boundary a hard cut.
-- Do not alter the approved concept backgrounds, generated terrain, ground heights, collision shapes, enemy behavior or gameplay timing.
-- Load and release ground textures with their corresponding three-image Surface or five-image Underworld backdrop group to limit phone memory use. If a ground tile fails, preserve the existing palette and procedural ground details.
+- Use the foreground already painted into each of the eight approved biome concepts. Do not cover it with repeating rock, gravel, ice or lava texture tiles.
+- Keep the gameplay terrain body lightly shaded and translucent so the concept foreground remains visible through the running path. Use a fine edge and restrained underside shadow to distinguish the collision surface.
+- Avoid evenly spaced procedural rocks, grass marks and cracks. Add no separate repeated foreground pattern.
+- Preserve gaps and keep the 5,000m Tundra-to-Caves boundary a hard portal cut.
+- Do not alter the approved concept images, generated terrain, ground heights, collision shapes, enemy behavior or gameplay timing.
 
 ## Underworld Biomes
 
