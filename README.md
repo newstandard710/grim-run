@@ -2,9 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current production build: v0.12.1 — Terrain Surface Pass**
-
-**Development candidate: v0.12.2 — Biome Surface & Performance Pass**
+**Current production build: v0.12.2 — Biome Surface & Performance Pass**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
@@ -16,8 +14,8 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The game wakes Phaser's frame loop when returning to the page and before pause, resume, menu, new-run, and vendor-exit transitions. A visible-page watchdog restarts Phaser if active gameplay stops receiving update heartbeats. Starting a run also resets the camera to the Reaper's starting position.
 - Terrain requests for already-generated ground now return without adding more chunks; God Mode extends the world in bounded chunks beyond the pre-generated normal course.
 - Normal runs still finish at 9,999m. God Mode can continue past the finish and teleport in 500m steps through 20,000m.
-- The v0.12.2 candidate adds a more visible, biome-matched surface cap beneath the Reaper's feet. It follows each terrain segment's exact top profile and stops at gaps; terrain and collision geometry stay unchanged.
-- The v0.12.2 candidate caches each visible terrain section's texture mask and surface cap. Material phase and biome color are anchored to the section's world position, reducing repeated per-frame drawing during play.
+- v0.12.2 adds a more visible, biome-matched surface cap beneath the Reaper's feet. It follows each terrain segment's exact top profile and stops at gaps; terrain and collision geometry stay unchanged.
+- v0.12.2 caches each visible terrain section's texture mask and surface cap. Material phase and biome color are anchored to the section's world position, reducing repeated per-frame drawing during play.
 - [Open the production game](https://newstandard710.github.io/grim-run/).
 
 - [Game HTML](index.html)
@@ -31,12 +29,12 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - Kept generated terrain, cliffs, gaps, collision, hazards, controls, and the normal 9,999m finish unchanged. Abyss fills remain visible behind open gaps.
 - Fixed the Ember Imp visual check to measure the decoded atlas silhouette; the long-run regression now turns God Mode off before testing victory, and the God Mode range check covers the documented 20,000m teleport limit.
 
-## v0.12.2 candidate — Biome Surface & Performance Pass
+## v0.12.2 — Biome Surface & Performance Pass
 
-- Add a readable, narrow biome-matched cap: moss and soil in Forest, gravel and stone in Foothills, frost in Tundra, layered rock in Caves, mineral color in Crystals, ash and embers in Ashlands, volcanic crust in Lava, and dark stone in the Boss Biome.
-- Keep the cap entirely within the existing walkable profile. It follows slopes, rubble, and ledges, and ends at every gap and platform edge. No collision or route geometry changes.
-- Reuse each terrain section's material mask and surface cap instead of rebuilding them as the camera moves. Keep material phase and biome colors fixed to world position.
-- Validate all eight biomes at phone dimensions, exercise the cap and cache behavior in Chromium, run gameplay regression checks, then deploy for Android playtest.
+- Added a readable, narrow biome-matched cap: moss and soil in Forest, gravel and stone in Foothills, frost in Tundra, layered rock in Caves, mineral color in Crystals, ash and embers in Ashlands, volcanic crust in Lava, and dark stone in the Boss Biome.
+- Kept the cap entirely within the existing walkable profile. It follows slopes, rubble, and ledges, and ends at every gap and platform edge. No collision or route geometry changes.
+- Cached each terrain section's material mask and surface cap instead of rebuilding them as the camera moves. Material phase and biome colors stay fixed to world position.
+- GitHub Actions passed gameplay regression and phone-sized Chromium checks across all eight biomes, including surface alignment, open gaps, ledges, and cache reuse. The live GitHub Pages build is v0.12.2. Real-device Android frame rate and play feel remain for playtesting.
 
 ## v0.12.1 — Terrain Surface Pass
 
