@@ -9,8 +9,8 @@ const root=path.join(__dirname,'..');
 const biomeIds=['forest','foothills','tundra','caves','crystals','ashlands','lava','boss'];
 assert.equal(art.GROUND_TEXTURES,undefined,'no tiled ground textures can cover the concept foregrounds');
 assert.equal(art.groundTextureWeights,undefined,'ground does not switch to repeated biome texture tiles');
-assert.ok(art.WORLD_GROUND_BODY_ALPHA>.1&&art.WORLD_GROUND_BODY_ALPHA<.3,
-  'terrain body stays translucent so the approved concept foreground remains visible');
+assert.equal(art.WORLD_GROUND_BODY_ALPHA,1,
+  'opaque terrain body hides the stationary painted floor beneath the collision path');
 assert.ok(art.WORLD_GROUND_SHADE_ALPHA>=0&&art.WORLD_GROUND_SHADE_ALPHA<.1,
   'background shade beneath the terrain stays light');
 assert.equal(fs.existsSync(path.join(root,'assets/visuals/ground')),false,
@@ -19,7 +19,7 @@ const near=(actual,expected,label)=>assert.ok(Math.abs(actual-expected)<1e-9,`${
 const total=weights=>Object.values(weights).reduce((sum,value)=>sum+value,0);
 
 // Exercise every live crossfade at its entrance, midpoint, and exit. Ground
-// appearance now follows the same concept image visible behind the terrain.
+// appearance follows the approved biome art on a moving surface layer.
 for(const [edge,leftId,rightId] of [
   [900,'forest','foothills'],[2300,'foothills','tundra'],
   [6000,'caves','crystals'],[7000,'crystals','ashlands'],
@@ -108,9 +108,9 @@ for(const meters of [641,720,900,1080,2120,2300,2480,4820,4999.99,5000,
   drawGame.drawGround();
   assert.ok(commands.length>0,`${meters}m ground renderer produced drawing commands`);
   assert.ok(commands.some(([name,args])=>name==='fillStyle'&&args[1]===art.WORLD_GROUND_BODY_ALPHA),
-    `${meters}m terrain keeps the approved concept foreground visible through its body`);
+    `${meters}m terrain body is opaque beneath its biome art`);
   assert.ok(commands.some(([name])=>name==='lineBetween'),
     `${meters}m collision path keeps a light surface contour`);
 }
 
-console.log('PASS: concept foreground blend, translucent terrain drawing, biome fades, portal handoff, and palettes');
+console.log('PASS: opaque moving terrain base, biome fades, portal handoff, and palettes');
