@@ -218,58 +218,71 @@
       const width=Math.min(80,to-x-3);
       if(width<38)continue;
       const right=x+width;
-      // Broken snow shelves cap a blue-gray rock face.
-      g.fillStyle(0xdaf5ff,.78);
+      // Broken snow shelves cap each exposed rock face.
+      g.fillStyle(0xdaf5ff,.82);
       g.fillPoints([
         {x:x+2,y:y+3},{x:x+10,y:y-1-variation*2},
         {x:x+width*.34,y:y+1},{x:x+width*.59,y:y-1+(1-variation)*2},
         {x:right,y:y+2},{x:right-4,y:y+7},
         {x:x+width*.62,y:y+5},{x:x+width*.32,y:y+7},{x:x+10,y:y+5}
       ],true);
-      g.lineStyle(1.8,0xf1fcff,.9);
+      g.lineStyle(1.8,0xf1fcff,.92);
       g.lineBetween(x+5,y+2,x+width*.28,y+1-variation*2);
       g.lineBetween(x+width*.58,y+2,x+width*.9,y+2+(1-variation)*2);
 
-      // Broad angular plates break up the plain rectangular face.
-      g.fillStyle(n%2===0?0x506a77:0x3c5662,.72);
+      // Overlapping slate facets cover the full ledge face and catch cold light.
+      g.fillStyle(n%2===0?0x506a77:0x3c5662,.80);
       g.fillPoints([
         {x:x+4,y:y+10},{x:x+width*.31,y:y+9+variation*3},
-        {x:x+width*.46,y:y+21},{x:x+width*.37,y:y+37},
-        {x:x+7,y:y+32}
+        {x:x+width*.46,y:y+22},{x:x+width*.39,y:y+37},
+        {x:x+width*.44,y:y+51},{x:x+7,y:y+48}
       ],true);
-      g.fillStyle(0x93b2bd,.48);
-      g.fillTriangle(x+6,y+11,x+width*.29,y+10+variation*2,
-        x+width*.40,y+y*0+19);
-      g.lineStyle(1.4,0xa5c5cf,.45);
+      g.fillStyle(0x93b2bd,.56);
+      g.fillTriangle(x+6,y+11,x+width*.29,y+10+variation*2,x+width*.40,y+19);
+      g.lineStyle(1.4,0xa5c5cf,.56);
       g.lineBetween(x+8,y+12,x+width*.28,y+11+variation*2);
 
-      g.fillStyle(n%2===0?0x334a56:0x425b67,.78);
+      g.fillStyle(n%2===0?0x334a56:0x425b67,.83);
       g.fillPoints([
-        {x:x+width*.52,y:y+16},{x:x+width*.91,y:y+10},
-        {x:right-3,y:y+29},{x:x+width*.78,y:y+43},
-        {x:x+width*.55,y:y+37}
+        {x:x+width*.52,y:y+15},{x:x+width*.91,y:y+10},
+        {x:right-3,y:y+30},{x:x+width*.77,y:y+45},
+        {x:x+width*.55,y:y+40}
       ],true);
-      g.fillStyle(0x75929e,.46);
-      g.fillTriangle(x+width*.58,y+17,x+width*.88,y+12,
-        x+width*.77,y+25);
-      g.lineStyle(1.2,0x172833,.58);
-      g.lineBetween(x+width*.48,y+12,x+width*.51,y+40);
-      g.lineBetween(x+width*.79,y+31,right-5,y+35);
+      g.fillStyle(0x75929e,.52);
+      g.fillTriangle(x+width*.58,y+17,x+width*.88,y+12,x+width*.77,y+26);
+      g.lineStyle(1.2,0x172833,.66);
+      g.lineBetween(x+width*.48,y+12,x+width*.51,y+42);
+      g.lineBetween(x+width*.79,y+32,right-5,y+37);
 
-      // Branching blue ice seams and white crystalline edges.
+      g.fillStyle(0x293f4a,.86);
+      g.fillPoints([
+        {x:x+5,y:y+47},{x:x+width*.39,y:y+43},
+        {x:x+width*.51,y:y+56},{x:x+width*.38,y:y+63},
+        {x:x+4,y:y+60}
+      ],true);
+      g.fillStyle(0x58717d,.62);
+      g.fillPoints([
+        {x:x+width*.53,y:y+44},{x:right-5,y:y+38},
+        {x:right-2,y:y+59},{x:x+width*.66,y:y+63}
+      ],true);
+      g.lineStyle(1.4,0x8cb3c0,.42);
+      g.lineBetween(x+9,y+51,x+width*.34,y+48);
+      g.lineBetween(x+width*.68,y+51,right-8,y+45);
+
+      // Branching blue ice seams split the stone and catch the snow light.
       const seam=x+width*(.28+variation*.32);
-      g.lineStyle(2.6,0x73d9f3,.92);
+      g.lineStyle(2.6,0x73d9f3,.96);
       g.lineBetween(seam,y+10,seam-5,y+24);
       g.lineBetween(seam-5,y+24,seam+2,y+36);
       g.lineBetween(seam+2,y+36,seam-2,y+52);
-      g.lineStyle(1.4,0xe0faff,.78);
+      g.lineStyle(1.4,0xe0faff,.82);
       g.lineBetween(seam+4,y+14,seam+1,y+26);
       g.lineBetween(seam-1,y+38,seam+2,y+49);
-      g.lineStyle(1.3,0x172833,.5);
+      g.lineStyle(1.3,0x172833,.56);
       g.lineBetween(x+4,y+56,right-5,y+57);
       if(n%3===0){
         const icicleX=x+width*.79;
-        g.fillStyle(0xc8f0fa,.86);
+        g.fillStyle(0xc8f0fa,.92);
         g.fillTriangle(icicleX-3,y+4,icicleX+3,y+4,icicleX,y+15+variation*5);
       }
     }

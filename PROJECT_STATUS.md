@@ -9,7 +9,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression suites pass, including 300 seeded terrain checks, five full runs to the normal 9,999m finish, and 72 safe God Mode teleports across eight seeds through 20,000m. The biome transition suite passes all fades, the 5,000m portal handoff, and the ground render helper. Actual Chromium CI passes the Ember Imp alpha-bound check, all eight ground-material checks, and the Tundra ledge-material check on generated terrain; phone-scale captures have been reviewed. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Local regression suites pass, including 300 seeded terrain checks, five full runs to the normal 9,999m finish, and 72 safe God Mode teleports across eight seeds through 20,000m. The biome transition suite passes all fades, the 5,000m portal handoff, and the ground render helper. Actual Chromium CI passes the Ember Imp alpha-bound check, all eight ground-material checks, and the Tundra ledge-material and phone-scale pixel-detail checks on generated terrain; phone-scale captures have been reviewed. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
 
 ## v0.12.0 candidate — Biome Ground Materials
 
