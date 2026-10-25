@@ -5,7 +5,7 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.14-grounded-terrain-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.15-grounded-terrain-v2"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
 assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.11-painted-ground-v1"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
@@ -25,9 +25,21 @@ assert.ok(!html.includes('groundTextureSprites'),'Repeated ground texture tiles 
 assert.ok(!html.includes('groundTextureMask'),'Concept foregrounds are not hidden behind a texture mask');
 assert.ok(!html.includes("this.load.image('ground-'+id"),'Only approved biome paintings load');
 assert.ok(html.includes('WORLD_GROUND_BODY_ALPHA'),'Terrain body uses the biome art as its own moving surface');
-assert.ok(html.includes('createBiomeGroundArt'),'Each approved biome supplies a moving ground-art layer');
-assert.ok(html.includes('.setMask(this.groundArtMask)'),'Ground art is clipped to the real solid terrain shape');
+assert.ok(html.includes('createBiomeGroundArt'),'Each biome has a distinct moving foreground sprite layer');
+assert.ok(html.includes('this.load.spritesheet(\'ground-sprites-\''),'Biome foreground atlases load as real sprite sheets');
+assert.ok(html.includes('const GROUND_ART_CELL_WIDTH=560;'),'Foreground clusters have space to read as separate terrain details');
+assert.ok(html.includes('.setMask(this.groundArtMask)'),'Foreground sprites are clipped to the real solid terrain shape');
+assert.ok(html.includes('.setScrollFactor(1).setDepth(2)'),'Foreground sprites move with the gameplay camera');
+assert.ok(!html.includes('GROUND_ART_CROP_START'),'Foreground accents no longer reuse broad background crops');
+assert.ok(!html.includes('ground-art-'),'Foreground no longer repeats crops from the full biome paintings');
 assert.ok(html.includes('this.updateBiomeGroundArt();'),'Ground art updates with camera movement and biome fades');
+assert.ok(html.includes('sprite.setFlipX(placement.flipX);'),'Biome art changes orientation to reduce visual repetition');
+for(const id of ['forest','foothills','tundra','caves','crystals','ashlands','lava','boss']){
+ const asset=fs.readFileSync(path.join(__dirname,'..','assets/visuals/ground-foreground',
+  id+'-ground-sprites-v1.webp'));
+ assert.equal(asset.toString('ascii',0,4),'RIFF',id+' sprite atlas has a WebP container');
+ assert.equal(asset.toString('ascii',8,12),'WEBP',id+' sprite atlas decodes as WebP');
+}
 const worldScope={};vm.runInNewContext(worldArt,{window:worldScope,globalThis:worldScope});
 assert.equal(worldScope.GRIM_WORLD_ART.WORLD_GROUND_BODY_ALPHA,1);
 assert.equal(worldScope.GRIM_WORLD_ART.WORLD_GROUND_SHADE_ALPHA,.08);
@@ -330,4 +342,4 @@ assert.equal(CombatApi.rectFor(impEnemy).width,38);assert.equal(CombatApi.rectFo
 impEnemy.dead=true;impRenderer.renderEmberImps();
 assert.equal(impRenderer.emberImpPool[0].visible,false,'Dead Imp returns to normal cleanup');
 impRenderer.shutdown();assert.equal(impRenderer.emberImpReady,false);
-console.log('PASS v0.11.12: approved biome images provide the visible foreground; terrain geometry remains intact.');
+console.log('PASS v0.11.15: distinct biome sprite clusters follow the solid terrain; terrain geometry remains intact.');

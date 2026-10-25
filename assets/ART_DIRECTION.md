@@ -39,13 +39,13 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - Foothills are the next stretch: use a gradual forest-to-hills transition from about 900m through 2,300m, with sparse pines, rounded slopes, increasingly visible mountain ridges, muted stone, small gravel and fading brush.
 - The accepted foothills art is the default. Existing terrain, ground heights, collision shapes, object placement and enemy behavior remain unchanged.
 - Preview the Tundra mountain ascent through `?worldReview=tundra` from 1,900–3,400m. Keep the 2,000–3,000m ridges broad and visibly rooted in the horizon; every snow cap must share its mountain's apex and stay within the rock face. Avoid detached peaks or snow fragments that read as floating.
-- Layer distant ranges, exposed rock faces, restrained frost, a sparse treeline that fades with altitude, and thin windblown snow well away from the play surface. Let the approved painting provide the natural ground and foreground; preserve readable contrast with enemy and hazard cues.
+- Layer distant ranges, exposed rock faces, restrained frost, a sparse treeline that fades with altitude, and thin windblown snow well away from the play surface. Use separate terrain-attached foreground art that matches the approved painting; preserve readable contrast with enemy and hazard cues.
 - Keep the 3,000–5,000m summit/stars treatment in the existing ascent. The user approved the complete post-portal concept set below for implementation as one world-art update.
 
 ## Foreground and ground treatment
 
 - Keep the full approved biome paintings on their existing slow parallax layer. The foreground floor must move as part of the playable terrain, never remain visible as a stationary painted strip.
-- Use varied, soft-edged crops of each approved concept's foreground as irregular world-anchored sprites. Clip them to the actual solid terrain path; do not create repeating texture tiles or evenly spaced sprite rows.
+- Use distinct, biome-specific foreground sprite clusters that match the approved concept's palette and painted materials. Place them sparsely at irregular world positions and clip them to the real terrain edge; do not crop broad panorama strips, tile textures or form evenly spaced rows.
 - Give the terrain body an opaque biome-matched fill so the fixed floor in the background painting cannot show through. Keep a clear surface contour and preserve readable hills, one-way platforms, gaps and collision paths.
 - Keep foreground sprites out of gaps and separate floating platform tops. Preserve the hard 5,000m Tundra-to-Caves portal cut.
 - Do not alter the approved concept images, generated terrain, ground heights, collision shapes, enemy behavior or gameplay timing.

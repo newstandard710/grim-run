@@ -91,7 +91,10 @@ const server=http.createServer((req,res)=>{
     forestVisible:s.biomeBackdrops.forest?.visible,forestAlpha:s.biomeBackdrops.forest?.alpha,
     groundArtVisible:s.groundArtSprites.forest?.some(sprite=>sprite.visible),
     groundArtSpriteCount:s.groundArtSprites.forest?.length,
+    groundArtVisibleCount:s.groundArtSprites.forest?.filter(sprite=>sprite.visible).length,
     groundArtKey:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.texture?.key,
+    groundArtWorldAnchored:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.scrollFactorX===1,
+    groundArtFrame:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.frame?.name,
     groundArtMask:Boolean(s.groundArtMask),
     groundFillDepth:s.groundFill?.depth,
     groundArtDepth:s.groundArtSprites.forest?.[0]?.depth,
@@ -107,7 +110,11 @@ const server=http.createServer((req,res)=>{
   assert.equal(surfaceGround.forestAlpha,1);
   assert.equal(surfaceGround.groundArtVisible,true,'approved foreground art is visible on the terrain');
   assert.equal(surfaceGround.groundArtSpriteCount,12,'terrain detail uses a reusable per-biome sprite pool');
-  assert.equal(surfaceGround.groundArtKey,'ground-art-forest');
+  assert.ok(surfaceGround.groundArtVisibleCount>=1&&surfaceGround.groundArtVisibleCount<=5,
+   'sparse forest clusters remain visually distinct instead of forming a continuous strip');
+  assert.equal(surfaceGround.groundArtKey,'ground-sprites-forest');
+  assert.equal(surfaceGround.groundArtWorldAnchored,true,'foreground sprites scroll with the real terrain');
+  assert.ok(['0','1','2','3'].includes(surfaceGround.groundArtFrame),'one of four distinct forest sprite frames is used');
   assert.equal(surfaceGround.groundArtMask,true,'ground art is clipped to actual solid terrain');
   assert.equal(surfaceGround.groundFillDepth,1);
   assert.equal(surfaceGround.groundArtDepth,2,'ground sprites render above fill and beneath details/gameplay');
@@ -141,7 +148,9 @@ const server=http.createServer((req,res)=>{
     crystalAlpha:s.biomeBackdrops.crystals?.alpha,
     loaded:['caves','crystals','ashlands','lava','boss'].every(id=>s.textures.exists('biome-'+id)),
     groundArtVisible:s.groundArtSprites.crystals?.some(sprite=>sprite.visible),
+    groundArtVisibleCount:s.groundArtSprites.crystals?.filter(sprite=>sprite.visible).length,
     groundArtKey:s.groundArtSprites.crystals?.find(sprite=>sprite.visible)?.texture?.key,
+    groundArtWorldAnchored:s.groundArtSprites.crystals?.find(sprite=>sprite.visible)?.scrollFactorX===1,
     groundArtMask:Boolean(s.groundArtMask),
     bodyAlpha:window.GRIM_WORLD_ART.WORLD_GROUND_BODY_ALPHA};
   });
@@ -152,7 +161,10 @@ const server=http.createServer((req,res)=>{
   assert.equal(underworldGround.crystalVisible,true,'crystal concept is visible at 6,500m');
   assert.equal(underworldGround.crystalAlpha,1);
   assert.equal(underworldGround.groundArtVisible,true,'crystal foreground is attached to terrain at 6,500m');
-  assert.equal(underworldGround.groundArtKey,'ground-art-crystals');
+  assert.ok(underworldGround.groundArtVisibleCount>=1&&underworldGround.groundArtVisibleCount<=5,
+   'crystal foreground stays in sparse separated clusters');
+  assert.equal(underworldGround.groundArtKey,'ground-sprites-crystals');
+  assert.equal(underworldGround.groundArtWorldAnchored,true);
   assert.equal(underworldGround.groundArtMask,true);
   assert.equal(underworldGround.bodyAlpha,1);
   await page.locator('#game canvas').screenshot({

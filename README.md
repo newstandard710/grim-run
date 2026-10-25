@@ -2,14 +2,14 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.11.14 — Grounded Terrain**
+**Current playable build: v0.11.15 — Grounded Terrain Art**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
 - All eight approved biome concepts are the only background art. The old procedural sky, mountain, tree, cave, ash, and lava overlays have been removed. Image layers stay fully opaque through the gently drifting 360m crossfades; at 5,000m the portal switches directly from Tundra to Caves. Ground colors follow the same transitions.
-- The approved biome paintings remain the distant scenery. Their distinct foreground details are placed as faded, world-anchored sprites on the actual solid ground, so they scroll beneath the Reaper and follow its hills.
-- An opaque biome-colored terrain body covers the paintings' stationary floor; the foreground sprites are clipped to the solid collision path and stop at gaps. One-way platforms and other platform geometry remain intact, with no repeating ground tile pattern.
+- The approved biome paintings remain the distant scenery. Eight biome-specific sprite atlases provide separate foreground clusters, spaced irregularly and anchored to the moving solid terrain so they follow its hills and slopes.
+- An opaque biome-colored terrain body covers the paintings' stationary floor; foreground sprites follow the real collision path and stop at gaps. One-way platforms and other platform geometry remain intact, with no repeated wall texture or broad background crops.
 - Biome crossfades define their own easing helper, preventing an out-of-scope function error from aborting background and ground rendering at fade boundaries.
 - Surface backgrounds load first. Underworld backgrounds are loaded during the portal sequence, then replace and release the Surface textures to reduce memory use on phones.
 - The game wakes Phaser's frame loop when returning to the page and before pause, resume, menu, new-run, and vendor-exit transitions. A visible-page watchdog restarts Phaser if active gameplay stops receiving update heartbeats. Starting a run also resets the camera to the Reaper's starting position.

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.11.14</title>
+  <title>GRIM RUN — v0.11.15</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.14 · GROUNDED TERRAIN</div>
+      <div class="mini">v0.11.15 · GROUNDED TERRAIN</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1458,7 +1458,7 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.14-grounded-terrain-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.15-grounded-terrain-v2"></script>
   <script src="assets/visuals/visual-system.js?v=0.11.11-painted-ground-v1"></script>
   <script>
 (function(scope) {
@@ -1472,12 +1472,12 @@ window.GRIM_CONFIG = Object.freeze({
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-  const GROUND_ART_CROP_START=.755;
-  const GROUND_ART_FRAME_WIDTH=384;
-  const GROUND_ART_FRAME_HEIGHT=256;
+  const GROUND_ART_ATLAS_FRAME_SIZE=627;
   const GROUND_ART_VARIANTS=4;
   const GROUND_ART_SPRITES_PER_BIOME=12;
+  const GROUND_ART_CELL_WIDTH=560;
   const GROUND_ART_BAND_DEPTH=176;
+  const GROUND_ART_BAND_ABOVE=150;
   const groundAccentNoise=(cell,salt=0)=>{
     let n=Math.imul((cell|0)^Math.imul(salt+1,0x9e3779b1),0x45d9f3b);
     n=Math.imul(n^(n>>>16),0x45d9f3b);
@@ -1498,6 +1498,16 @@ window.GRIM_CONFIG = Object.freeze({
       ['boss','boss-castle.webp']
     ]
   };
+  const BIOME_GROUND_SPRITES={
+    forest:'forest-ground-sprites-v1.webp',
+    foothills:'foothills-ground-sprites-v1.webp',
+    tundra:'tundra-ground-sprites-v1.webp',
+    caves:'caves-ground-sprites-v1.webp',
+    crystals:'crystals-ground-sprites-v1.webp',
+    ashlands:'ashlands-ground-sprites-v1.webp',
+    lava:'lava-ground-sprites-v1.webp',
+    boss:'boss-ground-sprites-v1.webp'
+  };
 
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
@@ -1507,6 +1517,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.biomeBackdropFailedGroups=new Set();
       for(const [id,file] of BIOME_BACKDROP_GROUPS.surface){
         this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
+        const spriteFile=BIOME_GROUND_SPRITES[id];
+        if(spriteFile&&this.load.spritesheet)
+          this.load.spritesheet('ground-sprites-'+id,
+            'assets/visuals/ground-foreground/'+spriteFile,
+            {frameWidth:GROUND_ART_ATLAS_FRAME_SIZE,frameHeight:GROUND_ART_ATLAS_FRAME_SIZE});
       }
     }
     create() {
@@ -3225,67 +3240,25 @@ window.GRIM_CONFIG = Object.freeze({
             .setOrigin(.5).setScrollFactor(0).setDepth(-30+biome.start/100000)
             .setAlpha(0).setVisible(false);
         }
-        this.createBiomeGroundArt(biome.id,key);
+        this.createBiomeGroundArt(biome.id);
       }
       this.biomeBackdropGroup=group;
       return files.every(([id])=>Boolean(this.biomeBackdrops[id]));
     }
-    createBiomeGroundArt(id,backdropKey){
-      if(!this.groundArtMask||!this.add?.image||!this.textures?.createCanvas)return false;
+    createBiomeGroundArt(id){
+      if(!this.groundArtMask||!this.add?.image)return false;
       if(this.groundArtSprites[id])return true;
-      const textureKey='ground-art-'+id;
+      const textureKey='ground-sprites-'+id;
       try{
-        if(!this.textures.exists(textureKey)){
-          const source=this.textures.get(backdropKey)?.getSourceImage?.();
-          if(!source?.width||!source?.height)return false;
-          const cropY=Math.floor(source.height*GROUND_ART_CROP_START);
-          const cropHeight=Math.max(1,source.height-cropY);
-          const frameWidth=GROUND_ART_FRAME_WIDTH,frameHeight=GROUND_ART_FRAME_HEIGHT;
-          const texture=this.textures.createCanvas(textureKey,frameWidth*GROUND_ART_VARIANTS,frameHeight);
-          if(!texture)return false;
-          const context=texture.getContext?.();
-          if(!context){this.textures.remove(textureKey);return false;}
-          context.clearRect(0,0,frameWidth*GROUND_ART_VARIANTS,frameHeight);
-          const frameNames=[];
-          for(let i=0;i<GROUND_ART_VARIANTS;i++){
-            const x=i*frameWidth;
-            const sourceX=Math.round(i*Math.max(0,source.width-frameWidth)/(GROUND_ART_VARIANTS-1));
-            const frameName='terrain-'+id+'-'+i;
-            context.drawImage(source,sourceX,cropY,frameWidth,cropHeight,
-              x,0,frameWidth,frameHeight);
-            // Fade the crop edges so each art piece melts into the matching
-            // solid terrain beneath it instead of making rectangular patches.
-            context.save();
-            context.beginPath();context.rect(x,0,frameWidth,frameHeight);context.clip();
-            context.globalCompositeOperation='destination-in';
-            const horizontal=context.createLinearGradient(x,0,x+frameWidth,0);
-            horizontal.addColorStop(0,'rgba(255,255,255,0)');
-            horizontal.addColorStop(.14,'rgba(255,255,255,1)');
-            horizontal.addColorStop(.86,'rgba(255,255,255,1)');
-            horizontal.addColorStop(1,'rgba(255,255,255,0)');
-            context.fillStyle=horizontal;context.fillRect(x,0,frameWidth,frameHeight);
-            const vertical=context.createLinearGradient(0,0,0,frameHeight);
-            vertical.addColorStop(0,'rgba(255,255,255,0)');
-            vertical.addColorStop(.12,'rgba(255,255,255,1)');
-            vertical.addColorStop(.94,'rgba(255,255,255,1)');
-            vertical.addColorStop(1,'rgba(255,255,255,0)');
-            context.fillStyle=vertical;context.fillRect(x,0,frameWidth,frameHeight);
-            context.restore();
-            frameNames.push(frameName);
-          }
-          texture.refresh();
-          for(let i=0;i<frameNames.length;i++)
-            texture.add(frameNames[i],0,i*frameWidth,0,frameWidth,frameHeight);
-        }
-        const frameNames=Array.from({length:GROUND_ART_VARIANTS},(_,i)=>'terrain-'+id+'-'+i);
+        if(!this.textures.exists(textureKey))return false;
+        const frameNames=Array.from({length:GROUND_ART_VARIANTS},(_,i)=>String(i));
         this.groundArtFrames[id]=frameNames;
         this.groundArtSprites[id]=Array.from({length:GROUND_ART_SPRITES_PER_BIOME},(_,i)=>
           this.add.image(0,0,textureKey,frameNames[i%frameNames.length])
-            .setOrigin(.5,0).setScrollFactor(1).setDepth(2)
+            .setOrigin(.5,.96).setScrollFactor(1).setDepth(2)
             .setAlpha(0).setVisible(false).setMask(this.groundArtMask));
         return true;
       }catch(_){
-        if(this.textures.exists(textureKey))this.textures.remove(textureKey);
         this.groundArtFrames?.[id]&&delete this.groundArtFrames[id];
         return false;
       }
@@ -3299,7 +3272,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.groundArtFrames)delete this.groundArtFrames[id];
         const key='biome-'+id;
         if(this.textures.exists(key))this.textures.remove(key);
-        const groundKey='ground-art-'+id;
+        const groundKey='ground-sprites-'+id;
         if(this.textures.exists(groundKey))this.textures.remove(groundKey);
       }
     }
@@ -3309,7 +3282,8 @@ window.GRIM_CONFIG = Object.freeze({
       if(!this.textures||typeof this.textures.exists!=='function'||!this.load?.image)return false;
       if(this.biomeBackdropGroup===group&&this.biomeBackdropReady)return true;
       if(this.biomeBackdropPendingGroup||this.biomeBackdropFailedGroups.has(group))return false;
-      const missing=files.filter(([id])=>!this.textures.exists('biome-'+id));
+      const missing=files.filter(([id])=>!this.textures.exists('biome-'+id)||
+        !this.textures.exists('ground-sprites-'+id));
       if(missing.length===0){
         const previous=this.biomeBackdropGroup;
         if(previous!==group)this.destroyBiomeBackdropSet(previous);
@@ -3319,8 +3293,15 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.biomeBackdropPendingGroup=group;
       this.biomeBackdropReady=false;
-      for(const [id,file] of missing)
-        this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
+      for(const [id,file] of missing){
+        if(!this.textures.exists('biome-'+id))
+          this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
+        const spriteFile=BIOME_GROUND_SPRITES[id];
+        if(spriteFile&&!this.textures.exists('ground-sprites-'+id)&&this.load.spritesheet)
+          this.load.spritesheet('ground-sprites-'+id,
+            'assets/visuals/ground-foreground/'+spriteFile,
+            {frameWidth:GROUND_ART_ATLAS_FRAME_SIZE,frameHeight:GROUND_ART_ATLAS_FRAME_SIZE});
+      }
       this.load.once('complete',()=>{
         this.biomeBackdropPendingGroup=null;
         if(!files.every(([id])=>this.textures.exists('biome-'+id))){
@@ -3373,7 +3354,7 @@ window.GRIM_CONFIG = Object.freeze({
         :worldArt?.biomeWeights?.(this.distance)||{};
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const sections=this.terrain.visibleSections(left,right);
-      const cellWidth=260,startX=this.startX??200;
+      const cellWidth=GROUND_ART_CELL_WIDTH,startX=this.startX??200;
       for(const [id,sprites] of Object.entries(this.groundArtSprites||{})){
         const weight=weights[id]||0;
         const placements=[];
@@ -3386,9 +3367,10 @@ window.GRIM_CONFIG = Object.freeze({
             const first=Math.floor(from/cellWidth)-1,last=Math.ceil(to/cellWidth)+1;
             for(let cell=first;cell<=last;cell++){
               const noise=n=>groundAccentNoise(cell,salt+n);
-              if(noise(0)<.24)continue;
-              const x=cell*cellWidth+36+noise(1)*170;
-              if(x<from+12||x>to-12)continue;
+              if(noise(0)<.38)continue;
+              const size=142+noise(3)*82;
+              const x=cell*cellWidth+48+noise(1)*(cellWidth-96);
+              if(x<from+size*.55||x>to-size*.55)continue;
               const y=this.terrain.groundAt(x);
               const before=this.terrain.groundAt(x-38),after=this.terrain.groundAt(x+42);
               if(y===null||before===null||after===null||Math.abs(after-before)>48)continue;
@@ -3398,8 +3380,8 @@ window.GRIM_CONFIG = Object.freeze({
               if(biomeWeight<=.003)continue;
               placements.push({x,y,weight:Math.min(weight,biomeWeight),
                 frame:Math.floor(noise(2)*GROUND_ART_VARIANTS),
-                width:188+noise(3)*132,height:118+noise(4)*54,
-                alpha:.66+noise(5)*.2});
+                width:size,height:size*(.84+noise(4)*.26),
+                alpha:.92+noise(5)*.08,flipX:noise(6)>.5});
             }
           }
         }
@@ -3407,8 +3389,9 @@ window.GRIM_CONFIG = Object.freeze({
           const sprite=sprites[i],placement=placements[i];
           if(!placement){sprite.setVisible(false);continue;}
           const frame=this.groundArtFrames[id]?.[placement.frame];
-          if(frame&&sprite.frame?.name!==frame)sprite.setTexture('ground-art-'+id,frame);
-          sprite.setPosition(placement.x,placement.y+5);
+          if(frame&&sprite.frame?.name!==frame)sprite.setTexture('ground-sprites-'+id,frame);
+          sprite.setPosition(placement.x,placement.y+8);
+          sprite.setFlipX(placement.flipX);
           if(Math.abs(sprite.displayWidth-placement.width)>.5||
              Math.abs(sprite.displayHeight-placement.height)>.5)
             sprite.setDisplaySize(placement.width,placement.height);
@@ -3599,10 +3582,10 @@ window.GRIM_CONFIG = Object.freeze({
           const top=[],bottom=[],sampleStep=48;
           for(let x=from;x<to;x+=sampleStep){
             const y=this.terrain.groundAt(x);
-            if(y!==null){top.push({x,y:y-2});bottom.push({x,y:y+GROUND_ART_BAND_DEPTH});}
+            if(y!==null){top.push({x,y:y-GROUND_ART_BAND_ABOVE});bottom.push({x,y:y+GROUND_ART_BAND_DEPTH});}
           }
           const endY=this.terrain.groundAt(to-.001);
-          if(endY!==null){top.push({x:to,y:endY-2});bottom.push({x:to,y:endY+GROUND_ART_BAND_DEPTH});}
+          if(endY!==null){top.push({x:to,y:endY-GROUND_ART_BAND_ABOVE});bottom.push({x:to,y:endY+GROUND_ART_BAND_DEPTH});}
           if(top.length>1)artMask.fillPoints([...top,...bottom.reverse()],true);
         }
         if(section.kind==='platform'){
