@@ -1475,7 +1475,7 @@ window.GRIM_CONFIG = Object.freeze({
   const GROUND_ART_ATLAS_FRAME_SIZE=627;
   const GROUND_ART_VARIANTS=4;
   const GROUND_ART_SPRITES_PER_BIOME=12;
-  const GROUND_ART_CELL_WIDTH=560;
+  const GROUND_ART_CELL_WIDTH=420;
   const GROUND_ART_BAND_DEPTH=176;
   const GROUND_ART_BAND_ABOVE=150;
   const groundAccentNoise=(cell,salt=0)=>{
@@ -3362,27 +3362,27 @@ window.GRIM_CONFIG = Object.freeze({
           const salt=id.split('').reduce((sum,char)=>sum+char.charCodeAt(0),0);
           for(const section of sections){
             if(section.kind==='gap'||section.kind==='platform')continue;
-            const from=Math.max(left,section.start),to=Math.min(right,section.end);
-            if(to-from<80)continue;
-            const first=Math.floor(from/cellWidth)-1,last=Math.ceil(to/cellWidth)+1;
-            for(let cell=first;cell<=last;cell++){
-              const noise=n=>groundAccentNoise(cell,salt+n);
-              if(noise(0)<.38)continue;
-              const size=142+noise(3)*82;
-              const x=cell*cellWidth+48+noise(1)*(cellWidth-96);
-              if(x<from+size*.55||x>to-size*.55)continue;
-              const y=this.terrain.groundAt(x);
-              const before=this.terrain.groundAt(x-38),after=this.terrain.groundAt(x+42);
-              if(y===null||before===null||after===null||Math.abs(after-before)>48)continue;
-              const meters=(x-startX)/C.pxPerMeter;
-              const biomeWeight=worldArt?.biomeWeights?.(meters)?.[id]??
-                worldArt?.underworldWeights?.(meters)?.[id]??weight;
-              if(biomeWeight<=.003)continue;
-              placements.push({x,y,weight:Math.min(weight,biomeWeight),
-                frame:Math.floor(noise(2)*GROUND_ART_VARIANTS),
-                width:size,height:size*(.84+noise(4)*.26),
-                alpha:.92+noise(5)*.08,flipX:noise(6)>.5});
-            }
+            const visibleFrom=Math.max(left,section.start),visibleTo=Math.min(right,section.end);
+            if(visibleTo-visibleFrom<80)continue;
+            const cell=Math.floor(section.start/cellWidth);
+            const noise=n=>groundAccentNoise(cell,salt+n);
+            if(noise(0)<.38)continue;
+            const sectionWidth=section.end-section.start;
+            const size=Math.min(142+noise(3)*82,(sectionWidth-32)*.88);
+            if(size<118)continue;
+            const x=section.start+16+size*.5+noise(1)*(sectionWidth-size-32);
+            if(x<visibleFrom-size*.55||x>visibleTo+size*.55)continue;
+            const y=this.terrain.groundAt(x);
+            const before=this.terrain.groundAt(x-38),after=this.terrain.groundAt(x+42);
+            if(y===null||before===null||after===null||Math.abs(after-before)>48)continue;
+            const meters=(x-startX)/C.pxPerMeter;
+            const biomeWeight=worldArt?.biomeWeights?.(meters)?.[id]??
+              worldArt?.underworldWeights?.(meters)?.[id]??weight;
+            if(biomeWeight<=.003)continue;
+            placements.push({x,y,weight:Math.min(weight,biomeWeight),
+              frame:Math.floor(noise(2)*GROUND_ART_VARIANTS),
+              width:size,height:size*(.84+noise(4)*.26),
+              alpha:.92+noise(5)*.08,flipX:noise(6)>.5});
           }
         }
         for(let i=0;i<sprites.length;i++){
