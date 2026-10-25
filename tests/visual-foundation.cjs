@@ -34,7 +34,10 @@ assert.equal(typeof worldScope.GRIM_WORLD_ART.drawFoothills,'function');
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawFoothillsGround,'function');
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawTundra,'function');
 assert.equal(typeof worldScope.GRIM_WORLD_ART.drawTundraGround,'function');
-assert.ok(worldArt.includes('The cap shares the exact ridge apex'),'Snow caps are anchored to their mountain silhouettes');
+assert.ok(worldArt.includes('The compact cap shares the apex and remains within both rising slopes.'),
+ 'Snow caps are anchored to their mountain silhouettes');
+assert.ok(worldArt.includes('const capWidth=Math.min(spacing*.08'),
+ 'Snow caps stay narrow enough to remain inside the mountain slopes');
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
  assert.ok(svg.startsWith('<svg')&&svg.includes('width="'+width+'" height="'+height+'"'));
  assert.equal((svg.match(/<g(?:\s|>)/g)||[]).length,(svg.match(/<\/g>/g)||[]).length);
