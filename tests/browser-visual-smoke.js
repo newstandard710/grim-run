@@ -89,57 +89,74 @@ const server=http.createServer((req,res)=>{
    const s=window.grimRun.scene.scenes[0];
    return {surfaceGroup:s.biomeBackdropGroup,backdropReady:s.biomeBackdropReady,
     forestVisible:s.biomeBackdrops.forest?.visible,forestAlpha:s.biomeBackdrops.forest?.alpha,
-    textureLayer:Boolean(s.groundTextureSprites||s.groundTextureMask),
+    groundArtVisible:s.groundArtSprites.forest?.some(sprite=>sprite.visible),
+    groundArtSpriteCount:s.groundArtSprites.forest?.length,
+    groundArtKey:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.texture?.key,
+    groundArtMask:Boolean(s.groundArtMask),
+    groundFillDepth:s.groundFill?.depth,
+    groundArtDepth:s.groundArtSprites.forest?.[0]?.depth,
+    worldDepth:s.world?.depth,
     loadedGroundTiles:['forest','foothills','tundra'].some(id=>s.textures.exists('ground-'+id)),
     bodyAlpha:window.GRIM_WORLD_ART.WORLD_GROUND_BODY_ALPHA,
-    shadeAlpha:window.GRIM_WORLD_ART.WORLD_GROUND_SHADE_ALPHA,worldDepth:s.world?.depth};
+    shadeAlpha:window.GRIM_WORLD_ART.WORLD_GROUND_SHADE_ALPHA};
   });
-  console.log('Phone-scale forest concept foreground:',JSON.stringify(surfaceGround));
+  console.log('Phone-scale moving forest terrain:',JSON.stringify(surfaceGround));
   assert.equal(surfaceGround.surfaceGroup,'surface');
   assert.equal(surfaceGround.backdropReady,true);
-  assert.equal(surfaceGround.forestVisible,true,'approved forest concept remains visible behind the terrain');
+  assert.equal(surfaceGround.forestVisible,true,'approved forest concept remains visible as distant scenery');
   assert.equal(surfaceGround.forestAlpha,1);
-  assert.equal(surfaceGround.textureLayer,false,'no repeating ground texture layer covers the scene');
+  assert.equal(surfaceGround.groundArtVisible,true,'approved foreground art is visible on the terrain');
+  assert.equal(surfaceGround.groundArtSpriteCount,12,'terrain detail uses a reusable per-biome sprite pool');
+  assert.equal(surfaceGround.groundArtKey,'ground-art-forest');
+  assert.equal(surfaceGround.groundArtMask,true,'ground art is clipped to actual solid terrain');
+  assert.equal(surfaceGround.groundFillDepth,1);
+  assert.equal(surfaceGround.groundArtDepth,2,'ground sprites render above fill and beneath details/gameplay');
+  assert.equal(surfaceGround.worldDepth,4,'gameplay objects stay above the moving ground artwork');
   assert.equal(surfaceGround.loadedGroundTiles,false,'obsolete ground tile assets are not loaded');
-  assert.equal(surfaceGround.bodyAlpha,.22,'terrain body is translucent over the concept foreground');
+  assert.equal(surfaceGround.bodyAlpha,1,'opaque terrain body covers the stationary painted floor');
   assert.equal(surfaceGround.shadeAlpha,.08,'terrain shade remains subtle');
-  assert.equal(surfaceGround.worldDepth,1,'ground edge and gameplay details share the original world layer');
   const surfaceArtifactDir=path.join(root,'test-results');fs.mkdirSync(surfaceArtifactDir,{recursive:true});
   await page.locator('#game canvas').screenshot({
-   path:path.join(surfaceArtifactDir,'concept-foreground-forest-phone-scale.png')});
+   path:path.join(surfaceArtifactDir,'grounded-terrain-forest-phone-scale.png')});
   await page.evaluate(()=>{
-   const g=window.grimRun,s=g.scene.scenes[0];
-   s.godMode=true;s.state='teleportConfirm';
-   if(!s.teleportForTesting(6500))throw new Error('Could not teleport to crystal biome');
-   s.state='paused';s.drawScene();
+   const g=window.grimRun,s=g.scene.scenes[0],meters=6500;
+   g.loop.stop();s.state='playing';s.elapsed=0;s.enemies=[];
+   s.hasTeleported=true;s.distance=meters;
+   s.cameraX=s.startX+meters*(window.GRIM_CONFIG?.pxPerMeter||12);
+   if(s.player)s.player.x=s.cameraX+150;
+   s.drawScene();
   });
   await page.waitForFunction(()=>{
    const s=window.grimRun?.scene?.scenes?.[0];
    return s?.biomeBackdropGroup==='underworld'&&s.biomeBackdropReady===true;
   },null,{timeout:45000});
   const underworldGround=await page.evaluate(()=>{
-   const g=window.grimRun,s=g.scene.scenes[0];
-   s.state='paused';s.drawScene();
+   const g=window.grimRun,s=g.scene.scenes[0],meters=6500;
+   g.loop.stop();s.state='playing';s.elapsed=0;s.enemies=[];
+   s.distance=meters;s.cameraX=s.startX+meters*(window.GRIM_CONFIG?.pxPerMeter||12);
+   if(s.player)s.player.x=s.cameraX+150;
+   s.drawScene();
    return {group:s.biomeBackdropGroup,backdropReady:s.biomeBackdropReady,
-    distance:s.distance,crystalVisible:s.biomeBackdrops.crystals?.visible,
+    crystalVisible:s.biomeBackdrops.crystals?.visible,
     crystalAlpha:s.biomeBackdrops.crystals?.alpha,
     loaded:['caves','crystals','ashlands','lava','boss'].every(id=>s.textures.exists('biome-'+id)),
-    textureLayer:Boolean(s.groundTextureSprites||s.groundTextureMask),
+    groundArtVisible:s.groundArtSprites.crystals?.some(sprite=>sprite.visible),
+    groundArtKey:s.groundArtSprites.crystals?.find(sprite=>sprite.visible)?.texture?.key,
+    groundArtMask:Boolean(s.groundArtMask),
     bodyAlpha:window.GRIM_WORLD_ART.WORLD_GROUND_BODY_ALPHA};
   });
-  console.log('Phone-scale crystal concept foreground:',JSON.stringify(underworldGround));
+  console.log('Phone-scale moving crystal terrain:',JSON.stringify(underworldGround));
   assert.equal(underworldGround.group,'underworld');
   assert.equal(underworldGround.backdropReady,true);
   assert.equal(underworldGround.loaded,true,'all five approved Underworld concept images load');
   assert.equal(underworldGround.crystalVisible,true,'crystal concept is visible at 6,500m');
   assert.equal(underworldGround.crystalAlpha,1);
-  assert.ok(underworldGround.distance>=6000&&underworldGround.distance<7000,
-    'capture remains in the 6,000–7,000m crystal biome');
-  assert.equal(underworldGround.textureLayer,false,'no repeating ground texture layer covers the scene');
-  assert.equal(underworldGround.bodyAlpha,.22);
-  await page.waitForTimeout(100); // Let Phaser repaint the paused crystal scene.
+  assert.equal(underworldGround.groundArtVisible,true,'crystal foreground is attached to terrain at 6,500m');
+  assert.equal(underworldGround.groundArtKey,'ground-art-crystals');
+  assert.equal(underworldGround.groundArtMask,true);
+  assert.equal(underworldGround.bodyAlpha,1);
   await page.locator('#game canvas').screenshot({
-   path:path.join(surfaceArtifactDir,'concept-foreground-crystals-phone-scale.png')});
+   path:path.join(surfaceArtifactDir,'grounded-terrain-crystals-phone-scale.png')});
   assert.deepEqual(errors,[],'Browser console errors');
   // The previous illustrated PNG art remains available for comparison.
   await page.goto(origin+'/?art=illustrated&seed=33',{waitUntil:'domcontentloaded',timeout:45000});
