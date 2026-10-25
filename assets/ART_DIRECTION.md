@@ -50,7 +50,7 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - **8,000–9,999m — Lava:** active molten channels and falls over dark volcanic rock.
 - **9,999–20,000m — Boss Biome:** a gothic Underworld castle framed by cavern walls, lava, chains and hanging skeletons.
 - Use each approved concept PNG as the visual source for the in-game backdrop. Adapt the wide art into moving background layers, add controlled seeded scenery variation and subtle ambient motion, and crossfade neighboring biomes over short distance bands.
-- Pair each backdrop with a matching ground palette and restrained surface detail. Keep terrain geometry, collision, hazards, enemy behavior, controls and the existing 9,999m normal victory unchanged.
+- Pair each backdrop with a matching ground material and restrained surface detail. Keep terrain geometry, collision, hazards, enemy behavior, controls and the existing 9,999m normal victory unchanged.
 - God Mode may continue beyond the normal finish through the Boss Biome, with teleport access through 20,000m. Preserve safe ground and the Boss Biome presentation beyond 20,000m for continued God Mode exploration.
 
 ## Full-route backdrop assets
@@ -58,6 +58,13 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - Approved surface concepts are `forest.webp`, `foothills.webp`, and `tundra.webp`; the five post-portal concepts are the files listed above under `assets/visuals/biomes/`.
 - Forest covers 0–900m, foothills 900–2,300m, and Tundra continues through the 5,000m portal approach. Surface and Underworld biome boundaries crossfade over 360m, except the portal: it changes directly from Tundra to fully formed Caves on arrival. Ground colors follow the same transitions.
 - Keep slight camera-linked drift, gentle vertical motion, and biome-specific ambient flecks so the art feels alive without competing with gameplay. Treat the generated concept image as the visual source; do not add an opaque procedural sky over it.
+
+## Ground and foreground materials
+
+- Use `assets/visuals/terrain/ground-forest-v1.webp`, `ground-foothills-v1.webp`, `ground-tundra-v1.webp`, `ground-caves-v1.webp`, `ground-crystals-v1.webp`, `ground-ashlands-v1.webp`, `ground-lava-v1.webp`, and `ground-boss-v1.webp` for the corresponding eight biomes.
+- Treat these as world-space surface materials. Clip them to the generated ground profile so plains, slopes, rubble, cliffs, ledges and the foreground follow the actual terrain. Leave procedural gaps open; preserve the existing dark and lava abyss fills behind them.
+- Use the same biome boundaries and easing as the backgrounds, including the hard Tundra-to-Caves handoff at the 5,000m portal. Avoid fixed screen-space ground bands or geometry changes.
+- Keep surface marks and edge highlights restrained so the Reaper, enemies, hazards and pickups remain readable at phone scale. Do not regenerate or replace the approved background concepts as part of ground-material work.
 
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.

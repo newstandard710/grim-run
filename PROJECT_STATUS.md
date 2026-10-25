@@ -1,14 +1,23 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.10 — *Background Art Cleanup*. The approved biome images are now the only background art; all legacy procedural atmosphere routines have been removed, and the image crossfades remain fully opaque.
+**Current production build:** v0.11.10 — *Background Art Cleanup*.  
+**Development candidate:** v0.12.0 — *Biome Ground Materials*. Eight biome-specific ground materials follow generated ground and foreground profiles while preserving existing gaps and abyss fills.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.10 — *Background Art Cleanup*  
+**Candidate:** v0.12.0 — *Biome Ground Materials*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The live v0.11.8 reproduction produced `ReferenceError: smooth is not defined` in the biome-weight renderer. The regression test exercises actual backdrop and ground drawing helpers at every surface and Underworld fade, the 641m location, and the direct 5,000m portal handoff; it passes in the Node VM. In the published v0.11.9 Chrome smoke test, the scene rendered through 7,000m with an animated background and no current-build console errors; the run also reached the first vendor at 666m and resumed to 709m. The God Mode test covers 20,000m, and the encounter suite checks continued play beyond 9,999m. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Local regression suites pass, including 300 seeded terrain checks, five full runs to the normal 9,999m finish, and 72 safe God Mode teleports across eight seeds through 20,000m. The biome transition suite passes all fades, the 5,000m portal handoff, and the ground render helper. Actual Chromium CI passes the Ember Imp alpha-bound check and all eight ground-material checks. Tundra now has separate phone-scale pixel checks for both walkable ground and floating ledges; phone-scale captures have been reviewed. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.12.0 candidate — Biome Ground Materials
+
+- Added eight lightweight WebP ground materials matched to Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss Biome. Tundra uses a new broad slate-and-snow material based on the approved mountain art. Its generated ground, slopes, rubble, and floating ledges are composited into their terrain silhouettes; generic rubble facets are suppressed so the material appears across the walkable foreground and cliff faces.
+- The renderer masks each material to the current generated terrain profile, including slopes, rubble, cliffs, and floating ledges. Procedural geometry, collision, hazards, and open gaps remain unchanged; dark and lava abyss fills remain behind gaps.
+- Ground materials use the existing 360m biome fades and hard Tundra-to-Caves portal handoff. Source images are reduced to 768px runtime canvases and loaded as the player reaches a biome; materials with no visible or active terrain are released to limit phone memory use.
+- Corrected the seed 1 full-run test so it exercises normal victory with God Mode off near the finish. Corrected the God Mode endpoint test so 10,000m remains a valid teleport and 20,000m is covered. Corrected the Ember Imp visible-height check to measure decoded atlas alpha bounds instead of screenshot contrast.
+
 
 ## v0.11.10 — Background Art Cleanup
 

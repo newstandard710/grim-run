@@ -12,7 +12,7 @@ require('./asset-integrity.cjs');
 
 const root=path.resolve(__dirname,'..');
 const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8',
- '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png'};
+ '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp'};
 const server=http.createServer((req,res)=>{
  try{
   const url=new URL(req.url,'http://localhost');
@@ -437,8 +437,24 @@ const server=http.createServer((req,res)=>{
       }
     }
     assert.ok(changed>100,'Rendered '+state.frame+' art changes visible phone-canvas pixels');
-    if(i<4)assert.ok(maxY-minY+1>50&&maxY-minY+1<60,
-      'Run pose '+state.frame+' measures about 55 visible pixels tall');
+    if(i<4){
+      const visibleHeight=await skeletalPage.evaluate(()=>{
+        const scene=window.grimRun.scene.scenes[0],sprite=scene.visuals.emberImpPool[0];
+        const frame=sprite.frame,image=scene.textures.get(sprite.texture.key).getSourceImage();
+        const canvas=document.createElement('canvas');
+        canvas.width=frame.cutWidth;canvas.height=frame.cutHeight;
+        const context=canvas.getContext('2d',{willReadFrequently:true});
+        context.drawImage(image,frame.cutX,frame.cutY,frame.cutWidth,frame.cutHeight,
+          0,0,frame.cutWidth,frame.cutHeight);
+        const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;
+        let minY=canvas.height,maxY=-1;
+        for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++)
+          if(pixels[(y*canvas.width+x)*4+3]>32){minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+        return (maxY-minY+1)*sprite.scaleY;
+      });
+      assert.ok(visibleHeight>50&&visibleHeight<60,
+        'Decoded '+state.frame+' atlas alpha measures about 55 visible pixels tall');
+    }
     impHashes.push(crypto.createHash('sha256').update(crop).digest('hex'));
   }
   assert.equal(new Set(impHashes).size,6,'All four run and two attack poses render distinct phone-scale pixels');
@@ -513,72 +529,169 @@ const server=http.createServer((req,res)=>{
   assert.ok(changedPixels(bothRendered.impRect)>50,
     'Ember Imp changes visible pixels in combined review mode');
 
-  // Compare the accepted foothills default and the new Tundra preview at phone scale.
-  const worldArtSnapshot=async(query,file,distanceMeters)=>{
-    await skeletalPage.goto(origin+'/'+query,
-      {waitUntil:'domcontentloaded',timeout:45000});
-    await skeletalPage.waitForFunction(()=>{
-      const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
-      return v?.loaded===true&&v.skeletalBatReady===true&&
-        v.boneCrawlerReady===true&&v.emberImpReady===true;
-    },null,{timeout:45000});
-    await skeletalPage.click('#start-btn');
-    await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
-      null,{timeout:15000});
-    const geometry=await skeletalPage.evaluate(distanceMeters=>{
-      const g=window.grimRun,s=g.scene.scenes[0];
-      g.loop.stop();s.state='paused';s.elapsed=0;s.frame=0;s.distance=distanceMeters;
-      s.hasTeleported=false;s.player.x=s.startX+distanceMeters*window.GRIM_CONFIG.pxPerMeter;
-      s.player.y=s.terrain.groundAt(s.player.x);
-      s.player.grounded=true;s.player.velocityY=0;
-      s.cameraX=s.player.x-s.width*window.GRIM_CONFIG.reaperXRatio;
-      s.cameraY=s.player.y-s.groundY;
-      s.cameras.main.setScroll(s.cameraX,s.cameraY);
-      s.refreshHud();
-      s.enemies=[];s.fireballs=[];s.obstacles=[];s.coins=[];s.souls=[];s.particles=[];
-      s.drawScene();g.step(performance.now(),0);
-      return {preview:s.tundraWorldArtReviewRequested,
-        ground:[0,70,160,310].map(dx=>s.terrain.groundAt(s.player.x+dx)),
-        player:{x:s.player.x,y:s.player.y,hp:s.player.hp,grounded:s.player.grounded}};
-    },distanceMeters);
-    const image=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({path:file}));
-    return {geometry,image};
-  };
-  const foothillsDefault=await worldArtSnapshot('?seed=33',
-    path.join(skeletalArtifactDir,'foothills-default-phone-scale.png'),1500);
-  const foothillsAlias=await worldArtSnapshot('?worldReview=foothills&seed=33',
-    path.join(skeletalArtifactDir,'foothills-alias-phone-scale.png'),1500);
-  assert.equal(foothillsDefault.geometry.preview,false);
-  assert.equal(foothillsAlias.geometry.preview,false,'Accepted foothills review alias uses the default art');
-  assert.deepEqual(foothillsAlias.geometry.ground,foothillsDefault.geometry.ground,
-    'Foothills art leaves seeded terrain geometry untouched');
-  let aliasPixelsChanged=0;
-  for(let i=0;i<foothillsAlias.image.data.length;i+=4){
-    if(Math.abs(foothillsAlias.image.data[i]-foothillsDefault.image.data[i])>2||
-       Math.abs(foothillsAlias.image.data[i+1]-foothillsDefault.image.data[i+1])>2||
-       Math.abs(foothillsAlias.image.data[i+2]-foothillsDefault.image.data[i+2])>2)aliasPixelsChanged++;
+  // Every ground material must reach the real Phaser scene and sit on a
+  // generated solid section. Move a paused seeded run through the eight biomes
+  // without changing any terrain or collision data.
+  await skeletalPage.goto(origin+'/?seed=33',
+    {waitUntil:'domcontentloaded',timeout:45000});
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.loaded===true,
+    null,{timeout:45000});
+  await skeletalPage.click('#start-btn');
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
+    null,{timeout:15000});
+  await skeletalPage.evaluate(()=>{
+    const scene=window.grimRun.scene.scenes[0];
+    // Keep Phaser's loop alive so its Loader can process biome textures; the
+    // paused game state keeps player position and gameplay timers frozen.
+    scene.state='paused';scene.enemies=[];scene.obstacles=[];
+  });
+  const terrainTargets=[
+    [300,'forest'],[1500,'foothills'],[3400,'tundra'],[5500,'caves'],
+    [6500,'crystals'],[7500,'ashlands'],[9000,'lava'],[11000,'boss']
+  ];
+  for(const [meters,biome] of terrainTargets){
+    const terrainBefore=await skeletalPage.evaluate(m=>{
+      const game=window.grimRun,scene=game.scene.scenes[0],ppm=window.GRIM_CONFIG.pxPerMeter;
+      scene.distance=m;scene.hasTeleported=m>=5000;
+      scene.player.x=scene.startX+m*ppm;
+      scene.player.y=scene.terrain.groundAt(scene.player.x)??scene.terrain.anchorAt(scene.player.x);
+      scene.player.grounded=true;scene.player.velocityY=0;
+      scene.cameraX=scene.player.x-scene.width*window.GRIM_CONFIG.reaperXRatio;
+      scene.cameraY=scene.player.y-scene.groundY;
+      scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
+      const ground=[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx));
+      scene.drawScene();game.step(performance.now(),0);
+      return ground;
+    },meters);
+    const materialDebug=await skeletalPage.evaluate(id=>{
+      const scene=window.grimRun.scene.scenes[0],sections=scene.terrain.visibleSections(
+        scene.cameraX-140,scene.cameraX+scene.width+170);
+      return {id,distance:scene.distance,state:scene.state,
+        ids:[...scene.terrainMaterialIds],queue:scene.terrainMaterialQueue,
+        loading:[...scene.terrainMaterialLoading],failed:[...scene.terrainMaterialFailed],
+        source:scene.textures.exists('terrain-source-'+id),
+        texture:scene.textures.exists('terrain-material-'+id),
+        addTileSprite:typeof scene.add.tileSprite,makeGraphics:typeof scene.make.graphics,
+        base:Boolean(scene.terrainBase),sections:sections.map(s=>s.kind),
+        views:[...scene.terrainTextureViews].map(([key,view])=>({key,visible:view.sprite.visible,
+          texture:view.sprite.displayTexture?.key}))};
+    },biome);
+    console.log('Terrain renderer state before wait: '+JSON.stringify(materialDebug));
+    await skeletalPage.waitForFunction(id=>{
+      const scene=window.grimRun?.scene?.scenes?.[0];
+      return scene?.terrainMaterialIds?.has(id)&&
+        [...scene.terrainTextureViews.values()].some(view=>view.sprite.visible&&
+          (view.sprite.displayTexture?.key==='terrain-material-'+id||
+            (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey))));
+    },biome,{timeout:45000});
+    const grounded=await skeletalPage.evaluate(id=>{
+      const scene=window.grimRun.scene.scenes[0];
+      const visible=[...scene.terrainTextureViews.values()].filter(view=>view.sprite.visible);
+      const sections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
+      const gaps=sections.filter(section=>section.kind==='gap');
+      const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
+        key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
+      const tundraGroundMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
+        (key.startsWith('ground:')||key.startsWith('rubble:'))&&view.id===id&&view.sprite.visible&&
+        id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)).length;
+      const groundFace=sections.filter(section=>section.kind==='ground'||section.kind==='rubble').map(section=>{
+        const from=Math.max(section.start,scene.cameraX+140);
+        const to=Math.min(section.end,scene.cameraX+scene.width-140);
+        const mid=(from+to)/2,y=scene.terrain.groundAt(mid);
+        return {x:Math.round(mid-scene.cameraX-30),
+          y:Math.round(y-scene.cameraY+14),width:60,height:36,span:to-from};
+      }).filter(face=>face.span>=60&&face.x>=140&&face.x+face.width<=scene.width-140&&
+        face.y>=0&&face.y+face.height<=scene.height)
+        .sort((a,b)=>Math.abs(a.x+30-scene.width/2)-Math.abs(b.x+30-scene.width/2))[0]||null;
+      const platformMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
+        key.startsWith('platform:')&&view.id===id&&view.sprite.visible&&
+        (view.sprite.displayTexture?.key==='terrain-material-'+id||
+          (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)))).length;
+      const platformFace=sections.filter(section=>section.kind==='platform').map(section=>{
+        const from=Math.max(section.start,scene.cameraX+140);
+        const to=Math.min(section.end,scene.cameraX+scene.width-140);
+        const mid=(from+to)/2,y=scene.terrain.groundAt(mid);
+        return {x:Math.round(mid-scene.cameraX-30),
+          y:Math.round(y-scene.cameraY+14),width:60,height:36,span:to-from};
+      }).filter(face=>face.span>=60&&face.x>=140&&face.x+face.width<=scene.width-140&&
+        face.y>=0&&face.y+face.height<=scene.height)
+        .sort((a,b)=>Math.abs(a.x+30-scene.width/2)-Math.abs(b.x+30-scene.width/2))[0]||null;
+      return {material:visible.some(view=>view.sprite.displayTexture?.key==='terrain-material-'+id||
+          (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey))),
+        ground:[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx)),
+        groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews,
+        tundraGroundMaterialViews,groundFace,platformMaterialViews,platformFace};
+    },biome);
+    assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
+    assert.deepEqual(grounded.ground,terrainBefore,biome+' material rendering leaves generated ground unchanged');
+    assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
+    assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
+    if(biome==='tundra'){
+      assert.ok(grounded.tundraGroundMaterialViews>0,
+        'Tundra ground and rubble use the composited terrain material');
+      assert.ok(grounded.platformMaterialViews>0,
+        'Tundra uses the composited snowbound material on visible floating ledges');
+    }
+    const terrainCapture=await skeletalPage.screenshot({
+      path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
+    if(biome==='tundra'){
+      assert.ok(grounded.platformFace,'Tundra screenshot has an unobstructed ledge face to inspect');
+      const image=PNG.sync.read(terrainCapture);
+      const countColors=(image,probe)=>{
+        const colors=new Set();
+        for(let y=probe.y;y<probe.y+probe.height;y++)for(let x=probe.x;x<probe.x+probe.width;x++){
+          const i=(y*image.width+x)*4;
+          colors.add((image.data[i]<<16)|(image.data[i+1]<<8)|image.data[i+2]);
+        }
+        return colors.size;
+      };
+      const ledgeColors=countColors(image,grounded.platformFace);
+      assert.ok(ledgeColors>=150,
+        'Tundra ledge face renders the painted rock-and-snow material; sampled '+ledgeColors+' colors');
+      const groundReview=await skeletalPage.evaluate(()=>{
+        const scene=window.grimRun.scene.scenes[0],game=window.grimRun;
+        const ppm=window.GRIM_CONFIG.pxPerMeter;
+        for(const meters of [2600,2800,3000,3200,3600,3900,4200,4600,4900]){
+          scene.distance=meters;scene.hasTeleported=false;
+          scene.player.x=scene.startX+meters*ppm;
+          const feet=scene.terrain.groundAt(scene.player.x)??scene.terrain.anchorAt(scene.player.x);
+          if(!Number.isFinite(feet))continue;
+          scene.player.y=feet;scene.player.grounded=true;scene.player.velocityY=0;
+          scene.cameraX=scene.player.x-scene.width*window.GRIM_CONFIG.reaperXRatio;
+          scene.cameraY=scene.player.y-scene.groundY;
+          scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
+          const sections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
+          const face=sections.filter(section=>section.kind==='ground'||section.kind==='rubble').map(section=>{
+            const from=Math.max(section.start,scene.cameraX+140);
+            const to=Math.min(section.end,scene.cameraX+scene.width-140);
+            const mid=(from+to)/2,y=scene.terrain.groundAt(mid);
+            if(y===null)return null;
+            return {x:Math.round(mid-scene.cameraX-30),y:Math.round(y-scene.cameraY+14),
+              width:60,height:36,span:to-from};
+          }).filter(item=>item&&item.span>=60&&item.x>=140&&item.x+item.width<=scene.width-140&&
+            item.y>=0&&item.y+item.height<=scene.height)
+            .sort((a,b)=>b.span-a.span||Math.abs(a.x+30-scene.width/2)-Math.abs(b.x+30-scene.width/2))[0];
+          if(!face)continue;
+          scene.drawScene();game.step(performance.now(),0);
+          const materialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
+            (key.startsWith('ground:')||key.startsWith('rubble:'))&&view.id==='tundra'&&view.sprite.visible&&
+            view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)).length;
+          return {meters,face,materialViews};
+        }
+        return {meters:null,face:null,materialViews:0};
+      });
+      assert.ok(groundReview.face,'Tundra has a phone-visible walkable ground face to inspect');
+      assert.ok(groundReview.materialViews>0,'Tundra walkable ground uses the composited material');
+      const groundCapture=await skeletalPage.screenshot({
+        path:path.join(skeletalArtifactDir,'terrain-tundra-ground-phone-scale.png')});
+      const groundImage=PNG.sync.read(groundCapture),groundColors=countColors(groundImage,groundReview.face);
+      assert.ok(groundColors>=150,
+        'Tundra walkable ground renders the painted rock-and-snow material; sampled '+groundColors+' colors');
+      console.log('Tundra ground material at '+groundReview.meters+'m pixel colors: '+groundColors);
+      console.log('Tundra ledge material pixel colors: '+ledgeColors);
+    }
+    console.log('Rendered '+biome+' ground material at '+meters+'m');
   }
-  assert.ok(aliasPixelsChanged<50,'Foothills alias matches the accepted default rendering');
-
-  const tundraDefault=await worldArtSnapshot('?seed=33',
-    path.join(skeletalArtifactDir,'tundra-default-phone-scale.png'),2600);
-  const tundraReview=await worldArtSnapshot('?worldReview=tundra&seed=33',
-    path.join(skeletalArtifactDir,'tundra-review-phone-scale.png'),2600);
-  assert.equal(tundraDefault.geometry.preview,false);
-  assert.equal(tundraReview.geometry.preview,true);
-  assert.deepEqual(tundraReview.geometry.ground,tundraDefault.geometry.ground,
-    'Tundra artwork leaves seeded terrain geometry untouched');
-  assert.deepEqual(tundraReview.geometry.player,tundraDefault.geometry.player,
-    'Tundra artwork leaves player position and health untouched');
-  assert.deepEqual([tundraReview.image.width,tundraReview.image.height],[950,430]);
-  let worldPixelsChanged=0;
-  for(let i=0;i<tundraReview.image.data.length;i+=4){
-    if(Math.abs(tundraReview.image.data[i]-tundraDefault.image.data[i])>12||
-       Math.abs(tundraReview.image.data[i+1]-tundraDefault.image.data[i+1])>12||
-       Math.abs(tundraReview.image.data[i+2]-tundraDefault.image.data[i+2])>12)worldPixelsChanged++;
-  }
-  assert.ok(worldPixelsChanged>15000,
-    'Tundra preview visibly changes the phone-scale scene without changing gameplay state');
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -820,7 +933,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.11.9 accepted forest and foothills art defaults, anchored Tundra mountains render at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.12.0 renders all eight ground materials on generated terrain, keeps the approved biome backgrounds and gameplay geometry, and preserves character scale, motion, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

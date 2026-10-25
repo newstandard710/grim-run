@@ -15,7 +15,7 @@ s.window=s;vm.createContext(s);
 for(const [,attrs,source] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(source,s,{filename:'index.html'});
 const C=s.GRIM_CONFIG;
-assert.equal(C.version,'0.10.15');
+assert.equal(C.version,'0.12.0');
 assert.ok(html.includes('id="god-teleport-range"'));
 assert.ok(html.includes('step="500"'), '500m increments are explicit');
 function game(seed){
@@ -49,7 +49,7 @@ assert.ok(half.elapsed/full.elapsed>.48&&half.elapsed/full.elapsed<.52,
 const unauthorized=game(5);unauthorized.state='paused';
 assert.equal(unauthorized.askTeleport(5000),false,'God Mode required');
 unauthorized.setGodMode(true);
-for(const invalid of [0,1,499,1001,9998,10000]){
+for(const invalid of [0,1,499,1001,9998,20001,20500]){
  assert.equal(unauthorized.askTeleport(invalid),false,'Invalid 500m step: '+invalid);
 }
 assert.equal(unauthorized.askTeleport(5000),true);
@@ -60,7 +60,7 @@ assert.equal(unauthorized.pendingTeleport,null);
 
 let checks=0;
 for(const seed of [1,7,19,42,99,314,888,1999]){
- for(const meters of [500,1000,2500,4500,5000,5500,7500,9500]){
+ for(const meters of [500,1000,2500,4500,5000,5500,7500,9500,20000]){
   const g=game(seed);g.setGodMode(true);g.state='paused';g.ui.setMode('paused');
   assert.equal(g.askTeleport(meters),true);
   assert.equal(g.confirmTeleport(),true);
@@ -72,8 +72,8 @@ for(const seed of [1,7,19,42,99,314,888,1999]){
   assert.ok(g.terrain.groundAt(g.player.x)!==null,'Solid ground at landing');
   assert.equal(g.hasTeleported,meters>=5000,'Biome/Underworld must match location');
   assert.equal(g.gunUnlocked,meters>=5000,'Crossbow available after portal');
-  assert.ok(g.nextVendorNumber>g.distance/C.vendorEveryMeters,
-   'Passed vendors must not re-open without an action');
+  assert.equal(g.nextVendorNumber,Math.min(14,Math.floor(g.distance/C.vendorEveryMeters))+1,
+   'Passed vendors must not re-open without an action, including beyond the final vendor');
   assert.equal(g.rewindFrames.length<=1,true,'Rewind history reset on teleport');
   assert.equal(g.enemies.length,0);
   assert.equal(g.fireballs.length,0);
@@ -98,4 +98,4 @@ const victory=game(2);
 victory.setGodMode(true);victory.state='paused';victory.askTeleport(9500);victory.confirmTeleport();
 victory.completeRun();
 assert.equal(store.has('grim-run-v03-best'),false,'Teleport-assisted victory cannot set personal best');
-console.log('PASS v0.10.15: 50% world speed, toggle guard, 500m selection, confirmation/cancel, '+checks+' teleports across eight seeds including portal and 9500m, skipped vendors, unchanged best scores.');
+console.log('PASS v0.12.0: 50% world speed, toggle guard, 500m selection, confirmation/cancel, '+checks+' teleports across eight seeds through 20,000m, skipped vendors, unchanged best scores.');

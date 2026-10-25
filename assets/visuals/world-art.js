@@ -1,4 +1,4 @@
-/* Grim Run — Biome Transitions and Ground Art, v0.11.10
+/* Grim Run — Biome Transitions and Ground Art, v0.12.0
  * Backgrounds use the approved biome images; these helpers draw only ground details.
  */
 (function(scope){
@@ -190,22 +190,18 @@
   }
 
   function drawTundraGround(scene,g,from,to){
-    const first=Math.ceil(from/72)*72;
-    for(let x=first;x<to-12;x+=72){
+    // A few soft frost strokes sit just below the tiled material's snow crust.
+    const first=Math.ceil(from/132)*132,startX=scene.startX??200;
+    for(let x=first;x<to-22;x+=132){
       const y=scene.terrain.groundAt(x);
       if(y===null||!Number.isFinite(y))continue;
-      const n=Math.floor(x/72);
-      const variation=(Math.sin(n*10.41)+1)*.5;
-      g.fillStyle(0x1c2831,.38);
-      g.fillTriangle(x+14,y+13,x+22+variation*6,y+19,x+31,y+13);
-      g.fillStyle(0x8598a0,.3);
-      g.fillEllipse(x+21+variation*6,y+15,6+variation*4,2.2);
-      g.fillStyle(0x465660,.38);
-      g.fillEllipse(x+51,y+29+(1-variation)*6,8+variation*5,3);
-      g.lineStyle(1.2,0xa8bac2,.17);
-      g.lineBetween(x+5,y+5,x+22+variation*4,y+6);
-      g.lineStyle(1.35,0x101b22,.34);
-      g.lineBetween(x+36,y+18,x+40+variation*4,y+33);
+      const n=Math.floor(x/132),variation=(Math.sin(n*6.73)+1)*.5;
+      g.lineStyle(1.5,0xc7dce5,.22);
+      g.lineBetween(x+8,y+5,x+28+variation*8,y+6);
+      if(n%2===0){
+        g.lineStyle(1,0xe1edf1,.18);
+        g.lineBetween(x+52,y+8,x+62+variation*5,y+8);
+      }
     }
   }
 

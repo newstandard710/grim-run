@@ -2,23 +2,32 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.11.10 — Background Art Cleanup**
+**Current production build: v0.11.10 — Background Art Cleanup**
+
+**Development candidate: v0.12.0 — Biome Ground Materials**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
-- All eight approved biome concepts are the only background art. The old procedural sky, mountain, tree, cave, ash, and lava overlays have been removed. Image layers stay fully opaque through the gently drifting 360m crossfades; at 5,000m the portal switches directly from Tundra to Caves. Ground colors follow the same transitions.
+- Eight matching ground materials now cover generated terrain and foreground platforms in their biome. Materials follow the exact slopes and cliffs; gaps stay open over the existing abyss, which retains its dark or lava underfill. No terrain, collision, or hazard geometry changes.
+- All eight approved biome concepts remain the only background art. The old procedural sky, mountain, tree, cave, ash, and lava overlays have been removed. Image and ground materials share the gently drifting 360m crossfades; at 5,000m the portal switches directly from Tundra to Caves.
 - Biome crossfades define their own easing helper, preventing an out-of-scope function error from aborting background and ground rendering at fade boundaries.
 - Surface backgrounds load first. Underworld backgrounds are loaded during the portal sequence, then replace and release the Surface textures to reduce memory use on phones.
 - The game wakes Phaser's frame loop when returning to the page and before pause, resume, menu, new-run, and vendor-exit transitions. A visible-page watchdog restarts Phaser if active gameplay stops receiving update heartbeats. Starting a run also resets the camera to the Reaper's starting position.
 - Terrain requests for already-generated ground now return without adding more chunks; God Mode extends the world in bounded chunks beyond the pre-generated normal course.
 - Normal runs still finish at 9,999m. God Mode can continue past the finish and teleport in 500m steps through 20,000m.
-- [Open the game](https://newstandard710.github.io/grim-run/).
+- [Open the production game](https://newstandard710.github.io/grim-run/).
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
+
+## v0.12.0 — Biome Ground Materials
+
+- Replaced the flat procedural ground fills with eight biome-specific materials, clipped to existing ground, slope, rubble, and platform profiles.
+- Kept generated terrain, cliffs, gaps, collision, hazards, controls, and the normal 9,999m finish unchanged. Abyss fills remain visible behind open gaps.
+- Fixed the Ember Imp visual check to measure the decoded atlas silhouette; the long-run regression now turns God Mode off before testing victory, and the God Mode range check covers the documented 20,000m teleport limit.
 
 ## Current Reaper art
 
