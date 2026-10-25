@@ -1488,7 +1488,7 @@ window.GRIM_CONFIG = Object.freeze({
   };
   const BIOME_TERRAIN_FILES=Object.freeze({
     forest:'ground-forest-v1.webp',foothills:'ground-foothills-v1.webp',
-    tundra:'ground-tundra-v1.webp',caves:'ground-caves-v1.webp',
+    tundra:'ground-tundra-v2-768.webp',caves:'ground-caves-v1.webp',
     crystals:'ground-crystals-v1.webp',ashlands:'ground-ashlands-v1.webp',
     lava:'ground-lava-v1.webp',boss:'ground-boss-v1.webp'
   });
@@ -3540,12 +3540,14 @@ window.GRIM_CONFIG = Object.freeze({
           section.kind!=='platform'&&scope.GRIM_WORLD_ART;
         const foothillsWorldArt=!this.hasTeleported&&
           m>=900&&m<=2300&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
-        const tundraWorldArt=!this.hasTeleported&&
-          m>=1900&&m<=5000&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
+        const tundraBiomeWorldArt=!this.hasTeleported&&
+          m>=1900&&m<=5000&&scope.GRIM_WORLD_ART;
+        const tundraWorldArt=tundraBiomeWorldArt&&section.kind!=='platform';
+        const tundraPlatformWorldArt=tundraBiomeWorldArt&&section.kind==='platform';
         const underworldWorldArt=this.hasTeleported&&m>=5000&&scope.GRIM_WORLD_ART?.underworldGroundPalette;
         const [body,edge,sheen,detail]=this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.worldGroundPalette
           ?scope.GRIM_WORLD_ART.worldGroundPalette(m)
-          :tundraWorldArt
+          :tundraWorldArt||tundraPlatformWorldArt
           ?scope.GRIM_WORLD_ART.tundraGroundPalette(m)
           :foothillsWorldArt?scope.GRIM_WORLD_ART.foothillsGroundPalette(m)
           :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette()
@@ -3561,7 +3563,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(section.kind==='platform'){
           g.lineStyle(3,detail,.6);g.lineBetween(from+5,underside-3,to-5,underside-3);
         }
-        const customWorldGround=openingWorldArt||foothillsWorldArt||tundraWorldArt||underworldWorldArt;
+        const customWorldGround=openingWorldArt||foothillsWorldArt||tundraWorldArt||tundraPlatformWorldArt||underworldWorldArt;
         g.lineStyle(customWorldGround?5:7,edge,customWorldGround?.9:.95);
         g.lineBetween(from,h0-2,to,h1-2);
         g.lineStyle(customWorldGround?2:3,sheen,customWorldGround?.42:.54);
@@ -3573,6 +3575,7 @@ window.GRIM_CONFIG = Object.freeze({
           g.lineStyle(4,detail,.66);g.lineBetween(x,y+7,x,y+105);
         }
         if(tundraWorldArt)scope.GRIM_WORLD_ART.drawTundraGround(this,g,from,to);
+        else if(tundraPlatformWorldArt)scope.GRIM_WORLD_ART.drawTundraPlatformGround(this,g,from,to);
         else if(foothillsWorldArt)scope.GRIM_WORLD_ART.drawFoothillsGround(this,g,from,to);
         else if(openingWorldArt)scope.GRIM_WORLD_ART.drawOpeningGround(this,g,from,to);
         else if(underworldWorldArt)scope.GRIM_WORLD_ART.drawUnderworldGround(this,g,from,to);
@@ -3605,6 +3608,8 @@ window.GRIM_CONFIG = Object.freeze({
       for(const section of sections){
         if(section.kind!=='platform')continue;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
+        const meters=(from+to-2*startX)/(2*C.pxPerMeter);
+        if(!this.hasTeleported&&meters>=1900&&meters<=5000&&scope.GRIM_WORLD_ART?.drawTundraPlatformGround)continue;
         g.lineStyle(3,0x96a9a5,.38);
         for(let x=Math.ceil(from/36)*36;x<to;x+=36){
           const y=this.terrain.groundAt(x);

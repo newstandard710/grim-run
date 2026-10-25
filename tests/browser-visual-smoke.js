@@ -590,14 +590,22 @@ const server=http.createServer((req,res)=>{
       const gaps=sections.filter(section=>section.kind==='gap');
       const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
         key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
+      const platformMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
+        key.startsWith('platform:')&&view.id===id&&view.sprite.visible&&
+        view.sprite.displayTexture?.key==='terrain-material-'+id).length;
       return {material:visible.some(view=>view.sprite.displayTexture?.key==='terrain-material-'+id),
         ground:[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx)),
-        groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews};
+        groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews,
+        platformMaterialViews};
     },biome);
     assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
     assert.deepEqual(grounded.ground,terrainBefore,biome+' material rendering leaves generated ground unchanged');
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
     assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
+    if(biome==='tundra'){
+      assert.ok(grounded.platformMaterialViews>0,
+        'Tundra uses the snowbound material on visible floating ledges');
+    }
     await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
     console.log('Rendered '+biome+' ground material at '+meters+'m');
   }

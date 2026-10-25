@@ -209,10 +209,50 @@
     }
   }
 
+  function drawTundraPlatformGround(scene,g,from,to){
+    const first=Math.ceil(from/84)*84;
+    for(let x=first;x<to-14;x+=84){
+      const y=scene.terrain.groundAt(x);
+      if(y===null||!Number.isFinite(y))continue;
+      const n=Math.floor(x/84),variation=(Math.sin(n*8.91)+1)*.5;
+      const capEnd=Math.min(to-2,x+78);
+      // Broken snow shelves make the top edge read as icy rock, not a gray slab.
+      g.fillStyle(0xdaf5ff,.70);
+      g.fillPoints([
+        {x:x+2,y:y+3},{x:x+12,y:y-1-variation*2},
+        {x:x+30,y:y+1},{x:x+47,y:y-1+(1-variation)*2},
+        {x:capEnd,y:y+2},{x:capEnd-4,y:y+7},
+        {x:x+49,y:y+5},{x:x+30,y:y+7},{x:x+11,y:y+5}
+      ],true);
+      g.lineStyle(1.8,0xf1fcff,.83);
+      g.lineBetween(x+5,y+2,x+22,y+1-variation*2);
+      g.lineBetween(x+43,y+2,x+Math.min(68,to-x-3),y+2+(1-variation)*2);
+
+      // Faceted blue ice cracks interrupt the long rectangular platform face.
+      const seam=x+25+variation*17;
+      g.lineStyle(2.4,0x73d9f3,.84);
+      g.lineBetween(seam,y+11,seam-5,y+25);
+      g.lineBetween(seam-5,y+25,seam+2,y+36);
+      g.lineBetween(seam+2,y+36,seam-2,y+51);
+      g.lineStyle(1.3,0xd1f6ff,.68);
+      g.lineBetween(seam+4,y+14,seam+1,y+26);
+      g.lineBetween(seam-1,y+37,seam+2,y+49);
+      if(n%2===0){
+        g.fillStyle(0x82cfe5,.28);
+        g.fillTriangle(x+48,y+17,x+71,y+30,x+49,y+40);
+      }
+      if(n%3===0){
+        const icicleX=x+62;
+        g.fillStyle(0xc8f0fa,.78);
+        g.fillTriangle(icicleX-3,y+4,icicleX+3,y+4,icicleX,y+15+variation*5);
+      }
+    }
+  }
+
   scope.GRIM_WORLD_ART=Object.freeze({
     openingGroundPalette,drawOpeningGround,
     foothillsGroundPalette,drawFoothillsGround,
-    tundraGroundPalette,drawTundraGround,
+    tundraGroundPalette,drawTundraGround,drawTundraPlatformGround,
     SURFACE_BIOMES,UNDERWORLD_BIOMES,WORLD_BIOMES,biomeWeights,underworldWeights,
     worldGroundPalette,underworldGroundPalette,
     drawUnderworldGround
