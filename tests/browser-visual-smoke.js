@@ -581,7 +581,8 @@ const server=http.createServer((req,res)=>{
       const scene=window.grimRun?.scene?.scenes?.[0];
       return scene?.terrainMaterialIds?.has(id)&&
         [...scene.terrainTextureViews.values()].some(view=>view.sprite.visible&&
-          view.sprite.displayTexture?.key==='terrain-material-'+id);
+          (view.sprite.displayTexture?.key==='terrain-material-'+id||
+            (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey))));
     },biome,{timeout:45000});
     const grounded=await skeletalPage.evaluate(id=>{
       const scene=window.grimRun.scene.scenes[0];
