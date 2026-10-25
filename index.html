@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.12.1</title>
+  <title>GRIM RUN — v0.12.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.12.1 · TERRAIN SURFACE PASS</div>
+      <div class="mini">v0.12.2 · BIOME SURFACE & PERFORMANCE PASS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.12.0',
+  version: '0.12.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1541,12 +1541,16 @@ window.GRIM_CONFIG = Object.freeze({
       this.resizeBiomeBackdrops();
       this.terrainBase=this.add.graphics().setDepth(0);
       this.terrainTextureViews=new Map();
+      this.terrainSurfaceViews=new Map();
       this.terrainMaterialIds=new Set();
       this.terrainMaterialLoading=new Set();
       this.terrainMaterialFailed=new Set();
       this.terrainMaterialQueue=[];
       if(this.textures?.exists?.('terrain-source-forest'))this.bakeTerrainMaterial('forest');
-      this.events?.once?.('shutdown',()=>this.destroyTerrainTextureViews());
+      this.events?.once?.('shutdown',()=>{
+        this.destroyTerrainTextureViews();
+        this.destroyTerrainSurfaceViews();
+      });
       this.world = this.add.graphics().setDepth(2);
       this.fx = this.add.graphics().setDepth(5);
       this.actor = this.add.graphics().setDepth(14);
@@ -3461,60 +3465,139 @@ window.GRIM_CONFIG = Object.freeze({
       const maskGraphics=this.make.graphics({x:0,y:0,add:false});
       const mask=maskGraphics.createGeometryMask();
       sprite.setOrigin(0,0).setDepth(1).setMask(mask).setVisible(false);
-      view={id:textureKey.slice('terrain-material-'.length),sprite,maskGraphics,mask};
+      view={id:textureKey.slice('terrain-material-'.length),sprite,maskGraphics,mask,
+        geometrySignature:null,boundsSignature:null};
       this.terrainTextureViews.set(key,view);
       return view;
     }
-    drawTerrainSurfaceLip(from,to,yAt,edge,sheen,detail){
-      if(!this.world||to<=from)return;
-      const g=this.world,top=[],step=14;
-      const surfaceY=x=>{
-        const y=yAt(x);
-        return Number.isFinite(y)?y:null;
-      };
-      for(let x=from;x<to;x+=step){
-        const y=surfaceY(x);
-        if(y!==null)top.push({x,y});
+    terrainSurfaceView(section,edge,sheen,detail,activeKeys){
+      if(!this.terrainSurfaceViews||!this.textures?.createCanvas||!this.add?.image)return null;
+      const from=section.start,to=section.end;
+      const y0=Number.isFinite(section.y0)?section.y0:section.y;
+      const y1=Number.isFinite(section.y1)?section.y1:section.y;
+      if(!Number.isFinite(y0)||!Number.isFinite(y1)||to<=from)return null;
+      const key=[section.kind,from,to].join(':');
+      const capDepth=section.kind==='soul-platform'?8:10;
+      const geometrySignature=[y0.toFixed(2),y1.toFixed(2),edge,sheen,detail,capDepth].join(':');
+      let view=this.terrainSurfaceViews.get(key);
+      if(view?.geometrySignature===geometrySignature){
+        activeKeys.add(key);
+        view.sprite.setVisible(true);
+        return view;
       }
-      const endY=surfaceY(to);
-      if(endY!==null)top.push({x:to,y:endY});
-      if(top.length<2)return;
+      if(view){
+        view.sprite.destroy();
+        this.textures.remove?.(view.textureKey);
+        this.terrainSurfaceViews.delete(key);
+      }
+      const width=Math.max(1,Math.ceil(to-from));
+      const top=Math.min(y0,y1),leftY=y0-top,rightY=y1-top;
+      const height=Math.max(1,Math.ceil(Math.max(leftY,rightY)+capDepth+2));
+      const textureKey='terrain-surface-'+section.kind+'-'+Math.round(from)+'-'+Math.round(to);
+      if(this.textures.exists?.(textureKey))this.textures.remove(textureKey);
+      const texture=this.textures.createCanvas(textureKey,width,height);
+      const context=texture?.getContext?.();
+      if(!texture||!context){this.textures.remove?.(textureKey);return null;}
 
-      // Keep the upper contour exactly on the walkable surface. All natural
-      // variation hangs below that line, so the Reaper's feet stay registered.
-      const lower=top.map(({x,y})=>{
-        const cell=Math.floor(x/31);
-        const variation=(Math.sin(cell*12.8)+Math.cos(cell*3.71)*.35+1)*.5;
-        return {x,y:y+2+variation*3.5};
-      });
-      g.fillStyle(edge,.27);
-      g.fillPoints(top.concat(lower.reverse()),true);
-
-      // Broken, low-contrast strokes soften the edge without making it hard
-      // to distinguish at phone scale.
-      const stride=34;
-      for(let x=Math.floor(from/stride)*stride;x<to;x+=stride){
-        const cell=Math.floor(x/stride);
-        const variation=(Math.sin(cell*8.17)+Math.cos(cell*4.31)+2)*.25;
-        const x0=Math.max(from,x+2+variation*4);
-        const x1=Math.min(to,x0+8+variation*8);
-        if(x1<=x0)continue;
-        const y0=surfaceY(x0),y1=surfaceY(x1);
-        if(y0===null||y1===null)continue;
-        g.lineStyle(1.35,sheen,.22+variation*.16);
-        g.lineBetween(x0,y0-.55,x1,y1-.35);
-        if(variation>.58){
-          g.lineStyle(1,detail,.12+variation*.08);
-          g.lineBetween(x0+1,y0+2.2,x1-1,y1+3.1);
+      const rgba=(color,alpha)=>`rgba(${(color>>16)&255},${(color>>8)&255},${color&255},${alpha})`;
+      const contour=(offset,variableDepth=false)=>{
+        const points=[];
+        const step=12;
+        for(let x=0;x<width;x+=step){
+          const worldX=from+x,cell=Math.floor(worldX/29);
+          const wobble=(Math.sin(cell*8.17)+Math.cos(cell*4.31)+2)*.5;
+          const y=leftY+(rightY-leftY)*(x/Math.max(1,width));
+          points.push({x,y:y+offset+(variableDepth?(wobble-1)*1.4:0)});
         }
+        const y=leftY+(rightY-leftY);
+        points.push({x:width,y:y+offset});
+        return points;
+      };
+      const upper=contour(0),lower=contour(capDepth,true);
+      context.save();
+      context.beginPath();
+      context.moveTo(upper[0].x,upper[0].y);
+      for(const point of upper.slice(1))context.lineTo(point.x,point.y);
+      for(const point of lower.slice().reverse())context.lineTo(point.x,point.y);
+      context.closePath();
+      context.fillStyle=rgba(edge,.70);
+      context.fill();
+
+      // A narrow darker seam gives the run surface a readable edge while the
+      // original biome material remains visible through the translucent cap.
+      const seamTop=contour(Math.max(3,capDepth*.43));
+      const seamBottom=contour(capDepth*.78,true);
+      context.beginPath();
+      context.moveTo(seamTop[0].x,seamTop[0].y);
+      for(const point of seamTop.slice(1))context.lineTo(point.x,point.y);
+      for(const point of seamBottom.slice().reverse())context.lineTo(point.x,point.y);
+      context.closePath();
+      context.fillStyle=rgba(detail,.34);
+      context.fill();
+
+      // Keep all highlight pixels inside the real walkable profile.
+      context.beginPath();
+      context.moveTo(upper[0].x,upper[0].y+1.3);
+      for(const point of upper.slice(1))context.lineTo(point.x,point.y+1.3);
+      context.lineWidth=1.5;
+      context.lineCap='round';
+      context.strokeStyle=rgba(sheen,.58);
+      context.stroke();
+      context.restore();
+      texture.refresh();
+      const sprite=this.add.image(from,top,textureKey).setOrigin(0,0)
+        .setDepth(1.5).setVisible(true);
+      view={sprite,textureKey,geometrySignature,
+        surfaceGeometry:{from,to,y0,y1,capDepth}};
+      this.terrainSurfaceViews.set(key,view);
+      activeKeys.add(key);
+      return view;
+    }
+    drawTerrainSurfaceFallback(section,edge,sheen,detail){
+      if(!this.world)return;
+      const from=section.start,to=section.end;
+      const y0=Number.isFinite(section.y0)?section.y0:section.y;
+      const y1=Number.isFinite(section.y1)?section.y1:section.y;
+      if(!Number.isFinite(y0)||!Number.isFinite(y1)||to<=from)return;
+      const lower=10;
+      this.world.fillStyle(edge,.70);
+      this.world.fillPoints([{x:from,y:y0},{x:to,y:y1},{x:to,y:y1+lower},{x:from,y:y0+lower}],true);
+      this.world.fillStyle(detail,.34);
+      this.world.fillPoints([{x:from,y:y0+4},{x:to,y:y1+4},{x:to,y:y1+8},{x:from,y:y0+8}],true);
+      this.world.lineStyle(1.5,sheen,.58);
+      this.world.lineBetween(from,y0+1.3,to,y1+1.3);
+    }
+    removeTerrainTextureView(key,view){
+      view.sprite.clearMask?.();view.sprite.destroy();
+      view.mask?.destroy?.();view.maskGraphics?.destroy?.();
+      if(view.compositeTextureKey)this.textures?.remove?.(view.compositeTextureKey);
+      this.terrainTextureViews.delete(key);
+    }
+    removeTerrainSurfaceView(key,view){
+      view.sprite.destroy();
+      this.textures?.remove?.(view.textureKey);
+      this.terrainSurfaceViews.delete(key);
+    }
+    pruneTerrainSurfaceViews(activeKeys){
+      if(!this.terrainSurfaceViews)return;
+      for(const [key,view] of this.terrainSurfaceViews){
+        if(activeKeys.has(key))continue;
+        this.removeTerrainSurfaceView(key,view);
       }
+    }
+    destroyTerrainSurfaceViews(){
+      if(!this.terrainSurfaceViews)return;
+      for(const [key,view] of this.terrainSurfaceViews)
+        this.removeTerrainSurfaceView(key,view);
+      this.terrainSurfaceViews.clear();
     }
     tundraTerrainTextureView(section,key,textureKey,depth){
       let view=this.terrainTextureViews.get(key);
       if(view)return view;
       if(!this.textures?.createCanvas||!this.add?.image)return null;
       const x0=section.start,x1=section.end,width=Math.max(1,Math.ceil(x1-x0));
-      const y0=this.terrain.groundAt(x0),y1=this.terrain.groundAt(x1-.001);
+      const y0=Number.isFinite(section.y0)?section.y0:this.terrain.groundAt(x0);
+      const y1=Number.isFinite(section.y1)?section.y1:this.terrain.groundAt(x1-.001);
       if(y0===null||y1===null)return null;
       const top=Math.min(y0,y1);
       const underside=section.kind==='platform'?Math.max(y0,y1)+68:depth;
@@ -3552,12 +3635,18 @@ window.GRIM_CONFIG = Object.freeze({
       context.restore();
       texture.refresh();
       const sprite=this.add.image(x0,top,compositeKey).setOrigin(0,0).setDepth(1).setVisible(false);
-      view={id:'tundra',sprite,mask:null,maskGraphics:null,compositeTextureKey:compositeKey};
+      view={id:'tundra',sprite,mask:null,maskGraphics:null,compositeTextureKey:compositeKey,
+        geometrySignature:null,boundsSignature:null};
       this.terrainTextureViews.set(key,view);
       return view;
     }
     drawTerrainTexture(section,from,to,h0,h1,underside,depth,meters,activeKeys){
       if(!this.terrainBase||!this.add?.tileSprite||!this.make?.graphics)return;
+      const sectionFrom=section.start,sectionTo=section.end;
+      const sectionY0=Number.isFinite(section.y0)?section.y0:h0;
+      const sectionY1=Number.isFinite(section.y1)?section.y1:h1;
+      const renderDepth=depth;
+      const geometrySignature=[section.kind,sectionFrom,sectionTo,sectionY0,sectionY1,renderDepth].join(':');
       const weights=this.terrainBiomeWeights(meters);
       const active=Object.entries(weights).filter(([,weight])=>weight>.003)
         .sort((a,b)=>TERRAIN_BIOME_ORDER.indexOf(a[0])-TERRAIN_BIOME_ORDER.indexOf(b[0]));
@@ -3567,30 +3656,44 @@ window.GRIM_CONFIG = Object.freeze({
       // are ready, then composite the newer tile over the older one by weight.
       if(active.some(([id])=>!this.terrainMaterialIds.has(id)))return;
       const sectionKey=[section.kind,section.start,section.end].join(':');
-      const points=[{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}];
+      const points=[{x:sectionFrom,y:sectionY0},{x:sectionTo,y:sectionY1},
+        {x:sectionTo,y:renderDepth},{x:sectionFrom,y:renderDepth}];
       for(let i=0;i<active.length;i++){
         const [id,weight]=active[i],textureKey='terrain-material-'+id;
         const key=sectionKey+':'+id;
+        let cachedView=this.terrainTextureViews.get(key);
+        if(cachedView&&cachedView.geometrySignature!==geometrySignature){
+          this.removeTerrainTextureView(key,cachedView);
+          cachedView=null;
+        }
         if(id==='tundra'){
           const view=this.tundraTerrainTextureView(section,key,textureKey,underside);
           if(!view)continue;
+          view.geometrySignature=geometrySignature;
           activeKeys.add(key);
           view.sprite.setAlpha(active.length===1||i===0?1:weight)
             .setDepth(1+i*.001).setVisible(true);
           continue;
         }
-        const view=this.terrainTextureView(key,textureKey);
+        const view=cachedView||this.terrainTextureView(key,textureKey);
         if(!view)continue;
         activeKeys.add(key);
         const {sprite,maskGraphics}=view;
-        maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);maskGraphics.fillPoints(points,true);
-        sprite.setTexture(textureKey).setPosition(from,0).setSize(Math.max(1,to-from),depth);
-        sprite.setTileScale(TERRAIN_TILE_SCALE,TERRAIN_TILE_SCALE);
-        // TileSprite tilePosition is measured in unscaled texture pixels.
-        // Convert the world-space clip origin through tileScale so the same
-        // world point keeps the same material phase as the camera advances.
-        sprite.setTilePosition(from/TERRAIN_TILE_SCALE,0)
-          .setAlpha(active.length===1||i===0?1:weight);
+        if(view.geometrySignature!==geometrySignature){
+          maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);maskGraphics.fillPoints(points,true);
+          view.geometrySignature=geometrySignature;
+        }
+        const boundsSignature=[sectionFrom,renderDepth].join(':');
+        if(view.boundsSignature!==boundsSignature){
+          sprite.setTexture(textureKey).setPosition(sectionFrom,0)
+            .setSize(Math.max(1,sectionTo-sectionFrom),renderDepth);
+          sprite.setTileScale(TERRAIN_TILE_SCALE,TERRAIN_TILE_SCALE);
+          // The material phase is anchored to a fixed world origin, so the
+          // section never slides beneath its surface as the camera moves.
+          sprite.setTilePosition(sectionFrom/TERRAIN_TILE_SCALE,0);
+          view.boundsSignature=boundsSignature;
+        }
+        sprite.setAlpha(active.length===1||i===0?1:weight);
         sprite.setDepth(1+i*.001).setVisible(true);
       }
     }
@@ -3598,10 +3701,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(!this.terrainTextureViews)return;
       for(const [key,view] of this.terrainTextureViews){
         if(activeKeys.has(key))continue;
-        view.sprite.clearMask?.();view.sprite.destroy();
-        view.mask?.destroy?.();view.maskGraphics?.destroy?.();
-        if(view.compositeTextureKey)this.textures?.remove?.(view.compositeTextureKey);
-        this.terrainTextureViews.delete(key);
+        this.removeTerrainTextureView(key,view);
       }
     }
     releaseInactiveTerrainMaterials(keepIds){
@@ -3615,11 +3715,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     destroyTerrainTextureViews(){
       if(!this.terrainTextureViews)return;
-      for(const view of this.terrainTextureViews.values()){
-        view.sprite.clearMask?.();view.sprite.destroy();
-        view.mask?.destroy?.();view.maskGraphics?.destroy?.();
-        if(view.compositeTextureKey)this.textures?.remove?.(view.compositeTextureKey);
-      }
+      for(const [key,view] of this.terrainTextureViews)
+        this.removeTerrainTextureView(key,view);
       this.terrainTextureViews.clear();
     }
     groundPalette(m) {
@@ -3643,10 +3740,12 @@ window.GRIM_CONFIG = Object.freeze({
       const g=this.world;g.clear();
       const base=this.terrainBase||g;
       if(base!==g)base.clear();
-      const activeTerrainViews=new Set();
+      const activeTerrainViews=new Set(),activeSurfaceViews=new Set();
       const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
-      const depth=Math.max(this.groundY+this.height+500,this.cameraY+this.height+1100);
+      // Keep the texture bounds fixed in world space. The view extends well
+      // below the phone viewport without needing a new mask as the camera rises.
+      const depth=this.groundY+this.height+1500;
       const sections=this.terrain.visibleSections(left,right);
       const startX=this.startX??200;
       for(const group of this.terrain.sequences){
@@ -3680,7 +3779,7 @@ window.GRIM_CONFIG = Object.freeze({
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
         const h0=this.terrain.groundAt(from),h1=this.terrain.groundAt(to-.001);
-        const m=(from+to-2*startX)/(2*C.pxPerMeter);
+        const m=(section.start+section.end-2*startX)/(2*C.pxPerMeter);
         const openingWorldArt=!this.hasTeleported&&m>=-40&&m<=900&&
           section.kind!=='platform'&&scope.GRIM_WORLD_ART;
         const foothillsWorldArt=!this.hasTeleported&&
@@ -3697,7 +3796,7 @@ window.GRIM_CONFIG = Object.freeze({
           :foothillsWorldArt?scope.GRIM_WORLD_ART.foothillsGroundPalette(m)
           :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette()
           :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
-        const underside=section.kind==='platform'?Math.max(h0,h1)+68:depth;
+        const underside=section.kind==='platform'?Math.max(section.y0,section.y1)+68:depth;
         base.fillStyle(body);
         base.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
         this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews);
@@ -3715,13 +3814,8 @@ window.GRIM_CONFIG = Object.freeze({
         if(section.kind==='platform'){
           g.lineStyle(3,detail,.6);g.lineBetween(from+5,underside-3,to-5,underside-3);
         }
-        const surfaceYAt=x=>{
-          const y=this.terrain.groundAt(Math.min(x,to-.001));
-          if(y!==null)return y;
-          const t=clamp((x-from)/Math.max(1,to-from),0,1);
-          return h0+(h1-h0)*t;
-        };
-        this.drawTerrainSurfaceLip(from,to,surfaceYAt,edge,sheen,detail);
+        if(!this.terrainSurfaceView(section,edge,sheen,detail,activeSurfaceViews))
+          this.drawTerrainSurfaceFallback(section,edge,sheen,detail);
         const cliff=sections.some(t=>t.kind==='gap'&&(Math.abs(t.start-section.end)<.02||Math.abs(t.end-section.start)<.02));
         if(cliff){
           const x=Math.abs(section.end-to)<.01?section.end:section.start;
@@ -3750,13 +3844,18 @@ window.GRIM_CONFIG = Object.freeze({
       for(const plat of this.soulPlatform||[]){
         if(plat.x+plat.width<left||plat.x>right)continue;
         base.fillStyle(plat.biome==='hell'?0x4a2727:0x213840,.93);base.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
-        const platformSection={kind:'soul-platform',start:plat.x,end:plat.x+plat.width};
+        const platformSection={kind:'soul-platform',start:plat.x,end:plat.x+plat.width,
+          y0:plat.y,y1:plat.y};
         const platformMeters=(plat.x+plat.width/2-this.startX)/C.pxPerMeter;
         this.drawTerrainTexture(platformSection,plat.x,plat.x+plat.width,plat.y,plat.y,
           plat.y+11,depth,platformMeters,activeTerrainViews);
-        const platformRim=plat.biome==='hell'?0xf4a16b:0xb4ddca;
-        this.drawTerrainSurfaceLip(plat.x,plat.x+plat.width,()=>plat.y,
-          platformRim,platformRim,0x6ca99d);
+        const platformPalette=this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.worldGroundPalette
+          ?scope.GRIM_WORLD_ART.worldGroundPalette(platformMeters)
+          :plat.biome==='hell'?[0x211216,0x8e3b2b,0xff9251,0x5d2924]
+          :scope.GRIM_WORLD_ART?.tundraGroundPalette?.(platformMeters)||[0x202a28,0x52675a,0x87947a,0x39433d];
+        const [,,platformSheen,platformDetail]=platformPalette,platformEdge=platformPalette[1];
+        if(!this.terrainSurfaceView(platformSection,platformEdge,platformSheen,platformDetail,activeSurfaceViews))
+          this.drawTerrainSurfaceFallback(platformSection,platformEdge,platformSheen,platformDetail);
         g.lineStyle(2,0x6ca99d,.7);
         for(let x=plat.x+20;x<plat.x+plat.width-8;x+=37)g.lineBetween(x,plat.y+6,x+12,plat.y+10);
       }
@@ -3772,6 +3871,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
       this.pruneTerrainTextureViews(activeTerrainViews);
+      this.pruneTerrainSurfaceViews(activeSurfaceViews);
       this.releaseInactiveTerrainMaterials(keepTerrainMaterials);
     }
     drawCoin(c) {
