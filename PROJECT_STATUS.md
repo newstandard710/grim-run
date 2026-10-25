@@ -1,14 +1,14 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.1 — *Foothills Art Review*. The approved opening forest art is now the default; foothills background and ground art is in phone review.
+**Current build:** v0.11.2 — *Tundra Art Review*. Forest and foothills art are accepted defaults; the Tundra mountain ascent is in phone review.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.1 — *Foothills Art Review*  
+**Release:** v0.11.2 — *Tundra Art Review*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The v0.10.15 combined route passed regression, PNG integrity, 950 × 430 Chromium rendering of both sprites, and Pages deployment; the user approved the enemy art. v0.11.0 passed full-repository regression, PNG asset integrity, 950 × 430 real-Chromium rendering and Pages deployment; the user approved the opening forest. v0.11.1 local and repository checks are pending.
+**Verification:** v0.11.2 review build and CI checks are pending. The user approved the foothills and requested a grounded snowline treatment; this preview anchors snow caps directly to mountain ridgelines. Gameplay and collision remain unchanged.
 
 ## Completed enemy sprite phase
 
@@ -16,7 +16,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 - The atlas covers four flap poses, the existing dive tell and dive, hit recoil, and defeat. Its 2 HP, flight/dive behavior, telegraph timing, collision box and procedural fallback are unchanged.
 - **Bone Crawler:** four accepted crawl poses now render by default. The user approved the 2.5× scale and 95×105 hitbox; the runtime mirrors its art to face right. Its one HP, ground movement, ledge stopping, spawn schedule and attack logic are unchanged.
 - **Ember Imp:** six accepted poses now render by default: four right-facing run poses at 8fps, a fire-warning pose and a short release pose. The visible target is about 55px tall with one shared foot line. Its 2 HP, 38×42 hitbox, movement, warning and fireball behavior are unchanged; the projectile remains a separate effect.
-- **Next:** phone-review foothills art from 1,000–2,000m, then continue through the mountain ascent (2,000–3,000m), summit/stars (3,000–5,000m), scenery, vendors and portal presentation.
+- **Next:** phone-review Tundra mountains across the 2,000–3,000m ascent. After approval, continue the summit/stars treatment from 3,000–5,000m, then Ashlands, scenery, vendors and portal presentation.
 
 ## Main Reaper motion cycle v4
 
@@ -75,12 +75,18 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 - Added `?enemyReview=both` so the Bone Crawler and Ember Imp art can render together in the same run. Their individual review aliases remain available, and both retain their procedural fallback.
 - **Verification:** Combined-route regression, exact PNG integrity, 950 × 430 Chromium rendering of both sprites together, and Pages deployment passed. The user approved both sprites for default play. Gameplay and collision behavior are unchanged.
 
+## v0.11.2 — Tundra Art Review
+
+- Promoted the user-approved foothills background and textured ground to the default across the transition from about 900m through 2,300m. The opening forest transitions into sparse pines, rounded slopes, rocky ground and distant ridges.
+- Added the `?worldReview=tundra` preview from 1,900–3,400m, covering the requested 2,000–3,000m mountain ascent. Snow caps attach to the exact ridgeline apex and remain inside each mountain face; the previous detached pale outcrops were removed. Frosted ground detail and sparse windblown snow support the transition.
+- Terrain, ground heights, collision shapes, obstacle placement, enemy behavior, controls, progression, vendors, portal, and save data are unchanged. The foothills review URL remains a compatibility alias for the accepted default art.
+- **Verification:** CI and phone-scale visual review pending. The preview route and visual smoke check compare identical seeded terrain and player state.
+
 ## v0.11.1 — Foothills Art Review
 
-- Promoted the phone-approved opening forest background and textured ground to the default through 1,200m.
-- Added a gradual forest-to-foothills background, sparse tree line, rolling hill layers, and rocky ground detail. `?worldReview=foothills` previews the treatment from 900–2,300m; the normal renderer remains active there until phone review is accepted.
+- Added a gradual forest-to-foothills background, sparse tree line, rolling hill layers, and rocky ground detail across roughly 900–2,300m.
+- The user approved the foothills art; it is now the default. `?worldReview=foothills` remains a compatibility alias.
 - Terrain, ground heights, collision shapes, obstacle placement, enemy behavior, controls, progression, vendors, portal, and save data are unchanged.
-- **Verification:** pending full-repository regression, exact PNG integrity, 950 × 430 Chromium rendering, and Pages deployment. Foothills phone review is pending.
 
 ## v0.11.0 — Opening Forest Art Review
 
