@@ -574,14 +574,14 @@ const server=http.createServer((req,res)=>{
         addTileSprite:typeof scene.add.tileSprite,makeGraphics:typeof scene.make.graphics,
         base:Boolean(scene.terrainBase),sections:sections.map(s=>s.kind),
         views:[...scene.terrainTextureViews].map(([key,view])=>({key,visible:view.sprite.visible,
-          texture:view.sprite.texture?.key}))};
+          texture:view.sprite.displayTexture?.key}))};
     },biome);
     console.log('Terrain renderer state before wait: '+JSON.stringify(materialDebug));
     await skeletalPage.waitForFunction(id=>{
       const scene=window.grimRun?.scene?.scenes?.[0];
       return scene?.terrainMaterialIds?.has(id)&&
         [...scene.terrainTextureViews.values()].some(view=>view.sprite.visible&&
-          view.sprite.texture.key==='terrain-material-'+id);
+          view.sprite.displayTexture?.key==='terrain-material-'+id);
     },biome,{timeout:45000});
     const grounded=await skeletalPage.evaluate(id=>{
       const scene=window.grimRun.scene.scenes[0];
@@ -590,7 +590,7 @@ const server=http.createServer((req,res)=>{
       const gaps=sections.filter(section=>section.kind==='gap');
       const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
         key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
-      return {material:visible.some(view=>view.sprite.texture.key==='terrain-material-'+id),
+      return {material:visible.some(view=>view.sprite.displayTexture?.key==='terrain-material-'+id),
         ground:[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx)),
         groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews};
     },biome);
