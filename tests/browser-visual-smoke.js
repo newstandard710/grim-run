@@ -149,6 +149,13 @@ const server=http.createServer((req,res)=>{
     loaded:['caves','crystals','ashlands','lava','boss'].every(id=>s.textures.exists('biome-'+id)),
     groundArtVisible:s.groundArtSprites.crystals?.some(sprite=>sprite.visible),
     groundArtVisibleCount:s.groundArtSprites.crystals?.filter(sprite=>sprite.visible).length,
+    groundArtPoolCount:s.groundArtSprites.crystals?.length,
+    groundArtFrameCount:s.groundArtFrames.crystals?.length,
+    groundSpriteTexture:s.textures.exists('ground-sprites-crystals'),
+    underworldWeights:window.GRIM_WORLD_ART.underworldWeights(meters),
+    terrainSections:s.terrain.visibleSections(s.cameraX-140,s.cameraX+s.width+170)
+     .map(section=>({kind:section.kind,width:Math.round(section.end-section.start),
+      visibleWidth:Math.round(Math.min(s.cameraX+s.width+170,section.end)-Math.max(s.cameraX-140,section.start))})),
     groundArtKey:s.groundArtSprites.crystals?.find(sprite=>sprite.visible)?.texture?.key,
     groundArtWorldAnchored:s.groundArtSprites.crystals?.find(sprite=>sprite.visible)?.scrollFactorX===1,
     groundArtMask:Boolean(s.groundArtMask),
