@@ -27,7 +27,7 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 
 - Replaced the flat procedural ground fills with eight biome-specific materials, clipped to existing ground, slope, rubble, and platform profiles.
 - Kept generated terrain, cliffs, gaps, collision, hazards, controls, and the normal 9,999m finish unchanged. Abyss fills remain visible behind open gaps.
-- Fixed the Ember Imp visual check to measure the decoded atlas silhouette and adjusted the long-run regression to test normal victory after turning off God Mode near the finish.
+- Fixed the Ember Imp visual check to measure the decoded atlas silhouette; the long-run regression now turns God Mode off before testing victory, and the God Mode range check covers the documented 20,000m teleport limit.
 
 ## Current Reaper art
 

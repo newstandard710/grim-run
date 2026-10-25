@@ -635,14 +635,17 @@ const server=http.createServer((req,res)=>{
     const grounded=await skeletalPage.evaluate(id=>{
       const scene=window.grimRun.scene.scenes[0];
       const visible=[...scene.terrainTextureViews.values()].filter(view=>view.sprite.visible);
+      const sections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
+      const gaps=sections.filter(section=>section.kind==='gap');
+      const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
+        key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
       return {material:visible.some(view=>view.sprite.texture.key==='terrain-material-'+id),
-        groundedSections:scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170)
-          .filter(section=>section.kind!=='gap').length,
-        gaps:scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170)
-          .filter(section=>section.kind==='gap')};
+        groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews};
     },biome);
     assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
+    assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
+    await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
   }
   await skeletalPage.close();
 

@@ -9,14 +9,14 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The Node encounter suite passes its 300 seeded terrain checks and reaches the normal 9,999m finish for five full-run seeds after leaving God Mode before the finish. The biome transition suite passes all fades, the 5,000m portal handoff, and the ground render helper. Chromium CI is pending for the updated terrain materials, the Ember Imp alpha-bound visual check, and screenshot review. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** The Node encounter suite passes its 300 seeded terrain checks and reaches the normal 9,999m finish for five full-run seeds after leaving God Mode before the finish. The God Mode suite covers 72 safe teleports across eight seeds through 20,000m. The biome transition suite passes all fades, the 5,000m portal handoff, and the ground render helper. Chromium CI is pending for the updated terrain materials, the Ember Imp alpha-bound visual check, and screenshot review. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
 
 ## v0.12.0 candidate — Biome Ground Materials
 
 - Added eight lightweight WebP ground materials matched to Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss Biome.
 - The renderer masks each material to the current generated terrain profile, including slopes, rubble, cliffs, and floating ledges. Procedural geometry, collision, hazards, and open gaps remain unchanged; dark and lava abyss fills remain behind gaps.
 - Ground materials use the existing 360m biome fades and hard Tundra-to-Caves portal handoff. Source images are reduced to 768px runtime canvases and loaded as the player reaches a biome.
-- Corrected the seed 1 full-run test so it exercises normal victory with God Mode off near the finish. Corrected the Ember Imp visible-height check to measure decoded atlas alpha bounds instead of screenshot contrast.
+- Corrected the seed 1 full-run test so it exercises normal victory with God Mode off near the finish. Corrected the God Mode endpoint test so 10,000m remains a valid teleport and 20,000m is covered. Corrected the Ember Imp visible-height check to measure decoded atlas alpha bounds instead of screenshot contrast.
 
 
 ## v0.11.10 — Background Art Cleanup
