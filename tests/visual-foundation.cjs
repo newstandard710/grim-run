@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.12-bone-crawler-scale-review-v2"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.13-bone-crawler-facing-review-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
@@ -250,6 +250,7 @@ const crawlerEnemy={kind:'crawler',x:450,y:280,phase:0,dead:false};
 const crawlerScene={state:'playing',cameraX:0,width:950,elapsed:0,enemies:[crawlerEnemy]};
 const crawlerFrame=()=>({setTexture(v){this.key=v;return this},setOrigin(x,y){this.origin=[x,y];return this},
  setScale(v){this.scale=v;return this},setPosition(x,y){this.x=x;this.y=y;return this},
+ setFlipX(v){this.flipX=v;return this},
  setVisible(v){this.visible=v;return this},setAlpha(v){this.alpha=v;return this},
  setRotation(v){this.rotation=v;return this},destroy(){this.destroyed=true}});
 const crawlerRenderer=new V.GrimVisualSystem(crawlerScene);
@@ -262,10 +263,11 @@ for(let i=0;i<4;i++){
  assert.equal(sprite.key,meta.key,'Crawler animation selects '+meta.name);
  assert.equal(sprite.visible,true);
  assert.deepEqual(sprite.origin,[.5,.5]);
+ assert.equal(sprite.flipX,true,'Each crawler pose is mirrored to face right');
  assert.equal(sprite.x,crawlerEnemy.x);assert.equal(sprite.y,crawlerEnemy.y);
  assert.ok(Math.abs(sprite.scale*1065-100)<.01);
 }
 crawlerEnemy.dead=true;crawlerRenderer.renderBoneCrawlers();
 assert.equal(crawlerRenderer.boneCrawlerPool[0].visible,false,'Dead crawler returns to normal cleanup');
 crawlerRenderer.shutdown();assert.equal(crawlerRenderer.boneCrawlerReady,false);
-console.log('PASS v0.10.12: accepted Reaper/Cavern/Skeletal Bat art unchanged; opt-in Bone Crawler 2.5x scale, hitbox, and ground anchor covered.');
+console.log('PASS v0.10.13: approved character art unchanged; opt-in Bone Crawler faces right at 2.5x scale with its hitbox and ground anchor intact.');
