@@ -460,10 +460,15 @@ const server=http.createServer((req,res)=>{
   await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
+  await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0];
+    g.loop.stop();s.state='paused';s.elapsed=0;s.enemies=[];s.fireballs=[];
+    s.drawScene();g.step(performance.now(),0);
+  });
+  const bothEmpty=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot());
   const bothRendered=await skeletalPage.evaluate(()=>{
     const g=window.grimRun,s=g.scene.scenes[0];
-    g.loop.stop();s.state='paused';s.elapsed=0;
-    const crawlerX=s.cameraX+280,impX=s.cameraX+620;
+    const crawlerX=s.cameraX+500,impX=s.cameraX+760;
     const crawlerGround=s.terrain.groundAt(crawlerX),impGround=s.terrain.groundAt(impX);
     const crawler={kind:'crawler',x:crawlerX,
       y:crawlerGround-window.GRIM_COMBAT.CRAWLER_HITBOX.footOffset,
@@ -473,12 +478,35 @@ const server=http.createServer((req,res)=>{
     s.enemies=[crawler,imp];s.fireballs=[];s.drawScene();g.step(performance.now(),0);
     const crawlerSprite=s.visuals.boneCrawlerPool[0],impSprite=s.visuals.emberImpPool[0];
     return {crawlerVisible:crawlerSprite.visible,crawlerFrame:crawlerSprite.texture.key,
-      crawlerFacesRight:crawlerSprite.flipX,impVisible:impSprite.visible,impFrame:impSprite.frame.name};
+      crawlerFacesRight:crawlerSprite.flipX,impVisible:impSprite.visible,impFrame:impSprite.frame.name,
+      crawlerRect:{x:Math.round(crawlerSprite.x-s.cameraX-crawlerSprite.displayWidth*.5),
+        y:Math.round(crawlerSprite.y-(s.cameraY||0)-crawlerSprite.displayHeight*.5),
+        width:Math.ceil(crawlerSprite.displayWidth),height:Math.ceil(crawlerSprite.displayHeight)},
+      impRect:{x:Math.round(impSprite.x-s.cameraX-impSprite.displayWidth*.5),
+        y:Math.round(impSprite.y-(s.cameraY||0)-impSprite.displayHeight*245/256),
+        width:Math.ceil(impSprite.displayWidth),height:Math.ceil(impSprite.displayHeight)}};
   });
-  assert.deepEqual(bothRendered,{crawlerVisible:true,crawlerFrame:'gr_v2_crawler_crawl_01',
-    crawlerFacesRight:true,impVisible:true,impFrame:'run_01'},
-    'Both review sprites render in the same gameplay scene');
-  await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'combined-enemy-phone-scale.png')});
+  assert.equal(bothRendered.crawlerVisible,true);
+  assert.equal(bothRendered.crawlerFrame,'gr_v2_crawler_crawl_01');
+  assert.equal(bothRendered.crawlerFacesRight,true);
+  assert.equal(bothRendered.impVisible,true);assert.equal(bothRendered.impFrame,'run_01');
+  const bothCanvas=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({
+    path:path.join(skeletalArtifactDir,'combined-enemy-phone-scale.png')}));
+  const changedPixels=(rect)=>{
+    let count=0;
+    for(let y=Math.max(0,rect.y);y<Math.min(bothCanvas.height,rect.y+rect.height);y++)
+      for(let x=Math.max(0,rect.x);x<Math.min(bothCanvas.width,rect.x+rect.width);x++){
+        const i=(y*bothCanvas.width+x)*4;
+        if(Math.abs(bothCanvas.data[i]-bothEmpty.data[i])>14||
+           Math.abs(bothCanvas.data[i+1]-bothEmpty.data[i+1])>14||
+           Math.abs(bothCanvas.data[i+2]-bothEmpty.data[i+2])>14)count++;
+      }
+    return count;
+  };
+  assert.ok(changedPixels(bothRendered.crawlerRect)>80,
+    'Bone Crawler changes visible pixels beside the Reaper in combined review mode');
+  assert.ok(changedPixels(bothRendered.impRect)>50,
+    'Ember Imp changes visible pixels in combined review mode');
   await skeletalPage.close();
 
   await page.click('#start-btn');
