@@ -540,8 +540,10 @@ const server=http.createServer((req,res)=>{
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
-    const game=window.grimRun,scene=game.scene.scenes[0];
-    game.loop.stop();scene.state='paused';scene.enemies=[];scene.obstacles=[];
+    const scene=window.grimRun.scene.scenes[0];
+    // Keep Phaser's loop alive so its Loader can process biome textures; the
+    // paused game state keeps player position and gameplay timers frozen.
+    scene.state='paused';scene.enemies=[];scene.obstacles=[];
   });
   const terrainTargets=[
     [300,'forest'],[1500,'foothills'],[3400,'tundra'],[5500,'caves'],
@@ -583,6 +585,7 @@ const server=http.createServer((req,res)=>{
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
     assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
     await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
+    console.log('Rendered '+biome+' ground material at '+meters+'m');
   }
   await skeletalPage.close();
 
