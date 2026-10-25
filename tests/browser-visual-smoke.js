@@ -591,6 +591,18 @@ const server=http.createServer((req,res)=>{
       const gaps=sections.filter(section=>section.kind==='gap');
       const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
         key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
+      const tundraGroundMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
+        (key.startsWith('ground:')||key.startsWith('rubble:'))&&view.id===id&&view.sprite.visible&&
+        id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)).length;
+      const groundFace=sections.filter(section=>section.kind==='ground'||section.kind==='rubble').map(section=>{
+        const from=Math.max(section.start,scene.cameraX+140);
+        const to=Math.min(section.end,scene.cameraX+scene.width-140);
+        const mid=(from+to)/2,y=scene.terrain.groundAt(mid);
+        return {x:Math.round(mid-scene.cameraX-30),
+          y:Math.round(y-scene.cameraY+14),width:60,height:36,span:to-from};
+      }).filter(face=>face.span>=60&&face.x>=140&&face.x+face.width<=scene.width-140&&
+        face.y>=0&&face.y+face.height<=scene.height)
+        .sort((a,b)=>Math.abs(a.x+30-scene.width/2)-Math.abs(b.x+30-scene.width/2))[0]||null;
       const platformMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
         key.startsWith('platform:')&&view.id===id&&view.sprite.visible&&
         (view.sprite.displayTexture?.key==='terrain-material-'+id||
@@ -604,31 +616,43 @@ const server=http.createServer((req,res)=>{
       }).filter(face=>face.span>=60&&face.x>=140&&face.x+face.width<=scene.width-140&&
         face.y>=0&&face.y+face.height<=scene.height)
         .sort((a,b)=>Math.abs(a.x+30-scene.width/2)-Math.abs(b.x+30-scene.width/2))[0]||null;
-      return {material:visible.some(view=>view.sprite.displayTexture?.key==='terrain-material-'+id),
+      return {material:visible.some(view=>view.sprite.displayTexture?.key==='terrain-material-'+id||
+          (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey))),
         ground:[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx)),
         groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews,
-        platformMaterialViews,platformFace};
+        tundraGroundMaterialViews,groundFace,platformMaterialViews,platformFace};
     },biome);
     assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
     assert.deepEqual(grounded.ground,terrainBefore,biome+' material rendering leaves generated ground unchanged');
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
     assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
     if(biome==='tundra'){
+      assert.ok(grounded.tundraGroundMaterialViews>0,
+        'Tundra ground and rubble use the composited terrain material');
       assert.ok(grounded.platformMaterialViews>0,
-        'Tundra uses the snowbound material on visible floating ledges');
+        'Tundra uses the composited snowbound material on visible floating ledges');
+      assert.ok(grounded.groundFace,'Tundra screenshot has an unobstructed walkable ground face to inspect');
     }
     const terrainCapture=await skeletalPage.screenshot({
       path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
     if(biome==='tundra'){
       assert.ok(grounded.platformFace,'Tundra screenshot has an unobstructed ledge face to inspect');
-      const image=PNG.sync.read(terrainCapture),probe=grounded.platformFace,colors=new Set();
-      for(let y=probe.y;y<probe.y+probe.height;y++)for(let x=probe.x;x<probe.x+probe.width;x++){
-        const i=(y*image.width+x)*4;
-        colors.add((image.data[i]<<16)|(image.data[i+1]<<8)|image.data[i+2]);
-      }
-      assert.ok(colors.size>=150,
-        'Tundra ledge face renders the painted rock-and-snow material; sampled '+colors.size+' colors');
-      console.log('Tundra ledge material pixel colors: '+colors.size);
+      const image=PNG.sync.read(terrainCapture);
+      const countColors=probe=>{
+        const colors=new Set();
+        for(let y=probe.y;y<probe.y+probe.height;y++)for(let x=probe.x;x<probe.x+probe.width;x++){
+          const i=(y*image.width+x)*4;
+          colors.add((image.data[i]<<16)|(image.data[i+1]<<8)|image.data[i+2]);
+        }
+        return colors.size;
+      };
+      const groundColors=countColors(grounded.groundFace),ledgeColors=countColors(grounded.platformFace);
+      assert.ok(groundColors>=150,
+        'Tundra walkable ground renders the painted rock-and-snow material; sampled '+groundColors+' colors');
+      assert.ok(ledgeColors>=150,
+        'Tundra ledge face renders the painted rock-and-snow material; sampled '+ledgeColors+' colors');
+      console.log('Tundra ground material pixel colors: '+groundColors);
+      console.log('Tundra ledge material pixel colors: '+ledgeColors);
     }
     console.log('Rendered '+biome+' ground material at '+meters+'m');
   }

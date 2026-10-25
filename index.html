@@ -1488,7 +1488,7 @@ window.GRIM_CONFIG = Object.freeze({
   };
   const BIOME_TERRAIN_FILES=Object.freeze({
     forest:'ground-forest-v1.webp',foothills:'ground-foothills-v1.webp',
-    tundra:'ground-tundra-v3.webp',caves:'ground-caves-v1.webp',
+    tundra:'ground-tundra-v4.webp',caves:'ground-caves-v1.webp',
     crystals:'ground-crystals-v1.webp',ashlands:'ground-ashlands-v1.webp',
     lava:'ground-lava-v1.webp',boss:'ground-boss-v1.webp'
   });
@@ -1496,7 +1496,7 @@ window.GRIM_CONFIG = Object.freeze({
     'crystals','ashlands','lava','boss'];
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
-  const TUNDRA_TERRAIN_TILE_SCALE=.42;
+  const TUNDRA_TERRAIN_TILE_SCALE=.48;
   const UNDERWORLD_ABYSS_PALETTE=Object.freeze({
     ashlands:Object.freeze({fill:0x2b1d23,edge:0x98514d,fillAlpha:.9,edgeAlpha:.58}),
     lava:Object.freeze({fill:0x4e1f1b,edge:0xf17b3b,fillAlpha:.92,edgeAlpha:.76}),
@@ -3429,16 +3429,17 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrainTextureViews.set(key,view);
       return view;
     }
-    tundraPlatformTextureView(section,key,textureKey){
+    tundraTerrainTextureView(section,key,textureKey,depth){
       let view=this.terrainTextureViews.get(key);
       if(view)return view;
       if(!this.textures?.createCanvas||!this.add?.image)return null;
       const x0=section.start,x1=section.end,width=Math.max(1,Math.ceil(x1-x0));
       const y0=this.terrain.groundAt(x0),y1=this.terrain.groundAt(x1-.001);
       if(y0===null||y1===null)return null;
-      const top=Math.min(y0,y1),bottom=Math.max(y0,y1)+68;
-      const height=Math.max(1,Math.ceil(bottom-top));
-      const compositeKey='terrain-tundra-platform-'+Math.round(x0)+'-'+Math.round(x1);
+      const top=Math.min(y0,y1);
+      const underside=section.kind==='platform'?Math.max(y0,y1)+68:depth;
+      const bottom=Math.max(top+1,underside),height=Math.max(1,Math.ceil(bottom-top));
+      const compositeKey='terrain-tundra-'+section.kind+'-'+Math.round(x0)+'-'+Math.round(x1);
       if(this.textures.exists?.(compositeKey))this.textures.remove(compositeKey);
       const texture=this.textures.createCanvas(compositeKey,width,height);
       if(!texture)return null;
@@ -3457,9 +3458,17 @@ window.GRIM_CONFIG = Object.freeze({
       const scale=TUNDRA_TERRAIN_TILE_SCALE,tileWidth=source.width*scale,tileHeight=source.height*scale;
       const mod=(value,size)=>((value%size)+size)%size;
       const offsetX=-mod(x0*scale,tileWidth),offsetY=-mod(top*scale,tileHeight);
-      for(let y=offsetY;y<height;y+=tileHeight)
-        for(let x=offsetX;x<width;x+=tileWidth)
-          context.drawImage(source,x,y,tileWidth,tileHeight);
+      for(let y=offsetY;y<height;y+=tileHeight){
+        const row=Math.floor((top+y)*scale/tileHeight),flipY=Math.abs(row%2)===1;
+        for(let x=offsetX;x<width;x+=tileWidth){
+          const column=Math.floor((x0+x)*scale/tileWidth),flipX=Math.abs(column%2)===1;
+          context.save();
+          context.translate(x+(flipX?tileWidth:0),y+(flipY?tileHeight:0));
+          context.scale(flipX?-1:1,flipY?-1:1);
+          context.drawImage(source,0,0,tileWidth,tileHeight);
+          context.restore();
+        }
+      }
       context.restore();
       texture.refresh();
       const sprite=this.add.image(x0,top,compositeKey).setOrigin(0,0).setDepth(1).setVisible(false);
@@ -3482,8 +3491,8 @@ window.GRIM_CONFIG = Object.freeze({
       for(let i=0;i<active.length;i++){
         const [id,weight]=active[i],textureKey='terrain-material-'+id;
         const key=sectionKey+':'+id;
-        if(section.kind==='platform'&&id==='tundra'){
-          const view=this.tundraPlatformTextureView(section,key,textureKey);
+        if(id==='tundra'){
+          const view=this.tundraTerrainTextureView(section,key,textureKey,underside);
           if(!view)continue;
           activeKeys.add(key);
           view.sprite.setAlpha(active.length===1||i===0?1:weight)
@@ -3608,7 +3617,7 @@ window.GRIM_CONFIG = Object.freeze({
         base.fillStyle(body);
         base.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
         this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews);
-        if(section.kind==='rubble'){
+        if(section.kind==='rubble'&&!tundraBiomeWorldArt){
           g.fillStyle(0x77716b,.8);
           for(let x=from+7;x<to-9;x+=24)g.fillTriangle(x,h0+3,x+12,h0-8-(x%5),x+22,h0+3);
         }
