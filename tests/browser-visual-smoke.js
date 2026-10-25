@@ -108,25 +108,20 @@ const server=http.createServer((req,res)=>{
   await page.locator('#game canvas').screenshot({
    path:path.join(surfaceArtifactDir,'concept-foreground-forest-phone-scale.png')});
   await page.evaluate(()=>{
-   const g=window.grimRun,s=g.scene.scenes[0],meters=6500;
-   g.loop.stop();s.state='playing';s.elapsed=0;s.enemies=[];
-   s.hasTeleported=true;s.distance=meters;
-   s.cameraX=s.startX+meters*(window.GRIM_CONFIG?.pxPerMeter||12);
-   if(s.player)s.player.x=s.cameraX+150;
-   s.drawScene();
+   const g=window.grimRun,s=g.scene.scenes[0];
+   g.loop.stop();s.godMode=true;s.state='teleportConfirm';
+   if(!s.teleportForTesting(6500))throw new Error('Could not teleport to crystal biome');
+   s.state='paused';s.drawScene();
   });
   await page.waitForFunction(()=>{
    const s=window.grimRun?.scene?.scenes?.[0];
    return s?.biomeBackdropGroup==='underworld'&&s.biomeBackdropReady===true;
   },null,{timeout:45000});
   const underworldGround=await page.evaluate(()=>{
-   const g=window.grimRun,s=g.scene.scenes[0],meters=6500;
-   g.loop.stop();s.state='playing';s.elapsed=0;s.enemies=[];
-   s.distance=meters;s.cameraX=s.startX+meters*(window.GRIM_CONFIG?.pxPerMeter||12);
-   if(s.player)s.player.x=s.cameraX+150;
-   s.drawScene();
+   const g=window.grimRun,s=g.scene.scenes[0];
+   g.loop.stop();s.state='paused';s.drawScene();
    return {group:s.biomeBackdropGroup,backdropReady:s.biomeBackdropReady,
-    crystalVisible:s.biomeBackdrops.crystals?.visible,
+    distance:s.distance,crystalVisible:s.biomeBackdrops.crystals?.visible,
     crystalAlpha:s.biomeBackdrops.crystals?.alpha,
     loaded:['caves','crystals','ashlands','lava','boss'].every(id=>s.textures.exists('biome-'+id)),
     textureLayer:Boolean(s.groundTextureSprites||s.groundTextureMask),
@@ -138,6 +133,8 @@ const server=http.createServer((req,res)=>{
   assert.equal(underworldGround.loaded,true,'all five approved Underworld concept images load');
   assert.equal(underworldGround.crystalVisible,true,'crystal concept is visible at 6,500m');
   assert.equal(underworldGround.crystalAlpha,1);
+  assert.ok(underworldGround.distance>=6000&&underworldGround.distance<7000,
+    'capture remains in the 6,000–7,000m crystal biome');
   assert.equal(underworldGround.textureLayer,false,'no repeating ground texture layer covers the scene');
   assert.equal(underworldGround.bodyAlpha,.22);
   await page.locator('#game canvas').screenshot({
