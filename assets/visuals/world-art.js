@@ -127,22 +127,23 @@
       g.lineBetween(leftShoulderX,leftShoulderY,peakX,peakY);
       g.lineBetween(peakX,peakY,rightShoulderX,rightShoulderY);
       if(snowAlpha>.01){
-        // The cap shares the exact ridge apex and stays inside the mountain face.
+        // The compact cap shares the apex and remains within both rising slopes.
+        const capWidth=Math.min(spacing*.08,(peakX-leftShoulderX)*.36,
+          (rightShoulderX-peakX)*.30);
         g.fillStyle(snowColor,snowAlpha);
         g.fillPoints([
           {x:peakX,y:peakY},
-          {x:peakX-spacing*.105,y:peakY+height*.26},
-          {x:peakX-spacing*.135,y:peakY+height*.36},
-          {x:peakX-spacing*.065,y:peakY+height*.31},
-          {x:peakX-spacing*.012,y:peakY+height*.40},
-          {x:peakX+spacing*.045,y:peakY+height*.29},
-          {x:peakX+spacing*.115,y:peakY+height*.31},
-          {x:peakX+spacing*.145,y:peakY+height*.38},
-          {x:peakX+spacing*.12,y:peakY+height*.235}
+          {x:peakX-capWidth*.52,y:peakY+height*.16},
+          {x:peakX-capWidth*.94,y:peakY+height*.22},
+          {x:peakX-capWidth*.52,y:peakY+height*.20},
+          {x:peakX-capWidth*.13,y:peakY+height*.245},
+          {x:peakX+capWidth*.34,y:peakY+height*.18},
+          {x:peakX+capWidth*.88,y:peakY+height*.22},
+          {x:peakX+capWidth*.62,y:peakY+height*.14}
         ],true);
-        g.lineStyle(1.1,0xe2ebee,snowAlpha*.48);
-        g.lineBetween(peakX-spacing*.095,peakY+height*.28,
-          peakX+spacing*.08,peakY+height*.30);
+        g.lineStyle(1.1,0xe2ebee,snowAlpha*.42);
+        g.lineBetween(peakX-capWidth*.54,peakY+height*.15,
+          peakX+capWidth*.48,peakY+height*.16);
       }
     }
   }
