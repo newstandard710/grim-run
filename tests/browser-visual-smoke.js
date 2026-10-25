@@ -631,14 +631,13 @@ const server=http.createServer((req,res)=>{
         'Tundra ground and rubble use the composited terrain material');
       assert.ok(grounded.platformMaterialViews>0,
         'Tundra uses the composited snowbound material on visible floating ledges');
-      assert.ok(grounded.groundFace,'Tundra screenshot has an unobstructed walkable ground face to inspect');
     }
     const terrainCapture=await skeletalPage.screenshot({
       path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
     if(biome==='tundra'){
       assert.ok(grounded.platformFace,'Tundra screenshot has an unobstructed ledge face to inspect');
       const image=PNG.sync.read(terrainCapture);
-      const countColors=probe=>{
+      const countColors=(image,probe)=>{
         const colors=new Set();
         for(let y=probe.y;y<probe.y+probe.height;y++)for(let x=probe.x;x<probe.x+probe.width;x++){
           const i=(y*image.width+x)*4;
@@ -646,12 +645,49 @@ const server=http.createServer((req,res)=>{
         }
         return colors.size;
       };
-      const groundColors=countColors(grounded.groundFace),ledgeColors=countColors(grounded.platformFace);
-      assert.ok(groundColors>=150,
-        'Tundra walkable ground renders the painted rock-and-snow material; sampled '+groundColors+' colors');
+      const ledgeColors=countColors(image,grounded.platformFace);
       assert.ok(ledgeColors>=150,
         'Tundra ledge face renders the painted rock-and-snow material; sampled '+ledgeColors+' colors');
-      console.log('Tundra ground material pixel colors: '+groundColors);
+      const groundReview=await skeletalPage.evaluate(()=>{
+        const scene=window.grimRun.scene.scenes[0],game=window.grimRun;
+        const ppm=window.GRIM_CONFIG.pxPerMeter;
+        for(const meters of [2600,2800,3000,3200,3600,3900,4200,4600,4900]){
+          scene.distance=meters;scene.hasTeleported=false;
+          scene.player.x=scene.startX+meters*ppm;
+          const feet=scene.terrain.groundAt(scene.player.x)??scene.terrain.anchorAt(scene.player.x);
+          if(!Number.isFinite(feet))continue;
+          scene.player.y=feet;scene.player.grounded=true;scene.player.velocityY=0;
+          scene.cameraX=scene.player.x-scene.width*window.GRIM_CONFIG.reaperXRatio;
+          scene.cameraY=scene.player.y-scene.groundY;
+          scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
+          const sections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
+          const face=sections.filter(section=>section.kind==='ground'||section.kind==='rubble').map(section=>{
+            const from=Math.max(section.start,scene.cameraX+140);
+            const to=Math.min(section.end,scene.cameraX+scene.width-140);
+            const mid=(from+to)/2,y=scene.terrain.groundAt(mid);
+            if(y===null)return null;
+            return {x:Math.round(mid-scene.cameraX-30),y:Math.round(y-scene.cameraY+14),
+              width:60,height:36,span:to-from};
+          }).filter(item=>item&&item.span>=60&&item.x>=140&&item.x+item.width<=scene.width-140&&
+            item.y>=0&&item.y+item.height<=scene.height)
+            .sort((a,b)=>b.span-a.span||Math.abs(a.x+30-scene.width/2)-Math.abs(b.x+30-scene.width/2))[0];
+          if(!face)continue;
+          scene.drawScene();game.step(performance.now(),0);
+          const materialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
+            (key.startsWith('ground:')||key.startsWith('rubble:'))&&view.id==='tundra'&&view.sprite.visible&&
+            view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)).length;
+          return {meters,face,materialViews};
+        }
+        return {meters:null,face:null,materialViews:0};
+      });
+      assert.ok(groundReview.face,'Tundra has a phone-visible walkable ground face to inspect');
+      assert.ok(groundReview.materialViews>0,'Tundra walkable ground uses the composited material');
+      const groundCapture=await skeletalPage.screenshot({
+        path:path.join(skeletalArtifactDir,'terrain-tundra-ground-phone-scale.png')});
+      const groundImage=PNG.sync.read(groundCapture),groundColors=countColors(groundImage,groundReview.face);
+      assert.ok(groundColors>=150,
+        'Tundra walkable ground renders the painted rock-and-snow material; sampled '+groundColors+' colors');
+      console.log('Tundra ground material at '+groundReview.meters+'m pixel colors: '+groundColors);
       console.log('Tundra ledge material pixel colors: '+ledgeColors);
     }
     console.log('Rendered '+biome+' ground material at '+meters+'m');
