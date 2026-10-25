@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Ground texture asset integrity, all eight biome weights, terrain masking, phone-size Chromium rendering and the existing gameplay regression suites are being checked for this release. The v0.11.10 live Chrome check reached 7,510m in Ashlands with no background-rendering console errors. Two existing GitHub workflow assertions were already failing before this update (seed 1 full-run completion and Reaper `run_03` height); see the release note below for current results. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Local biome-transition, ground-palette, portal, God Mode, rewind, fairness and crossbow checks pass. Actual Chromium/Phaser confirms all eight ground textures load, texture layers clip to the existing terrain, both biome groups render, and the ground texture changes visible phone-scale pixels. The Chromium workflow then stops at the existing Reaper `run_03` height assertion (~55px); the regression workflow fails the known seed 1 full-run completion assertion, reproduced on rerun. Both issues predate v0.11.11. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
 
 ## v0.11.11 — Painted Ground
 
