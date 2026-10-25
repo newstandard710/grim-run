@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.11.13</title>
+  <title>GRIM RUN — v0.11.14</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.13 · MOVING FLOOR</div>
+      <div class="mini">v0.11.14 · GROUNDED TERRAIN</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1458,7 +1458,7 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.13-moving-floor-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.14-grounded-terrain-v1"></script>
   <script src="assets/visuals/visual-system.js?v=0.11.11-painted-ground-v1"></script>
   <script>
 (function(scope) {
@@ -1472,6 +1472,12 @@ window.GRIM_CONFIG = Object.freeze({
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const GROUND_ART_CROP_START=.755;
+  const GROUND_ART_FRAME_WIDTH=384;
+  const GROUND_ART_FRAME_HEIGHT=256;
+  const GROUND_ART_VARIANTS=4;
+  const GROUND_ART_SPRITES_PER_BIOME=12;
+  const GROUND_ART_BAND_DEPTH=176;
   const groundAccentNoise=(cell,salt=0)=>{
     let n=Math.imul((cell|0)^Math.imul(salt+1,0x9e3779b1),0x45d9f3b);
     n=Math.imul(n^(n>>>16),0x45d9f3b);
@@ -1524,10 +1530,16 @@ window.GRIM_CONFIG = Object.freeze({
         rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
         kills:0,byKind:{}};
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
+      this.groundFill = this.add.graphics().setDepth(1);
+      this.groundDetails = this.add.graphics().setDepth(3);
+      this.groundArtSprites={};
+      this.groundArtFrames={};
+      this.groundArtMaskGraphics=this.make?.graphics?.({x:0,y:0,add:false})||null;
+      this.groundArtMask=this.groundArtMaskGraphics?.createGeometryMask?.()||null;
       this.biomeBackdrops={};
       this.biomeBackdropReady=this.createBiomeBackdropSet('surface');
       this.resizeBiomeBackdrops();
-      this.world = this.add.graphics().setDepth(1);
+      this.world = this.add.graphics().setDepth(4);
       this.fx = this.add.graphics().setDepth(5);
       this.actor = this.add.graphics().setDepth(14);
       this.foreground = this.add.graphics().setScrollFactor(0).setDepth(20);
@@ -3201,6 +3213,8 @@ window.GRIM_CONFIG = Object.freeze({
       if(!files)return false;
       if(!this.textures||typeof this.textures.exists!=='function'||!this.add?.image)return false;
       if(!this.biomeBackdrops)this.biomeBackdrops={};
+      if(!this.groundArtSprites)this.groundArtSprites={};
+      if(!this.groundArtFrames)this.groundArtFrames={};
       const ids=new Set(files.map(([id])=>id));
       for(const biome of scope.GRIM_WORLD_ART?.WORLD_BIOMES||[]){
         if(!ids.has(biome.id))continue;
@@ -3211,16 +3225,82 @@ window.GRIM_CONFIG = Object.freeze({
             .setOrigin(.5).setScrollFactor(0).setDepth(-30+biome.start/100000)
             .setAlpha(0).setVisible(false);
         }
+        this.createBiomeGroundArt(biome.id,key);
       }
       this.biomeBackdropGroup=group;
       return files.every(([id])=>Boolean(this.biomeBackdrops[id]));
+    }
+    createBiomeGroundArt(id,backdropKey){
+      if(!this.groundArtMask||!this.add?.image||!this.textures?.createCanvas)return false;
+      if(this.groundArtSprites[id])return true;
+      const textureKey='ground-art-'+id;
+      try{
+        if(!this.textures.exists(textureKey)){
+          const source=this.textures.get(backdropKey)?.getSourceImage?.();
+          if(!source?.width||!source?.height)return false;
+          const cropY=Math.floor(source.height*GROUND_ART_CROP_START);
+          const cropHeight=Math.max(1,source.height-cropY);
+          const frameWidth=GROUND_ART_FRAME_WIDTH,frameHeight=GROUND_ART_FRAME_HEIGHT;
+          const texture=this.textures.createCanvas(textureKey,frameWidth*GROUND_ART_VARIANTS,frameHeight);
+          if(!texture)return false;
+          const context=texture.getContext?.();
+          if(!context){this.textures.remove(textureKey);return false;}
+          context.clearRect(0,0,frameWidth*GROUND_ART_VARIANTS,frameHeight);
+          const frameNames=[];
+          for(let i=0;i<GROUND_ART_VARIANTS;i++){
+            const x=i*frameWidth;
+            const sourceX=Math.round(i*Math.max(0,source.width-frameWidth)/(GROUND_ART_VARIANTS-1));
+            const frameName='terrain-'+id+'-'+i;
+            context.drawImage(source,sourceX,cropY,frameWidth,cropHeight,
+              x,0,frameWidth,frameHeight);
+            // Fade the crop edges so each art piece melts into the matching
+            // solid terrain beneath it instead of making rectangular patches.
+            context.save();
+            context.beginPath();context.rect(x,0,frameWidth,frameHeight);context.clip();
+            context.globalCompositeOperation='destination-in';
+            const horizontal=context.createLinearGradient(x,0,x+frameWidth,0);
+            horizontal.addColorStop(0,'rgba(255,255,255,0)');
+            horizontal.addColorStop(.14,'rgba(255,255,255,1)');
+            horizontal.addColorStop(.86,'rgba(255,255,255,1)');
+            horizontal.addColorStop(1,'rgba(255,255,255,0)');
+            context.fillStyle=horizontal;context.fillRect(x,0,frameWidth,frameHeight);
+            const vertical=context.createLinearGradient(0,0,0,frameHeight);
+            vertical.addColorStop(0,'rgba(255,255,255,0)');
+            vertical.addColorStop(.12,'rgba(255,255,255,1)');
+            vertical.addColorStop(.94,'rgba(255,255,255,1)');
+            vertical.addColorStop(1,'rgba(255,255,255,0)');
+            context.fillStyle=vertical;context.fillRect(x,0,frameWidth,frameHeight);
+            context.restore();
+            frameNames.push(frameName);
+          }
+          texture.refresh();
+          for(let i=0;i<frameNames.length;i++)
+            texture.add(frameNames[i],0,i*frameWidth,0,frameWidth,frameHeight);
+        }
+        const frameNames=Array.from({length:GROUND_ART_VARIANTS},(_,i)=>'terrain-'+id+'-'+i);
+        this.groundArtFrames[id]=frameNames;
+        this.groundArtSprites[id]=Array.from({length:GROUND_ART_SPRITES_PER_BIOME},(_,i)=>
+          this.add.image(0,0,textureKey,frameNames[i%frameNames.length])
+            .setOrigin(.5,0).setScrollFactor(1).setDepth(2)
+            .setAlpha(0).setVisible(false).setMask(this.groundArtMask));
+        return true;
+      }catch(_){
+        if(this.textures.exists(textureKey))this.textures.remove(textureKey);
+        this.groundArtFrames?.[id]&&delete this.groundArtFrames[id];
+        return false;
+      }
     }
     destroyBiomeBackdropSet(group){
       for(const [id] of BIOME_BACKDROP_GROUPS[group]||[]){
         this.biomeBackdrops[id]?.destroy();
         delete this.biomeBackdrops[id];
+        for(const sprite of this.groundArtSprites?.[id]||[]){sprite.clearMask?.();sprite.destroy?.();}
+        if(this.groundArtSprites)delete this.groundArtSprites[id];
+        if(this.groundArtFrames)delete this.groundArtFrames[id];
         const key='biome-'+id;
         if(this.textures.exists(key))this.textures.remove(key);
+        const groundKey='ground-art-'+id;
+        if(this.textures.exists(groundKey))this.textures.remove(groundKey);
       }
     }
     ensureBiomeBackdropGroup(group){
@@ -3285,13 +3365,66 @@ window.GRIM_CONFIG = Object.freeze({
         image.setAlpha(alpha).setVisible(true);
       }
     }
+    updateBiomeGroundArt(){
+      if(!this.groundArtSprites||!this.groundArtMask)return;
+      const worldArt=scope.GRIM_WORLD_ART;
+      const weights=this.hasTeleported
+        ?worldArt?.underworldWeights?.(this.distance)||{}
+        :worldArt?.biomeWeights?.(this.distance)||{};
+      const left=this.cameraX-140,right=this.cameraX+this.width+170;
+      const sections=this.terrain.visibleSections(left,right);
+      const cellWidth=260,startX=this.startX??200;
+      for(const [id,sprites] of Object.entries(this.groundArtSprites||{})){
+        const weight=weights[id]||0;
+        const placements=[];
+        if(weight>.003){
+          const salt=id.split('').reduce((sum,char)=>sum+char.charCodeAt(0),0);
+          for(const section of sections){
+            if(section.kind==='gap'||section.kind==='platform')continue;
+            const from=Math.max(left,section.start),to=Math.min(right,section.end);
+            if(to-from<80)continue;
+            const first=Math.floor(from/cellWidth)-1,last=Math.ceil(to/cellWidth)+1;
+            for(let cell=first;cell<=last;cell++){
+              const noise=n=>groundAccentNoise(cell,salt+n);
+              if(noise(0)<.24)continue;
+              const x=cell*cellWidth+36+noise(1)*170;
+              if(x<from+12||x>to-12)continue;
+              const y=this.terrain.groundAt(x);
+              const before=this.terrain.groundAt(x-38),after=this.terrain.groundAt(x+42);
+              if(y===null||before===null||after===null||Math.abs(after-before)>48)continue;
+              const meters=(x-startX)/C.pxPerMeter;
+              const biomeWeight=worldArt?.biomeWeights?.(meters)?.[id]??
+                worldArt?.underworldWeights?.(meters)?.[id]??weight;
+              if(biomeWeight<=.003)continue;
+              placements.push({x,y,weight:Math.min(weight,biomeWeight),
+                frame:Math.floor(noise(2)*GROUND_ART_VARIANTS),
+                width:188+noise(3)*132,height:118+noise(4)*54,
+                alpha:.66+noise(5)*.2});
+            }
+          }
+        }
+        for(let i=0;i<sprites.length;i++){
+          const sprite=sprites[i],placement=placements[i];
+          if(!placement){sprite.setVisible(false);continue;}
+          const frame=this.groundArtFrames[id]?.[placement.frame];
+          if(frame&&sprite.frame?.name!==frame)sprite.setTexture('ground-art-'+id,frame);
+          sprite.setPosition(placement.x,placement.y+5);
+          if(Math.abs(sprite.displayWidth-placement.width)>.5||
+             Math.abs(sprite.displayHeight-placement.height)>.5)
+            sprite.setDisplaySize(placement.width,placement.height);
+          sprite.setAlpha(placement.alpha*placement.weight).setVisible(true);
+        }
+      }
+    }
     drawScene() {
       if (!this.bg) return;
       const g=this.bg;
       g.clear();
+      this.world?.clear();
       this.ensureBiomeBackdropGroup(this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
       this.drawGround();
+      this.updateBiomeGroundArt();
       this.drawPortals();
       this.drawVendors();
       for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
@@ -3362,7 +3495,7 @@ window.GRIM_CONFIG = Object.freeze({
       return hell;
     }
     drawGroundMotionCues(sections,left,right,startX){
-      const g=this.world,worldArt=scope.GRIM_WORLD_ART,cellWidth=170;
+      const g=this.groundDetails||this.world,worldArt=scope.GRIM_WORLD_ART,cellWidth=170;
       for(const section of sections){
         if(section.kind==='gap'||section.kind==='platform')continue;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
@@ -3414,8 +3547,12 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     drawGround(){
-      const g=this.world;
+      const g=this.groundFill||this.world,details=this.groundDetails||g;
       g.clear();
+      if(details!==g)details.clear();
+      const artMask=this.groundArtMaskGraphics;
+      artMask?.clear();
+      if(artMask)artMask.fillStyle(0xffffff,1);
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const depth=Math.max(this.groundY+this.height+500,this.cameraY+this.height+1100);
       const sections=this.terrain.visibleSections(left,right);
@@ -3456,21 +3593,31 @@ window.GRIM_CONFIG = Object.freeze({
           :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
         const underside=section.kind==='platform'?Math.max(h0,h1)+68:depth;
         const terrainShape=[{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}];
-        g.fillStyle(body,scope.GRIM_WORLD_ART?.WORLD_GROUND_BODY_ALPHA??.22);
+        g.fillStyle(body,scope.GRIM_WORLD_ART?.WORLD_GROUND_BODY_ALPHA??1);
         g.fillPoints(terrainShape,true);
+        if(artMask&&section.kind!=='platform'){
+          const top=[],bottom=[],sampleStep=48;
+          for(let x=from;x<to;x+=sampleStep){
+            const y=this.terrain.groundAt(x);
+            if(y!==null){top.push({x,y:y-2});bottom.push({x,y:y+GROUND_ART_BAND_DEPTH});}
+          }
+          const endY=this.terrain.groundAt(to-.001);
+          if(endY!==null){top.push({x:to,y:endY-2});bottom.push({x:to,y:endY+GROUND_ART_BAND_DEPTH});}
+          if(top.length>1)artMask.fillPoints([...top,...bottom.reverse()],true);
+        }
         if(section.kind==='platform'){
-          g.lineStyle(3,detail,.6);g.lineBetween(from+5,underside-3,to-5,underside-3);
+          details.lineStyle(3,detail,.6);details.lineBetween(from+5,underside-3,to-5,underside-3);
         }
         const customWorldGround=openingWorldArt||foothillsWorldArt||tundraWorldArt||underworldWorldArt;
-        g.lineStyle(customWorldGround?4:6,edge,customWorldGround?.72:.82);
-        g.lineBetween(from,h0-2,to,h1-2);
-        g.lineStyle(customWorldGround?1.5:2,sheen,customWorldGround?.26:.34);
-        g.lineBetween(from,h0+4,to,h1+4);
+        details.lineStyle(customWorldGround?4:6,edge,customWorldGround?.9:.95);
+        details.lineBetween(from,h0-2,to,h1-2);
+        details.lineStyle(customWorldGround?1.5:2,sheen,customWorldGround?.58:.68);
+        details.lineBetween(from,h0+4,to,h1+4);
         const cliff=sections.some(t=>t.kind==='gap'&&(Math.abs(t.start-section.end)<.02||Math.abs(t.end-section.start)<.02));
         if(cliff){
           const x=Math.abs(section.end-to)<.01?section.end:section.start;
           const y=this.terrain.anchorAt(x+.01)??h0;
-          g.lineStyle(3,detail,.38);g.lineBetween(x,y+7,x,y+58);
+          details.lineStyle(3,detail,.62);details.lineBetween(x,y+7,x,y+58);
         }
       }
       // Irregular surface marks share world coordinates with the terrain, so they move beneath the Reaper.
@@ -3479,18 +3626,18 @@ window.GRIM_CONFIG = Object.freeze({
       // Lightweight one-way ledges; only top surfaces catch a falling player.
       for(const plat of this.soulPlatform||[]){
         if(plat.x+plat.width<left||plat.x>right)continue;
-        g.fillStyle(plat.biome==='hell'?0x4a2727:0x213840,.93);g.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
-        g.lineStyle(5,plat.biome==='hell'?0xf4a16b:0xb4ddca,.99);g.lineBetween(plat.x,plat.y,plat.x+plat.width,plat.y);
-        g.lineStyle(2,0x6ca99d,.7);
-        for(let x=plat.x+20;x<plat.x+plat.width-8;x+=37)g.lineBetween(x,plat.y+6,x+12,plat.y+10);
+        details.fillStyle(plat.biome==='hell'?0x4a2727:0x213840,.96);details.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
+        details.lineStyle(5,plat.biome==='hell'?0xf4a16b:0xb4ddca,.99);details.lineBetween(plat.x,plat.y,plat.x+plat.width,plat.y);
+        details.lineStyle(2,0x6ca99d,.7);
+        for(let x=plat.x+20;x<plat.x+plat.width-8;x+=37)details.lineBetween(x,plat.y+6,x+12,plat.y+10);
       }
       for(const section of sections){
         if(section.kind!=='platform')continue;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
-        g.lineStyle(3,0x96a9a5,.38);
+        details.lineStyle(3,0x96a9a5,.5);
         for(let x=Math.ceil(from/36)*36;x<to;x+=36){
           const y=this.terrain.groundAt(x);
-          if(y!==null)g.lineBetween(x,y+10,x+3,y+29);
+          if(y!==null)details.lineBetween(x,y+10,x+3,y+29);
         }
       }
     }
@@ -3647,7 +3794,8 @@ window.GRIM_CONFIG = Object.freeze({
           g.fillStyle(underground?(i%2?0x5f5869:0x786371):(i%2?0x567f54:0x47724f),.96);g.fillRoundedRect(bx,ground-h,10,h,3);
           g.lineStyle(1.6,0xc2c98d,.56);
           for(let j=1;j<5;j++)g.lineBetween(bx+1,ground-h+j*h/5,bx+9,ground-h+j*h/5);
-          g.lineStyle(2,0x82946e,.74);
+          g.lineStyle(2
+,0x82946e,.74);
           g.lineBetween(bx+4,ground-h*.54,bx+(i%2?-13:20),ground-h*.71);
           g.lineBetween(bx+4,ground-h*.7,bx+(i%2?24:-12),ground-h*.8);
         }
