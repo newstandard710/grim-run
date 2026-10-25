@@ -513,8 +513,7 @@ const server=http.createServer((req,res)=>{
   assert.ok(changedPixels(bothRendered.impRect)>50,
     'Ember Imp changes visible pixels in combined review mode');
 
-  // Review foothills art at phone scale. Compare the opt-in render against
-  // the approved default forest/terrain renderer without changing gameplay state.
+  // Compare the accepted foothills default and the new Tundra preview at phone scale.
   const worldArtSnapshot=async(query,file,distanceMeters)=>{
     await skeletalPage.goto(origin+'/'+query,
       {waitUntil:'domcontentloaded',timeout:45000});
@@ -538,7 +537,7 @@ const server=http.createServer((req,res)=>{
       s.refreshHud();
       s.enemies=[];s.fireballs=[];s.obstacles=[];s.coins=[];s.souls=[];s.particles=[];
       s.drawScene();g.step(performance.now(),0);
-      return {preview:s.foothillsWorldArtReviewRequested,
+      return {preview:s.tundraWorldArtReviewRequested,
         ground:[0,70,160,310].map(dx=>s.terrain.groundAt(s.player.x+dx)),
         player:{x:s.player.x,y:s.player.y,hp:s.player.hp,grounded:s.player.grounded}};
     },distanceMeters);
@@ -547,23 +546,39 @@ const server=http.createServer((req,res)=>{
   };
   const foothillsDefault=await worldArtSnapshot('?seed=33',
     path.join(skeletalArtifactDir,'foothills-default-phone-scale.png'),1500);
-  const foothillsReview=await worldArtSnapshot('?worldReview=foothills&seed=33',
-    path.join(skeletalArtifactDir,'foothills-review-phone-scale.png'),1500);
+  const foothillsAlias=await worldArtSnapshot('?worldReview=foothills&seed=33',
+    path.join(skeletalArtifactDir,'foothills-alias-phone-scale.png'),1500);
   assert.equal(foothillsDefault.geometry.preview,false);
-  assert.equal(foothillsReview.geometry.preview,true);
-  assert.deepEqual(foothillsReview.geometry.ground,foothillsDefault.geometry.ground,
-    'Foothills artwork leaves seeded terrain geometry untouched');
-  assert.deepEqual(foothillsReview.geometry.player,foothillsDefault.geometry.player,
-    'Foothills artwork leaves player position and health untouched');
-  assert.deepEqual([foothillsReview.image.width,foothillsReview.image.height],[950,430]);
+  assert.equal(foothillsAlias.geometry.preview,false,'Accepted foothills review alias uses the default art');
+  assert.deepEqual(foothillsAlias.geometry.ground,foothillsDefault.geometry.ground,
+    'Foothills art leaves seeded terrain geometry untouched');
+  let aliasPixelsChanged=0;
+  for(let i=0;i<foothillsAlias.image.data.length;i+=4){
+    if(Math.abs(foothillsAlias.image.data[i]-foothillsDefault.image.data[i])>2||
+       Math.abs(foothillsAlias.image.data[i+1]-foothillsDefault.image.data[i+1])>2||
+       Math.abs(foothillsAlias.image.data[i+2]-foothillsDefault.image.data[i+2])>2)aliasPixelsChanged++;
+  }
+  assert.ok(aliasPixelsChanged<50,'Foothills alias matches the accepted default rendering');
+
+  const tundraDefault=await worldArtSnapshot('?seed=33',
+    path.join(skeletalArtifactDir,'tundra-default-phone-scale.png'),2600);
+  const tundraReview=await worldArtSnapshot('?worldReview=tundra&seed=33',
+    path.join(skeletalArtifactDir,'tundra-review-phone-scale.png'),2600);
+  assert.equal(tundraDefault.geometry.preview,false);
+  assert.equal(tundraReview.geometry.preview,true);
+  assert.deepEqual(tundraReview.geometry.ground,tundraDefault.geometry.ground,
+    'Tundra artwork leaves seeded terrain geometry untouched');
+  assert.deepEqual(tundraReview.geometry.player,tundraDefault.geometry.player,
+    'Tundra artwork leaves player position and health untouched');
+  assert.deepEqual([tundraReview.image.width,tundraReview.image.height],[950,430]);
   let worldPixelsChanged=0;
-  for(let i=0;i<foothillsReview.image.data.length;i+=4){
-    if(Math.abs(foothillsReview.image.data[i]-foothillsDefault.image.data[i])>12||
-       Math.abs(foothillsReview.image.data[i+1]-foothillsDefault.image.data[i+1])>12||
-       Math.abs(foothillsReview.image.data[i+2]-foothillsDefault.image.data[i+2])>12)worldPixelsChanged++;
+  for(let i=0;i<tundraReview.image.data.length;i+=4){
+    if(Math.abs(tundraReview.image.data[i]-tundraDefault.image.data[i])>12||
+       Math.abs(tundraReview.image.data[i+1]-tundraDefault.image.data[i+1])>12||
+       Math.abs(tundraReview.image.data[i+2]-tundraDefault.image.data[i+2])>12)worldPixelsChanged++;
   }
   assert.ok(worldPixelsChanged>15000,
-    'Foothills preview visibly changes the phone-scale scene without changing gameplay state');
+    'Tundra preview visibly changes the phone-scale scene without changing gameplay state');
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -805,7 +820,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.11.1 accepted enemy and forest art defaults, foothills review renders at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.11.2 accepted forest and foothills art defaults, anchored Tundra mountains render at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

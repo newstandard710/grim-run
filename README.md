@@ -2,12 +2,12 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.11.1 — Foothills Art Review**
+**Current playable build: v0.11.2 — Tundra Art Review**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
-- The approved illustrated forest background and textured ground now appear by default through the opening 1,200m.
-- The next stretch adds a gradual forest-to-foothills background and ground treatment from about 900m to 2,300m. It is opt-in while you review it on a phone.
-- [Open the foothills phone-review build](https://newstandard710.github.io/grim-run/?worldReview=foothills).
+- The approved forest-to-foothills background and ground treatment is now the default from the opening through about 2,300m.
+- The next 1,900–3,400m stretch previews the Tundra mountain ascent, with snow caps joined to the mountain ridgelines and frost detail along the ground. Terrain, collision and gameplay stay unchanged.
+- [Open the Tundra phone-review build](https://newstandard710.github.io/grim-run/?worldReview=tundra).
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -200,4 +200,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: review the foothills art at landscape phone size, then continue the mountain and summit transitions, scenery, vendors and portal presentation.
+Next: review the Tundra mountain ascent at landscape phone size, then continue with the summit transition, Ashlands preview, scenery, vendors and portal presentation.
