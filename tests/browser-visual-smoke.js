@@ -513,9 +513,9 @@ const server=http.createServer((req,res)=>{
   assert.ok(changedPixels(bothRendered.impRect)>50,
     'Ember Imp changes visible pixels in combined review mode');
 
-  // Review the opening-forest art at phone scale. Compare the opt-in render
-  // against the main-game fallback while asserting the same seeded terrain.
-  const openingWorldSnapshot=async(query,file)=>{
+  // Review foothills art at phone scale. Compare the opt-in render against
+  // the approved default forest/terrain renderer without changing gameplay state.
+  const worldArtSnapshot=async(query,file,distanceMeters)=>{
     await skeletalPage.goto(origin+'/'+query,
       {waitUntil:'domcontentloaded',timeout:45000});
     await skeletalPage.waitForFunction(()=>{
@@ -526,41 +526,41 @@ const server=http.createServer((req,res)=>{
     await skeletalPage.click('#start-btn');
     await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
       null,{timeout:15000});
-    const geometry=await skeletalPage.evaluate(()=>{
+    const geometry=await skeletalPage.evaluate(distanceMeters=>{
       const g=window.grimRun,s=g.scene.scenes[0];
-      g.loop.stop();s.state='paused';s.elapsed=0;s.frame=0;s.distance=0;
-      s.hasTeleported=false;s.player.x=s.startX;
-      s.player.y=s.terrain.groundAt(s.startX);
+      g.loop.stop();s.state='paused';s.elapsed=0;s.frame=0;s.distance=distanceMeters;
+      s.hasTeleported=false;s.player.x=s.startX+distanceMeters*window.GRIM_CONFIG.pxPerMeter;
+      s.player.y=s.terrain.groundAt(s.player.x);
       s.cameraX=s.player.x-s.width*window.GRIM_CONFIG.reaperXRatio;
       s.cameraY=0;s.cameras.main.setScroll(s.cameraX,s.cameraY);
       s.enemies=[];s.fireballs=[];s.obstacles=[];s.coins=[];s.souls=[];s.particles=[];
       s.drawScene();g.step(performance.now(),0);
-      return {preview:s.openingWorldArtReviewRequested,
-        ground:[0,70,160,310].map(dx=>s.terrain.groundAt(s.startX+dx)),
+      return {preview:s.foothillsWorldArtReviewRequested,
+        ground:[0,70,160,310].map(dx=>s.terrain.groundAt(s.player.x+dx)),
         player:{x:s.player.x,y:s.player.y,hp:s.player.hp,grounded:s.player.grounded}};
-    });
+    },distanceMeters);
     const image=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({path:file}));
     return {geometry,image};
   };
-  const openingDefault=await openingWorldSnapshot('?seed=33',
-    path.join(skeletalArtifactDir,'opening-forest-default-phone-scale.png'));
-  const openingReview=await openingWorldSnapshot('?worldReview=opening&seed=33',
-    path.join(skeletalArtifactDir,'opening-forest-review-phone-scale.png'));
-  assert.equal(openingDefault.geometry.preview,false);
-  assert.equal(openingReview.geometry.preview,true);
-  assert.deepEqual(openingReview.geometry.ground,openingDefault.geometry.ground,
-    'Opening-world artwork leaves seeded terrain geometry untouched');
-  assert.deepEqual(openingReview.geometry.player,openingDefault.geometry.player,
-    'Opening-world artwork leaves player position and health untouched');
-  assert.deepEqual([openingReview.image.width,openingReview.image.height],[950,430]);
+  const foothillsDefault=await worldArtSnapshot('?seed=33',
+    path.join(skeletalArtifactDir,'foothills-default-phone-scale.png'),1500);
+  const foothillsReview=await worldArtSnapshot('?worldReview=foothills&seed=33',
+    path.join(skeletalArtifactDir,'foothills-review-phone-scale.png'),1500);
+  assert.equal(foothillsDefault.geometry.preview,false);
+  assert.equal(foothillsReview.geometry.preview,true);
+  assert.deepEqual(foothillsReview.geometry.ground,foothillsDefault.geometry.ground,
+    'Foothills artwork leaves seeded terrain geometry untouched');
+  assert.deepEqual(foothillsReview.geometry.player,foothillsDefault.geometry.player,
+    'Foothills artwork leaves player position and health untouched');
+  assert.deepEqual([foothillsReview.image.width,foothillsReview.image.height],[950,430]);
   let worldPixelsChanged=0;
-  for(let i=0;i<openingReview.image.data.length;i+=4){
-    if(Math.abs(openingReview.image.data[i]-openingDefault.image.data[i])>12||
-       Math.abs(openingReview.image.data[i+1]-openingDefault.image.data[i+1])>12||
-       Math.abs(openingReview.image.data[i+2]-openingDefault.image.data[i+2])>12)worldPixelsChanged++;
+  for(let i=0;i<foothillsReview.image.data.length;i+=4){
+    if(Math.abs(foothillsReview.image.data[i]-foothillsDefault.image.data[i])>12||
+       Math.abs(foothillsReview.image.data[i+1]-foothillsDefault.image.data[i+1])>12||
+       Math.abs(foothillsReview.image.data[i+2]-foothillsDefault.image.data[i+2])>12)worldPixelsChanged++;
   }
   assert.ok(worldPixelsChanged>15000,
-    'Opening-forest preview visibly changes the phone-scale scene without changing gameplay state');
+    'Foothills preview visibly changes the phone-scale scene without changing gameplay state');
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -802,7 +802,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.11.0 accepted enemy art defaults, opening-forest review renders at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.11.1 accepted enemy and forest art defaults, foothills review renders at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
