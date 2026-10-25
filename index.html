@@ -1496,6 +1496,11 @@ window.GRIM_CONFIG = Object.freeze({
     'crystals','ashlands','lava','boss'];
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
+  const UNDERWORLD_ABYSS_PALETTE=Object.freeze({
+    ashlands:Object.freeze({fill:0x2b1d23,edge:0x98514d,fillAlpha:.9,edgeAlpha:.58}),
+    lava:Object.freeze({fill:0x4e1f1b,edge:0xf17b3b,fillAlpha:.92,edgeAlpha:.76}),
+    boss:Object.freeze({fill:0x261720,edge:0x9f4e5b,fillAlpha:.82,edgeAlpha:.68})
+  });
 
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
@@ -3501,10 +3506,28 @@ window.GRIM_CONFIG = Object.freeze({
       const startX=this.startX??200;
       for(const group of this.terrain.sequences){
         if(group.endX<left||group.startX>right)continue;
-        if((group.startX-startX)/C.pxPerMeter>=8000){
+        const groupMeters=(group.startX+group.endX-2*startX)/(2*C.pxPerMeter);
+        if(groupMeters>=8000){
           const lavaY=this.terrain.anchorAt(group.startX)-5;
-          base.fillStyle(0xb92e17,.96);base.fillRect(group.startX,lavaY,group.endX-group.startX,depth-lavaY+200);
-          base.lineStyle(5,0xff9032,.94);base.lineBetween(group.startX,lavaY,group.endX,lavaY);
+          const weights=this.terrainBiomeWeights(groupMeters);
+          const total=Object.values(weights).reduce((sum,weight)=>sum+weight,0)||1;
+          const weightedColor=key=>{
+            const channel=shift=>{
+              let value=0;
+              for(const [id,weight] of Object.entries(weights)){
+                const color=(UNDERWORLD_ABYSS_PALETTE[id]||UNDERWORLD_ABYSS_PALETTE.lava)[key];
+                value+=((color>>shift)&255)*weight;
+              }
+              return Math.round(value/total);
+            };
+            return (channel(16)<<16)|(channel(8)<<8)|channel(0);
+          };
+          const weightedAlpha=key=>Object.entries(weights).reduce((sum,[id,weight])=>
+            sum+(UNDERWORLD_ABYSS_PALETTE[id]||UNDERWORLD_ABYSS_PALETTE.lava)[key]*weight,0)/total;
+          base.fillStyle(weightedColor('fill'),weightedAlpha('fillAlpha'));
+          base.fillRect(group.startX,lavaY,group.endX-group.startX,depth-lavaY+200);
+          base.lineStyle(4,weightedColor('edge'),weightedAlpha('edgeAlpha'));
+          base.lineBetween(group.startX,lavaY,group.endX,lavaY);
         }else base.fillStyle(0x190c2a,.58),base.fillRect(group.startX,this.groundY+36,group.endX-group.startX,depth);
       }
       for(const section of sections){
