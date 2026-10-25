@@ -1,23 +1,24 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.12.1 — *Terrain Surface Pass*.
-**Development candidate:** v0.12.2 — *Biome Surface & Performance Pass*. This pass makes the run surface easier to read and removes repeated terrain rendering work from each frame.
+**Current production build:** v0.12.2 — *Biome Surface & Performance Pass*.
+
+This release makes the run surface easier to read and removes repeated terrain rendering work from each frame.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Candidate:** v0.12.2 — *Biome Surface & Performance Pass*
+**Release:** v0.12.2 — *Biome Surface & Performance Pass*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The v0.12.1 production build passed the local regression suites, including 300 seeded terrain checks, five full runs to the normal 9,999m finish, and 72 safe God Mode teleports across eight seeds through 20,000m. Its biome transition checks covered all fades, the 5,000m portal handoff, and ground rendering; Chromium checks covered the Ember Imp silhouette and all eight ground materials. The v0.12.2 candidate is being checked across all eight biomes at phone dimensions; Android device confirmation remains pending.
+**Verification:** GitHub regression and Chromium rendering workflows passed. Gameplay checks include 300 seeded terrain cases, five full runs to the normal 9,999m finish, the seed 1 win state, and 72 safe God Mode teleports across eight seeds through 20,000m. Chromium checked all eight biomes at phone dimensions for cap alignment, gaps, ledges, and cache reuse. The live Pages build is v0.12.2; an Android device playtest is still pending. CI drawGround timing averaged 0.09–0.60ms across its eight synthetic biome renders; this does not replace phone FPS testing.
 
-## v0.12.2 candidate — Biome Surface & Performance Pass
+## v0.12.2 — Biome Surface & Performance Pass
 
 - A visible, narrow surface cap follows the existing profile: moss and soil in Forest, gravel and stone in Foothills, frost in Tundra, layered rock in Caves, mineral color in Crystals, ash and embers in Ashlands, volcanic crust in Lava, and dark stone in the Boss Biome.
 - The cap sits inside the exact walkable profile and ends at gaps and platform edges. Surface decoration does not change terrain heights, collisions, ledges, controls, hazards, or progression.
 - Surface caps are rasterized once per visible terrain section and reused in world space. Terrain material masks now cover full terrain sections and rebuild only when their geometry changes, so camera movement no longer reissues those mask drawing commands every frame.
 - Biome blend weights and surface colors are chosen from each section's world position, preventing the texture and cap colors from shifting as the viewport clips a section.
-- Phone-sized Chromium review covers all eight biomes, slope/contact alignment, open gaps, and stable reuse across repeated renders. Gameplay regression and live deployment checks are pending.
+- GitHub's phone-sized Chromium checks passed across all eight biomes for slope/contact alignment, open gaps, and stable reuse across repeated renders. Gameplay regression and live deployment checks passed. Android frame rate and play feel remain for device playtesting.
 
 ## v0.12.1 — Terrain Surface Pass
 
