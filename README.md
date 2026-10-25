@@ -2,7 +2,11 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.15 — Combined Enemy Art Review**
+**Current playable build: v0.11.0 — Opening Forest Art Review**
+
+- The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
+- The first World & Atmosphere pass adds an illustrated opening forest background and textured ground for the first 1,200m. It stays opt-in while you review it on a phone.
+- [Open the opening forest phone-review build](https://newstandard710.github.io/grim-run/?worldReview=opening).
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -25,27 +29,27 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - The atlas changes only the Skeletal Bat drawing. Its existing 2 HP, flight and dive behavior, telegraph timing, and collision box stay unchanged. Procedural art remains the fallback.
 - [Open the current game](https://newstandard710.github.io/grim-run/).
 
-## Bone Crawler scale review
+## Approved Bone Crawler art
 
-- The four-pose crawl cycle is opt-in at `?enemyReview=bone-crawler` while it is reviewed on a phone.
+- The four-pose crawl cycle is approved and enabled by default. The `?enemyReview=bone-crawler` link remains available as a focused review alias.
 - At 2.5× its first review size, the animated silhouette is about 85–93px high and 112–131px wide, close to a large dog beside the 120px Reaper. Its hitbox is now 95×105px, also 2.5× larger, and shares the art's ground baseline.
 - The game mirrors each pose horizontally so the crawler faces right as it moves. The source PNGs remain unchanged.
 - One HP, ground movement, ledge stopping, spawn schedule and attack logic remain unchanged.
 - To reach a crawler quickly, use Pause → God Mode → Teleport to 5,000m, confirm, then continue until one enters view. Crawlers appear in the Underworld.
 - [Open the Bone Crawler phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=bone-crawler).
 
-## Ember Imp art review
+## Approved Ember Imp art
 
-- The six-pose atlas is opt-in at `?enemyReview=ember-imp`; its four running poses face right, followed by the existing fire-warning and release poses.
+- The six-pose atlas is approved and enabled by default; its four running poses face right, followed by the existing fire-warning and release poses.
 - The visible target is about 55px tall. The atlas shares one foot line and keeps the existing 38×42 hitbox, 2 HP, movement, 470ms warning and fireball timing unchanged.
 - The warning and release are character poses; the launched fireball remains a separate effect. Missing or invalid art keeps the procedural Imp visible.
 - To reach one quickly, use Pause → God Mode → Teleport to 7,500m, then continue into the Underworld until an Imp enters view.
 - [Open the Ember Imp phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=ember-imp).
 
-## Combined enemy-art review
+## Enemy art
 
-- The Bone Crawler and Ember Imp each have their own opt-in review links above. Use the combined route to see both sprites in the same run.
-- [Open the combined Bone Crawler and Ember Imp phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=both).
+- Both ground enemies now appear with their approved sprites during regular play. Their former single-enemy and combined review links remain available.
+- [Open the combined Bone Crawler and Ember Imp route](https://newstandard710.github.io/grim-run/?enemyReview=both).
 
 ## v0.10.9: Subtle Reaper Run Head Bob
 
@@ -195,4 +199,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: review the Bone Crawler in the opt-in landscape phone view, then create the Ember Imp sprites. Begin v0.11 World & Atmosphere after the enemy art is accepted.
+Next: review the opening forest art at landscape phone size, then continue the World & Atmosphere work with the remaining biome transitions, scenery, vendors and portal presentation.
