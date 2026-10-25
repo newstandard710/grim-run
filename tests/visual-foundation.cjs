@@ -5,7 +5,7 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.12-concept-foreground-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.11.14-grounded-terrain-v1"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
 assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.11.11-painted-ground-v1"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
@@ -24,9 +24,12 @@ assert.ok(!html.includes('worldReviewMode'),'Old background review routes are re
 assert.ok(!html.includes('groundTextureSprites'),'Repeated ground texture tiles are not created');
 assert.ok(!html.includes('groundTextureMask'),'Concept foregrounds are not hidden behind a texture mask');
 assert.ok(!html.includes("this.load.image('ground-'+id"),'Only approved biome paintings load');
-assert.ok(html.includes('WORLD_GROUND_BODY_ALPHA'),'Terrain keeps concept foreground visible through its body');
+assert.ok(html.includes('WORLD_GROUND_BODY_ALPHA'),'Terrain body uses the biome art as its own moving surface');
+assert.ok(html.includes('createBiomeGroundArt'),'Each approved biome supplies a moving ground-art layer');
+assert.ok(html.includes('.setMask(this.groundArtMask)'),'Ground art is clipped to the real solid terrain shape');
+assert.ok(html.includes('this.updateBiomeGroundArt();'),'Ground art updates with camera movement and biome fades');
 const worldScope={};vm.runInNewContext(worldArt,{window:worldScope,globalThis:worldScope});
-assert.equal(worldScope.GRIM_WORLD_ART.WORLD_GROUND_BODY_ALPHA,.22);
+assert.equal(worldScope.GRIM_WORLD_ART.WORLD_GROUND_BODY_ALPHA,1);
 assert.equal(worldScope.GRIM_WORLD_ART.WORLD_GROUND_SHADE_ALPHA,.08);
 for(const legacyBackground of ['drawRidge','drawPines','drawRollingHills','drawMountainRange',
  'drawOpeningForest','drawFoothills(','drawTundra(','drawCavernSilhouettes',
