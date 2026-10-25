@@ -12,7 +12,7 @@ require('./asset-integrity.cjs');
 
 const root=path.resolve(__dirname,'..');
 const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8',
- '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png'};
+ '.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp'};
 const server=http.createServer((req,res)=>{
  try{
   const url=new URL(req.url,'http://localhost');
@@ -437,8 +437,24 @@ const server=http.createServer((req,res)=>{
       }
     }
     assert.ok(changed>100,'Rendered '+state.frame+' art changes visible phone-canvas pixels');
-    if(i<4)assert.ok(maxY-minY+1>50&&maxY-minY+1<60,
-      'Run pose '+state.frame+' measures about 55 visible pixels tall');
+    if(i<4){
+      const visibleHeight=await skeletalPage.evaluate(()=>{
+        const scene=window.grimRun.scene.scenes[0],sprite=scene.visuals.emberImpPool[0];
+        const frame=sprite.frame,image=scene.textures.get(sprite.texture.key).getSourceImage();
+        const canvas=document.createElement('canvas');
+        canvas.width=frame.cutWidth;canvas.height=frame.cutHeight;
+        const context=canvas.getContext('2d',{willReadFrequently:true});
+        context.drawImage(image,frame.cutX,frame.cutY,frame.cutWidth,frame.cutHeight,
+          0,0,frame.cutWidth,frame.cutHeight);
+        const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;
+        let minY=canvas.height,maxY=-1;
+        for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++)
+          if(pixels[(y*canvas.width+x)*4+3]>32){minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+        return (maxY-minY+1)*sprite.scaleY;
+      });
+      assert.ok(visibleHeight>50&&visibleHeight<60,
+        'Decoded '+state.frame+' atlas alpha measures about 55 visible pixels tall');
+    }
     impHashes.push(crypto.createHash('sha256').update(crop).digest('hex'));
   }
   assert.equal(new Set(impHashes).size,6,'All four run and two attack poses render distinct phone-scale pixels');
@@ -579,6 +595,55 @@ const server=http.createServer((req,res)=>{
   }
   assert.ok(worldPixelsChanged>15000,
     'Tundra preview visibly changes the phone-scale scene without changing gameplay state');
+
+  // Every ground material must reach the real Phaser scene and sit on a
+  // generated solid section. Move a paused seeded run through the eight biomes
+  // without changing any terrain or collision data.
+  await skeletalPage.goto(origin+'/?seed=33',
+    {waitUntil:'domcontentloaded',timeout:45000});
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.loaded===true,
+    null,{timeout:45000});
+  await skeletalPage.click('#start-btn');
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
+    null,{timeout:15000});
+  await skeletalPage.evaluate(()=>{
+    const game=window.grimRun,scene=game.scene.scenes[0];
+    game.loop.stop();scene.state='paused';scene.enemies=[];scene.obstacles=[];
+  });
+  const terrainTargets=[
+    [300,'forest'],[1500,'foothills'],[3400,'tundra'],[5500,'caves'],
+    [6500,'crystals'],[7500,'ashlands'],[9000,'lava'],[11000,'boss']
+  ];
+  for(const [meters,biome] of terrainTargets){
+    await skeletalPage.evaluate(m=>{
+      const game=window.grimRun,scene=game.scene.scenes[0],ppm=window.GRIM_CONFIG.pxPerMeter;
+      scene.distance=m;scene.hasTeleported=m>=5000;
+      scene.player.x=scene.startX+m*ppm;
+      scene.player.y=scene.terrain.groundAt(scene.player.x)??scene.terrain.anchorAt(scene.player.x);
+      scene.player.grounded=true;scene.player.velocityY=0;
+      scene.cameraX=scene.player.x-scene.width*window.GRIM_CONFIG.reaperXRatio;
+      scene.cameraY=scene.player.y-scene.groundY;
+      scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
+      scene.drawScene();game.step(performance.now(),0);
+    },meters);
+    await skeletalPage.waitForFunction(id=>{
+      const scene=window.grimRun?.scene?.scenes?.[0];
+      return scene?.terrainMaterialIds?.has(id)&&
+        [...scene.terrainTextureViews.values()].some(view=>view.sprite.visible&&
+          view.sprite.texture.key==='terrain-material-'+id);
+    },biome,{timeout:45000});
+    const grounded=await skeletalPage.evaluate(id=>{
+      const scene=window.grimRun.scene.scenes[0];
+      const visible=[...scene.terrainTextureViews.values()].filter(view=>view.sprite.visible);
+      return {material:visible.some(view=>view.sprite.texture.key==='terrain-material-'+id),
+        groundedSections:scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170)
+          .filter(section=>section.kind!=='gap').length,
+        gaps:scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170)
+          .filter(section=>section.kind==='gap')};
+    },biome);
+    assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
+    assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
+  }
   await skeletalPage.close();
 
   await page.click('#start-btn');

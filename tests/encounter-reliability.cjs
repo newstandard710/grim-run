@@ -31,7 +31,7 @@ for(const [,attributes,source] of scripts){
 }
 const C=sandbox.GRIM_CONFIG,Core=sandbox.GRIM_CORE,Terrain=sandbox.GRIM_TERRAIN;
 const Powers=sandbox.GRIM_POWERS,Combat=sandbox.GRIM_COMBAT,GameScene=sandbox.GrimGameScene;
-assert.equal(C.version,'0.10.15');
+assert.equal(C.version,'0.12.0');
 
 for(let k=1;k<=14;k++){
   const x=200+k*666*C.pxPerMeter;
@@ -136,6 +136,11 @@ for(const seed of [1,7,42,99,314]){
   let frames=0;
   while(world.state!=='won'&&frames<6000){
     if(world.state==='upgrade')world.leaveVendor();
+    // God Mode intentionally permits post-finish exploration. Keep it enabled
+    // for the long encounter sample, then exercise the real victory condition.
+    if(world.godMode&&world.distance>=9900){
+      world.godMode=false;world.player.hp=world.player.maxHp;world.player.invulMs=60000;
+    }
     assert.notEqual(world.state,'dead','Unexpected death in God Mode: seed '+seed);
     world.update(0,34);frames++;
     for(const [enemy,entry] of appeared){
@@ -157,6 +162,7 @@ for(const seed of [1,7,42,99,314]){
   assert.ok(report.bat.visible2s+report.skeletalBat.visible2s>=15,
     'Bats crossed screen too quickly: seed '+seed);
   byTypeReports.push(report);
+  console.log('DEBUG seed='+seed+' state='+world.state+' x='+world.player.x+' dist='+world.distance+' frames='+frames+' max='+world.maxDistance+' nextVendor='+world.nextVendorNumber+' velocityY='+world.player.velocityY);
   assert.equal(world.state,'won','Full run must reach 9,999m: seed '+seed);
   assert.ok(world.encounterTelemetry.enteredView>=15,
     'Enemies spawned but did not enter viewport: seed '+seed);
@@ -167,6 +173,6 @@ for(const seed of [1,7,42,99,314]){
 console.log('Full-run encounter visibility: '+visibility.join(', '));
 console.log('On-screen bat, skeletal, crawler and imp encounters: '+JSON.stringify(byTypeReports));
 
-console.log('v0.10.15 PASS: 300 seeded worlds; air-tuck gate counts '+JSON.stringify(counts)+
+console.log('v0.12.0 PASS: 300 seeded worlds; air-tuck gate counts '+JSON.stringify(counts)+
   '; enemy spawns '+Math.min(...totals)+'–'+Math.max(...totals)+
   '; 50m vendor rules, visibility gate, and God Mode damage effects.');

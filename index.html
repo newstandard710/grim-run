@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.11.10</title>
+  <title>GRIM RUN — v0.12.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.10 · BACKGROUND ART CLEANUP</div>
+      <div class="mini">v0.12.0 · BIOME GROUND MATERIALS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.10.15',
+  version: '0.12.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.10-background-art-cleanup-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.10-background-art-cleanup-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.12.0-ground-materials-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.12.0-ground-materials-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1486,6 +1486,16 @@ window.GRIM_CONFIG = Object.freeze({
       ['boss','boss-castle.webp']
     ]
   };
+  const BIOME_TERRAIN_FILES=Object.freeze({
+    forest:'ground-forest-v1.webp',foothills:'ground-foothills-v1.webp',
+    tundra:'ground-tundra-v1.webp',caves:'ground-caves-v1.webp',
+    crystals:'ground-crystals-v1.webp',ashlands:'ground-ashlands-v1.webp',
+    lava:'ground-lava-v1.webp',boss:'ground-boss-v1.webp'
+  });
+  const TERRAIN_BIOME_ORDER=['forest','foothills','tundra','caves',
+    'crystals','ashlands','lava','boss'];
+  const TERRAIN_TEXTURE_SIZE=768;
+  const TERRAIN_TILE_SCALE=.75;
 
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
@@ -1495,6 +1505,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.biomeBackdropFailedGroups=new Set();
       for(const [id,file] of BIOME_BACKDROP_GROUPS.surface)
         this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
+      this.load.image('terrain-source-forest',
+        'assets/visuals/terrain/'+BIOME_TERRAIN_FILES.forest);
     }
     create() {
       this.width = this.scale.width;
@@ -1520,7 +1532,15 @@ window.GRIM_CONFIG = Object.freeze({
       this.biomeBackdrops={};
       this.biomeBackdropReady=this.createBiomeBackdropSet('surface');
       this.resizeBiomeBackdrops();
-      this.world = this.add.graphics().setDepth(1);
+      this.terrainBase=this.add.graphics().setDepth(0);
+      this.terrainTextureViews=new Map();
+      this.terrainMaterialIds=new Set();
+      this.terrainMaterialLoading=new Set();
+      this.terrainMaterialFailed=new Set();
+      this.terrainMaterialQueue=[];
+      if(this.textures?.exists?.('terrain-source-forest'))this.bakeTerrainMaterial('forest');
+      this.events?.once?.('shutdown',()=>this.destroyTerrainTextureViews());
+      this.world = this.add.graphics().setDepth(2);
       this.fx = this.add.graphics().setDepth(5);
       this.actor = this.add.graphics().setDepth(14);
       this.foreground = this.add.graphics().setScrollFactor(0).setDepth(20);
@@ -3337,6 +3357,107 @@ window.GRIM_CONFIG = Object.freeze({
         g.lineStyle(2,aura,.95);g.strokeRoundedRect(x-31,y-120,62,17,4);
       }
     }
+    bakeTerrainMaterial(id){
+      if(this.terrainMaterialIds?.has(id))return true;
+      if(!this.textures||typeof this.textures.get!=='function')return false;
+      const sourceKey='terrain-source-'+id,materialKey='terrain-material-'+id;
+      const sourceTexture=this.textures.get(sourceKey);
+      const source=sourceTexture?.getSourceImage?.()||sourceTexture?.source?.[0]?.image;
+      if(!source)return false;
+      if(this.textures.exists?.(materialKey))this.textures.remove(materialKey);
+      const texture=this.textures.createCanvas(materialKey,TERRAIN_TEXTURE_SIZE,TERRAIN_TEXTURE_SIZE);
+      if(!texture)return false;
+      const context=texture.getContext();
+      context.clearRect(0,0,TERRAIN_TEXTURE_SIZE,TERRAIN_TEXTURE_SIZE);
+      context.drawImage(source,0,0,TERRAIN_TEXTURE_SIZE,TERRAIN_TEXTURE_SIZE);
+      texture.refresh();
+      this.textures.remove(sourceKey);
+      this.terrainMaterialIds.add(id);
+      return true;
+    }
+    requestTerrainMaterial(id){
+      if(!BIOME_TERRAIN_FILES[id]||this.terrainMaterialIds.has(id)||
+        this.terrainMaterialLoading.has(id)||this.terrainMaterialFailed.has(id)||
+        this.terrainMaterialQueue.includes(id))return;
+      this.terrainMaterialQueue.push(id);
+      this.pumpTerrainMaterialLoads();
+    }
+    pumpTerrainMaterialLoads(){
+      if(!this.load||typeof this.load.image!=='function'||this.load.isLoading?.())return;
+      while(this.terrainMaterialQueue.length){
+        const id=this.terrainMaterialQueue.shift();
+        if(this.terrainMaterialIds.has(id)||this.terrainMaterialFailed.has(id))continue;
+        this.terrainMaterialLoading.add(id);
+        this.load.image('terrain-source-'+id,
+          'assets/visuals/terrain/'+BIOME_TERRAIN_FILES[id]);
+        this.load.once('complete',()=>{
+          this.terrainMaterialLoading.delete(id);
+          if(!this.bakeTerrainMaterial(id))this.terrainMaterialFailed.add(id);
+          this.drawScene?.();
+          this.pumpTerrainMaterialLoads();
+        });
+        this.load.start();
+        return;
+      }
+    }
+    terrainBiomeWeights(meters){
+      const art=scope.GRIM_WORLD_ART;
+      if(!art?.biomeWeights)return {forest:1};
+      if(!this.hasTeleported&&meters>=5000)return {tundra:1};
+      return art.biomeWeights(meters);
+    }
+    terrainTextureView(key,textureKey){
+      let view=this.terrainTextureViews.get(key);
+      if(view)return view;
+      if(!this.add?.tileSprite||!this.make?.graphics)return null;
+      const sprite=this.add.tileSprite(0,0,1,1,textureKey);
+      const maskGraphics=this.make.graphics({x:0,y:0,add:false});
+      const mask=maskGraphics.createGeometryMask();
+      sprite.setOrigin(0,0).setDepth(1).setMask(mask).setVisible(false);
+      view={sprite,maskGraphics,mask};
+      this.terrainTextureViews.set(key,view);
+      return view;
+    }
+    drawTerrainTexture(section,from,to,h0,h1,underside,depth,meters,activeKeys){
+      if(!this.terrainBase||!this.add?.tileSprite||!this.make?.graphics)return;
+      const weights=this.terrainBiomeWeights(meters);
+      const active=Object.entries(weights).filter(([,weight])=>weight>.003)
+        .sort((a,b)=>TERRAIN_BIOME_ORDER.indexOf(a[0])-TERRAIN_BIOME_ORDER.indexOf(b[0]));
+      if(!active.length)return;
+      for(const [id] of active)this.requestTerrainMaterial(id);
+      // Keep the palette crossfade coherent: wait until both adjoining tiles
+      // are ready, then composite the newer tile over the older one by weight.
+      if(active.some(([id])=>!this.terrainMaterialIds.has(id)))return;
+      const sectionKey=[section.kind,section.start,section.end].join(':');
+      const points=[{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}];
+      for(let i=0;i<active.length;i++){
+        const [id,weight]=active[i],textureKey='terrain-material-'+id;
+        const key=sectionKey+':'+id,view=this.terrainTextureView(key,textureKey);
+        if(!view)continue;
+        activeKeys.add(key);
+        const {sprite,maskGraphics}=view;
+        maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);maskGraphics.fillPoints(points,true);
+        sprite.setTexture(textureKey).setPosition(from,0).setSize(Math.max(1,to-from),depth);
+        sprite.setTileScale(TERRAIN_TILE_SCALE,TERRAIN_TILE_SCALE);
+        sprite.setTilePosition(from,0).setAlpha(active.length===1||i===0?1:weight);
+        sprite.setDepth(1+i*.001).setVisible(true);
+      }
+    }
+    pruneTerrainTextureViews(activeKeys){
+      if(!this.terrainTextureViews)return;
+      for(const [key,view] of this.terrainTextureViews){
+        if(activeKeys.has(key))continue;
+        view.sprite.clearMask?.();view.sprite.destroy();view.mask.destroy();view.maskGraphics.destroy();
+        this.terrainTextureViews.delete(key);
+      }
+    }
+    destroyTerrainTextureViews(){
+      if(!this.terrainTextureViews)return;
+      for(const view of this.terrainTextureViews.values()){
+        view.sprite.clearMask?.();view.sprite.destroy();view.mask.destroy();view.maskGraphics.destroy();
+      }
+      this.terrainTextureViews.clear();
+    }
     groundPalette(m) {
       const blend=(a,b,t)=>{
         t=clamp(t,0,1);
@@ -3356,6 +3477,9 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawGround(){
       const g=this.world;g.clear();
+      const base=this.terrainBase||g;
+      if(base!==g)base.clear();
+      const activeTerrainViews=new Set();
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const depth=Math.max(this.groundY+this.height+500,this.cameraY+this.height+1100);
       const sections=this.terrain.visibleSections(left,right);
@@ -3364,9 +3488,9 @@ window.GRIM_CONFIG = Object.freeze({
         if(group.endX<left||group.startX>right)continue;
         if((group.startX-startX)/C.pxPerMeter>=8000){
           const lavaY=this.terrain.anchorAt(group.startX)-5;
-          g.fillStyle(0xb92e17,.96);g.fillRect(group.startX,lavaY,group.endX-group.startX,depth-lavaY+200);
-          g.lineStyle(5,0xff9032,.94);g.lineBetween(group.startX,lavaY,group.endX,lavaY);
-        }else g.fillStyle(0x190c2a,.58),g.fillRect(group.startX,this.groundY+36,group.endX-group.startX,depth);
+          base.fillStyle(0xb92e17,.96);base.fillRect(group.startX,lavaY,group.endX-group.startX,depth-lavaY+200);
+          base.lineStyle(5,0xff9032,.94);base.lineBetween(group.startX,lavaY,group.endX,lavaY);
+        }else base.fillStyle(0x190c2a,.58),base.fillRect(group.startX,this.groundY+36,group.endX-group.startX,depth);
       }
       for(const section of sections){
         if(section.kind==='gap')continue;
@@ -3389,8 +3513,9 @@ window.GRIM_CONFIG = Object.freeze({
           :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette()
           :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
         const underside=section.kind==='platform'?Math.max(h0,h1)+68:depth;
-        g.fillStyle(body);
-        g.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
+        base.fillStyle(body);
+        base.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
+        this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews);
         if(section.kind==='rubble'){
           g.fillStyle(0x77716b,.8);
           for(let x=from+7;x<to-9;x+=24)g.fillTriangle(x,h0+3,x+12,h0-8-(x%5),x+22,h0+3);
@@ -3430,7 +3555,11 @@ window.GRIM_CONFIG = Object.freeze({
       // Lightweight one-way ledges; only top surfaces catch a falling player.
       for(const plat of this.soulPlatform||[]){
         if(plat.x+plat.width<left||plat.x>right)continue;
-        g.fillStyle(plat.biome==='hell'?0x4a2727:0x213840,.93);g.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
+        base.fillStyle(plat.biome==='hell'?0x4a2727:0x213840,.93);base.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
+        const platformSection={kind:'soul-platform',start:plat.x,end:plat.x+plat.width};
+        const platformMeters=(plat.x+plat.width/2-this.startX)/C.pxPerMeter;
+        this.drawTerrainTexture(platformSection,plat.x,plat.x+plat.width,plat.y,plat.y,
+          plat.y+11,depth,platformMeters,activeTerrainViews);
         g.lineStyle(5,plat.biome==='hell'?0xf4a16b:0xb4ddca,.99);g.lineBetween(plat.x,plat.y,plat.x+plat.width,plat.y);
         g.lineStyle(2,0x6ca99d,.7);
         for(let x=plat.x+20;x<plat.x+plat.width-8;x+=37)g.lineBetween(x,plat.y+6,x+12,plat.y+10);
@@ -3444,6 +3573,7 @@ window.GRIM_CONFIG = Object.freeze({
           if(y!==null)g.lineBetween(x,y+10,x+3,y+29);
         }
       }
+      this.pruneTerrainTextureViews(activeTerrainViews);
     }
     drawCoin(c) {
       const g=this.world;

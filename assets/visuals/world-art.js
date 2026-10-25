@@ -1,4 +1,4 @@
-/* Grim Run — Biome Transitions and Ground Art, v0.11.10
+/* Grim Run — Biome Transitions and Ground Art, v0.12.0
  * Backgrounds use the approved biome images; these helpers draw only ground details.
  */
 (function(scope){
