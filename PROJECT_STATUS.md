@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering, and Pages deployment passed for the Bone Crawler direction correction on October 24, 2026. User phone review is pending. Verification is pending for the v0.10.14 Ember Imp review build. Both enemy reviews remain opt-in at `?enemyReview=bone-crawler` and `?enemyReview=ember-imp`.
+**Verification:** The Bone Crawler direction review passed regression, exact PNG integrity, phone-sized Chromium/Phaser rendering, and Pages deployment on October 24, 2026. The Ember Imp review passed regression, exact PNG integrity, 950 × 430 Chromium/Phaser rendering, and Pages deployment on October 25, 2026. User phone review is pending for both. Both enemy reviews remain opt-in at `?enemyReview=bone-crawler` and `?enemyReview=ember-imp`.
 
 ## Remaining enemy sprite phase
 
@@ -68,7 +68,7 @@ The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October
 - Added a six-pose transparent Ember Imp atlas: four running poses, fire warning, and release. Running poses face right; attack poses turn toward the Reaper.
 - The art remains opt-in at `?enemyReview=ember-imp`. A missing or invalid atlas retains the procedural Imp.
 - The 55px art target is aligned to the existing ground position. HP, 38×42 hitbox, movement, 470ms warning, fireball launch/cooldown, and projectile rendering remain unchanged.
-- **Verification:** Pending regression, exact PNG integrity, actual phone-sized Chromium/Phaser rendering, and Pages deployment.
+- **Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering of all six poses, and Pages deployment passed on October 25, 2026. User phone review is pending.
 
 ## v0.10.8 — Reaper Run Cycle Rework
 
