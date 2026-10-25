@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The v0.10.15 combined route passed regression, PNG integrity, 950 × 430 Chromium rendering of both sprites, and Pages deployment; the user approved the enemy art. v0.11.0 local gameplay checks pass, with full-repository CI, phone-sized Chromium rendering and Pages deployment pending.
+**Verification:** The v0.10.15 combined route passed regression, PNG integrity, 950 × 430 Chromium rendering of both sprites, and Pages deployment; the user approved the enemy art. v0.11.0 passed the full-repository regression suite, PNG asset integrity, 950 × 430 real-Chromium rendering and Pages deployment. The opening forest art remains opt-in while phone review is pending.
 
 ## Completed enemy sprite phase
 
