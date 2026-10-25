@@ -1,22 +1,22 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.15 — *Combined Enemy Art Review*. Current development phase: opt-in art review for remaining enemy sprites.
+**Current build:** v0.11.0 — *Opening Forest Art Review*. Current development phase: opt-in art review for the opening forest background and ground.
 
-The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October 24, 2026. Their art, timing, scale and collision behavior stay unchanged during the remaining enemy-sprite phase.
+The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.10.15 — *Combined Enemy Art Review*  
+**Release:** v0.11.0 — *Opening Forest Art Review*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The Bone Crawler direction review passed regression, exact PNG integrity, phone-sized Chromium/Phaser rendering, and Pages deployment on October 24, 2026. The Ember Imp review passed regression, exact PNG integrity, 950 × 430 Chromium/Phaser rendering, and Pages deployment on October 25, 2026. Combined-route verification is pending. User phone review is pending for both. Individual art remains opt-in at `?enemyReview=bone-crawler` and `?enemyReview=ember-imp`; `?enemyReview=both` enables both for one run.
+**Verification:** The v0.10.15 combined route passed regression, PNG integrity, 950 × 430 Chromium rendering of both sprites, and Pages deployment; the user approved the enemy art. v0.11.0 local gameplay checks pass, with full-repository CI, phone-sized Chromium rendering and Pages deployment pending.
 
-## Remaining enemy sprite phase
+## Completed enemy sprite phase
 
 - **Skeletal Bat:** approved eight-frame art set in `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, now the default. Its visible target is about 58px, slightly larger than the regular Cavern Bat's 52px target.
 - The atlas covers four flap poses, the existing dive tell and dive, hit recoil, and defeat. Its 2 HP, flight/dive behavior, telegraph timing, collision box and procedural fallback are unchanged.
-- **Bone Crawler:** four crawl poses are opt-in at `?enemyReview=bone-crawler` or alongside the Imp at `?enemyReview=both`. The user approved the 2.5× scale and 95×105 hitbox; the runtime mirrors its art to face right. Its one HP, ground movement, ledge stopping, spawn schedule and attack logic are unchanged.
-- **Ember Imp:** six poses are opt-in at `?enemyReview=ember-imp` or alongside the Crawler at `?enemyReview=both`: four right-facing run poses at 8fps, a fire-warning pose and a short release pose. The visible target is about 55px tall with one shared foot line. Its 2 HP, 38×42 hitbox, movement, warning and fireball behavior are unchanged; the projectile remains a separate effect.
-- **Next:** phone-review the Bone Crawler and Ember Imp art. Begin v0.11 World & Atmosphere only after the enemy-sprite phase.
+- **Bone Crawler:** four accepted crawl poses now render by default. The user approved the 2.5× scale and 95×105 hitbox; the runtime mirrors its art to face right. Its one HP, ground movement, ledge stopping, spawn schedule and attack logic are unchanged.
+- **Ember Imp:** six accepted poses now render by default: four right-facing run poses at 8fps, a fire-warning pose and a short release pose. The visible target is about 55px tall with one shared foot line. Its 2 HP, 38×42 hitbox, movement, warning and fireball behavior are unchanged; the projectile remains a separate effect.
+- **Next:** phone-review the opening forest art, then continue the World & Atmosphere pass through biome transitions, scenery, vendors and portal presentation.
 
 ## Main Reaper motion cycle v4
 
@@ -72,8 +72,17 @@ The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October
 
 ## v0.10.15 — Combined Enemy Art Review
 
-- Added `?enemyReview=both` so the Bone Crawler and Ember Imp art can render together in the same run. Their individual opt-in links still work, and both retain their procedural fallback outside review.
-- **Verification:** Pending combined-route Chromium coverage and deployment. Gameplay and collision behavior are unchanged.
+- Added `?enemyReview=both` so the Bone Crawler and Ember Imp art can render together in the same run. Their individual review aliases remain available, and both retain their procedural fallback.
+- **Verification:** Combined-route regression, exact PNG integrity, 950 × 430 Chromium rendering of both sprites together, and Pages deployment passed. The user approved both sprites for default play. Gameplay and collision behavior are unchanged.
+
+## v0.11.0 — Opening Forest Art Review
+
+- Added a layered illustrated forest background with moonlight, distant ridgelines, three parallax pine layers, low mist and restrained fireflies.
+- Added muted moss along the ground edge and fine stone, root and soil-strata details. The review route applies these drawings only through the opening 1,200m.
+- `?worldReview=opening` enables the preview. Outside that route, the existing world renderer remains active until the new art is approved.
+- Promoted the accepted Bone Crawler and Ember Imp illustrations to the default game. Their procedural fallbacks remain available if an art file fails to load.
+- Terrain, collision, enemy behavior, controls, progression, vendors and portal logic are unchanged.
+- **Verification:** Local regression and the focused Bone Crawler/Ember Imp PNG integrity checks pass. Full-repository regression, 950 × 430 Chromium rendering and Pages deployment are pending. Phone review remains pending.
 
 ## v0.10.8 — Reaper Run Cycle Rework
 
@@ -391,7 +400,7 @@ This is the fourth permanent tree, joining Boneheart, Grave Wealth and Death's L
 
 ## Next steps
 
-Next: finish the remaining enemy sprites, then begin v0.11 World & Atmosphere.
+Next: review the opening forest background and ground at landscape phone size, then continue through the remaining World & Atmosphere regions.
 
 ## Source and backups
 
