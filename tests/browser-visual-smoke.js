@@ -563,6 +563,20 @@ const server=http.createServer((req,res)=>{
       scene.drawScene();game.step(performance.now(),0);
       return ground;
     },meters);
+    const materialDebug=await skeletalPage.evaluate(id=>{
+      const scene=window.grimRun.scene.scenes[0],sections=scene.terrain.visibleSections(
+        scene.cameraX-140,scene.cameraX+scene.width+170);
+      return {id,distance:scene.distance,state:scene.state,
+        ids:[...scene.terrainMaterialIds],queue:scene.terrainMaterialQueue,
+        loading:[...scene.terrainMaterialLoading],failed:[...scene.terrainMaterialFailed],
+        source:scene.textures.exists('terrain-source-'+id),
+        texture:scene.textures.exists('terrain-material-'+id),
+        addTileSprite:typeof scene.add.tileSprite,makeGraphics:typeof scene.make.graphics,
+        base:Boolean(scene.terrainBase),sections:sections.map(s=>s.kind),
+        views:[...scene.terrainTextureViews].map(([key,view])=>({key,visible:view.sprite.visible,
+          texture:view.sprite.texture?.key}))};
+    },biome);
+    console.log('Terrain renderer state before wait: '+JSON.stringify(materialDebug));
     await skeletalPage.waitForFunction(id=>{
       const scene=window.grimRun?.scene?.scenes?.[0];
       return scene?.terrainMaterialIds?.has(id)&&
