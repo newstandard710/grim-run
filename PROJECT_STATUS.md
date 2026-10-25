@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.13 — *Moving Floor*. Sparse, irregular surface accents now travel with the terrain beneath the Reaper while the approved biome paintings remain visible.
+**Current build:** v0.11.14 — *Grounded Terrain*. Approved foreground details now move with the solid gameplay terrain, clipped to its hills and slopes.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.13 — *Moving Floor*  
+**Release:** v0.11.14 — *Grounded Terrain*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** v0.11.13 is ready for phone review of moving floor detail across flat ground, hills, gaps and one-way platforms. This update changes presentation only: terrain generation, heights and collision geometry remain unchanged. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Local regression and real-Chromium terrain rendering checks are pending. Android device review remains necessary. This update changes presentation only: terrain generation, heights and collision geometry remain unchanged. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.14 — Grounded Terrain
+
+- Removed the stationary foreground floor from the playable visual read by making the terrain body fully opaque beneath the running surface.
+- Reused each approved biome painting's foreground as four soft-edged detail sprites. Irregular, seeded placements stay in world coordinates, scroll with the terrain, and fade with each biome.
+- Clipped foreground sprites to the existing solid terrain surface band. Gaps and separate platform tops remain clear; hill and slope contours remain visible above the art.
+- Kept the full biome paintings on their existing slow parallax layer. No repeating ground tiles, terrain generation, ground heights, collision shapes, hazards or gameplay timing changed.
 
 ## v0.11.13 — Moving Floor
 
