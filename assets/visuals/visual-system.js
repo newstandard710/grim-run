@@ -1,4 +1,4 @@
-/* Grim Run — Macabre Storybook visual system, v0.10.12 review build
+/* Grim Run — Macabre Storybook visual system, v0.10.13 review build
  * The legacy SVG atlas remains available as an experimental option. The
  * illustrated runtime uses anchored PNG poses and short Reaper/Bat cycles.
  * No player movement, collision-box, currency or progression changes.
@@ -649,7 +649,7 @@
           const index=Math.floor(now*V2_BONE_CRAWLER_FPS+(e.phase||0))%frames.length;
           const meta=frames[index],sprite=this.boneCrawlerPool[used++];
           sprite.setTexture(meta.key).setOrigin(meta.origin[0],meta.origin[1])
-            .setScale(meta.scale).setPosition(e.x,e.y).setVisible(true)
+            .setScale(meta.scale).setPosition(e.x,e.y).setFlipX(true).setVisible(true)
             .setAlpha(1).setRotation(0);
         }
       }

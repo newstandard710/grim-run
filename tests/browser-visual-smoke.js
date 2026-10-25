@@ -291,11 +291,12 @@ const server=http.createServer((req,res)=>{
       groundY:ground,hitbox:window.GRIM_COMBAT.rectFor(enemy),
       screenX:Math.round(enemy.x-s.cameraX-sprite.displayWidth*.5),
       screenY:Math.round(enemy.y-sprite.displayHeight*.5),scale:sprite.scaleX,
-      expectedScale:meta.scale};
+      expectedScale:meta.scale,flipX:sprite.flipX};
   });
   assert.equal(crawlerRect.frame,'gr_v2_crawler_crawl_01');
   assert.equal(crawlerRect.visible,true);assert.equal(crawlerRect.x,crawlerRect.enemyX);
   assert.equal(crawlerRect.y,crawlerRect.enemyY);
+  assert.equal(crawlerRect.flipX,true,'Bone Crawler art faces right, in its direction of travel');
   assert.ok(Math.abs(crawlerRect.scale-crawlerRect.expectedScale)<.00001);
   assert.ok(crawlerRect.displayWidth>137&&crawlerRect.displayWidth<141);
   assert.ok(crawlerRect.displayHeight>99&&crawlerRect.displayHeight<101);
@@ -587,7 +588,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.12 Reaper/Bat/Skeletal Bat defaults, opt-in Bone Crawler 2.5x art/hitbox four-pose phone render, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.10.13 Reaper/Bat/Skeletal Bat defaults, opt-in right-facing Bone Crawler 2.5x art/hitbox four-pose phone render, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
