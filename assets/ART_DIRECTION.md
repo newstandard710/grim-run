@@ -40,7 +40,18 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - The accepted foothills art is the default. Existing terrain, ground heights, collision shapes, object placement and enemy behavior remain unchanged.
 - Preview the Tundra mountain ascent through `?worldReview=tundra` from 1,900–3,400m. Keep the 2,000–3,000m ridges broad and visibly rooted in the horizon; every snow cap must share its mountain's apex and stay within the rock face. Avoid detached peaks or snow fragments that read as floating.
 - Layer distant ranges, exposed rock faces, restrained frost, a sparse treeline that fades with altitude, and thin windblown snow well away from the play surface. Keep backgrounds and ground texture below foreground sprites and preserve a readable contrast with enemy and hazard cues.
-- Review Tundra on a landscape phone before promotion. Continue with the 3,000–5,000m summit/stars, then Ashlands preview, scenery, vendors and portal.
+- Keep the 3,000–5,000m summit/stars treatment in the existing ascent. The user approved the complete post-portal concept set below for implementation as one world-art update.
+
+## Underworld Biomes
+
+- **5,000–6,000m — Underground Caves:** enclosed natural rock caverns with layered arches and stalactites.
+- **6,000–7,000m — Deep Underground:** large cyan and violet crystal formations in deep rock.
+- **7,000–8,000m — Ashlands:** charred basalt, dead trees, ash and ember seams; entirely underground with no visible sky, moon or moonlight.
+- **8,000–9,999m — Lava:** active molten channels and falls over dark volcanic rock.
+- **9,999–20,000m — Boss Biome:** a gothic Underworld castle framed by cavern walls, lava, chains and hanging skeletons.
+- Use each approved concept PNG as the visual source for the in-game backdrop. Adapt the wide art into moving background layers, add controlled seeded scenery variation and subtle ambient motion, and crossfade neighboring biomes over short distance bands.
+- Pair each backdrop with a matching ground palette and restrained surface detail. Keep terrain geometry, collision, hazards, enemy behavior, controls and the existing 9,999m normal victory unchanged.
+- God Mode may continue beyond the normal finish through the Boss Biome, with teleport access through 20,000m. Preserve safe ground and the Boss Biome presentation beyond 20,000m for continued God Mode exploration.
 
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.

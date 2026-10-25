@@ -1,14 +1,22 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.2 — *Tundra Art Review*. Forest and foothills art are accepted defaults; the Tundra mountain ascent is in phone review.
+**Current build:** v0.11.3 — *Underworld Biome Expansion*. The five approved post-portal concepts are integrated as layered moving scenery; God Mode can explore beyond the normal finish.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.2 — *Tundra Art Review*  
+**Release:** v0.11.3 — *Underworld Biome Expansion*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** v0.11.2 review build and CI checks are pending. The user approved the foothills and requested a grounded snowline treatment; this preview anchors snow caps directly to mountain ridgelines. Gameplay and collision remain unchanged.
+**Verification:** Awaiting landscape phone review of the five Underworld regions and their transitions. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m. Terrain and collision rules are unchanged.
+
+## v0.11.3 — Underworld Biome Expansion
+
+- Added the approved concepts as game backdrops for 5,000–6,000m Underground Caves, 6,000–7,000m Deep Underground crystals, 7,000–8,000m skyless Ashlands, 8,000–9,999m Lava, and 9,999–20,000m Boss Biome.
+- Backdrops drift at a restrained rate and crossfade through overlapping distance bands. Distinct parallax silhouettes, ambient particles and ground palettes add movement and variation while keeping the play lane readable.
+- God Mode bypasses the 9,999m victory trigger, can continue through the Boss Biome, and can teleport from 500m to 20,000m in 500m steps. The normal finish remains 9,999m; travel beyond it is excluded from personal-best recording.
+- Terrain extends ahead on demand for God Mode travel. After 20,000m, the Boss Biome presentation and safe ground continue for exploration.
+- **Next:** phone review the portal arrival, biome boundaries, crystal/ash/lava/castle visibility, God Mode travel beyond the finish, and normal 9,999m completion.
 
 ## Completed enemy sprite phase
 

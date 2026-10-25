@@ -273,10 +273,10 @@ button {cursor:pointer;}
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1>GRIM <em>RUN</em></h1>
-      <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
+      <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.2 · TUNDRA ART REVIEW</div>
+      <div class="mini">v0.11.3 · UNDERWORLD BIOMES</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -319,10 +319,10 @@ button {cursor:pointer;}
   <div id="pause-screen" class="modal-wrap hidden">
     <div class="modal compact"><h2>PAUSED</h2><p>The Underworld can wait.</p>
       <label class="god-mode-setting"><input id="god-mode-checkbox" type="checkbox"><span> GOD MODE — INVINCIBLE</span></label>
-      <p class="god-mode-desc">Playtest only: invincibility, max-level Rewind, half-speed gameplay, and distance teleport. Devil deals still cost HP.</p>
+      <p class="god-mode-desc">Playtest only: invincibility, max-level Rewind, half-speed gameplay, and distance teleport up to 20,000m. God Mode lets you run past the 9,999m finish.</p>
       <div id="god-teleport-panel" class="god-teleport-panel hidden">
         <label for="god-teleport-range">TEST TELEPORT <strong id="god-teleport-value">5,000M</strong></label>
-        <input id="god-teleport-range" type="range" min="500" max="9500" step="500" value="5000" aria-label="Select destination in 500m increments">
+        <input id="god-teleport-range" type="range" min="500" max="20000" step="500" value="5000" aria-label="Select destination in 500m increments">
         <div class="teleport-controls">
           <button id="god-teleport-minus" class="secondary" aria-label="500 meters earlier">−500M</button>
           <button id="god-teleport-confirm-open" class="secondary">TELEPORT ▶</button>
@@ -412,6 +412,7 @@ window.GRIM_CONFIG = Object.freeze({
   firstEncounterX: 1000,
   vendorEveryMeters: 666,
   finishMeters: 9999,
+  worldArtEndMeters: 20000,
   soulAtMeters: 4856,
   finalSoulMeters: 9500,
   goldPerInterval: 7,
@@ -892,7 +893,7 @@ window.GRIM_CONFIG = Object.freeze({
   const lerp=(a,b,t)=>a+(b-a)*t;
   // Elevation milestones are cumulative heights measured relative to the initial ground.
   const SURFACE_PROFILE=[[0,0],[1000,-85],[2000,-730],[3000,-1550],[4000,-2470],[5000,-3420]];
-  const CAVERN_PROFILE=[[5000,185],[5300,580],[6000,1820],[6666,2700],[7300,3470],[8000,4300],[8800,5450],[9999,6850],[10200,6850]];
+  const CAVERN_PROFILE=[[5000,185],[5300,580],[6000,1820],[6666,2700],[7300,3470],[8000,4300],[8800,5450],[9999,6850],[12000,8050],[16000,10300],[20000,12600]];
   function interpolateProfile(points,m){
     if(m<=points[0][0])return points[0][1];
     for(let i=1;i<points.length;i++)if(m<=points[i][0]){
@@ -909,6 +910,8 @@ window.GRIM_CONFIG = Object.freeze({
     const segments=[],sequences=[];
     const portalX=startX+5000*pxPerMeter;
     const finishX=startX+9999*pxPerMeter;
+    const worldEndMeters=scope.GRIM_CONFIG?.worldArtEndMeters||20000;
+    const worldEndX=startX+worldEndMeters*pxPerMeter;
     let cursor=startX-2600,elevation=baseY,groupsMade=0,nextGapMeters=766;
     const meters=x=>(x-startX)/pxPerMeter;
     const isCavern=x=>x>=portalX;
@@ -944,12 +947,13 @@ window.GRIM_CONFIG = Object.freeze({
     }
     function allowedAt(m,group){
       const p=plan(group,m),lengthMeters=(p.length+420)/pxPerMeter;
-      if(m>9980)return false;
-      // Never let a sequence cross the teleporter or the finish.
+      if(m>worldEndMeters-20)return false;
+      // Never let a sequence cross the teleporter or the extended world end.
       if(m<5000 && m+lengthMeters>4730)return false;
       if(m<9690 && m+lengthMeters>9320)return false; // second Soul's uninterrupted underpass
       if(m>=5000 && m<5105)return false;
-      if(m+lengthMeters>9950)return false;
+      if(m<10050&&m+lengthMeters>9950)return false; // Keep the normal finish approach safely supported.
+      if(m+lengthMeters>worldEndMeters-50)return false;
       // No pre-vendor exclusion. Gap groups cannot intersect the 50m
       // post-vendor safe corridor; the sequence includes its landing runway.
       for(let k=1;k<=14;k++){
@@ -963,9 +967,10 @@ window.GRIM_CONFIG = Object.freeze({
       for(let i=0;i<400;i++,m+=5){
         if(m>=4730 && m<5105)m=5105;
         if(m>=9320 && m<9690)m=9690;
+        if(m>=9950 && m<10050)m=10050;
         if(allowedAt(m,group))return m;
       }
-      return Infinity; // Near the 9,999m finish, leave safe ground.
+      return Infinity; // Near the 20,000m world-art end, leave safe ground.
     }
     function addHillsUntil(target,prepareTakeoff=false){
       while(cursor<target-.01){
@@ -1047,7 +1052,7 @@ window.GRIM_CONFIG = Object.freeze({
     function advance(minX){
       // Generate in meaningful chunks. Previously tiny advances every frame
       // produced a new flat segment, accidentally flattening nearly the ENTIRE map.
-      const bound=Math.min(Math.max(minX,cursor+1750),finishX+1000);
+      const bound=Math.max(minX,cursor+1750);
       let watchdog=0;
       while(cursor<bound && watchdog++<20000){
         if(cursor>=portalX-0.01 && cursor<portalX+200){makePortalBoundary();continue;}
@@ -1058,23 +1063,23 @@ window.GRIM_CONFIG = Object.freeze({
           const until=Math.min(bound,portalX);
           addHillsUntil(until,until===portalX);continue;
         }
-        if(nextX>cursor+.01 && nextX<finishX && ((nextX<portalX)===(cursor<portalX))){
+        if(nextX>cursor+.01 && nextX<worldEndX && ((nextX<portalX)===(cursor<portalX))){
           const until=Math.min(bound,nextX,cursor<portalX?portalX:Infinity);
           addHillsUntil(until,until===nextX);
-        } else if(Math.abs(cursor-nextX)<.01 && nextGapMeters<9910 && allowedAt(nextGapMeters,groupsMade)){
+        } else if(Math.abs(cursor-nextX)<.01 && nextGapMeters<worldEndMeters-90 && allowedAt(nextGapMeters,groupsMade)){
           addSequence(groupsMade);groupsMade++;
           let nominal;
           if(groupsMade===1)nominal=940;
           else if(groupsMade===2)nominal=1170;
           else {
-            // Between 1,300 and 9,999m sequences come closer together,
-            // while safe soul zones and portal/finish boundaries win.
+            // Gap groups continue through the Boss Biome; safe Soul and portal
+            // zones remain reserved, while normal victory still occurs at 9,999m.
             const spacing=Math.max(nextGapMeters>=8000?78:100,198-Math.max(0,nextGapMeters-1250)*.018);
             nominal=Math.max(nextGapMeters+spacing, meters(cursor)+75);
           }
           nextGapMeters=nextPosition(nominal,groupsMade);
         } else {
-          addHillsUntil(Math.min(bound,cursor+900, cursor<portalX?portalX:finishX+1000));
+          addHillsUntil(Math.min(bound,cursor+900,cursor<portalX?portalX:Infinity));
         }
         if(!Number.isFinite(nextGapMeters))nextGapMeters=Infinity;
       }
@@ -1106,7 +1111,7 @@ window.GRIM_CONFIG = Object.freeze({
     function groupNear(x){advance(x+1100);return sequences.find(s=>x>=s.startX-100&&x<=s.endX+320)||null;}
     function canPlace(x,width=200){
       advance(x+Math.max(650,width+20));
-      if(x+width>finishX)return false;
+      if(x+width>worldEndX)return false;
       // Prevent obstacles hanging into the unsupported edge of a gap group.
       // This is geometry clearance only, never a generic milestone exclusion.
       if(sequences.some(s=>x+width>s.startX-85&&x<s.endX+75))return false;
@@ -1115,12 +1120,12 @@ window.GRIM_CONFIG = Object.freeze({
     }
     function visibleSections(from,to){advance(to+60);return segments.filter(s=>s.end>=from&&s.start<=to);}
     function shiftY(dy){elevation+=dy;baseY+=dy;for(const s of segments){s.y0+=dy;s.y1+=dy;}for(const seq of sequences)seq.initialY+=dy;}
-    // The full 9,999m world is small enough to generate once. This also
-    // makes seeded terrain identical regardless of frame rate or camera calls.
+    // Build the normal run at startup; God Mode extends terrain ahead on demand
+    // through the full Boss Biome. Seeded terrain stays independent of frame rate.
     advance(finishX+1000);
     return {segments,sequences,groundAt,fillGaps,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
       get firstGapX(){return startX+766*pxPerMeter;},get portalX(){return portalX;},get portalExitX(){return portalX+310;},
-      get finishX(){return finishX;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
+      get finishX(){return finishX;},get worldEndX(){return worldEndX;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
   }
   scope.GRIM_TERRAIN={makeTerrain,SURFACE_PROFILE,CAVERN_PROFILE};
 })(typeof window!=='undefined'?window:globalThis);
@@ -1254,7 +1259,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('practice-slow-btn').title=on?'Return to normal speed':'Slow game to 50%';
     }
     updateTeleportValue(value){
-      const rounded=Math.max(500,Math.min(9500,Math.round((Number(value)||500)/500)*500));
+      const rounded=Math.max(500,Math.min(20000,Math.round((Number(value)||500)/500)*500));
       el('god-teleport-range').value=String(rounded);
       el('god-teleport-value').textContent=rounded.toLocaleString()+'M';
     }
@@ -1451,8 +1456,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.2-tundra-review-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.2-tundra-review-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.3-underworld-biomes-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.11.3-underworld-biomes-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1469,6 +1474,16 @@ window.GRIM_CONFIG = Object.freeze({
 
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
+    preload(){
+      const files=[
+        ['caves','underground-caves.webp'],
+        ['crystals','deep-underground.webp'],
+        ['ashlands','ashlands.webp'],
+        ['lava','lava.webp'],
+        ['boss','boss-castle.webp']
+      ];
+      for(const [id,file] of files)this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
+    }
     create() {
       this.width = this.scale.width;
       this.height = this.scale.height;
@@ -1485,6 +1500,16 @@ window.GRIM_CONFIG = Object.freeze({
         rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
         kills:0,byKind:{}};
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
+      this.biomeBackdrops={};
+      for(const biome of scope.GRIM_WORLD_ART?.UNDERWORLD_BIOMES||[]){
+        const key='biome-'+biome.id;
+        if(!this.textures.exists(key))continue;
+        this.biomeBackdrops[biome.id]=this.add.image(this.width*.5,this.height*.5,key)
+          .setOrigin(.5).setScrollFactor(0).setDepth(-30+biome.start/100000)
+          .setAlpha(0).setVisible(false);
+      }
+      this.biomeBackdropReady=Object.keys(this.biomeBackdrops).length===5;
+      this.resizeBiomeBackdrops();
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
       this.actor = this.add.graphics().setDepth(14);
@@ -1514,7 +1539,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorType=null;this.vendorPhase='deal';
       this.soulPlatform=null;
       this.totalSouls=0;
-      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.pendingTeleport=null;
+      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
       this.distance = 0;
       this.points = 0;
       this.powerManager = Powers.makePowerManager();
@@ -1637,7 +1662,7 @@ window.GRIM_CONFIG = Object.freeze({
     askTeleport(value){
       if(!this.godMode||this.state!=='paused')return false;
       const d=Number(value);
-      if(!Number.isFinite(d)||d<500||d>9500||d%500!==0)return false;
+      if(!Number.isFinite(d)||d<500||d>20000||d%500!==0)return false;
       this.pendingTeleport=d;
       this.state='teleportConfirm';
       this.ui.teleportConfirmation(d);
@@ -1658,7 +1683,7 @@ window.GRIM_CONFIG = Object.freeze({
     teleportForTesting(meters){
       if(!this.godMode||this.state!=='teleportConfirm')return false;
       const d=Number(meters);
-      if(!Number.isFinite(d)||d<500||d>9500||d%500!==0)return false;
+      if(!Number.isFinite(d)||d<500||d>20000||d%500!==0)return false;
       const wanted=this.startX+d*C.pxPerMeter;
       // Procedural terrain is generated deterministically for the whole world.
       // At exactly 5000m the canonical portal destination begins at portalExitX.
@@ -1675,7 +1700,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Try the nearest clear solid runway, preferably forward of the marker.
       for(let i=1;y===null&&i<=72;i++){
         const forward=destination+i*18;
-        if(forward<this.terrain.finishX-160){const test=safeAt(forward);if(test!==null){x=forward;y=test;break;}}
+        if(forward<this.terrain.worldEndX-160){const test=safeAt(forward);if(test!==null){x=forward;y=test;break;}}
         const backward=destination-i*18;
         if(backward>this.startX+15&&((backward>=this.terrain.portalExitX)===(d>=5000))){
           const test=safeAt(backward);if(test!==null){x=backward;y=test;break;}
@@ -1684,6 +1709,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(y===null){this.state='paused';this.ui.setMode('paused');return false;}
       const p=this.player;
       this.teleportUsed=true;
+      if(d>C.finishMeters)this.godModePastFinish=true;
       this.resetRewindHistory();
       this.rewindTerrainBase=new Map();
       this.rewindPlayback=null;this.rewindFlashMs=0;this.ui.rewindFlash(false);
@@ -1732,6 +1758,7 @@ window.GRIM_CONFIG = Object.freeze({
       const previousY=this.groundY;
       this.width=size.width;this.height=size.height;
       this.groundY=Math.round(this.height*C.groundRatio);
+      this.resizeBiomeBackdrops();
       const dy=this.groundY-previousY;
       this.terrain.shiftY(dy);
       // Existing snapshots are screen-size specific; invalidate on rotation.
@@ -1971,7 +1998,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorType=null;this.vendorPhase='deal';
       this.soulPlatform=null;
       this.totalSouls=this.meta.souls;
-      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.pendingTeleport=null;
+      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
       for (const tip of this.tips) tip.label.destroy();
       this.tips = [];
       this.tipped = new Set();
@@ -2444,7 +2471,7 @@ window.GRIM_CONFIG = Object.freeze({
            !Core.intersectsVendorCorridor(x,width,this.startX,C.vendorEveryMeters,C.pxPerMeter) &&
            !Core.overlapsSoulPlatform(x,width,this.soulPlatform,30) &&
            Math.abs(x-this.terrain.portalX)>95 &&
-           x+width<this.terrain.finishX-80 &&
+           x+width<this.terrain.worldEndX-80 &&
            !this.obstacles.some(o=>!o.destroyed&&x<o.x+o.width+90&&x+width>o.x-90) &&
            !this.coins.some(c=>!c.taken&&c.x>x-40&&c.x<x+width+40)){
           this.placeEncounter(type,x);
@@ -2503,6 +2530,7 @@ window.GRIM_CONFIG = Object.freeze({
           if(this.goFlashMs===0)this.ui.hideCountdown();
         }
         this.distance = (p.x-this.startX)/C.pxPerMeter;
+        if(this.godMode&&this.distance>=C.finishMeters)this.godModePastFinish=true;
         this.speed = Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
         p.invulMs = Math.max(0,p.invulMs-frameMs);
         p.fireproofCooldownMs=Math.max(0,p.fireproofCooldownMs-frameMs);
@@ -2581,7 +2609,7 @@ window.GRIM_CONFIG = Object.freeze({
           this.enterUnderworld();this.drawScene();return;
         }
         // Run completion is a separate victory condition, never ordinary death.
-        if(this.hasTeleported && this.distance>=C.finishMeters){
+        if(this.hasTeleported && this.distance>=C.finishMeters&&!this.godMode){
           this.completeRun();this.drawScene();return;
         }
         const reachedVendor=Math.floor(this.distance/C.vendorEveryMeters);
@@ -2832,7 +2860,7 @@ window.GRIM_CONFIG = Object.freeze({
       // the world, or entered a vendor safety corridor. Nothing is created
       // beyond the visible right edge, so legitimate spawns aren't culled.
       this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-130&&
-        e.x<this.terrain.finishX+100&&
+        e.x<this.terrain.worldEndX+100&&
         !Core.intersectsVendorCorridor(e.x-22,44,this.startX,C.vendorEveryMeters,C.pxPerMeter));
       this.bullets=this.bullets.filter(b=>!b.dead);
       this.fireballs=this.fireballs.filter(b=>!b.dead&&
@@ -3013,7 +3041,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       let best=false;
       try{const key='grim-run-v03-best';const old=Number(localStorage.getItem(key)||0);
-        if(!this.teleportUsed&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}}
+        if(!this.teleportUsed&&!this.godModePastFinish&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}}
       catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
     }
@@ -3079,7 +3107,7 @@ window.GRIM_CONFIG = Object.freeze({
       let best=false;
       try{
         const key='grim-run-v03-best',old=Number(localStorage.getItem(key)||0);
-        if(!this.teleportUsed&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}
+        if(!this.teleportUsed&&!this.godModePastFinish&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}
       }catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,
         `${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),false);
@@ -3092,10 +3120,35 @@ window.GRIM_CONFIG = Object.freeze({
         this.particles.push({x,y,vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity-35,life,maxLife:life,color,radius:2+this.rng.next()*3});
       }
     }
+    resizeBiomeBackdrops(){
+      if(!this.biomeBackdrops)return;
+      const scale=Math.max(this.width/1536,this.height/864)*1.25;
+      for(const image of Object.values(this.biomeBackdrops))
+        image.setDisplaySize(1536*scale,864*scale);
+    }
+    updateBiomeBackdrops(){
+      if(!this.biomeBackdrops)return;
+      const worldArt=scope.GRIM_WORLD_ART;
+      const weights=this.hasTeleported&&worldArt?.underworldWeights
+        ?worldArt.underworldWeights(this.distance):{};
+      const biomes=worldArt?.UNDERWORLD_BIOMES||[];
+      for(let i=0;i<biomes.length;i++){
+        const biome=biomes[i],image=this.biomeBackdrops[biome.id];
+        if(!image)continue;
+        const alpha=weights[biome.id]||0;
+        if(alpha<=.003){image.setVisible(false);continue;}
+        const progress=clamp((this.distance-biome.start)/Math.max(1,biome.end-biome.start),0,1);
+        const drift=this.width*(.10*progress+Math.sin(this.elapsed*.12+i*1.7)*.004);
+        const float=Math.sin(this.elapsed*.20+i*1.9)*this.height*.003;
+        image.setPosition(this.width*.5-drift,this.height*.5+float);
+        image.setAlpha(alpha*.96).setVisible(true);
+      }
+    }
     drawScene() {
       if (!this.bg) return;
       const w=this.width,h=this.height,gy=this.groundY,g=this.bg;
       g.clear();
+      this.updateBiomeBackdrops();
       this.drawAtmosphere(g,w,h,gy);
       this.drawGround();
       this.drawPortals();
@@ -3111,6 +3164,11 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawAtmosphere(g,w,h,gy){
       const m=this.distance,underworld=this.hasTeleported;
+      if(underworld&&this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.drawUnderworldDetails){
+        const weights=scope.GRIM_WORLD_ART.underworldWeights(m);
+        scope.GRIM_WORLD_ART.drawUnderworldDetails(this,g,w,h,gy,weights);
+        return;
+      }
       if(!underworld&&scope.GRIM_WORLD_ART){
         if(this.tundraWorldArtReviewRequested&&m>=1900&&m<=3400&&
           scope.GRIM_WORLD_ART.drawTundra){
@@ -3349,10 +3407,12 @@ window.GRIM_CONFIG = Object.freeze({
           m>=900&&m<=2300&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
         const tundraWorldArt=this.tundraWorldArtReviewRequested&&!this.hasTeleported&&
           m>=1900&&m<=3400&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
+        const underworldWorldArt=this.hasTeleported&&m>=5000&&scope.GRIM_WORLD_ART?.underworldGroundPalette;
         const [body,edge,sheen,detail]=tundraWorldArt
           ?scope.GRIM_WORLD_ART.tundraGroundPalette(m)
           :foothillsWorldArt?scope.GRIM_WORLD_ART.foothillsGroundPalette(m)
-          :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette():this.groundPalette(m);
+          :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette()
+          :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
         const underside=section.kind==='platform'?Math.max(h0,h1)+68:depth;
         g.fillStyle(body);
         g.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
@@ -3363,7 +3423,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(section.kind==='platform'){
           g.lineStyle(3,detail,.6);g.lineBetween(from+5,underside-3,to-5,underside-3);
         }
-        const customWorldGround=openingWorldArt||foothillsWorldArt||tundraWorldArt;
+        const customWorldGround=openingWorldArt||foothillsWorldArt||tundraWorldArt||underworldWorldArt;
         g.lineStyle(customWorldGround?5:7,edge,customWorldGround?.9:.95);
         g.lineBetween(from,h0-2,to,h1-2);
         g.lineStyle(customWorldGround?2:3,sheen,customWorldGround?.42:.54);
@@ -3377,6 +3437,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(tundraWorldArt)scope.GRIM_WORLD_ART.drawTundraGround(this,g,from,to);
         else if(foothillsWorldArt)scope.GRIM_WORLD_ART.drawFoothillsGround(this,g,from,to);
         else if(openingWorldArt)scope.GRIM_WORLD_ART.drawOpeningGround(this,g,from,to);
+        else if(underworldWorldArt)scope.GRIM_WORLD_ART.drawUnderworldGround(this,g,from,to);
         else for(let x=Math.ceil(from/59)*59;x<to-5;x+=59){
           const y=this.terrain.groundAt(x);if(y===null)continue;
           const variation=(Math.sin(Math.floor(x/59)*12.8)+1)*.5;

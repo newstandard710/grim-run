@@ -2,12 +2,14 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.11.2 — Tundra Art Review**
+**Current playable build: v0.11.3 — Underworld Biome Expansion**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - The approved forest-to-foothills background and ground treatment is now the default from the opening through about 2,300m.
-- The next 1,900–3,400m stretch previews the Tundra mountain ascent, with snow caps joined to the mountain ridgelines and frost detail along the ground. Terrain, collision and gameplay stay unchanged.
-- [Open the Tundra phone-review build](https://newstandard710.github.io/grim-run/?worldReview=tundra).
+- The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
+- The new concept art is used as layered, gently drifting backdrops with biome crossfades, atmospheric details and matching ground treatments. The existing terrain and collision design stay intact.
+- Normal runs still finish at 9,999m. God Mode can continue past the finish and teleport in 500m steps through 20,000m.
+- [Open the game](https://newstandard710.github.io/grim-run/).
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -99,7 +101,7 @@ The approved illustrated Reaper and Cavern Bat became the default visual set, wi
 ## v0.10.2: God Mode Playtest Tools
 
 - **Half speed:** Enable God Mode in Pause, then toggle the **0.5× SPEED** button at bottom center. Slows gameplay physics, enemy/projectile movement, cooldowns and animation to half speed. Free, unlimited and instantly toggled. Turning off God Mode restores normal speed.
-- **Distance Teleport:** While God Mode is enabled, Pause displays a slider and buttons for **500m–9,500m in 500m steps**. Requires confirmation; cancelling remains paused; confirming places the Reaper on safe solid ground and resumes immediately **without a countdown**. Teleporting to 5,000m or beyond initializes the Underworld and Bone Crossbow, marks earlier vendors as passed and clears Rewind history. Skipped Souls/vendors give no rewards, and any Souls subsequently collected in a teleport-assisted test run are visual-only (not permanently banked).
+- **Distance Teleport:** While God Mode is enabled, Pause displays a slider and buttons for **500m–20,000m in 500m steps**. Requires confirmation; cancelling remains paused; confirming places the Reaper on safe solid ground and resumes immediately **without a countdown**. Teleporting to 5,000m or beyond initializes the Underworld and Bone Crossbow, marks earlier vendors as passed and clears Rewind history. Skipped Souls/vendors give no rewards, and any Souls subsequently collected in a teleport-assisted test run are visual-only (not permanently banked).
 - **Best-score protection:** Runs that use teleport cannot write a legitimate personal-best score.
 - **Visual-art safeguard:** The v0.10.1 painted-style SVG character art is not aesthetically accepted. Until an actual illustrated frame set passes gameplay-scale art review, the older procedural Reaper and Bat are the **default**; use `?art=experimental` to opt into the rejected SVG version for A/B comparison.
 - **Tests:** `tests/godmode-tools.cjs` covers 64 teleports, simulation-wide half-speed, confirmations, score safety and save preservation. Other gameplay tests and the real Chromium browser UI suite also run in CI.
@@ -168,7 +170,7 @@ The manual Bone Crossbow, 3-Soul revival, Grave Glide and chest cutscene are unc
 - **Rewind**: upper-left when unlocked; desktop R.
 - **Pause**: upper right; God Mode grants temporary fully upgraded Rewind and invulnerability.
 
-Survive hazards, vendors and combat across procedural terrain to the 5,000m Underworld portal, collect Souls near 4,850m and 9,500m, and reach the 9,999m final gate.
+Survive hazards, vendors and combat across procedural terrain to the 5,000m Underworld portal, collect Souls near 4,850m and 9,500m, and reach the 9,999m final gate. In God Mode, continue through the extended Boss Biome to explore its scenery through 20,000m.
 
 ## v0.8.2 changes
 
@@ -200,4 +202,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: review the Tundra mountain ascent at landscape phone size, then continue with the summit transition, Ashlands preview, scenery, vendors and portal presentation.
+Next: review the full Underworld biome sequence and its transitions on a landscape phone, including God Mode travel beyond 9,999m.
