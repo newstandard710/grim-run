@@ -588,9 +588,64 @@ const server=http.createServer((req,res)=>{
       const scene=window.grimRun.scene.scenes[0];
       const visible=[...scene.terrainTextureViews.values()].filter(view=>view.sprite.visible);
       const sections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
+      const surfaceViews=[...scene.terrainSurfaceViews.entries()].filter(([,view])=>view.sprite.visible);
+      const walkable=sections.filter(section=>section.kind==='ground'||section.kind==='rubble'||
+        section.kind==='platform')
+        .map(section=>({section,span:Math.min(section.end,scene.cameraX+scene.width+170)-
+          Math.max(section.start,scene.cameraX-140)}))
+        .filter(item=>item.span>=80)
+        .sort((a,b)=>b.span-a.span)[0];
+      const surfaceView=walkable&&scene.terrainSurfaceViews.get([
+        walkable.section.kind,walkable.section.start,walkable.section.end].join(':'));
+      let surfaceContact=null;
+      if(surfaceView){
+        const profile=surfaceView.surfaceGeometry,mid=(profile.from+profile.to)/2;
+        const expected=scene.terrain.groundAt(mid);
+        const rendered=surfaceView.sprite.y+(profile.y0-Math.min(profile.y0,profile.y1))+
+          (profile.y1-profile.y0)*((mid-profile.from)/(profile.to-profile.from));
+        const source=scene.textures.get(surfaceView.textureKey).getSourceImage();
+        const context=source.getContext('2d',{willReadFrequently:true});
+        const localX=Math.min(source.width-1,Math.max(0,Math.floor(mid-profile.from)));
+        const surfaceY=rendered-surfaceView.sprite.y;
+        const belowY=Math.min(source.height-1,Math.max(0,Math.floor(surfaceY+3)));
+        const capAlpha=context.getImageData(localX,belowY,1,1).data[3];
+        surfaceContact={error:Math.abs(expected-rendered),capAlpha,
+          visible:surfaceView.sprite.visible,textureHeight:source.height,
+          terrainDepth:Math.abs(profile.y1-profile.y0),profile};
+      }
+
+      // Repeated redraws must reuse masks and the cached surface canvas. Timing
+      // is diagnostic across CI machines; the stable cache assertion is the
+      // non-flaky performance guard.
+      let maskClearCalls=0;
+      const maskRestores=[];
+      for(const view of scene.terrainTextureViews.values())if(view.maskGraphics){
+        const original=view.maskGraphics.clear;
+        view.maskGraphics.clear=function(...args){maskClearCalls++;return original.apply(this,args);};
+        maskRestores.push(()=>{view.maskGraphics.clear=original;});
+      }
+      const surfaceSnapshot=surfaceViews.map(([key,view])=>[key,view,view.sprite.texture.key,
+        view.geometrySignature]);
+      const timings=[];
+      for(let i=0;i<24;i++){
+        const start=performance.now();scene.drawGround();timings.push(performance.now()-start);
+      }
+      for(const restore of maskRestores)restore();
+      timings.sort((a,b)=>a-b);
+      const afterSurfaceViews=[...scene.terrainSurfaceViews.entries()].filter(([,view])=>view.sprite.visible);
+      const stableSurfaceCache=surfaceSnapshot.length===afterSurfaceViews.length&&
+        surfaceSnapshot.every(([key,view,textureKey,signature],index)=>{
+          const current=afterSurfaceViews[index];
+          return current?.[0]===key&&current[1]===view&&current[1].sprite.texture.key===textureKey&&
+            current[1].geometrySignature===signature;
+        });
       const gaps=sections.filter(section=>section.kind==='gap');
       const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
         key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
+      const gapSurfaceViews=[...scene.terrainSurfaceViews.keys()].filter(key=>key.startsWith('gap:')).length;
+      const visiblePlatforms=sections.filter(section=>section.kind==='platform');
+      const cappedPlatforms=visiblePlatforms.filter(section=>scene.terrainSurfaceViews.has(
+        ['platform',section.start,section.end].join(':'))).length;
       const tundraGroundMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
         (key.startsWith('ground:')||key.startsWith('rubble:'))&&view.id===id&&view.sprite.visible&&
         id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)).length;
@@ -620,12 +675,29 @@ const server=http.createServer((req,res)=>{
           (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey))),
         ground:[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx)),
         groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews,
-        tundraGroundMaterialViews,groundFace,platformMaterialViews,platformFace};
+        tundraGroundMaterialViews,groundFace,platformMaterialViews,platformFace,
+        surfaceCount:surfaceViews.length,gapSurfaceViews,surfaceContact,stableSurfaceCache,
+        visiblePlatforms:visiblePlatforms.length,cappedPlatforms,
+        maskClearCalls,drawGroundMeanMs:+(timings.reduce((sum,time)=>sum+time,0)/timings.length).toFixed(3),
+        drawGroundP95Ms:+timings[Math.floor(timings.length*.95)].toFixed(3)};
     },biome);
     assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
     assert.deepEqual(grounded.ground,terrainBefore,biome+' material rendering leaves generated ground unchanged');
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
     assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
+    assert.ok(grounded.surfaceCount>0,biome+' has a visible surface cap');
+    assert.equal(grounded.gapSurfaceViews,0,biome+' leaves generated gaps without a surface cap');
+    assert.ok(grounded.surfaceContact?.visible,biome+' surface cap is rendered');
+    assert.ok(grounded.surfaceContact.error<.05,
+      biome+' cap top follows the exact walkable profile without changing collision');
+    assert.ok(grounded.surfaceContact.capAlpha>100,
+      biome+' cap is visibly filled a few pixels below its contact line');
+    assert.ok(grounded.stableSurfaceCache,biome+' reuses its cached surface across repeated redraws');
+    assert.equal(grounded.cappedPlatforms,grounded.visiblePlatforms,
+      biome+' gives visible one-way ledges a matching surface cap');
+    assert.equal(grounded.maskClearCalls,0,biome+' does not rebuild texture masks on each redraw');
+    console.log(biome+' terrain draw diagnostic: mean '+grounded.drawGroundMeanMs+
+      'ms, p95 '+grounded.drawGroundP95Ms+'ms; cached cap/masks reused');
     if(biome==='tundra'){
       assert.ok(grounded.tundraGroundMaterialViews>0,
         'Tundra ground and rubble use the composited terrain material');
@@ -933,7 +1005,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.12.0 renders all eight ground materials on generated terrain, keeps the approved biome backgrounds and gameplay geometry, and preserves character scale, motion, and fallbacks.');
+  console.log('PASS actual Chromium: v0.12.2 renders all eight ground materials with aligned cached biome surfaces, keeps approved backgrounds and gameplay geometry, and preserves character scale, motion, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

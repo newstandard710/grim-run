@@ -17,7 +17,7 @@ for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 }
 const M=w.GRIM_META,C=w.GRIM_CONFIG,Combat=w.GRIM_COMBAT;
-assert.equal(C.version,'0.12.0');
+assert.equal(C.version,'0.12.2');
 const wallet=M.load();assert.equal(wallet.souls,60);
 assert.equal(wallet.levels.graveGlide,0);
 for(const [lvl,cost] of [[1,5],[2,10],[3,25]]){
@@ -89,4 +89,4 @@ const poor=game(24);poor.meta.souls=2;poor.player.hp=1;poor.takeDamage(1,'rock')
 assert.equal(poor.state,'revive');assert.equal(get('revive-yes-btn').disabled,true);
 assert.equal(poor.revive(),false);poor.declineRevive();assert.equal(poor.state,'dead');
 assert.equal(game(25).reviveUsed,false,'New run resets revive quota');
-console.log('PASS v0.12.0: permanent slide tiers, legacy wallet, Soul revival, chest, manual crossbow and cooldowns.');
+console.log('PASS v0.12.2: permanent slide tiers, legacy wallet, Soul revival, chest, manual crossbow and cooldowns.');
