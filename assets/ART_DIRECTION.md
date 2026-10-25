@@ -56,7 +56,7 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 ## Full-route backdrop assets
 
 - Approved surface concepts are `forest.webp`, `foothills.webp`, and `tundra.webp`; the five post-portal concepts are the files listed above under `assets/visuals/biomes/`.
-- Forest covers 0–900m, foothills 900–2,300m, tundra 2,300–5,000m, and caves begin at the portal. All adjacent backdrops crossfade over a 360m band, including the portal approach, with matching color blends on the ground.
+- Forest covers 0–900m, foothills 900–2,300m, and Tundra continues through the 5,000m portal approach. Surface and Underworld biome boundaries crossfade over 360m, except the portal: it changes directly from Tundra to fully formed Caves on arrival. Ground colors follow the same transitions.
 - Keep slight camera-linked drift, gentle vertical motion, and biome-specific ambient flecks so the art feels alive without competing with gameplay. Treat the generated concept image as the visual source; do not add an opaque procedural sky over it.
 
 ## Validation and deployment

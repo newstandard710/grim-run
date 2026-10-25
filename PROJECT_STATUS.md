@@ -1,19 +1,25 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.4 — *Full World Biome Art*. All eight approved surface and Underworld concepts are integrated as moving scenery, with gradual crossfades. Terrain extends in bounded chunks as the runner approaches.
+**Current build:** v0.11.5 — *Portal Biome Handoff*. All eight approved surface and Underworld concepts are integrated as moving scenery, with gradual crossfades except for the direct Tundra-to-Caves portal switch. Terrain extends in bounded chunks as the runner approaches.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.4 — *Full World Biome Art*  
+**Release:** v0.11.5 — *Portal Biome Handoff*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Awaiting landscape phone review of the full biome route and the reported crash around 5,700m. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m. Terrain and collision rules are unchanged.
+**Verification:** Awaiting landscape phone review of the full biome route and the reported freeze near 630m. The first vendor pause is triggered at 666m; confirm whether its upgrade panel appeared. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m. Terrain and collision rules are unchanged.
+
+## v0.11.5 — Portal Biome Handoff
+
+- The surface remains fully Tundra on the approach. Crossing the 5,000m portal switches directly to fully formed Caves; that boundary does not crossfade.
+- Other neighboring backdrops crossfade over 360m, with ground colors following those transitions.
+- **Next:** confirm whether the stop near 630m was the expected vendor pause at 666m or a separate freeze, then phone-review the portal and route.
 
 ## v0.11.4 — Full World Biome Art and Terrain Streaming Fix
 
 - Added approved Forest (0–900m), Foothills (900–2,300m), and Tundra (2,300–5,000m) concept backdrops alongside all five Underworld backgrounds.
-- All eight backdrops drift gently and crossfade over 360m around each biome boundary. The Tundra-to-Caves blend begins before the 5,000m portal and continues after arrival. Ground palettes use the same blended biome weights.
+- All eight backdrops drift gently and crossfade over 360m at biome boundaries. At 5,000m, the portal switches directly from Tundra to fully formed Caves. Ground palettes follow the same transitions.
 - Fixed terrain generation that appended another 1,750px chunk each time per-frame callers asked for an already-covered range. Those calls now return immediately, and God Mode extends beyond the pre-generated normal course in bounded chunks.
 - **Next:** phone-review the full route, especially the 5,000m portal, 5,700m area, all biome transitions, and God Mode exploration beyond 9,999m.
 

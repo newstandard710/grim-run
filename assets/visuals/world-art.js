@@ -1,4 +1,4 @@
-/* Grim Run — Full Route World Art, v0.11.4
+/* Grim Run — Full Route World Art, v0.11.5
  * Pure presentation helpers. They never write terrain, collision or game state.
  */
 (function(scope){
@@ -319,6 +319,9 @@
     const m=Math.max(0,Number(meters)||0);
     for(let i=0;i<WORLD_BIOMES.length-1;i++){
       const edge=WORLD_BIOMES[i].end,left=edge-fadeHalfWidth,right=edge+fadeHalfWidth;
+      // The 5,000m boundary is a portal cut: remain fully in Tundra until
+      // arrival, then show fully formed Caves on the far side.
+      if(edge===5000)continue;
       if(m>=left&&m<=right){
         const t=smooth((m-left)/(right-left));
         return {[WORLD_BIOMES[i].id]:1-t,[WORLD_BIOMES[i+1].id]:t};
