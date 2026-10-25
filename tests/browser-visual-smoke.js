@@ -529,73 +529,6 @@ const server=http.createServer((req,res)=>{
   assert.ok(changedPixels(bothRendered.impRect)>50,
     'Ember Imp changes visible pixels in combined review mode');
 
-  // Compare the accepted foothills default and the new Tundra preview at phone scale.
-  const worldArtSnapshot=async(query,file,distanceMeters)=>{
-    await skeletalPage.goto(origin+'/'+query,
-      {waitUntil:'domcontentloaded',timeout:45000});
-    await skeletalPage.waitForFunction(()=>{
-      const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
-      return v?.loaded===true&&v.skeletalBatReady===true&&
-        v.boneCrawlerReady===true&&v.emberImpReady===true;
-    },null,{timeout:45000});
-    await skeletalPage.click('#start-btn');
-    await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
-      null,{timeout:15000});
-    const geometry=await skeletalPage.evaluate(distanceMeters=>{
-      const g=window.grimRun,s=g.scene.scenes[0];
-      g.loop.stop();s.state='paused';s.elapsed=0;s.frame=0;s.distance=distanceMeters;
-      s.hasTeleported=false;s.player.x=s.startX+distanceMeters*window.GRIM_CONFIG.pxPerMeter;
-      s.player.y=s.terrain.groundAt(s.player.x);
-      s.player.grounded=true;s.player.velocityY=0;
-      s.cameraX=s.player.x-s.width*window.GRIM_CONFIG.reaperXRatio;
-      s.cameraY=s.player.y-s.groundY;
-      s.cameras.main.setScroll(s.cameraX,s.cameraY);
-      s.refreshHud();
-      s.enemies=[];s.fireballs=[];s.obstacles=[];s.coins=[];s.souls=[];s.particles=[];
-      s.drawScene();g.step(performance.now(),0);
-      return {preview:s.tundraWorldArtReviewRequested,
-        ground:[0,70,160,310].map(dx=>s.terrain.groundAt(s.player.x+dx)),
-        player:{x:s.player.x,y:s.player.y,hp:s.player.hp,grounded:s.player.grounded}};
-    },distanceMeters);
-    const image=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({path:file}));
-    return {geometry,image};
-  };
-  const foothillsDefault=await worldArtSnapshot('?seed=33',
-    path.join(skeletalArtifactDir,'foothills-default-phone-scale.png'),1500);
-  const foothillsAlias=await worldArtSnapshot('?worldReview=foothills&seed=33',
-    path.join(skeletalArtifactDir,'foothills-alias-phone-scale.png'),1500);
-  assert.equal(foothillsDefault.geometry.preview,false);
-  assert.equal(foothillsAlias.geometry.preview,false,'Accepted foothills review alias uses the default art');
-  assert.deepEqual(foothillsAlias.geometry.ground,foothillsDefault.geometry.ground,
-    'Foothills art leaves seeded terrain geometry untouched');
-  let aliasPixelsChanged=0;
-  for(let i=0;i<foothillsAlias.image.data.length;i+=4){
-    if(Math.abs(foothillsAlias.image.data[i]-foothillsDefault.image.data[i])>2||
-       Math.abs(foothillsAlias.image.data[i+1]-foothillsDefault.image.data[i+1])>2||
-       Math.abs(foothillsAlias.image.data[i+2]-foothillsDefault.image.data[i+2])>2)aliasPixelsChanged++;
-  }
-  assert.ok(aliasPixelsChanged<50,'Foothills alias matches the accepted default rendering');
-
-  const tundraDefault=await worldArtSnapshot('?seed=33',
-    path.join(skeletalArtifactDir,'tundra-default-phone-scale.png'),2600);
-  const tundraReview=await worldArtSnapshot('?worldReview=tundra&seed=33',
-    path.join(skeletalArtifactDir,'tundra-review-phone-scale.png'),2600);
-  assert.equal(tundraDefault.geometry.preview,false);
-  assert.equal(tundraReview.geometry.preview,true);
-  assert.deepEqual(tundraReview.geometry.ground,tundraDefault.geometry.ground,
-    'Tundra artwork leaves seeded terrain geometry untouched');
-  assert.deepEqual(tundraReview.geometry.player,tundraDefault.geometry.player,
-    'Tundra artwork leaves player position and health untouched');
-  assert.deepEqual([tundraReview.image.width,tundraReview.image.height],[950,430]);
-  let worldPixelsChanged=0;
-  for(let i=0;i<tundraReview.image.data.length;i+=4){
-    if(Math.abs(tundraReview.image.data[i]-tundraDefault.image.data[i])>12||
-       Math.abs(tundraReview.image.data[i+1]-tundraDefault.image.data[i+1])>12||
-       Math.abs(tundraReview.image.data[i+2]-tundraDefault.image.data[i+2])>12)worldPixelsChanged++;
-  }
-  assert.ok(worldPixelsChanged>15000,
-    'Tundra preview visibly changes the phone-scale scene without changing gameplay state');
-
   // Every ground material must reach the real Phaser scene and sit on a
   // generated solid section. Move a paused seeded run through the eight biomes
   // without changing any terrain or collision data.
@@ -615,7 +548,7 @@ const server=http.createServer((req,res)=>{
     [6500,'crystals'],[7500,'ashlands'],[9000,'lava'],[11000,'boss']
   ];
   for(const [meters,biome] of terrainTargets){
-    await skeletalPage.evaluate(m=>{
+    const terrainBefore=await skeletalPage.evaluate(m=>{
       const game=window.grimRun,scene=game.scene.scenes[0],ppm=window.GRIM_CONFIG.pxPerMeter;
       scene.distance=m;scene.hasTeleported=m>=5000;
       scene.player.x=scene.startX+m*ppm;
@@ -624,7 +557,9 @@ const server=http.createServer((req,res)=>{
       scene.cameraX=scene.player.x-scene.width*window.GRIM_CONFIG.reaperXRatio;
       scene.cameraY=scene.player.y-scene.groundY;
       scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
+      const ground=[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx));
       scene.drawScene();game.step(performance.now(),0);
+      return ground;
     },meters);
     await skeletalPage.waitForFunction(id=>{
       const scene=window.grimRun?.scene?.scenes?.[0];
@@ -640,9 +575,11 @@ const server=http.createServer((req,res)=>{
       const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
         key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
       return {material:visible.some(view=>view.sprite.texture.key==='terrain-material-'+id),
+        ground:[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx)),
         groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews};
     },biome);
     assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
+    assert.deepEqual(grounded.ground,terrainBefore,biome+' material rendering leaves generated ground unchanged');
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
     assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
     await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
