@@ -1,4 +1,4 @@
-/* Grim Run — Surface and Underworld World Art, v0.11.3
+/* Grim Run — Full Route World Art, v0.11.4
  * Pure presentation helpers. They never write terrain, collision or game state.
  */
 (function(scope){
@@ -293,6 +293,11 @@
     }
   }
 
+  const SURFACE_BIOMES=Object.freeze([
+    {id:'forest',start:0,end:900},
+    {id:'foothills',start:900,end:2300},
+    {id:'tundra',start:2300,end:5000}
+  ]);
   const UNDERWORLD_BIOMES=Object.freeze([
     {id:'caves',start:5000,end:6000},
     {id:'crystals',start:6000,end:7000},
@@ -300,6 +305,8 @@
     {id:'lava',start:8000,end:9999},
     {id:'boss',start:9999,end:20000}
   ]);
+  const WORLD_BIOMES=Object.freeze([...SURFACE_BIOMES,...UNDERWORLD_BIOMES]);
+  const BIOME_FADE_HALF_WIDTH=180;
   const UNDERWORLD_PALETTES=Object.freeze({
     caves:[0x171821,0x414555,0x818495,0x343844],
     crystals:[0x17212a,0x4a6475,0x87c8d8,0x354c5c],
@@ -308,7 +315,20 @@
     boss:[0x1c151d,0x58404e,0xc3795e,0x4c2d3a]
   });
 
-  function underworldWeights(meters,fadeHalfWidth=125){
+  function biomeWeights(meters,fadeHalfWidth=BIOME_FADE_HALF_WIDTH){
+    const m=Math.max(0,Number(meters)||0);
+    for(let i=0;i<WORLD_BIOMES.length-1;i++){
+      const edge=WORLD_BIOMES[i].end,left=edge-fadeHalfWidth,right=edge+fadeHalfWidth;
+      if(m>=left&&m<=right){
+        const t=smooth((m-left)/(right-left));
+        return {[WORLD_BIOMES[i].id]:1-t,[WORLD_BIOMES[i+1].id]:t};
+      }
+    }
+    const index=m<900?0:m<2300?1:m<5000?2:m<6000?3:m<7000?4:m<8000?5:m<9999?6:7;
+    return {[WORLD_BIOMES[index].id]:1};
+  }
+
+  function underworldWeights(meters,fadeHalfWidth=BIOME_FADE_HALF_WIDTH){
     const m=Math.max(5000,Number(meters)||5000),edges=[6000,7000,8000,9999];
     for(let i=0;i<edges.length;i++){
       const edge=edges[i],left=edge-fadeHalfWidth,right=edge+fadeHalfWidth;
@@ -476,15 +496,69 @@
     }
   }
 
+  function drawSurfaceDetails(scene,g,w,h,groundY,id,alpha){
+    if(alpha<=.005)return;
+    const time=scene.elapsed||0,offset=scene.cameraX||0;
+    g.setAlpha(alpha);
+    if(id==='forest'||id==='foothills'){
+      for(let i=0;i<10;i++){
+        const period=w+70,x=((i*139-offset*(id==='forest' ? .045 : .07)+time*(5+i%3)+period)%period+period)%period-35;
+        const y=groundY*(.30+(i%6)*.075)+Math.sin(time*.58+i*1.9)*5;
+        g.fillStyle(id==='forest'?0xe5dba9:0xc8cec1,id==='forest' ? .22 : .15);
+        g.fillCircle(x,y,1.1+(i%3)*.45);
+      }
+      if(id==='foothills'){
+        for(let i=0;i<3;i++){
+          const y=groundY*(.53+i*.10);
+          g.fillStyle(0xb9c6c7,.025+i*.008);
+          g.fillEllipse(w*.5,y,w*.72,10+i*3);
+        }
+      }
+    }else if(id==='tundra'){
+      for(let i=0;i<12;i++){
+        const period=w+50,x=((i*121-offset*.08+time*10+period)%period+period)%period-25;
+        const y=groundY*(.31+(i%6)*.085)+Math.sin(time*.7+i)*3;
+        g.lineStyle(1,0xd1dde1,.12);g.lineBetween(x,y,x+6+(i%3)*2,y-1);
+      }
+    }
+    g.setAlpha(1);
+  }
+
+  function drawWorldDetails(scene,g,w,h,groundY,weights){
+    const underworld={};
+    for(const [id,weight] of Object.entries(weights||{})){
+      if(weight<=.005)continue;
+      if(UNDERWORLD_BIOMES.some(biome=>biome.id===id))underworld[id]=weight;
+      else drawSurfaceDetails(scene,g,w,h,groundY,id,weight);
+    }
+    drawUnderworldDetails(scene,g,w,h,groundY,underworld);
+  }
+
   function underworldGroundPalette(meters){
-    const weights=underworldWeights(meters),channels=color=>[(color>>16)&255,(color>>8)&255,color&255];
+    const weights=underworldWeights(meters);
+    return blendGroundPalettes(weights,id=>UNDERWORLD_PALETTES[id]);
+  }
+
+  function blendGroundPalettes(weights,paletteFor){
+    const channels=color=>[(color>>16)&255,(color>>8)&255,color&255];
     return [0,1,2,3].map(index=>{
       const total=[0,0,0],weightSum=Object.values(weights).reduce((sum,value)=>sum+value,0)||1;
       for(const [id,weight] of Object.entries(weights)){
-        const color=channels(UNDERWORLD_PALETTES[id][index]);
+        const palette=paletteFor(id);
+        if(!palette)continue;
+        const color=channels(palette[index]);
         for(let channel=0;channel<3;channel++)total[channel]+=color[channel]*weight/weightSum;
       }
       return (Math.round(total[0])<<16)|(Math.round(total[1])<<8)|Math.round(total[2]);
+    });
+  }
+
+  function worldGroundPalette(meters){
+    return blendGroundPalettes(biomeWeights(meters),id=>{
+      if(id==='forest')return openingGroundPalette();
+      if(id==='foothills')return foothillsGroundPalette(meters);
+      if(id==='tundra')return tundraGroundPalette(meters);
+      return UNDERWORLD_PALETTES[id];
     });
   }
 
@@ -608,7 +682,8 @@
     drawOpeningForest,openingGroundPalette,drawOpeningGround,
     drawFoothills,foothillsGroundPalette,drawFoothillsGround,
     drawTundra,tundraGroundPalette,drawTundraGround,
-    UNDERWORLD_BIOMES,underworldWeights,underworldGroundPalette,
-    drawUnderworldDetails,drawUnderworldGround
+    SURFACE_BIOMES,UNDERWORLD_BIOMES,WORLD_BIOMES,biomeWeights,underworldWeights,
+    worldGroundPalette,underworldGroundPalette,
+    drawUnderworldDetails,drawWorldDetails,drawUnderworldGround
   });
 })(typeof window!=='undefined'?window:globalThis);

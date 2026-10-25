@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.11.3 · UNDERWORLD BIOMES</div>
+      <div class="mini">v0.11.4 · WORLD BIOME ART</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1050,8 +1050,10 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     function advance(minX){
-      // Generate in meaningful chunks. Previously tiny advances every frame
-      // produced a new flat segment, accidentally flattening nearly the ENTIRE map.
+      // Only extend when the caller is getting close to the generated edge.
+      // spawnAhead and visibleSections ask every frame; without this guard each
+      // call generated another chunk even when the requested range was covered.
+      if(!Number.isFinite(minX)||minX<=cursor+850)return;
       const bound=Math.max(minX,cursor+1750);
       let watchdog=0;
       while(cursor<bound && watchdog++<20000){
@@ -1120,8 +1122,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     function visibleSections(from,to){advance(to+60);return segments.filter(s=>s.end>=from&&s.start<=to);}
     function shiftY(dy){elevation+=dy;baseY+=dy;for(const s of segments){s.y0+=dy;s.y1+=dy;}for(const seq of sequences)seq.initialY+=dy;}
-    // Build the normal run at startup; God Mode extends terrain ahead on demand
-    // through the full Boss Biome. Seeded terrain stays independent of frame rate.
+    // Keep the normal course pre-generated. God Mode continues in fixed chunks
+    // only when its requested range approaches the generated edge.
     advance(finishX+1000);
     return {segments,sequences,groundAt,fillGaps,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
       get firstGapX(){return startX+766*pxPerMeter;},get portalX(){return portalX;},get portalExitX(){return portalX+310;},
@@ -1456,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.11.3-underworld-biomes-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.11.3-underworld-biomes-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.11.4-world-biomes-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.11.4-world-biomes-v1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1476,6 +1478,9 @@ window.GRIM_CONFIG = Object.freeze({
     constructor() { super('GrimRun'); }
     preload(){
       const files=[
+        ['forest','forest.webp'],
+        ['foothills','foothills.webp'],
+        ['tundra','tundra.webp'],
         ['caves','underground-caves.webp'],
         ['crystals','deep-underground.webp'],
         ['ashlands','ashlands.webp'],
@@ -1501,14 +1506,15 @@ window.GRIM_CONFIG = Object.freeze({
         kills:0,byKind:{}};
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.biomeBackdrops={};
-      for(const biome of scope.GRIM_WORLD_ART?.UNDERWORLD_BIOMES||[]){
+      for(const biome of scope.GRIM_WORLD_ART?.WORLD_BIOMES||[]){
         const key='biome-'+biome.id;
         if(!this.textures.exists(key))continue;
         this.biomeBackdrops[biome.id]=this.add.image(this.width*.5,this.height*.5,key)
           .setOrigin(.5).setScrollFactor(0).setDepth(-30+biome.start/100000)
           .setAlpha(0).setVisible(false);
       }
-      this.biomeBackdropReady=Object.keys(this.biomeBackdrops).length===5;
+      this.biomeBackdropReady=Object.keys(this.biomeBackdrops).length===
+        (scope.GRIM_WORLD_ART?.WORLD_BIOMES?.length||0);
       this.resizeBiomeBackdrops();
       this.world = this.add.graphics().setDepth(1);
       this.fx = this.add.graphics().setDepth(5);
@@ -3129,13 +3135,17 @@ window.GRIM_CONFIG = Object.freeze({
     updateBiomeBackdrops(){
       if(!this.biomeBackdrops)return;
       const worldArt=scope.GRIM_WORLD_ART;
-      const weights=this.hasTeleported&&worldArt?.underworldWeights
-        ?worldArt.underworldWeights(this.distance):{};
-      const biomes=worldArt?.UNDERWORLD_BIOMES||[];
+      const weights=worldArt?.biomeWeights?worldArt.biomeWeights(this.distance):{};
+      const biomes=worldArt?.WORLD_BIOMES||[];
+      const active=biomes.filter(biome=>this.biomeBackdrops[biome.id]&&
+        (weights[biome.id]||0)>.003);
+      const lowerId=active.length===2?active[0].id:null;
       for(let i=0;i<biomes.length;i++){
         const biome=biomes[i],image=this.biomeBackdrops[biome.id];
         if(!image)continue;
-        const alpha=weights[biome.id]||0;
+        const rawAlpha=weights[biome.id]||0;
+        const alpha=active.length===1?(active[0].id===biome.id?1:0):
+          lowerId===biome.id?1:rawAlpha;
         if(alpha<=.003){image.setVisible(false);continue;}
         const progress=clamp((this.distance-biome.start)/Math.max(1,biome.end-biome.start),0,1);
         const drift=this.width*(.10*progress+Math.sin(this.elapsed*.12+i*1.7)*.004);
@@ -3164,9 +3174,9 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawAtmosphere(g,w,h,gy){
       const m=this.distance,underworld=this.hasTeleported;
-      if(underworld&&this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.drawUnderworldDetails){
-        const weights=scope.GRIM_WORLD_ART.underworldWeights(m);
-        scope.GRIM_WORLD_ART.drawUnderworldDetails(this,g,w,h,gy,weights);
+      if(this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.drawWorldDetails){
+        const weights=scope.GRIM_WORLD_ART.biomeWeights(m);
+        scope.GRIM_WORLD_ART.drawWorldDetails(this,g,w,h,gy,weights);
         return;
       }
       if(!underworld&&scope.GRIM_WORLD_ART){
@@ -3405,10 +3415,12 @@ window.GRIM_CONFIG = Object.freeze({
           section.kind!=='platform'&&scope.GRIM_WORLD_ART;
         const foothillsWorldArt=!this.hasTeleported&&
           m>=900&&m<=2300&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
-        const tundraWorldArt=this.tundraWorldArtReviewRequested&&!this.hasTeleported&&
-          m>=1900&&m<=3400&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
+        const tundraWorldArt=!this.hasTeleported&&
+          m>=1900&&m<=5000&&section.kind!=='platform'&&scope.GRIM_WORLD_ART;
         const underworldWorldArt=this.hasTeleported&&m>=5000&&scope.GRIM_WORLD_ART?.underworldGroundPalette;
-        const [body,edge,sheen,detail]=tundraWorldArt
+        const [body,edge,sheen,detail]=this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.worldGroundPalette
+          ?scope.GRIM_WORLD_ART.worldGroundPalette(m)
+          :tundraWorldArt
           ?scope.GRIM_WORLD_ART.tundraGroundPalette(m)
           :foothillsWorldArt?scope.GRIM_WORLD_ART.foothillsGroundPalette(m)
           :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette()

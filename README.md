@@ -2,12 +2,13 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.11.3 — Underworld Biome Expansion**
+**Current playable build: v0.11.4 — Full World Biome Art**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
-- The approved forest-to-foothills background and ground treatment is now the default from the opening through about 2,300m.
+- Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
-- The new concept art is used as layered, gently drifting backdrops with biome crossfades, atmospheric details and matching ground treatments. The existing terrain and collision design stay intact.
+- All eight approved biome concepts are used as gently drifting backdrops. Neighboring regions crossfade over 360m, including the surface-to-cave portal approach; matching ground colors blend across those same boundaries.
+- Terrain requests for already-generated ground now return without adding more chunks; God Mode extends the world in bounded chunks beyond the pre-generated normal course.
 - Normal runs still finish at 9,999m. God Mode can continue past the finish and teleport in 500m steps through 20,000m.
 - [Open the game](https://newstandard710.github.io/grim-run/).
 
@@ -202,4 +203,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: review the full Underworld biome sequence and its transitions on a landscape phone, including God Mode travel beyond 9,999m.
+Next: review the complete surface-to-Underworld art sequence and smooth transitions on a landscape phone, check the 5,000–6,000m crash fix, and confirm God Mode travel beyond 9,999m.

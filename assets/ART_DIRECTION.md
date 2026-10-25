@@ -53,6 +53,12 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - Pair each backdrop with a matching ground palette and restrained surface detail. Keep terrain geometry, collision, hazards, enemy behavior, controls and the existing 9,999m normal victory unchanged.
 - God Mode may continue beyond the normal finish through the Boss Biome, with teleport access through 20,000m. Preserve safe ground and the Boss Biome presentation beyond 20,000m for continued God Mode exploration.
 
+## Full-route backdrop assets
+
+- Approved surface concepts are `forest.webp`, `foothills.webp`, and `tundra.webp`; the five post-portal concepts are the files listed above under `assets/visuals/biomes/`.
+- Forest covers 0–900m, foothills 900–2,300m, tundra 2,300–5,000m, and caves begin at the portal. All adjacent backdrops crossfade over a 360m band, including the portal approach, with matching color blends on the ground.
+- Keep slight camera-linked drift, gentle vertical motion, and biome-specific ambient flecks so the art feels alive without competing with gameplay. Treat the generated concept image as the visual source; do not add an opaque procedural sky over it.
+
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
 
