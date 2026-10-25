@@ -3359,7 +3359,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     bakeTerrainMaterial(id){
       if(this.terrainMaterialIds?.has(id))return true;
-      if(!this.textures||typeof this.textures.get!=='function')return false;
+      if(!this.textures||typeof this.textures.get!=='function'||
+        typeof this.textures.createCanvas!=='function')return false;
       const sourceKey='terrain-source-'+id,materialKey='terrain-material-'+id;
       const sourceTexture=this.textures.get(sourceKey);
       const source=sourceTexture?.getSourceImage?.()||sourceTexture?.source?.[0]?.image;
@@ -3414,7 +3415,7 @@ window.GRIM_CONFIG = Object.freeze({
       const maskGraphics=this.make.graphics({x:0,y:0,add:false});
       const mask=maskGraphics.createGeometryMask();
       sprite.setOrigin(0,0).setDepth(1).setMask(mask).setVisible(false);
-      view={sprite,maskGraphics,mask};
+      view={id:textureKey.slice('terrain-material-'.length),sprite,maskGraphics,mask};
       this.terrainTextureViews.set(key,view);
       return view;
     }
@@ -3451,6 +3452,15 @@ window.GRIM_CONFIG = Object.freeze({
         this.terrainTextureViews.delete(key);
       }
     }
+    releaseInactiveTerrainMaterials(keepIds){
+      if(!this.terrainMaterialIds||!this.textures?.remove)return;
+      const visibleIds=new Set([...this.terrainTextureViews.values()].map(view=>view.id));
+      for(const id of this.terrainMaterialIds){
+        if(keepIds.has(id)||visibleIds.has(id))continue;
+        this.textures.remove('terrain-material-'+id);
+        this.terrainMaterialIds.delete(id);
+      }
+    }
     destroyTerrainTextureViews(){
       if(!this.terrainTextureViews)return;
       for(const view of this.terrainTextureViews.values()){
@@ -3480,6 +3490,7 @@ window.GRIM_CONFIG = Object.freeze({
       const base=this.terrainBase||g;
       if(base!==g)base.clear();
       const activeTerrainViews=new Set();
+      const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const depth=Math.max(this.groundY+this.height+500,this.cameraY+this.height+1100);
       const sections=this.terrain.visibleSections(left,right);
@@ -3574,6 +3585,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
       this.pruneTerrainTextureViews(activeTerrainViews);
+      this.releaseInactiveTerrainMaterials(keepTerrainMaterials);
     }
     drawCoin(c) {
       const g=this.world;
