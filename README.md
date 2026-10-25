@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.10.13 — Bone Crawler Direction Review**
+**Current playable build: v0.10.14 — Ember Imp Art Review**
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -33,6 +33,13 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - One HP, ground movement, ledge stopping, spawn schedule and attack logic remain unchanged.
 - To reach a crawler quickly, use Pause → God Mode → Teleport to 5,000m, confirm, then continue until one enters view. Crawlers appear in the Underworld.
 - [Open the Bone Crawler phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=bone-crawler).
+
+## Ember Imp art review
+
+- The six-pose atlas is opt-in at `?enemyReview=ember-imp`; its four running poses face right, followed by the existing fire-warning and release poses.
+- The visible target is about 55px tall. The atlas shares one foot line and keeps the existing 38×42 hitbox, 2 HP, movement, 470ms warning and fireball timing unchanged.
+- The warning and release are character poses; the launched fireball remains a separate effect. Missing or invalid art keeps the procedural Imp visible.
+- [Open the Ember Imp phone-review build](https://newstandard710.github.io/grim-run/?enemyReview=ember-imp).
 
 ## v0.10.9: Subtle Reaper Run Head Bob
 

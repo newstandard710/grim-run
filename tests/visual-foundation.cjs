@@ -4,14 +4,15 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.13-bone-crawler-facing-review-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.14-ember-imp-review-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
 assert.ok(html.includes("artMode==='procedural'"),'v0.10.3 procedural art remains an explicit fallback');
 assert.ok(html.includes("artMode==='experimental'"),'Earlier experimental vector atlas remains available');
 assert.ok(html.includes('this.visuals.skeletalBatArtEnabled=true'),'Approved Skeletal Bat art is the default');
-assert.ok(html.includes("get('enemyReview')==='bone-crawler'"),'Bone Crawler art stays behind its opt-in review query');
+assert.ok(html.includes("enemyReview==='bone-crawler'"),'Bone Crawler art stays behind its opt-in review query');
+assert.ok(html.includes("enemyReview==='ember-imp'"),'Ember Imp art stays behind its opt-in review query');
 for(const [svg,width,height,frames] of [[reaper,768,768,16],[bat,640,256,8]]){
  assert.ok(svg.startsWith('<svg')&&svg.includes('width="'+width+'" height="'+height+'"'));
  assert.equal((svg.match(/<g(?:\s|>)/g)||[]).length,(svg.match(/<\/g>/g)||[]).length);
@@ -56,6 +57,16 @@ assert.ok(Math.abs(V.V2_BONE_CRAWLER_SCALE*1065-100)<.01,
   'Bone Crawler canvas scale is 2.5x the original phone-review size');
 assert.ok(V.V2_BONE_CRAWLER_FRAMES.every(frame=>frame.width===1477&&frame.height===1065),
   'Bone Crawler frames share a stable canvas and registration');
+assert.deepEqual([V.V2_EMBER_IMP_ATLAS.width,V.V2_EMBER_IMP_ATLAS.height],[768,512]);
+assert.equal(V.V2_EMBER_IMP_FRAMES.length,6);
+assert.deepEqual(Array.from(V.V2_EMBER_IMP_RUN),['run_01','run_02','run_03','run_04']);
+assert.equal(V.V2_EMBER_IMP_FPS,8);
+assert.ok(Math.abs(175*V.V2_EMBER_IMP_ATLAS.scale-55)<.01,
+  'Ember Imp target silhouette is about 55px at gameplay scale');
+assert.deepEqual(Array.from(V.V2_EMBER_IMP_ATLAS.origin),[.5,245/256]);
+for(const frame of V.V2_EMBER_IMP_FRAMES)
+ assert.ok(frame.x>=0&&frame.y>=0&&frame.x+frame.width<=768&&frame.y+frame.height<=512,
+   `Ember Imp frame ${frame.name} stays inside the source atlas`);
 for(const frame of V.V2_SKELETAL_BAT_FRAMES){
  assert.ok(frame.x>=0&&frame.y>=0&&frame.x+frame.width<=1254&&frame.y+frame.height<=1254,
    `Skeletal Bat frame ${frame.name} stays inside the source atlas`);
@@ -270,4 +281,30 @@ for(let i=0;i<4;i++){
 crawlerEnemy.dead=true;crawlerRenderer.renderBoneCrawlers();
 assert.equal(crawlerRenderer.boneCrawlerPool[0].visible,false,'Dead crawler returns to normal cleanup');
 crawlerRenderer.shutdown();assert.equal(crawlerRenderer.boneCrawlerReady,false);
-console.log('PASS v0.10.13: approved character art unchanged; opt-in Bone Crawler faces right at 2.5x scale with its hitbox and ground anchor intact.');
+const impEnemy={kind:'imp',x:450,y:280,phase:0,dead:false,hp:2,warningMs:0};
+const impScene={state:'playing',cameraX:0,width:950,elapsed:0,enemies:[impEnemy],fireballs:[]};
+const impFrame=()=>({setOrigin(x,y){this.origin=[x,y];return this},setScale(v){this.scale=v;return this},
+ setPosition(x,y){this.x=x;this.y=y;return this},setFrame(v){this.frame=v;return this},
+ setVisible(v){this.visible=v;return this},setAlpha(v){this.alpha=v;return this},
+ setRotation(v){this.rotation=v;return this},destroy(){this.destroyed=true}});
+const impRenderer=new V.GrimVisualSystem(impScene);
+impRenderer.emberImpReady=true;impRenderer.emberImpPool=Array.from({length:12},impFrame);
+for(let i=0;i<V.V2_EMBER_IMP_RUN.length;i++){
+ impScene.elapsed=i/V.V2_EMBER_IMP_FPS;impScene.fireballs=[];impRenderer.renderEmberImps();
+ const sprite=impRenderer.emberImpPool[0];
+ assert.equal(sprite.frame,V.V2_EMBER_IMP_RUN[i],'Imp run cycle selects '+V.V2_EMBER_IMP_RUN[i]);
+ assert.deepEqual(sprite.origin,[.5,245/256]);assert.ok(Math.abs(sprite.scale*175-55)<.01);
+ assert.equal(sprite.x,impEnemy.x);assert.equal(sprite.y,impEnemy.y+22);
+}
+impEnemy.warningMs=470;impRenderer.renderEmberImps();
+assert.equal(impRenderer.emberImpPool[0].frame,'warning','Existing warning selects the tell pose');
+impEnemy.warningMs=0;impScene.fireballs=[{owner:impEnemy,ageMs:0,dead:false}];
+impRenderer.renderEmberImps();
+assert.equal(impRenderer.emberImpPool[0].frame,'release','Newly launched fireball selects the release pose');
+impScene.fireballs[0].ageMs=261;impRenderer.renderEmberImps();
+assert.equal(impRenderer.emberImpPool[0].frame,'run_04','Imp returns to its run cycle after release');
+assert.equal(CombatApi.rectFor(impEnemy).width,38);assert.equal(CombatApi.rectFor(impEnemy).height,42);
+impEnemy.dead=true;impRenderer.renderEmberImps();
+assert.equal(impRenderer.emberImpPool[0].visible,false,'Dead Imp returns to normal cleanup');
+impRenderer.shutdown();assert.equal(impRenderer.emberImpReady,false);
+console.log('PASS v0.10.14: approved character art unchanged; Bone Crawler faces right at 2.5x; opt-in Ember Imp has a right-facing run cycle and separate warning/release poses with original hitbox.');

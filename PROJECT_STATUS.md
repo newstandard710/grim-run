@@ -1,21 +1,22 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.10.13 — *Bone Crawler Direction Review*. Current development phase: opt-in art review for remaining enemy sprites.
+**Current build:** v0.10.14 — *Ember Imp Art Review*. Current development phase: opt-in art review for remaining enemy sprites.
 
 The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October 24, 2026. Their art, timing, scale and collision behavior stay unchanged during the remaining enemy-sprite phase.
 
-**Release:** v0.10.13 — *Bone Crawler Direction Review*  
+**Release:** v0.10.14 — *Ember Imp Art Review*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering, and Pages deployment passed on October 24, 2026. User phone review is pending. The Bone Crawler review remains opt-in at `?enemyReview=bone-crawler`.
+**Verification:** Regression, exact PNG integrity, actual 950 × 430 Chromium/Phaser rendering, and Pages deployment passed for the Bone Crawler direction correction on October 24, 2026. User phone review is pending. Verification is pending for the v0.10.14 Ember Imp review build. Both enemy reviews remain opt-in at `?enemyReview=bone-crawler` and `?enemyReview=ember-imp`.
 
 ## Remaining enemy sprite phase
 
 - **Skeletal Bat:** approved eight-frame art set in `assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png`, now the default. Its visible target is about 58px, slightly larger than the regular Cavern Bat's 52px target.
 - The atlas covers four flap poses, the existing dive tell and dive, hit recoil, and defeat. Its 2 HP, flight/dive behavior, telegraph timing, collision box and procedural fallback are unchanged.
-- **Bone Crawler:** four crawl poses are opt-in at `?enemyReview=bone-crawler`. After phone feedback, the art is increased to about 85–93px tall by 112–131px wide and the hitbox to 95×105. Its one HP, ground movement, ledge stopping, spawn schedule and attack logic are unchanged.
-- **Next:** review the Bone Crawler on a phone, then create Ember Imp sprites. Begin v0.11 World & Atmosphere only after the enemy-sprite phase.
+- **Bone Crawler:** four crawl poses are opt-in at `?enemyReview=bone-crawler`. The user approved the 2.5× scale and 95×105 hitbox; the runtime now mirrors its art to face right. Its one HP, ground movement, ledge stopping, spawn schedule and attack logic are unchanged.
+- **Ember Imp:** six poses are opt-in at `?enemyReview=ember-imp`: four right-facing run poses at 8fps, a fire-warning pose and a short release pose. The visible target is about 55px tall with one shared foot line. Its 2 HP, 38×42 hitbox, movement, warning and fireball behavior are unchanged; the projectile remains a separate effect.
+- **Next:** phone-review the Bone Crawler and Ember Imp art. Begin v0.11 World & Atmosphere only after the enemy-sprite phase.
 
 ## Main Reaper motion cycle v4
 
@@ -61,6 +62,13 @@ The user accepted the Reaper, regular Cavern Bat and Skeletal Bat art on October
 
 - Mirror the four Bone Crawler poses horizontally at runtime so its head faces right, matching its movement direction. The source PNGs, 2.5× scale, 95×105 hitbox and ground alignment stay unchanged.
 - **Verification:** Full regression, exact PNG integrity, actual phone-sized Chromium/Phaser rendering, and Pages deployment passed. User phone review is pending.
+
+## v0.10.14 — Ember Imp Art Review
+
+- Added a six-pose transparent Ember Imp atlas: four running poses, fire warning, and release. Running poses face right; attack poses turn toward the Reaper.
+- The art remains opt-in at `?enemyReview=ember-imp`. A missing or invalid atlas retains the procedural Imp.
+- The 55px art target is aligned to the existing ground position. HP, 38×42 hitbox, movement, 470ms warning, fireball launch/cooldown, and projectile rendering remain unchanged.
+- **Verification:** Pending regression, exact PNG integrity, actual phone-sized Chromium/Phaser rendering, and Pages deployment.
 
 ## v0.10.8 — Reaper Run Cycle Rework
 

@@ -347,6 +347,101 @@ const server=http.createServer((req,res)=>{
     enemy.dead=true;s.drawScene();g.step(performance.now(),0);return sprite.visible;
   });
   assert.equal(crawlerAfterDeath,false,'Dead crawlers return to ordinary enemy cleanup');
+
+  // Ember Imp art remains opt-in. Exercise all four run poses and the existing
+  // warning/release states at phone scale while checking the old hitbox.
+  await skeletalPage.goto(origin+'/?enemyReview=ember-imp&seed=33',
+    {waitUntil:'domcontentloaded',timeout:45000});
+  await skeletalPage.waitForFunction(()=>{
+    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    return v?.loaded===true&&v.emberImpReady===true;
+  },null,{timeout:45000});
+  const impLoaded=await skeletalPage.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS,m=V.V2_EMBER_IMP_ATLAS;
+    const texture=s.textures.get(m.key),source=texture.getSourceImage();
+    return {ready:s.visuals.emberImpReady,pool:s.visuals.emberImpPool.length,
+      dimensions:[source.width,source.height],
+      frames:V.V2_EMBER_IMP_FRAMES.every(frame=>texture.has(frame.name)),
+      flag:new URLSearchParams(location.search).get('enemyReview')};
+  });
+  assert.deepEqual(impLoaded,{ready:true,pool:12,dimensions:[768,512],frames:true,flag:'ember-imp'});
+  await skeletalPage.click('#start-btn');
+  await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
+    null,{timeout:15000});
+  await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0];
+    g.loop.stop();s.state='paused';s.elapsed=0;s.enemies=[];s.fireballs=[];
+    s.drawScene();g.step(performance.now(),0);
+  });
+  const impEmpty=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot());
+  const impRect=await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_EMBER_IMP_ATLAS;
+    const x=s.cameraX+600,ground=s.terrain.groundAt(x),y=ground-30;
+    const enemy={kind:'imp',x,y,homeY:y,phase:0,dead:false,hp:2,warningMs:0};
+    s.enemies=[enemy];s.fireballs=[];s.drawScene();g.step(performance.now(),0);
+    const sprite=v.emberImpPool[0],hitbox=window.GRIM_COMBAT.rectFor(enemy);
+    return {frame:sprite.frame.name,visible:sprite.visible,x:sprite.x,y:sprite.y,
+      enemyX:enemy.x,enemyY:enemy.y,groundY:ground,hitbox,
+      displayWidth:sprite.displayWidth,displayHeight:sprite.displayHeight,
+      screenX:Math.round(enemy.x-s.cameraX-sprite.displayWidth*m.origin[0]),
+      screenY:Math.round(sprite.y-(s.cameraY||0)-sprite.displayHeight*m.origin[1]),
+      scale:sprite.scaleX,expectedScale:m.scale};
+  });
+  assert.equal(impRect.frame,'run_01');assert.equal(impRect.visible,true);
+  assert.equal(impRect.x,impRect.enemyX);assert.equal(impRect.y,impRect.enemyY+22);
+  assert.ok(Math.abs(impRect.scale-impRect.expectedScale)<.00001);
+  assert.ok(Math.abs(175*impRect.scale-55)<.01,'Ember Imp visible target is 55px');
+  assert.equal(impRect.hitbox.width,38);assert.equal(impRect.hitbox.height,42);
+  await skeletalPage.screenshot({path:path.join(skeletalArtifactDir,'ember-imp-phone-scale.png')});
+  const impStates=[
+    {elapsed:0,warningMs:0,ageMs:null,frame:'run_01'},
+    {elapsed:1/8,warningMs:0,ageMs:null,frame:'run_02'},
+    {elapsed:2/8,warningMs:0,ageMs:null,frame:'run_03'},
+    {elapsed:3/8,warningMs:0,ageMs:null,frame:'run_04'},
+    {elapsed:.5,warningMs:470,ageMs:null,frame:'warning'},
+    {elapsed:.6,warningMs:0,ageMs:0,frame:'release'}
+  ];
+  const impHashes=[];
+  for(let i=0;i<impStates.length;i++){
+    const state=impStates[i];
+    const rendered=await skeletalPage.evaluate(({elapsed,warningMs,ageMs})=>{
+      const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.emberImpPool[0];
+      s.elapsed=elapsed;enemy.warningMs=warningMs;
+      s.fireballs=ageMs===null?[]:[{owner:enemy,ageMs,dead:false,x:enemy.x-12,y:enemy.y-11}];
+      s.drawScene();g.step(performance.now(),0);
+      return {frame:sprite.frame.name,visible:sprite.visible,fireballs:s.fireballs.length};
+    },state);
+    assert.deepEqual(rendered,{frame:state.frame,visible:true,fireballs:state.ageMs===null?0:1},
+      'Phaser selects and displays the '+state.frame+' pose');
+    const canvas=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({
+      path:path.join(skeletalArtifactDir,'ember-imp-canvas-'+String(i+1).padStart(2,'0')+'.png')}));
+    const x=Math.max(0,Math.floor(impRect.screenX)),y=Math.max(0,Math.floor(impRect.screenY));
+    const width=Math.min(Math.ceil(impRect.displayWidth),canvas.width-x);
+    const height=Math.min(Math.ceil(impRect.displayHeight),canvas.height-y);
+    const crop=Buffer.alloc(width*height*4);let changed=0,minY=height,maxY=-1;
+    for(let row=0;row<height;row++){
+      const from=((y+row)*canvas.width+x)*4,to=row*width*4;
+      canvas.data.copy(crop,to,from,from+width*4);
+      for(let px=0;px<width*4;px+=4){
+        const offset=from+px;
+        if(Math.abs(canvas.data[offset]-impEmpty.data[offset])>14||
+           Math.abs(canvas.data[offset+1]-impEmpty.data[offset+1])>14||
+           Math.abs(canvas.data[offset+2]-impEmpty.data[offset+2])>14){
+          changed++;minY=Math.min(minY,row);maxY=Math.max(maxY,row);
+        }
+      }
+    }
+    assert.ok(changed>100,'Rendered '+state.frame+' art changes visible phone-canvas pixels');
+    if(i<4)assert.ok(maxY-minY+1>50&&maxY-minY+1<60,
+      'Run pose '+state.frame+' measures about 55 visible pixels tall');
+    impHashes.push(crypto.createHash('sha256').update(crop).digest('hex'));
+  }
+  assert.equal(new Set(impHashes).size,6,'All four run and two attack poses render distinct phone-scale pixels');
+  const impAfterDeath=await skeletalPage.evaluate(()=>{
+    const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.emberImpPool[0];
+    enemy.dead=true;s.drawScene();g.step(performance.now(),0);return sprite.visible;
+  });
+  assert.equal(impAfterDeath,false,'Dead Imps return to ordinary enemy cleanup');
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -588,7 +683,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.13 Reaper/Bat/Skeletal Bat defaults, opt-in right-facing Bone Crawler 2.5x art/hitbox four-pose phone render, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.10.14 Reaper/Bat/Skeletal Bat defaults, opt-in right-facing Bone Crawler 2.5x and Ember Imp six-pose phone renders, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
