@@ -13,7 +13,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 
 ## v0.12.0 candidate — Biome Ground Materials
 
-- Added eight lightweight WebP ground materials matched to Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss Biome. Tundra uses a painterly slate-and-snow material drawn directly on its playable surfaces and floating ledges, matching the approved mountain art; the previous faceted platform overlay has been removed.
+- Added eight lightweight WebP ground materials matched to Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss Biome. Tundra uses a painterly slate-and-snow material matching the approved mountain art. Floating ledges are composited into their exact sloped shape so the raster texture appears on the actual face; the previous faceted overlay is removed.
 - The renderer masks each material to the current generated terrain profile, including slopes, rubble, cliffs, and floating ledges. Procedural geometry, collision, hazards, and open gaps remain unchanged; dark and lava abyss fills remain behind gaps.
 - Ground materials use the existing 360m biome fades and hard Tundra-to-Caves portal handoff. Source images are reduced to 768px runtime canvases and loaded as the player reaches a biome; materials with no visible or active terrain are released to limit phone memory use.
 - Corrected the seed 1 full-run test so it exercises normal victory with God Mode off near the finish. Corrected the God Mode endpoint test so 10,000m remains a valid teleport and 20,000m is covered. Corrected the Ember Imp visible-height check to measure decoded atlas alpha bounds instead of screenshot contrast.

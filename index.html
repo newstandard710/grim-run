@@ -3429,6 +3429,44 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrainTextureViews.set(key,view);
       return view;
     }
+    tundraPlatformTextureView(section,key,textureKey){
+      let view=this.terrainTextureViews.get(key);
+      if(view)return view;
+      if(!this.textures?.createCanvas||!this.add?.image)return null;
+      const x0=section.start,x1=section.end,width=Math.max(1,Math.ceil(x1-x0));
+      const y0=this.terrain.groundAt(x0),y1=this.terrain.groundAt(x1-.001);
+      if(y0===null||y1===null)return null;
+      const top=Math.min(y0,y1),bottom=Math.max(y0,y1)+68;
+      const height=Math.max(1,Math.ceil(bottom-top));
+      const compositeKey='terrain-tundra-platform-'+Math.round(x0)+'-'+Math.round(x1);
+      if(this.textures.exists?.(compositeKey))this.textures.remove(compositeKey);
+      const texture=this.textures.createCanvas(compositeKey,width,height);
+      if(!texture)return null;
+      const context=texture.getContext();
+      const source=this.textures.get(textureKey)?.getSourceImage?.();
+      if(!context||!source){this.textures.remove(compositeKey);return null;}
+      context.clearRect(0,0,width,height);
+      context.save();
+      context.beginPath();
+      context.moveTo(0,y0-top);
+      context.lineTo(x1-x0,y1-top);
+      context.lineTo(x1-x0,bottom-top);
+      context.lineTo(0,bottom-top);
+      context.closePath();
+      context.clip();
+      const scale=TUNDRA_TERRAIN_TILE_SCALE,tileWidth=source.width*scale,tileHeight=source.height*scale;
+      const mod=(value,size)=>((value%size)+size)%size;
+      const offsetX=-mod(x0*scale,tileWidth),offsetY=-mod(top*scale,tileHeight);
+      for(let y=offsetY;y<height;y+=tileHeight)
+        for(let x=offsetX;x<width;x+=tileWidth)
+          context.drawImage(source,x,y,tileWidth,tileHeight);
+      context.restore();
+      texture.refresh();
+      const sprite=this.add.image(x0,top,compositeKey).setOrigin(0,0).setDepth(1).setVisible(false);
+      view={id:'tundra',sprite,mask:null,maskGraphics:null,compositeTextureKey:compositeKey};
+      this.terrainTextureViews.set(key,view);
+      return view;
+    }
     drawTerrainTexture(section,from,to,h0,h1,underside,depth,meters,activeKeys){
       if(!this.terrainBase||!this.add?.tileSprite||!this.make?.graphics)return;
       const weights=this.terrainBiomeWeights(meters);
@@ -3443,14 +3481,22 @@ window.GRIM_CONFIG = Object.freeze({
       const points=[{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}];
       for(let i=0;i<active.length;i++){
         const [id,weight]=active[i],textureKey='terrain-material-'+id;
-        const key=sectionKey+':'+id,view=this.terrainTextureView(key,textureKey);
+        const key=sectionKey+':'+id;
+        if(section.kind==='platform'&&id==='tundra'){
+          const view=this.tundraPlatformTextureView(section,key,textureKey);
+          if(!view)continue;
+          activeKeys.add(key);
+          view.sprite.setAlpha(active.length===1||i===0?1:weight)
+            .setDepth(1+i*.001).setVisible(true);
+          continue;
+        }
+        const view=this.terrainTextureView(key,textureKey);
         if(!view)continue;
         activeKeys.add(key);
         const {sprite,maskGraphics}=view;
         maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);maskGraphics.fillPoints(points,true);
         sprite.setTexture(textureKey).setPosition(from,0).setSize(Math.max(1,to-from),depth);
-        sprite.setTileScale(id==='tundra'?TUNDRA_TERRAIN_TILE_SCALE:TERRAIN_TILE_SCALE,
-          id==='tundra'?TUNDRA_TERRAIN_TILE_SCALE:TERRAIN_TILE_SCALE);
+        sprite.setTileScale(TERRAIN_TILE_SCALE,TERRAIN_TILE_SCALE);
         sprite.setTilePosition(from,0).setAlpha(active.length===1||i===0?1:weight);
         sprite.setDepth(1+i*.001).setVisible(true);
       }
@@ -3459,7 +3505,9 @@ window.GRIM_CONFIG = Object.freeze({
       if(!this.terrainTextureViews)return;
       for(const [key,view] of this.terrainTextureViews){
         if(activeKeys.has(key))continue;
-        view.sprite.clearMask?.();view.sprite.destroy();view.mask.destroy();view.maskGraphics.destroy();
+        view.sprite.clearMask?.();view.sprite.destroy();
+        view.mask?.destroy?.();view.maskGraphics?.destroy?.();
+        if(view.compositeTextureKey)this.textures?.remove?.(view.compositeTextureKey);
         this.terrainTextureViews.delete(key);
       }
     }
@@ -3475,7 +3523,9 @@ window.GRIM_CONFIG = Object.freeze({
     destroyTerrainTextureViews(){
       if(!this.terrainTextureViews)return;
       for(const view of this.terrainTextureViews.values()){
-        view.sprite.clearMask?.();view.sprite.destroy();view.mask.destroy();view.maskGraphics.destroy();
+        view.sprite.clearMask?.();view.sprite.destroy();
+        view.mask?.destroy?.();view.maskGraphics?.destroy?.();
+        if(view.compositeTextureKey)this.textures?.remove?.(view.compositeTextureKey);
       }
       this.terrainTextureViews.clear();
     }
