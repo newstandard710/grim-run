@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.10.11</title>
+  <title>GRIM RUN — v0.10.12</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.10.11 · ENEMY ART REVIEW</div>
+      <div class="mini">v0.10.12 · ENEMY ART REVIEW</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.10.11',
+  version: '0.10.12',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1436,18 +1436,22 @@ window.GRIM_CONFIG = Object.freeze({
     return null;
   }
   function snappingHeight(phase){return 46+32*(.5+.5*Math.sin(phase));}
+  const CRAWLER_HITBOX=Object.freeze({width:95,height:105,footOffset:46});
   function rectFor(e){
+    if(e.kind==='crawler')return {x:e.x-CRAWLER_HITBOX.width/2,
+      y:e.y-(CRAWLER_HITBOX.height-CRAWLER_HITBOX.footOffset),
+      width:CRAWLER_HITBOX.width,height:CRAWLER_HITBOX.height};
     const bat=enemyIsFlying(e);
     return {x:e.x-(bat?23:19),y:e.y-(bat?19:22),width:bat?46:38,height:bat?38:42};
   }
   function flightVisible(e,playerX,width){
     return enemyIsFlying(e)&&!e.dead&&e.x>=playerX-width*.32&&e.x<=playerX+width*.68;
   }
-  scope.GRIM_COMBAT={SHOT_MS,FLYERS,CUTTABLE,enemyIsFlying,cuttable,hpCost,pickTarget,snappingHeight,rectFor,flightVisible};
+  scope.GRIM_COMBAT={SHOT_MS,FLYERS,CUTTABLE,CRAWLER_HITBOX,enemyIsFlying,cuttable,hpCost,pickTarget,snappingHeight,rectFor,flightVisible};
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/visual-system.js?v=0.10.11-bone-crawler-review-v1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.10.12-bone-crawler-scale-review-v2"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -2317,7 +2321,7 @@ window.GRIM_CONFIG = Object.freeze({
     trySpawnCombat(x,kind){
       const stats=this.encounterTelemetry;
       const flying=Combat.enemyIsFlying({kind});
-      const width=flying?46:42;
+      const width=flying?46:kind==='crawler'?Combat.CRAWLER_HITBOX.width:42;
       if(Core.intersectsVendorCorridor(x-width/2,width,this.startX,C.vendorEveryMeters,C.pxPerMeter)){
         stats.rejectedVendor++;return false;
       }
@@ -2343,7 +2347,7 @@ window.GRIM_CONFIG = Object.freeze({
         Combat.enemyIsFlying(e)===flying&&Math.abs(e.x-x)<(flying?175:235))){
         stats.rejectedOverlap++;return false;
       }
-      const idealY=ground-(flying?161:kind==='crawler'?21:34);
+      const idealY=ground-(flying?161:kind==='crawler'?Combat.CRAWLER_HITBOX.footOffset:34);
       // Keep flying creatures actually inside the camera view at entrance.
       const y=flying?Math.max(this.cameraY+75,
         Math.min(this.cameraY+this.height-90,idealY)):idealY;
@@ -2731,7 +2735,7 @@ window.GRIM_CONFIG = Object.freeze({
           // A moving crawler stops at a drop; never silently evaporates.
           // That leaves it present for the player to shoot or scythe.
           if(floor!==null){
-            e.x=newX;e.homeY=floor-20;e.y=e.homeY;
+            e.x=newX;e.homeY=floor-Combat.CRAWLER_HITBOX.footOffset;e.y=e.homeY;
           }
         }else if(e.kind==='imp'){
           // Retreating, ground-hugging imps stay readable for more than a
@@ -3587,16 +3591,16 @@ window.GRIM_CONFIG = Object.freeze({
           }
           if(skeletal&&e.hp===1){g.fillStyle(0xffcf76,.68);g.fillCircle(x,y+13,3);}
         }else if(e.kind==='crawler'){
-          g.fillStyle(0xa8e1d6,.14);g.fillEllipse(x,y-2,60,48);
-          g.lineStyle(3,0xeff6e6,.9);g.strokeEllipse(x,y-2,43,32);
-          g.fillStyle(0xa9babf);g.fillEllipse(x,y,41,30);
-          g.fillStyle(0xecf4e7,.97);g.fillEllipse(x+5,y-8,27,16);
-          g.lineStyle(3,0xe4fbf1,.96);
+          g.fillStyle(0xa8e1d6,.14);g.fillEllipse(x,y+45,124,18);
+          g.lineStyle(4,0xeff6e6,.9);g.strokeEllipse(x,y+3,112,80);
+          g.fillStyle(0xa9babf);g.fillEllipse(x,y+3,104,72);
+          g.fillStyle(0xecf4e7,.97);g.fillEllipse(x+24,y-11,44,30);
+          g.lineStyle(4,0xe4fbf1,.96);
           for(const side of [-1,1]){
-            g.lineBetween(x+side*12,y+8,x+side*23,y+20);
-            g.lineBetween(x+side*3,y+11,x+side*17,y+22);
+            g.lineBetween(x+side*29,y+21,x+side*42,y+43);
+            g.lineBetween(x+side*7,y+24,x+side*23,y+43);
           }
-          g.fillStyle(0xfe8390);g.fillCircle(x-10,y-5,3.6);
+          g.fillStyle(0xfe8390);g.fillCircle(x+20,y-10,4.5);
         }else if(e.kind==='imp'){
           g.fillStyle(0xffb76a,.16);g.fillEllipse(x,y-4,60,65);
           g.lineStyle(3,0xffc583,.92);g.strokeEllipse(x,y,39,47);

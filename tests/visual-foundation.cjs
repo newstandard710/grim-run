@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.11-bone-crawler-review-v1"></script>'), 'Versioned art JS avoids stale mobile cached loader');
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.10.12-bone-crawler-scale-review-v2"></script>'), 'Versioned art JS avoids stale mobile cached loader');
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');
@@ -52,8 +52,8 @@ assert.deepEqual(Array.from(V.V2_SKELETAL_BAT_FLAP),['flap_raised','flap_mid_dow
 assert.equal(V.V2_SKELETAL_BAT_FLAP_FPS,12);
 assert.equal(V.V2_BONE_CRAWLER_FRAMES.length,4);
 assert.equal(V.V2_BONE_CRAWLER_FPS,8);
-assert.ok(Math.abs(V.V2_BONE_CRAWLER_SCALE*1065-40)<.01,
-  'Bone Crawler canvas scale yields about 36px visible height');
+assert.ok(Math.abs(V.V2_BONE_CRAWLER_SCALE*1065-100)<.01,
+  'Bone Crawler canvas scale is 2.5x the original phone-review size');
 assert.ok(V.V2_BONE_CRAWLER_FRAMES.every(frame=>frame.width===1477&&frame.height===1065),
   'Bone Crawler frames share a stable canvas and registration');
 for(const frame of V.V2_SKELETAL_BAT_FRAMES){
@@ -94,7 +94,8 @@ vm.createContext(scope);
 for(const [,attrs,code] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(code,scope,{filename:'index.html'});
 scope.GrimUI=scope.window.GrimUI; // Node VM global binding for the game's constructor.
-const CoreApi=scope.window.GRIM_CORE,slideClearance=scope.window.GRIM_CONFIG.slideClearancePx;
+const CoreApi=scope.window.GRIM_CORE,CombatApi=scope.window.GRIM_COMBAT,
+ slideClearance=scope.window.GRIM_CONFIG.slideClearancePx;
 const testBranch=CoreApi.obstacle('branch',180,300,0,slideClearance,430);
 assert.equal(testBranch.y+testBranch.height,300-slideClearance,'Raised branch is positioned 76px above ground');
 assert.equal(CoreApi.branchHits(CoreApi.collisionBox(200,300,false),testBranch,()=>300,slideClearance,false),true,
@@ -103,6 +104,12 @@ assert.equal(CoreApi.branchHits(CoreApi.collisionBox(200,300,true),testBranch,()
  'Ground slide still passes under the raised branch without changing collision boxes');
 assert.equal(JSON.stringify(CoreApi.collisionBox(200,300,false)),JSON.stringify({x:180,y:221,width:42,height:79}));
 assert.equal(JSON.stringify(CoreApi.collisionBox(200,300,true)),JSON.stringify({x:173,y:271,width:56,height:29}));
+assert.deepEqual(JSON.parse(JSON.stringify(CombatApi.CRAWLER_HITBOX)),{width:95,height:105,footOffset:46},
+ 'Crawler collision dimensions grow 2.5x with the visible art');
+const crawlerCollision=CombatApi.rectFor({kind:'crawler',x:250,y:600-CombatApi.CRAWLER_HITBOX.footOffset});
+assert.deepEqual(JSON.parse(JSON.stringify(crawlerCollision)),{x:202.5,y:495,width:95,height:105},
+ 'Larger crawler hitbox stays centered and aligned to the ground');
+assert.equal(crawlerCollision.y+crawlerCollision.height,600);
 const Game=scope.window.GrimGameScene;
 const game=new Game();game.scale={width:950,height:430,on(){},off(){}};
 game.events={once(){}};game.add={graphics:gfx,text:gfx};game.cameras={main:{setScroll(){}}};
@@ -256,9 +263,9 @@ for(let i=0;i<4;i++){
  assert.equal(sprite.visible,true);
  assert.deepEqual(sprite.origin,[.5,.5]);
  assert.equal(sprite.x,crawlerEnemy.x);assert.equal(sprite.y,crawlerEnemy.y);
- assert.ok(Math.abs(sprite.scale*1065-40)<.01);
+ assert.ok(Math.abs(sprite.scale*1065-100)<.01);
 }
 crawlerEnemy.dead=true;crawlerRenderer.renderBoneCrawlers();
 assert.equal(crawlerRenderer.boneCrawlerPool[0].visible,false,'Dead crawler returns to normal cleanup');
 crawlerRenderer.shutdown();assert.equal(crawlerRenderer.boneCrawlerReady,false);
-console.log('PASS v0.10.11: accepted Reaper/Cavern/Skeletal Bat art unchanged; opt-in Bone Crawler crawl cycle, scale, and anchor covered.');
+console.log('PASS v0.10.12: accepted Reaper/Cavern/Skeletal Bat art unchanged; opt-in Bone Crawler 2.5x scale, hitbox, and ground anchor covered.');
