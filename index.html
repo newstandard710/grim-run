@@ -3600,7 +3600,7 @@ window.GRIM_CONFIG = Object.freeze({
       const y1=Number.isFinite(section.y1)?section.y1:this.terrain.groundAt(x1-.001);
       if(y0===null||y1===null)return null;
       const top=Math.min(y0,y1);
-      const underside=section.kind==='platform'?Math.max(y0,y1)+68:depth;
+      const underside=depth;
       const bottom=Math.max(top+1,underside),height=Math.max(1,Math.ceil(bottom-top));
       const compositeKey='terrain-tundra-'+section.kind+'-'+Math.round(x0)+'-'+Math.round(x1);
       if(this.textures.exists?.(compositeKey))this.textures.remove(compositeKey);
@@ -3646,7 +3646,9 @@ window.GRIM_CONFIG = Object.freeze({
       const sectionY0=Number.isFinite(section.y0)?section.y0:h0;
       const sectionY1=Number.isFinite(section.y1)?section.y1:h1;
       const renderDepth=depth;
-      const geometrySignature=[section.kind,sectionFrom,sectionTo,sectionY0,sectionY1,renderDepth].join(':');
+      const sectionBottom=section.kind==='platform'||section.kind==='soul-platform'
+        ?underside:renderDepth;
+      const geometrySignature=[section.kind,sectionFrom,sectionTo,sectionY0,sectionY1,sectionBottom].join(':');
       const weights=this.terrainBiomeWeights(meters);
       const active=Object.entries(weights).filter(([,weight])=>weight>.003)
         .sort((a,b)=>TERRAIN_BIOME_ORDER.indexOf(a[0])-TERRAIN_BIOME_ORDER.indexOf(b[0]));
@@ -3657,7 +3659,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(active.some(([id])=>!this.terrainMaterialIds.has(id)))return;
       const sectionKey=[section.kind,section.start,section.end].join(':');
       const points=[{x:sectionFrom,y:sectionY0},{x:sectionTo,y:sectionY1},
-        {x:sectionTo,y:renderDepth},{x:sectionFrom,y:renderDepth}];
+        {x:sectionTo,y:sectionBottom},{x:sectionFrom,y:sectionBottom}];
       for(let i=0;i<active.length;i++){
         const [id,weight]=active[i],textureKey='terrain-material-'+id;
         const key=sectionKey+':'+id;

@@ -642,6 +642,9 @@ const server=http.createServer((req,res)=>{
       const gapTextureViews=gaps.filter(gap=>[...scene.terrainTextureViews.keys()].some(key=>
         key.startsWith(['gap',gap.start,gap.end].join(':')))).length;
       const gapSurfaceViews=[...scene.terrainSurfaceViews.keys()].filter(key=>key.startsWith('gap:')).length;
+      const visiblePlatforms=sections.filter(section=>section.kind==='platform');
+      const cappedPlatforms=visiblePlatforms.filter(section=>scene.terrainSurfaceViews.has(
+        ['platform',section.start,section.end].join(':'))).length;
       const tundraGroundMaterialViews=[...scene.terrainTextureViews.entries()].filter(([key,view])=>
         (key.startsWith('ground:')||key.startsWith('rubble:'))&&view.id===id&&view.sprite.visible&&
         id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey)).length;
@@ -673,6 +676,7 @@ const server=http.createServer((req,res)=>{
         groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews,
         tundraGroundMaterialViews,groundFace,platformMaterialViews,platformFace,
         surfaceCount:surfaceViews.length,gapSurfaceViews,surfaceContact,stableSurfaceCache,
+        visiblePlatforms:visiblePlatforms.length,cappedPlatforms,
         maskClearCalls,drawGroundMeanMs:+(timings.reduce((sum,time)=>sum+time,0)/timings.length).toFixed(3),
         drawGroundP95Ms:+timings[Math.floor(timings.length*.95)].toFixed(3)};
     },biome);
@@ -688,6 +692,8 @@ const server=http.createServer((req,res)=>{
     assert.ok(grounded.surfaceContact.capAlpha>100,
       biome+' cap is visibly filled a few pixels below its contact line');
     assert.ok(grounded.stableSurfaceCache,biome+' reuses its cached surface across repeated redraws');
+    assert.equal(grounded.cappedPlatforms,grounded.visiblePlatforms,
+      biome+' gives visible one-way ledges a matching surface cap');
     assert.equal(grounded.maskClearCalls,0,biome+' does not rebuild texture masks on each redraw');
     console.log(biome+' terrain draw diagnostic: mean '+grounded.drawGroundMeanMs+
       'ms, p95 '+grounded.drawGroundP95Ms+'ms; cached cap/masks reused');
