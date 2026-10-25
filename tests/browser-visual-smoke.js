@@ -108,7 +108,8 @@ const server=http.createServer((req,res)=>{
   await page.locator('#game canvas').screenshot({
    path:path.join(surfaceArtifactDir,'concept-foreground-forest-phone-scale.png')});
   await page.evaluate(()=>{
-   const s=window.grimRun.scene.scenes[0],meters=6500;
+   const g=window.grimRun,s=g.scene.scenes[0],meters=6500;
+   g.loop.stop();s.state='playing';s.elapsed=0;s.enemies=[];
    s.hasTeleported=true;s.distance=meters;
    s.cameraX=s.startX+meters*(window.GRIM_CONFIG?.pxPerMeter||12);
    if(s.player)s.player.x=s.cameraX+150;
@@ -119,7 +120,8 @@ const server=http.createServer((req,res)=>{
    return s?.biomeBackdropGroup==='underworld'&&s.biomeBackdropReady===true;
   },null,{timeout:45000});
   const underworldGround=await page.evaluate(()=>{
-   const s=window.grimRun.scene.scenes[0],meters=6500;
+   const g=window.grimRun,s=g.scene.scenes[0],meters=6500;
+   g.loop.stop();s.state='playing';s.elapsed=0;s.enemies=[];
    s.distance=meters;s.cameraX=s.startX+meters*(window.GRIM_CONFIG?.pxPerMeter||12);
    if(s.player)s.player.x=s.cameraX+150;
    s.drawScene();
