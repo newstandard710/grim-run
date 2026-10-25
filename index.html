@@ -1475,7 +1475,7 @@ window.GRIM_CONFIG = Object.freeze({
   const GROUND_ART_ATLAS_FRAME_SIZE=627;
   const GROUND_ART_VARIANTS=4;
   const GROUND_ART_SPRITES_PER_BIOME=12;
-  const GROUND_ART_SECTION_KEY_WIDTH=64;
+  const GROUND_ART_CELL_WIDTH=640;
   const GROUND_ART_BAND_DEPTH=176;
   const GROUND_ART_BAND_ABOVE=150;
   const groundAccentNoise=(cell,salt=0)=>{
@@ -3354,7 +3354,7 @@ window.GRIM_CONFIG = Object.freeze({
         :worldArt?.biomeWeights?.(this.distance)||{};
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const sections=this.terrain.visibleSections(left,right);
-      const cellWidth=GROUND_ART_SECTION_KEY_WIDTH,startX=this.startX??200;
+      const cellWidth=GROUND_ART_CELL_WIDTH,startX=this.startX??200;
       for(const [id,sprites] of Object.entries(this.groundArtSprites||{})){
         const weight=weights[id]||0;
         const placements=[];
@@ -3364,25 +3364,36 @@ window.GRIM_CONFIG = Object.freeze({
             if(section.kind==='gap'||section.kind==='platform')continue;
             const visibleFrom=Math.max(left,section.start),visibleTo=Math.min(right,section.end);
             if(visibleTo-visibleFrom<80)continue;
-            const cell=Math.floor(section.start/cellWidth);
-            const noise=n=>groundAccentNoise(cell,salt+n);
-            if(noise(0)<.38)continue;
             const sectionWidth=section.end-section.start;
-            const size=Math.min(142+noise(3)*82,(sectionWidth-32)*.88);
-            if(size<118)continue;
-            const x=section.start+16+size*.5+noise(1)*(sectionWidth-size-32);
-            if(x<visibleFrom-size*.55||x>visibleTo+size*.55)continue;
-            const y=this.terrain.groundAt(x);
-            const before=this.terrain.groundAt(x-38),after=this.terrain.groundAt(x+42);
-            if(y===null||before===null||after===null||Math.abs(after-before)>48)continue;
-            const meters=(x-startX)/C.pxPerMeter;
-            const biomeWeight=worldArt?.biomeWeights?.(meters)?.[id]??
-              worldArt?.underworldWeights?.(meters)?.[id]??weight;
-            if(biomeWeight<=.003)continue;
-            placements.push({x,y,weight:Math.min(weight,biomeWeight),
-              frame:Math.floor(noise(2)*GROUND_ART_VARIANTS),
-              width:size,height:size*(.84+noise(4)*.26),
-              alpha:.92+noise(5)*.08,flipX:noise(6)>.5});
+            const cells=[];
+            if(sectionWidth<=cellWidth*1.25){
+              cells.push({index:Math.floor(section.start/64),from:section.start,to:section.end,sparse:false});
+            }else{
+              const first=Math.floor(section.start/cellWidth),last=Math.floor((section.end-.001)/cellWidth);
+              for(let cell=first;cell<=last;cell++)
+                cells.push({index:cell,from:Math.max(section.start,cell*cellWidth+20),
+                  to:Math.min(section.end,(cell+1)*cellWidth-20),sparse:true});
+            }
+            for(const cell of cells){
+              const noise=n=>groundAccentNoise(cell.index,salt+n);
+              if(cell.sparse&&noise(0)<.35)continue;
+              const cellWidthAvailable=cell.to-cell.from;
+              const size=Math.min(142+noise(3)*82,(cellWidthAvailable-32)*.88);
+              if(size<118)continue;
+              const x=cell.from+16+size*.5+noise(1)*(cellWidthAvailable-size-32);
+              if(x<visibleFrom-size*.55||x>visibleTo+size*.55)continue;
+              const y=this.terrain.groundAt(x);
+              const before=this.terrain.groundAt(x-38),after=this.terrain.groundAt(x+42);
+              if(y===null||before===null||after===null||Math.abs(after-before)>48)continue;
+              const meters=(x-startX)/C.pxPerMeter;
+              const biomeWeight=worldArt?.biomeWeights?.(meters)?.[id]??
+                worldArt?.underworldWeights?.(meters)?.[id]??weight;
+              if(biomeWeight<=.003)continue;
+              placements.push({x,y,weight:Math.min(weight,biomeWeight),
+                frame:Math.floor(noise(2)*GROUND_ART_VARIANTS),
+                width:size,height:size*(.84+noise(4)*.26),
+                alpha:.92+noise(5)*.08,flipX:noise(6)>.5});
+            }
           }
         }
         for(let i=0;i<sprites.length;i++){
