@@ -1,17 +1,25 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.11.10 — *Background Art Cleanup*.  
-**Development candidate:** v0.12.0 — *Biome Ground Materials*. Eight biome-specific ground materials follow generated ground and foreground profiles while preserving existing gaps and abyss fills.
+**Current production build:** v0.12.0 — *Biome Ground Materials*.
+**Development candidate:** v0.12.1 — *Terrain Surface Pass*. This pass fixes world alignment and refines how the playable surface meets the approved biome art.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Candidate:** v0.12.0 — *Biome Ground Materials*  
+**Candidate:** v0.12.1 — *Terrain Surface Pass*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression suites pass, including 300 seeded terrain checks, five full runs to the normal 9,999m finish, and 72 safe God Mode teleports across eight seeds through 20,000m. The biome transition suite passes all fades, the 5,000m portal handoff, and the ground render helper. Actual Chromium CI passes the Ember Imp alpha-bound check and all eight ground-material checks. Tundra now has separate phone-scale pixel checks for both walkable ground and floating ledges; phone-scale captures have been reviewed. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** The v0.12.0 production build passed the local regression suites, including 300 seeded terrain checks, five full runs to the normal 9,999m finish, and 72 safe God Mode teleports across eight seeds through 20,000m. Its biome transition checks covered all fades, the 5,000m portal handoff, and ground rendering; Chromium checks covered the Ember Imp silhouette and all eight ground materials. The v0.12.1 candidate has not yet been reviewed. Android device confirmation remains pending.
 
-## v0.12.0 candidate — Biome Ground Materials
+## v0.12.1 candidate — Terrain Surface Pass
+
+- Non-Tundra material textures now use a scale-aware world offset so visible sections keep a stable phase while the camera scrolls. Tundra's stable compositor remains unchanged.
+- Rubble accents are anchored to the local terrain profile and sit below the walkable edge, preventing them from floating over slopes.
+- A restrained lower-backdrop veil lowers the contrast of painted ground near the run lane while preserving the approved concepts and distant parallax.
+- The hard two-stroke edge is replaced by a narrow, broken biome-colored lip whose top contour follows the existing surface line. No terrain or collision geometry changes.
+- Existing gaps, abyss fills, ledges, controls, hazards and route progression remain unchanged. Browser review is pending.
+
+## v0.12.0 — Biome Ground Materials
 
 - Added eight lightweight WebP ground materials matched to Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss Biome. Tundra uses a new broad slate-and-snow material based on the approved mountain art. Its generated ground, slopes, rubble, and floating ledges are composited into their terrain silhouettes; generic rubble facets are suppressed so the material appears across the walkable foreground and cliff faces.
 - The renderer masks each material to the current generated terrain profile, including slopes, rubble, cliffs, and floating ledges. Procedural geometry, collision, hazards, and open gaps remain unchanged; dark and lava abyss fills remain behind gaps.
