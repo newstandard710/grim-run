@@ -1,6 +1,6 @@
-/* Grim Run — Biome Transitions and Concept Foregrounds, v0.11.12
- * Approved biome paintings supply both the distant view and the natural
- * foreground visible through the lightly shaded gameplay terrain.
+/* Grim Run — Biome Transitions and Grounded Terrain, v0.11.14
+ * Approved biome paintings supply the distant view and their extracted
+ * foreground supplies the moving, collision-clipped terrain surface.
  */
 (function(scope){
   'use strict';
@@ -29,7 +29,7 @@
   ]);
   const WORLD_BIOMES=Object.freeze([...SURFACE_BIOMES,...UNDERWORLD_BIOMES]);
   const BIOME_FADE_HALF_WIDTH=180;
-  const WORLD_GROUND_BODY_ALPHA=.22;
+  const WORLD_GROUND_BODY_ALPHA=1;
   const WORLD_GROUND_SHADE_ALPHA=.08;
   const UNDERWORLD_PALETTES=Object.freeze({
     caves:[0x171821,0x414555,0x818495,0x343844],
