@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression and real-Chromium terrain rendering checks are pending. Android device review remains necessary. This update changes presentation only: terrain generation, heights and collision geometry remain unchanged. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Local visual foundation, biome-transition and gameplay suites pass; GitHub asset integrity passes. Actual Chromium confirms sparse forest and crystal foreground sprites load at phone scale, move with world coordinates, and stay clipped to solid terrain. The broader browser workflow then hits its recorded Reaper `run_03` height assertion, and the regression workflow still hits its documented seed‑1 completion assertion. Android device review remains necessary. Terrain generation, heights and collision geometry remain unchanged. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
 
 ## v0.11.15 — Grounded Terrain Art
 

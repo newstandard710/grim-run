@@ -33,6 +33,7 @@ assert.ok(html.includes('.setScrollFactor(1).setDepth(2)'),'Foreground sprites m
 assert.ok(!html.includes('GROUND_ART_CROP_START'),'Foreground accents no longer reuse broad background crops');
 assert.ok(!html.includes('ground-art-'),'Foreground no longer repeats crops from the full biome paintings');
 assert.ok(html.includes('this.updateBiomeGroundArt();'),'Ground art updates with camera movement and biome fades');
+assert.ok(worldArt.includes('separate biome sprite'),'Biome painting stays scenery while separate art follows the terrain');
 assert.ok(html.includes('sprite.setFlipX(placement.flipX);'),'Biome art changes orientation to reduce visual repetition');
 for(const id of ['forest','foothills','tundra','caves','crystals','ashlands','lava','boss']){
  const asset=fs.readFileSync(path.join(__dirname,'..','assets/visuals/ground-foreground',

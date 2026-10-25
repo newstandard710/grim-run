@@ -1,6 +1,6 @@
-/* Grim Run — Biome Transitions and Grounded Terrain, v0.11.14
- * Approved biome paintings supply the distant view and their extracted
- * foreground supplies the moving, collision-clipped terrain surface.
+/* Grim Run — Biome Transitions and Grounded Terrain Art, v0.11.15
+ * Approved biome paintings supply distant scenery; separate biome sprite
+ * atlases dress the moving terrain while its existing geometry stays intact.
  */
 (function(scope){
   'use strict';
