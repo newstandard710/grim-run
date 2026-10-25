@@ -147,40 +147,45 @@ const server=http.createServer((req,res)=>{
   await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>{
     const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
-    return v?.loaded===true&&v.reviewV2===true;
+    return v?.loaded===true&&v.reviewV2===true&&v.boneCrawlerReady===true&&v.emberImpReady===true;
   },null,{timeout:45000});
   const reviewV2Loaded=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
     const visuals=window.GRIM_VISUALS;
     return {ready:v.reaperReady&&v.batReady,reviewV2:v.reviewV2,
       reaperPoses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length,
-      skeletalBatReady:v.skeletalBatReady,
+      skeletalBatReady:v.skeletalBatReady,boneCrawlerReady:v.boneCrawlerReady,
+      emberImpReady:v.emberImpReady,
       textures:Object.values(visuals.V2_REAPER).every(m=>s.textures.exists(m.key))&&
         Object.values(visuals.V2_BAT).every(m=>s.textures.exists(m.key)),
       failures:v.failedAssets};
   });
-  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:20,bats:12,skeletalBatReady:true,
+  assert.deepEqual(reviewV2Loaded,{ready:true,reviewV2:true,reaperPoses:20,bats:12,
+    skeletalBatReady:true,boneCrawlerReady:true,emberImpReady:true,
     textures:true,failures:[]});
 
-  // The accepted Skeletal Bat art is now present in the default game. Exercise
-  // all eight frames through Phaser at the same phone canvas dimensions.
+  // All accepted enemy illustrations are present in the default game. Exercise
+  // them through Phaser at the same phone canvas dimensions.
   const skeletalPage=await browser.newPage({viewport:{width:950,height:430}});
   skeletalPage.on('pageerror',e=>errors.push('Skeletal Bat review: '+String(e)));
   await skeletalPage.goto(origin+'/?seed=33',
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>{
     const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
-    return v?.loaded===true&&v.skeletalBatReady===true;
+    return v?.loaded===true&&v.skeletalBatReady===true&&
+      v.boneCrawlerReady===true&&v.emberImpReady===true;
   },null,{timeout:45000});
   const skeletalLoaded=await skeletalPage.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS,m=V.V2_SKELETAL_BAT_ATLAS;
     const texture=s.textures.get(m.key),source=texture.getSourceImage();
     return {ready:s.visuals.skeletalBatReady,pool:s.visuals.skeletalBatPool.length,
+      crawler:s.visuals.boneCrawlerReady,imp:s.visuals.emberImpReady,
       dimensions:[source.width,source.height],
       frames:V.V2_SKELETAL_BAT_FRAMES.every(frame=>texture.has(frame.name)),
       reviewFlag:new URLSearchParams(location.search).get('enemyReview')};
   });
-  assert.deepEqual(skeletalLoaded,{ready:true,pool:12,dimensions:[1254,1254],frames:true,
+  assert.deepEqual(skeletalLoaded,{ready:true,pool:12,crawler:true,imp:true,
+    dimensions:[1254,1254],frames:true,
     reviewFlag:null});
   await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
@@ -253,8 +258,8 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(afterDeath,false,'Defeat art clears after its short visual hold');
 
-  // Bone Crawler art remains opt-in. Exercise all four crawl drawings through
-  // real Phaser at 950x430 and compare their actual rendered phone-scale pixels.
+  // Exercise all four approved Bone Crawler drawings through real Phaser at
+  // 950x430 and compare their actual rendered phone-scale pixels.
   await skeletalPage.goto(origin+'/?enemyReview=bone-crawler&seed=33',
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>{
@@ -348,7 +353,7 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(crawlerAfterDeath,false,'Dead crawlers return to ordinary enemy cleanup');
 
-  // Ember Imp art remains opt-in. Exercise all four run poses and the existing
+  // Exercise all four approved Ember Imp run poses and the existing
   // warning/release states at phone scale while checking the old hitbox.
   await skeletalPage.goto(origin+'/?enemyReview=ember-imp&seed=33',
     {waitUntil:'domcontentloaded',timeout:45000});
@@ -443,7 +448,7 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(impAfterDeath,false,'Dead Imps return to ordinary enemy cleanup');
 
-  // The combined review link must load and render both opt-in ground enemies.
+  // The combined review link remains a supported alias and renders both enemies.
   await skeletalPage.goto(origin+'/?enemyReview=both&seed=33',
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>{
@@ -507,6 +512,55 @@ const server=http.createServer((req,res)=>{
     'Bone Crawler changes visible pixels beside the Reaper in combined review mode');
   assert.ok(changedPixels(bothRendered.impRect)>50,
     'Ember Imp changes visible pixels in combined review mode');
+
+  // Review the opening-forest art at phone scale. Compare the opt-in render
+  // against the main-game fallback while asserting the same seeded terrain.
+  const openingWorldSnapshot=async(query,file)=>{
+    await skeletalPage.goto(origin+'/'+query,
+      {waitUntil:'domcontentloaded',timeout:45000});
+    await skeletalPage.waitForFunction(()=>{
+      const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+      return v?.loaded===true&&v.skeletalBatReady===true&&
+        v.boneCrawlerReady===true&&v.emberImpReady===true;
+    },null,{timeout:45000});
+    await skeletalPage.click('#start-btn');
+    await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
+      null,{timeout:15000});
+    const geometry=await skeletalPage.evaluate(()=>{
+      const g=window.grimRun,s=g.scene.scenes[0];
+      g.loop.stop();s.state='paused';s.elapsed=0;s.frame=0;s.distance=0;
+      s.hasTeleported=false;s.player.x=s.startX;
+      s.player.y=s.terrain.groundAt(s.startX);
+      s.cameraX=s.player.x-s.width*window.GRIM_CONFIG.reaperXRatio;
+      s.cameraY=0;s.cameras.main.setScroll(s.cameraX,s.cameraY);
+      s.enemies=[];s.fireballs=[];s.obstacles=[];s.coins=[];s.souls=[];s.particles=[];
+      s.drawScene();g.step(performance.now(),0);
+      return {preview:s.openingWorldArtReviewRequested,
+        ground:[0,70,160,310].map(dx=>s.terrain.groundAt(s.startX+dx)),
+        player:{x:s.player.x,y:s.player.y,hp:s.player.hp,grounded:s.player.grounded}};
+    });
+    const image=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({path:file}));
+    return {geometry,image};
+  };
+  const openingDefault=await openingWorldSnapshot('?seed=33',
+    path.join(skeletalArtifactDir,'opening-forest-default-phone-scale.png'));
+  const openingReview=await openingWorldSnapshot('?worldReview=opening&seed=33',
+    path.join(skeletalArtifactDir,'opening-forest-review-phone-scale.png'));
+  assert.equal(openingDefault.geometry.preview,false);
+  assert.equal(openingReview.geometry.preview,true);
+  assert.deepEqual(openingReview.geometry.ground,openingDefault.geometry.ground,
+    'Opening-world artwork leaves seeded terrain geometry untouched');
+  assert.deepEqual(openingReview.geometry.player,openingDefault.geometry.player,
+    'Opening-world artwork leaves player position and health untouched');
+  assert.deepEqual([openingReview.image.width,openingReview.image.height],[950,430]);
+  let worldPixelsChanged=0;
+  for(let i=0;i<openingReview.image.data.length;i+=4){
+    if(Math.abs(openingReview.image.data[i]-openingDefault.image.data[i])>12||
+       Math.abs(openingReview.image.data[i+1]-openingDefault.image.data[i+1])>12||
+       Math.abs(openingReview.image.data[i+2]-openingDefault.image.data[i+2])>12)worldPixelsChanged++;
+  }
+  assert.ok(worldPixelsChanged>15000,
+    'Opening-forest preview visibly changes the phone-scale scene without changing gameplay state');
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -748,7 +802,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.10.15 Reaper/Bat/Skeletal Bat defaults, opt-in Bone Crawler and Ember Imp renders individually and together, slide, scythe, and fallbacks.');
+  console.log('PASS actual Chromium: v0.11.0 accepted enemy art defaults, opening-forest review renders at phone scale, gameplay geometry is unchanged, slide, scythe, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
