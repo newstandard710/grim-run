@@ -3357,13 +3357,13 @@ window.GRIM_CONFIG = Object.freeze({
         g.lineStyle(2,aura,.95);g.strokeRoundedRect(x-31,y-120,62,17,4);
       }
     }
-    bakeTerrainMaterial(id){
+    bakeTerrainMaterial(id,sourceOverride=null){
       if(this.terrainMaterialIds?.has(id))return true;
       if(!this.textures||typeof this.textures.get!=='function'||
         typeof this.textures.createCanvas!=='function')return false;
       const sourceKey='terrain-source-'+id,materialKey='terrain-material-'+id;
-      const sourceTexture=this.textures.get(sourceKey);
-      const source=sourceTexture?.getSourceImage?.()||sourceTexture?.source?.[0]?.image;
+      const sourceTexture=this.textures.exists?.(sourceKey)?this.textures.get(sourceKey):null;
+      const source=sourceOverride||sourceTexture?.getSourceImage?.()||sourceTexture?.source?.[0]?.image;
       if(!source)return false;
       if(this.textures.exists?.(materialKey))this.textures.remove(materialKey);
       const texture=this.textures.createCanvas(materialKey,TERRAIN_TEXTURE_SIZE,TERRAIN_TEXTURE_SIZE);
@@ -3372,7 +3372,7 @@ window.GRIM_CONFIG = Object.freeze({
       context.clearRect(0,0,TERRAIN_TEXTURE_SIZE,TERRAIN_TEXTURE_SIZE);
       context.drawImage(source,0,0,TERRAIN_TEXTURE_SIZE,TERRAIN_TEXTURE_SIZE);
       texture.refresh();
-      this.textures.remove(sourceKey);
+      if(sourceTexture)this.textures.remove(sourceKey);
       this.terrainMaterialIds.add(id);
       return true;
     }
@@ -3384,20 +3384,24 @@ window.GRIM_CONFIG = Object.freeze({
       this.pumpTerrainMaterialLoads();
     }
     pumpTerrainMaterialLoads(){
-      if(!this.load||typeof this.load.image!=='function'||this.load.isLoading?.())return;
+      if(typeof scope.Image!=='function')return;
       while(this.terrainMaterialQueue.length){
         const id=this.terrainMaterialQueue.shift();
         if(this.terrainMaterialIds.has(id)||this.terrainMaterialFailed.has(id))continue;
         this.terrainMaterialLoading.add(id);
-        this.load.image('terrain-source-'+id,
-          'assets/visuals/terrain/'+BIOME_TERRAIN_FILES[id]);
-        this.load.once('complete',()=>{
+        const image=new scope.Image();
+        image.onload=()=>{
           this.terrainMaterialLoading.delete(id);
-          if(!this.bakeTerrainMaterial(id))this.terrainMaterialFailed.add(id);
+          if(!this.bakeTerrainMaterial(id,image))this.terrainMaterialFailed.add(id);
           this.drawScene?.();
           this.pumpTerrainMaterialLoads();
-        });
-        this.load.start();
+        };
+        image.onerror=()=>{
+          this.terrainMaterialLoading.delete(id);
+          this.terrainMaterialFailed.add(id);
+          this.pumpTerrainMaterialLoads();
+        };
+        image.src='assets/visuals/terrain/'+BIOME_TERRAIN_FILES[id];
         return;
       }
     }
