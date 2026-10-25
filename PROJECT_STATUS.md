@@ -8,7 +8,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The live v0.11.8 reproduction produced `ReferenceError: smooth is not defined` in the biome-weight renderer. The regression test exercises actual backdrop and ground drawing helpers at every surface and Underworld fade, the 641m location, and the direct 5,000m portal handoff; it passes in the Node VM. In the published v0.11.9 Chrome smoke test, the scene rendered through 7,000m with an animated background and no current-build console errors; the run also reached the first vendor at 666m and resumed to 709m. The God Mode test covers 20,000m, and the encounter suite checks continued play beyond 9,999m. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** The live v0.11.10 Chrome page was checked at phone-landscape size (844×390): God Mode reached 7,510m in Ashlands, showing the approved full-screen artwork and drift with no legacy overlay or browser console errors. The GitHub Regression and Chromium Rendering workflows still fail on the same baseline assertions that failed on v0.11.9 (seed 1 full-run completion and Reaper `run_03` height); these are outside the background cleanup. The previous v0.11.9 Chrome smoke test reached 7,000m without current-build console errors. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
 
 ## v0.11.10 — Background Art Cleanup
 
@@ -22,7 +22,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 - Added the easing helper inside the World Art module. The old crossfade code called `smooth()` even though the only same-named helper lived inside a separate script scope. At biome fades, the resulting `ReferenceError` aborted `drawScene()` before it could paint the background and Reaper.
 - Made optional backdrop creation/loading return safely when a reduced test host has no Phaser texture manager or loader. The watchdog now checks timer API availability before starting or clearing its interval.
 - Added `tests/world-biome-transitions.cjs`, covering every biome fade, the 5,000m portal hard cut, ground palettes, and the reported 641m location.
-- **Next:** phone-review a fresh run around the first vendor and a God Mode run through the 6,500–7,200m crystal-to-Ashlands fade; verify movement, backdrop, and pause/countdown remain responsive.
+- **Next:** User phone review across Surface and Underworld transitions; Android device confirmation remains pending.
 
 ## v0.11.8 — Runtime Loop Guard
 
