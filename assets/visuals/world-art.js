@@ -211,39 +211,65 @@
 
   function drawTundraPlatformGround(scene,g,from,to){
     const first=Math.ceil(from/84)*84;
-    for(let x=first;x<to-14;x+=84){
+    for(let x=first;x<to-38;x+=84){
       const y=scene.terrain.groundAt(x);
       if(y===null||!Number.isFinite(y))continue;
       const n=Math.floor(x/84),variation=(Math.sin(n*8.91)+1)*.5;
-      const capEnd=Math.min(to-2,x+78);
-      // Broken snow shelves make the top edge read as icy rock, not a gray slab.
-      g.fillStyle(0xdaf5ff,.70);
+      const width=Math.min(80,to-x-3);
+      if(width<38)continue;
+      const right=x+width;
+      // Broken snow shelves cap a blue-gray rock face.
+      g.fillStyle(0xdaf5ff,.78);
       g.fillPoints([
-        {x:x+2,y:y+3},{x:x+12,y:y-1-variation*2},
-        {x:x+30,y:y+1},{x:x+47,y:y-1+(1-variation)*2},
-        {x:capEnd,y:y+2},{x:capEnd-4,y:y+7},
-        {x:x+49,y:y+5},{x:x+30,y:y+7},{x:x+11,y:y+5}
+        {x:x+2,y:y+3},{x:x+10,y:y-1-variation*2},
+        {x:x+width*.34,y:y+1},{x:x+width*.59,y:y-1+(1-variation)*2},
+        {x:right,y:y+2},{x:right-4,y:y+7},
+        {x:x+width*.62,y:y+5},{x:x+width*.32,y:y+7},{x:x+10,y:y+5}
       ],true);
-      g.lineStyle(1.8,0xf1fcff,.83);
-      g.lineBetween(x+5,y+2,x+22,y+1-variation*2);
-      g.lineBetween(x+43,y+2,x+Math.min(68,to-x-3),y+2+(1-variation)*2);
+      g.lineStyle(1.8,0xf1fcff,.9);
+      g.lineBetween(x+5,y+2,x+width*.28,y+1-variation*2);
+      g.lineBetween(x+width*.58,y+2,x+width*.9,y+2+(1-variation)*2);
 
-      // Faceted blue ice cracks interrupt the long rectangular platform face.
-      const seam=x+25+variation*17;
-      g.lineStyle(2.4,0x73d9f3,.84);
-      g.lineBetween(seam,y+11,seam-5,y+25);
-      g.lineBetween(seam-5,y+25,seam+2,y+36);
-      g.lineBetween(seam+2,y+36,seam-2,y+51);
-      g.lineStyle(1.3,0xd1f6ff,.68);
+      // Broad angular plates break up the plain rectangular face.
+      g.fillStyle(n%2===0?0x506a77:0x3c5662,.72);
+      g.fillPoints([
+        {x:x+4,y:y+10},{x:x+width*.31,y:y+9+variation*3},
+        {x:x+width*.46,y:y+21},{x:x+width*.37,y:y+37},
+        {x:x+7,y:y+32}
+      ],true);
+      g.fillStyle(0x93b2bd,.48);
+      g.fillTriangle(x+6,y+11,x+width*.29,y+10+variation*2,
+        x+width*.40,y+y*0+19);
+      g.lineStyle(1.4,0xa5c5cf,.45);
+      g.lineBetween(x+8,y+12,x+width*.28,y+11+variation*2);
+
+      g.fillStyle(n%2===0?0x334a56:0x425b67,.78);
+      g.fillPoints([
+        {x:x+width*.52,y:y+16},{x:x+width*.91,y:y+10},
+        {x:right-3,y:y+29},{x:x+width*.78,y:y+43},
+        {x:x+width*.55,y:y+37}
+      ],true);
+      g.fillStyle(0x75929e,.46);
+      g.fillTriangle(x+width*.58,y+17,x+width*.88,y+12,
+        x+width*.77,y+25);
+      g.lineStyle(1.2,0x172833,.58);
+      g.lineBetween(x+width*.48,y+12,x+width*.51,y+40);
+      g.lineBetween(x+width*.79,y+31,right-5,y+35);
+
+      // Branching blue ice seams and white crystalline edges.
+      const seam=x+width*(.28+variation*.32);
+      g.lineStyle(2.6,0x73d9f3,.92);
+      g.lineBetween(seam,y+10,seam-5,y+24);
+      g.lineBetween(seam-5,y+24,seam+2,y+36);
+      g.lineBetween(seam+2,y+36,seam-2,y+52);
+      g.lineStyle(1.4,0xe0faff,.78);
       g.lineBetween(seam+4,y+14,seam+1,y+26);
-      g.lineBetween(seam-1,y+37,seam+2,y+49);
-      if(n%2===0){
-        g.fillStyle(0x82cfe5,.28);
-        g.fillTriangle(x+48,y+17,x+71,y+30,x+49,y+40);
-      }
+      g.lineBetween(seam-1,y+38,seam+2,y+49);
+      g.lineStyle(1.3,0x172833,.5);
+      g.lineBetween(x+4,y+56,right-5,y+57);
       if(n%3===0){
-        const icicleX=x+62;
-        g.fillStyle(0xc8f0fa,.78);
+        const icicleX=x+width*.79;
+        g.fillStyle(0xc8f0fa,.86);
         g.fillTriangle(icicleX-3,y+4,icicleX+3,y+4,icicleX,y+15+variation*5);
       }
     }
