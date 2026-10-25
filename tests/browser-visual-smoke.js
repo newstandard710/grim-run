@@ -94,12 +94,6 @@ const server=http.createServer((req,res)=>{
     groundArtVisibleCount:s.groundArtSprites.forest?.filter(sprite=>sprite.visible).length,
     groundArtFrameCount:s.groundArtFrames.forest?.length,
     groundSpriteTexture:s.textures.exists('ground-sprites-forest'),
-    surfaceWeights:window.GRIM_WORLD_ART.biomeWeights(s.distance),
-    terrainSections:s.terrain.visibleSections(s.cameraX-140,s.cameraX+s.width+170)
-     .map(section=>({kind:section.kind,width:Math.round(section.end-section.start),
-      visibleWidth:Math.round(Math.min(s.cameraX+s.width+170,section.end)-Math.max(s.cameraX-140,section.start)),
-      centerDelta:Math.round(Math.abs((s.terrain.groundAt((section.start+section.end)/2-38)||0)-
-       (s.terrain.groundAt((section.start+section.end)/2+42)||0)))})),
     groundArtKey:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.texture?.key,
     groundArtWorldAnchored:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.scrollFactorX===1,
     groundArtFrame:s.groundArtSprites.forest?.find(sprite=>sprite.visible)?.frame?.name,
@@ -123,6 +117,8 @@ const server=http.createServer((req,res)=>{
   assert.equal(surfaceGround.groundArtKey,'ground-sprites-forest');
   assert.equal(surfaceGround.groundArtWorldAnchored,true,'foreground sprites scroll with the real terrain');
   assert.ok([0,1,2,3].includes(surfaceGround.groundArtFrame),'one of four distinct forest sprite frames is used');
+  assert.equal(surfaceGround.groundArtFrameCount,4);
+  assert.equal(surfaceGround.groundSpriteTexture,true);
   assert.equal(surfaceGround.groundArtMask,true,'ground art is clipped to actual solid terrain');
   assert.equal(surfaceGround.groundFillDepth,1);
   assert.equal(surfaceGround.groundArtDepth,2,'ground sprites render above fill and beneath details/gameplay');
@@ -160,10 +156,6 @@ const server=http.createServer((req,res)=>{
     groundArtPoolCount:s.groundArtSprites.crystals?.length,
     groundArtFrameCount:s.groundArtFrames.crystals?.length,
     groundSpriteTexture:s.textures.exists('ground-sprites-crystals'),
-    underworldWeights:window.GRIM_WORLD_ART.underworldWeights(meters),
-    terrainSections:s.terrain.visibleSections(s.cameraX-140,s.cameraX+s.width+170)
-     .map(section=>({kind:section.kind,width:Math.round(section.end-section.start),
-      visibleWidth:Math.round(Math.min(s.cameraX+s.width+170,section.end)-Math.max(s.cameraX-140,section.start))})),
     groundArtKey:s.groundArtSprites.crystals?.find(sprite=>sprite.visible)?.texture?.key,
     groundArtWorldAnchored:s.groundArtSprites.crystals?.find(sprite=>sprite.visible)?.scrollFactorX===1,
     groundArtMask:Boolean(s.groundArtMask),
@@ -180,6 +172,8 @@ const server=http.createServer((req,res)=>{
    'crystal foreground stays in sparse separated clusters');
   assert.equal(underworldGround.groundArtKey,'ground-sprites-crystals');
   assert.equal(underworldGround.groundArtWorldAnchored,true);
+  assert.equal(underworldGround.groundArtFrameCount,4);
+  assert.equal(underworldGround.groundSpriteTexture,true);
   assert.equal(underworldGround.groundArtMask,true);
   assert.equal(underworldGround.bodyAlpha,1);
   await page.locator('#game canvas').screenshot({
