@@ -531,8 +531,11 @@ const server=http.createServer((req,res)=>{
       g.loop.stop();s.state='paused';s.elapsed=0;s.frame=0;s.distance=distanceMeters;
       s.hasTeleported=false;s.player.x=s.startX+distanceMeters*window.GRIM_CONFIG.pxPerMeter;
       s.player.y=s.terrain.groundAt(s.player.x);
+      s.player.grounded=true;s.player.velocityY=0;
       s.cameraX=s.player.x-s.width*window.GRIM_CONFIG.reaperXRatio;
-      s.cameraY=0;s.cameras.main.setScroll(s.cameraX,s.cameraY);
+      s.cameraY=s.player.y-s.groundY;
+      s.cameras.main.setScroll(s.cameraX,s.cameraY);
+      s.refreshHud();
       s.enemies=[];s.fireballs=[];s.obstacles=[];s.coins=[];s.souls=[];s.particles=[];
       s.drawScene();g.step(performance.now(),0);
       return {preview:s.foothillsWorldArtReviewRequested,
