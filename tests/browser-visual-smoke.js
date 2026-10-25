@@ -109,7 +109,7 @@ const server=http.createServer((req,res)=>{
    path:path.join(surfaceArtifactDir,'concept-foreground-forest-phone-scale.png')});
   await page.evaluate(()=>{
    const g=window.grimRun,s=g.scene.scenes[0];
-   g.loop.stop();s.godMode=true;s.state='teleportConfirm';
+   s.godMode=true;s.state='teleportConfirm';
    if(!s.teleportForTesting(6500))throw new Error('Could not teleport to crystal biome');
    s.state='paused';s.drawScene();
   });
@@ -119,7 +119,7 @@ const server=http.createServer((req,res)=>{
   },null,{timeout:45000});
   const underworldGround=await page.evaluate(()=>{
    const g=window.grimRun,s=g.scene.scenes[0];
-   g.loop.stop();s.state='paused';s.drawScene();
+   s.state='paused';s.drawScene();
    return {group:s.biomeBackdropGroup,backdropReady:s.biomeBackdropReady,
     distance:s.distance,crystalVisible:s.biomeBackdrops.crystals?.visible,
     crystalAlpha:s.biomeBackdrops.crystals?.alpha,
@@ -137,6 +137,7 @@ const server=http.createServer((req,res)=>{
     'capture remains in the 6,000–7,000m crystal biome');
   assert.equal(underworldGround.textureLayer,false,'no repeating ground texture layer covers the scene');
   assert.equal(underworldGround.bodyAlpha,.22);
+  await page.waitForTimeout(100); // Let Phaser repaint the paused crystal scene.
   await page.locator('#game canvas').screenshot({
    path:path.join(surfaceArtifactDir,'concept-foreground-crystals-phone-scale.png')});
   assert.deepEqual(errors,[],'Browser console errors');
