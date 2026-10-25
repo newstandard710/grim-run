@@ -3251,7 +3251,7 @@ window.GRIM_CONFIG = Object.freeze({
       const textureKey='ground-sprites-'+id;
       try{
         if(!this.textures.exists(textureKey))return false;
-        const frameNames=Array.from({length:GROUND_ART_VARIANTS},(_,i)=>String(i));
+        const frameNames=Array.from({length:GROUND_ART_VARIANTS},(_,i)=>i);
         this.groundArtFrames[id]=frameNames;
         this.groundArtSprites[id]=Array.from({length:GROUND_ART_SPRITES_PER_BIOME},(_,i)=>
           this.add.image(0,0,textureKey,frameNames[i%frameNames.length])
@@ -3389,7 +3389,7 @@ window.GRIM_CONFIG = Object.freeze({
           const sprite=sprites[i],placement=placements[i];
           if(!placement){sprite.setVisible(false);continue;}
           const frame=this.groundArtFrames[id]?.[placement.frame];
-          if(frame&&sprite.frame?.name!==frame)sprite.setTexture('ground-sprites-'+id,frame);
+          if(frame!==undefined&&sprite.frame?.name!==frame)sprite.setTexture('ground-sprites-'+id,frame);
           sprite.setPosition(placement.x,placement.y+8);
           sprite.setFlipX(placement.flipX);
           if(Math.abs(sprite.displayWidth-placement.width)>.5||

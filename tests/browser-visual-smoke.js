@@ -114,7 +114,7 @@ const server=http.createServer((req,res)=>{
    'sparse forest clusters remain visually distinct instead of forming a continuous strip');
   assert.equal(surfaceGround.groundArtKey,'ground-sprites-forest');
   assert.equal(surfaceGround.groundArtWorldAnchored,true,'foreground sprites scroll with the real terrain');
-  assert.ok(['0','1','2','3'].includes(surfaceGround.groundArtFrame),'one of four distinct forest sprite frames is used');
+  assert.ok([0,1,2,3].includes(surfaceGround.groundArtFrame),'one of four distinct forest sprite frames is used');
   assert.equal(surfaceGround.groundArtMask,true,'ground art is clipped to actual solid terrain');
   assert.equal(surfaceGround.groundFillDepth,1);
   assert.equal(surfaceGround.groundArtDepth,2,'ground sprites render above fill and beneath details/gameplay');
