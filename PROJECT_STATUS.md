@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.11 — *Painted Ground*. Eight concept-matched ground textures now follow the existing terrain shape under the gameplay art.
+**Current build:** v0.11.12 — *Concept Foregrounds*. The approved biome paintings now supply the visible natural foreground around the running path.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.11 — *Painted Ground*  
+**Release:** v0.11.12 — *Concept Foregrounds*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local biome-transition, ground-palette, portal, God Mode, rewind, fairness and crossbow checks pass. Actual Chromium/Phaser confirms all eight ground textures load, texture layers clip to the existing terrain, both biome groups render, and the ground texture changes visible phone-scale pixels. The Chromium workflow then stops at the existing Reaper `run_03` height assertion (~55px); the regression workflow fails the known seed 1 full-run completion assertion, reproduced on rerun. Both issues predate v0.11.11. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** Pending v0.11.12 build and phone-size Chromium checks. The v0.11.11 ground-tile implementation has been removed after the user found it unlike the approved concepts. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.12 — Concept Foregrounds
+
+- Removed all eight repeating ground texture tiles and the terrain mask used to spread them across the ground body.
+- Let the approved biome paintings provide the natural foreground. The terrain fill now uses a light transparent tint, with a fine surface contour to keep the gameplay path readable.
+- Removed evenly repeated procedural pebbles, grass marks and rock shapes that added another tiled appearance.
+- Kept ground heights, terrain geometry, collisions, gaps, enemy behavior and biome transition timing unchanged. The Tundra-to-Caves portal remains a hard cut at 5,000m.
 
 ## v0.11.11 — Painted Ground
 
