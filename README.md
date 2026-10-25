@@ -2,11 +2,12 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current playable build: v0.11.0 — Opening Forest Art Review**
+**Current playable build: v0.11.1 — Foothills Art Review**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
-- The first World & Atmosphere pass adds an illustrated opening forest background and textured ground for the first 1,200m. It stays opt-in while you review it on a phone.
-- [Open the opening forest phone-review build](https://newstandard710.github.io/grim-run/?worldReview=opening).
+- The approved illustrated forest background and textured ground now appear by default through the opening 1,200m.
+- The next stretch adds a gradual forest-to-foothills background and ground treatment from about 900m to 2,300m. It is opt-in while you review it on a phone.
+- [Open the foothills phone-review build](https://newstandard710.github.io/grim-run/?worldReview=foothills).
 
 - [Game HTML](index.html)
 - [Development status and playtest checklist](PROJECT_STATUS.md)
@@ -199,4 +200,4 @@ node tests/godmode-tools.cjs
 
 The source and simulated logic tests pass; actual Android landscape playtesting is still required to validate visual presentation, input positions, and pacing.
 
-Next: review the opening forest art at landscape phone size, then continue the World & Atmosphere work with the remaining biome transitions, scenery, vendors and portal presentation.
+Next: review the foothills art at landscape phone size, then continue the mountain and summit transitions, scenery, vendors and portal presentation.

@@ -29,14 +29,16 @@ The four frames are `crawler_crawl_01_v1.png` through `crawler_crawl_04_v1.png` 
 ## Ember Imp review art
 The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames and a shared foot baseline. Frames 1–3 and 6 form a four-pose run cycle facing right at 8fps; frames 4–5 show its existing fire warning and release poses turning toward the Reaper. The visible silhouette target is about 55px tall. The accepted art is the default; `?enemyReview=ember-imp` and `?enemyReview=both` remain review aliases. Preserve the 2 HP, 38 × 42 collision box, movement, 470ms warning, fireball launch/cooldown, and separate projectile effect. Missing or invalid art leaves the procedural Imp visible.
 
-## World & Atmosphere opening forest review
+## World & Atmosphere forest and foothills
 
 - Keep the approved character palette and silhouettes readable against the environment: deep navy shadows, restrained blue-green fog, muted pine greens and small warm moonlit highlights.
 - Use layered, hand-drawn shapes with clear parallax depth. The first preview uses a pale moon, broken ridgelines, three pine layers, low mist and a few dim fireflies.
 - Give the ground a subdued moss edge with visible soil strata, scattered stones and occasional root marks. Texture stays below the running silhouette and never resembles a hazard or collectible.
 - Keep the opening forest illustration behind the play layer. Do not cover enemies, pickups, hazard cues, the Reaper's feet or the HUD.
-- The preview is limited to the first 1,200m and loads only with `?worldReview=opening`. Existing terrain, ground heights, collision shapes, object placement and the default renderer remain unchanged.
-- Continue with the later biome transitions, scenery, vendors and portal after this phone-scale art review.
+- The phone-approved forest art is the default through the opening 1,200m. `?worldReview=opening` remains as a compatibility alias.
+- Foothills are the next stretch: use a gradual forest-to-hills transition from about 900m through 2,300m, with sparse pines, rounded slopes, increasingly visible mountain ridges, muted stone, small gravel and fading brush.
+- Keep the foothills art opt-in through `?worldReview=foothills` until phone review. Existing terrain, ground heights, collision shapes, object placement and enemy behavior remain unchanged.
+- Continue with the 2,000–3,000m mountain ascent, 3,000–5,000m summit/stars, then scenery, vendors and portal after the foothills review.
 
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
