@@ -1,14 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.11.12 — *Concept Foregrounds*. The approved biome paintings now supply the visible natural foreground around the running path.
+**Current build:** v0.11.13 — *Moving Floor*. Sparse, irregular surface accents now travel with the terrain beneath the Reaper while the approved biome paintings remain visible.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.11.12 — *Concept Foregrounds*  
+**Release:** v0.11.13 — *Moving Floor*  
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local transition, visual-foundation and encounter checks pass. Phone-size Chromium captures confirm the approved Forest foreground and the crystal concept at 6,494m, visible through the terrain with no repeating ground texture layer or obsolete ground tiles. The browser workflow later fails at the separate Reaper run-pose height assertion, and the regression workflow fails at the separate seed 1 run-completion assertion. Android device confirmation remains pending. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+**Verification:** v0.11.13 is ready for phone review of moving floor detail across flat ground, hills, gaps and one-way platforms. This update changes presentation only: terrain generation, heights and collision geometry remain unchanged. Normal runs still finish at 9,999m; God Mode extends play and teleport through 20,000m.
+
+## v0.11.13 — Moving Floor
+
+- Added sparse, irregular, biome-tinted surface scuffs at fixed world positions so they travel under the Reaper with the existing terrain and camera.
+- Marks are drawn only on solid non-platform sections, and are skipped across gaps and steep ledges.
+- Kept the approved paintings visible as natural foreground, with their distant backdrop drift remaining slower than the moving ground.
+- Preserved terrain heights, hills, platforms, gaps, collisions, enemy behavior and biome transitions; no repeating texture tiles were restored.
 
 ## v0.11.12 — Concept Foregrounds
 

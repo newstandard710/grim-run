@@ -46,8 +46,8 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 
 - Use the foreground already painted into each of the eight approved biome concepts. Do not cover it with repeating rock, gravel, ice or lava texture tiles.
 - Keep the gameplay terrain body lightly shaded and translucent so the concept foreground remains visible through the running path. Use a fine edge and restrained underside shadow to distinguish the collision surface.
-- Avoid evenly spaced procedural rocks, grass marks and cracks. Add no separate repeated foreground pattern.
-- Preserve gaps and keep the 5,000m Tundra-to-Caves boundary a hard portal cut.
+- Keep floor motion readable with sparse, irregular, biome-tinted strokes anchored to solid terrain. They move with the ground and never form a tiled or evenly spaced pattern.
+- Keep these accents off platform tops and out of gaps. Preserve visible hill contours, one-way platforms, collision paths and the hard 5,000m Tundra-to-Caves portal cut.
 - Do not alter the approved concept images, generated terrain, ground heights, collision shapes, enemy behavior or gameplay timing.
 
 ## Underworld Biomes
