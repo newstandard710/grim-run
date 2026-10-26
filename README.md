@@ -4,6 +4,8 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 
 **Current production build: v0.12.2 — Biome Surface & Performance Pass**
 
+**Development candidate: v0.12.3 — Ground Texture & Underworld Rendering Fixes**
+
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
@@ -16,6 +18,8 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - Normal runs still finish at 9,999m. God Mode can continue past the finish and teleport in 500m steps through 20,000m.
 - v0.12.2 adds a more visible, biome-matched surface cap beneath the Reaper's feet. It follows each terrain segment's exact top profile and stops at gaps; terrain and collision geometry stay unchanged.
 - v0.12.2 caches each visible terrain section's texture mask and surface cap. Material phase and biome color are anchored to the section's world position, reducing repeated per-frame drawing during play.
+- The v0.12.3 candidate gives the cap a broken, translucent lower edge with biome-specific detail while keeping the exact existing walkable contour.
+- The v0.12.3 candidate anchors ground masks and abyss fills to world-space terrain bounds, restoring Crystal and Boss ground art after deep underworld teleports.
 - [Open the production game](https://newstandard710.github.io/grim-run/).
 
 - [Game HTML](index.html)
@@ -28,6 +32,13 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - Replaced the flat procedural ground fills with eight biome-specific materials, clipped to existing ground, slope, rubble, and platform profiles.
 - Kept generated terrain, cliffs, gaps, collision, hazards, controls, and the normal 9,999m finish unchanged. Abyss fills remain visible behind open gaps.
 - Fixed the Ember Imp visual check to measure the decoded atlas silhouette; the long-run regression now turns God Mode off before testing victory, and the God Mode range check covers the documented 20,000m teleport limit.
+
+## v0.12.3 candidate — Natural Ground & Underworld Rendering Fixes
+
+- Replace the even-looking cap seam with a lightly varied, translucent edge and restrained biome-specific surface marks; keep the run contact contour exact.
+- Extend material masks and abyss fills from each terrain section's world-space height. This prevents deep Crystal and Boss sections from being clipped by the normal screen ground line.
+- Add phone-scale Chromium checks for visible underworld backdrops and textured ground across Crystal and Boss, alongside the all-biome profile and cache checks.
+- No terrain generation, collision, controls, hazards, or route progression changes.
 
 ## v0.12.2 — Biome Surface & Performance Pass
 
