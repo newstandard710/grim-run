@@ -3492,18 +3492,18 @@ window.GRIM_CONFIG = Object.freeze({
         const x=(index+.5)*GROUND_FOG_STRIDE+spread;
         const ground=this.terrain.groundAt(x);
         if(!Number.isFinite(ground))continue;
-        const width=420+this.groundFogHash(index,131)%155;
-        const height=122+this.groundFogHash(index,167)%25;
+        const width=350+this.groundFogHash(index,131)%180;
+        const height=139+this.groundFogHash(index,167)%21;
         const shade=this.groundFogColorAt(x);
-        const alpha=shade.opacity*(.80+(this.groundFogHash(index,211)%30)/100);
+        const alpha=shade.opacity*(.68+(this.groundFogHash(index,211)%43)/100);
         let sprite=views.get(index);
         if(!sprite){
-          sprite=this.add.image(x,ground+26,key).setOrigin(.5,1)
+          sprite=this.add.image(x,ground+3,key).setOrigin(.5,1)
             .setDepth(15).setMask(this.groundFogMask);
           views.set(index,sprite);
         }
         const drift=Math.sin(this.elapsed*.24+index*1.83)*4;
-        sprite.setTexture(key).setPosition(x+drift,ground+27+
+        sprite.setTexture(key).setPosition(x+drift,ground+3+
           Math.sin(this.elapsed*.18+index*.77)*2)
           .setDisplaySize(width,height).setFlipX(Boolean(this.groundFogHash(index,251)&1))
           .setTint(shade.tint).setAlpha(alpha).setVisible(true);
