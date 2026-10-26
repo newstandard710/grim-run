@@ -1,16 +1,26 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.13.6 — *Abyss Fog*.
+**Current build:** v0.14.0 — *Biome Obstacle Variety*.
+
+This update adds 93 biome-exclusive obstacle sprites. Obstacle families now have visual variety while all obstacle selection mechanics, hitboxes, placements, rates, timing, route progression, and gameplay RNG remain unchanged. The update is ready for Android device testing.
 
 This release adds a subtle, biome-tinted fog overlay inside each of the eight abyss openings. It follows the same jagged, sloped terrain mask as the ravine art, sits above that art and below the real ground, and moves only a few pixels over time. The normal biome backgrounds, walkable surface, and collision geometry are unchanged.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.13.6 — *Abyss Fog* (current production)
+**Release:** v0.14.0 — *Biome Obstacle Variety*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Eight local gameplay regression suites pass, including seed 1 reaching 9,999m. Actual Chromium checks cover all eight biome openings, biome-tinted fog, shared mask and draw order, independently aligned sloped edges, and phone-size rendering. Android device appearance and play-feel remain for playtesting.
+**Verification:** All local gameplay regression suites pass, including seed 1 reaching 9,999m. Obstacle catalog checks cover all 93 unique PNGs, biome tags, dimensions, alpha channels, PNG checksums, and decoding. Actual Chromium checks verify all obstacle textures load and render at authored game size on a phone-scale canvas. Android appearance, frame rate, and play-feel remain for device playtesting.
+
+## v0.14.0 — Biome Obstacle Variety
+
+- Added 24 jump-over, 24 slide-under, 24 cuttable, and 15 fire skins, plus 2 air-tuck, 3 air-bramble, and 1 snapping-bramble skins. The PNGs are grouped by biome, authored at 3× their game dimensions, and uniquely assigned; no sprite asset is shared across biomes.
+- Three jump, slide-under, and cuttable choices appear per biome. Fire has three choices in Caves, Crystals, Ashlands, Lava, and Boss. Air-bramble falls back to the cuttable art from its current biome where dedicated air-bramble art is not assigned. Air-tuck art is assigned in Ashlands and Lava, while its existing procedural gate remains in other biomes. Snapping bramble is Tundra-specific.
+- A deterministic world-position hash chooses the visual skin without gameplay RNG or gameplay variant changes. Sprite rendering follows existing obstacle hitboxes; slide-under skins stay above the terrain-following clearance contour.
+- Gameplay collision, obstacle types, placements, selection, spawn rates, timing, movement, combat, and progression are unchanged.
+- Local regression and catalog integrity suites pass. Actual Chromium texture and render checks are included in the browser workflow. Device appearance and play-feel remain for Android testing.
 
 ## v0.13.6 — Abyss Fog
 
