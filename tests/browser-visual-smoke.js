@@ -928,6 +928,8 @@ const server=http.createServer((req,res)=>{
         cliffBiome:cliffView?.biomeId,cliffSideCount:cliffView?.sideCount,
         cliffUnderlap:cliffView?.underlapPx,cliffLipOverhang:cliffView?.lipOverhangPx,
         cliffMaskOverlap:cliffView?.maskOverlapPx,
+        cliffSourceType:faceSource?.constructor?.name,cliffSourceWidth:faceSource?.width,
+        cliffSourceHeight:faceSource?.height,cliffPixelContextAvailable:Boolean(faceContext),
         leftLipAlpha:faceAlpha(actualStart+5,y0+4),rightLipAlpha:faceAlpha(actualEnd-5,y1+4),
         leftFaceUnderlapAlpha:faceAlpha(actualStart-8,y0+22),
         rightFaceUnderlapAlpha:faceAlpha(actualEnd+8,y1+22),
@@ -950,9 +952,13 @@ const server=http.createServer((req,res)=>{
     assert.equal(abyss.cliffSideCount,2,target.name+' cliff face covers both sides of the opening');
     assert.ok(abyss.cliffUnderlap>=20&&abyss.cliffLipOverhang>=10&&abyss.cliffMaskOverlap>=2,
       target.name+' jagged face includes a ground underlap, a small shelf lip, and overlap at the image seam');
+    console.log(target.name+' cliff coverage samples: '+JSON.stringify({source:abyss.cliffSourceType,
+      sourceSize:[abyss.cliffSourceWidth,abyss.cliffSourceHeight],context:abyss.cliffPixelContextAvailable,
+      leftLip:abyss.leftLipAlpha,rightLip:abyss.rightLipAlpha,
+      leftUnderlap:abyss.leftFaceUnderlapAlpha,rightUnderlap:abyss.rightFaceUnderlapAlpha}));
     assert.ok(abyss.leftLipAlpha>200&&abyss.rightLipAlpha>200&&
       abyss.leftFaceUnderlapAlpha>200&&abyss.rightFaceUnderlapAlpha>200,
-      target.name+' rendered cliff texture covers both lip edges and overlaps the ground');
+      target.name+' rendered cliff texture covers both lip edges and overlaps the ground: '+JSON.stringify(abyss));
     assert.ok(abyss.imageCenterError<.1,
       target.name+' portrait plate is centered on the generated opening');
     assert.ok(abyss.imageLipError<.1,
