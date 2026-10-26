@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.13.1</title>
+  <title>GRIM RUN — v0.13.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.13.1 · RECEDING ABYSS ART</div>
+      <div class="mini">v0.13.2 · GAP-FITTED ABYSS ART</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.13.1',
+  version: '0.13.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.13.1-receding-abyss"></script>
-  <script src="assets/visuals/visual-system.js?v=0.13.1-receding-abyss"></script>
+  <script src="assets/visuals/world-art.js?v=0.13.2-gap-fitted-abyss"></script>
+  <script src="assets/visuals/visual-system.js?v=0.13.2-gap-fitted-abyss"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1495,8 +1495,8 @@ window.GRIM_CONFIG = Object.freeze({
   const TERRAIN_BIOME_ORDER=['forest','foothills','tundra','caves',
     'crystals','ashlands','lava','boss'];
   const ABYSS_BACKDROP_VARIANTS=Object.freeze({
-    canyon:Object.freeze(['abyss-canyon-depth-01','abyss-canyon-depth-02']),
-    lava:Object.freeze(['abyss-lava-depth-01','abyss-lava-depth-02'])
+    canyon:Object.freeze(['abyss-canyon-gap-01','abyss-canyon-gap-02']),
+    lava:Object.freeze(['abyss-lava-gap-01','abyss-lava-gap-02'])
   });
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
@@ -3867,21 +3867,28 @@ window.GRIM_CONFIG = Object.freeze({
         view.geometrySignature=signature;
       }
       const source=this.textures.get(textureKey)?.getSourceImage?.();
-      const aspect=source?.width>0&&source?.height>0?source.width/source.height:1024/592;
-      const displayWidth=Math.max(this.width*1.12,shape.width*1.4);
-      const displayHeight=displayWidth/aspect;
+      const aspect=source?.width>0&&source?.height>0?source.width/source.height:9/16;
+      // These portrait plates belong to the narrow opening, not the full
+      // viewport. The former screen-width sizing exposed only a thin crop from
+      // the panorama's empty center and hid both canyon walls completely.
+      const displayWidth=Math.max(shape.width*1.08,96);
+      // Extend the painted view below the phone while keeping its horizontal
+      // scale tied to the actual gap. The vertical stretch reinforces depth;
+      // the real gap mask and terrain still define the visible silhouette.
+      const displayHeight=Math.max(this.height*.92,displayWidth/aspect);
       const centerX=(section.start+section.end)/2;
       const lipY=((Number.isFinite(section.y0)?section.y0:shape.top)+
         (Number.isFinite(section.y1)?section.y1:shape.top))/2;
-      // The painted plate is centered behind each gap and kept at its original
-      // aspect ratio. Only the exact abyss mask exposes it; terrain is drawn
-      // above it in world space.
-      const x=centerX-displayWidth/2,y=lipY-displayHeight*.42;
+      // The artwork's near cliff lips sit at 12% of its portrait height. Align
+      // that painted lip to the real gap, then let the image recede below it.
+      const lipAnchor=.12;
+      const x=centerX-displayWidth/2,y=lipY-displayHeight*lipAnchor;
       const bounds=[x,y,displayWidth,displayHeight].map(value=>value.toFixed(2)).join(':');
       if(view.boundsSignature!==bounds){
         sprite.setTexture(textureKey).setPosition(x,y).setDisplaySize(displayWidth,displayHeight);
         view.boundsSignature=bounds;
       }
+      view.lipY=lipY;view.lipAnchor=lipAnchor;
       sprite.setAlpha(alpha).setVisible(true);
       activeKeys.add(key);
       return view;

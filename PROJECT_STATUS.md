@@ -1,8 +1,8 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.13.1 — *Receding Canyon Depths*.
+**Current production build:** v0.13.2 — *Gap-Fitted Abyss Art*.
 
-This release replaces the repeating canyon-wall treatment with painted depth scenes behind generated gaps. Real terrain defines and covers each opening lip; the new canyon and lava scenes narrow into unseen distance without changing gameplay geometry.
+This release fixes the gap-to-art scale that hid the painted canyon and lava walls. Portrait scenes now fit each generated opening, with their near lips aligned to real terrain. The abyss remains background art behind the unchanged terrain and collision geometry.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
@@ -11,6 +11,14 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
 **Verification:** Local regression suites pass, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. GitHub actual-Chromium checks run on the release branch before deployment. Android device frame-rate and play-feel review remains for playtesting.
+
+## v0.13.2 — Gap-Fitted Abyss Art
+
+- Fixed the missing canyon walls: the previous art was wider than the generated openings, so the gap mask exposed only its dark center.
+- Added four portrait scenes sized to each terrain gap. Their painted near lips align to the real opening while jagged walls narrow into the dark below the screen.
+- Render the scenes behind the generated gap mask and draw terrain bodies above them. Removed the previous canyon and lava plates.
+- Terrain generation, surface caps, platform shapes, collisions, movement, and progression remain unchanged.
+- Regression and actual Chromium rendering checks gate deployment. A physical Android playtest remains useful for checking appearance on the user's phone.
 
 ## v0.13.1 — Receding Canyon Depths
 
