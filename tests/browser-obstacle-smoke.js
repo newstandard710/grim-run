@@ -40,9 +40,11 @@ const server=http.createServer((req,res)=>{
         return source.width!==skin.gameW*3||source.height!==skin.gameH*3;
       }).map(skin=>skin.id);
       return {count:skins.length,missing,wrongSize,
+        badge:document.querySelector('.mini')?.textContent.trim(),
         images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
+    assert.equal(loaded.badge,'v0.14.0 · OBSTACLE VARIETY','visible version badge matches the obstacle release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,93,'no obstacle texture key is missing or duplicated');
