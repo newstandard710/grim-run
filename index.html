@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.13.0</title>
+  <title>GRIM RUN — v0.13.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.13.0 · CANYON & LAVA ABYSS ART</div>
+      <div class="mini">v0.13.1 · RECEDING ABYSS ART</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.13.0',
+  version: '0.13.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.13.0-canyon-abyss-art"></script>
-  <script src="assets/visuals/visual-system.js?v=0.13.0-canyon-abyss-art"></script>
+  <script src="assets/visuals/world-art.js?v=0.13.1-receding-abyss"></script>
+  <script src="assets/visuals/visual-system.js?v=0.13.1-receding-abyss"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1494,7 +1494,10 @@ window.GRIM_CONFIG = Object.freeze({
   });
   const TERRAIN_BIOME_ORDER=['forest','foothills','tundra','caves',
     'crystals','ashlands','lava','boss'];
-  const ABYSS_TEXTURE_SCALE=.68;
+  const ABYSS_BACKDROP_VARIANTS=Object.freeze({
+    canyon:Object.freeze(['abyss-canyon-depth-01','abyss-canyon-depth-02']),
+    lava:Object.freeze(['abyss-lava-depth-01','abyss-lava-depth-02'])
+  });
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
   const TUNDRA_TERRAIN_TILE_SCALE=.48;
@@ -1509,8 +1512,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
       this.load.image('terrain-source-forest',
         'assets/visuals/terrain/'+BIOME_TERRAIN_FILES.forest);
-      this.load.image('abyss-canyon-art','assets/visuals/terrain/abyss-canyon-v1.webp');
-      this.load.image('abyss-lava-art','assets/visuals/terrain/abyss-lava-v1.webp');
+      for(const key of [...ABYSS_BACKDROP_VARIANTS.canyon,...ABYSS_BACKDROP_VARIANTS.lava])
+        this.load.image(key,'assets/visuals/terrain/'+key+'.webp');
     }
     create() {
       this.width = this.scale.width;
@@ -1537,9 +1540,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.biomeBackdropReady=this.createBiomeBackdropSet('surface');
       this.createBackdropGroundVeil();
       this.resizeBiomeBackdrops();
-      this.terrainBase=this.add.graphics().setDepth(0);
-      this.abyssEdgeGraphics=this.add.graphics().setDepth(1.58);
-      this.abyssTextureViews=new Map();
+      this.abyssFallback=this.add.graphics().setDepth(.25);
+      // Solid terrain covers the abyss backplates at the exact run-surface
+      // silhouette, so background pixels can never leave a seam at a gap lip.
+      this.terrainBase=this.add.graphics().setDepth(.62);
+      this.abyssBackdropViews=new Map();
       this.abyssGeometryCache=new Map();
       this.terrainTextureViews=new Map();
       this.terrainSurfaceViews=new Map();
@@ -1549,7 +1554,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrainMaterialQueue=[];
       if(this.textures?.exists?.('terrain-source-forest'))this.bakeTerrainMaterial('forest');
       this.events?.once?.('shutdown',()=>{
-        this.destroyAbyssTextureViews();
+        this.destroyAbyssBackdropViews();
         this.destroyTerrainTextureViews();
         this.destroyTerrainSurfaceViews();
       });
@@ -3808,45 +3813,51 @@ window.GRIM_CONFIG = Object.freeze({
       const y0=Number.isFinite(section.y0)?section.y0:this.terrain.anchorAt(section.start);
       const y1=Number.isFinite(section.y1)?section.y1:y0;
       const top=Math.min(y0,y1),width=Math.max(1,section.end-section.start);
-      // The lower closure remains well below the camera. This is a continuous
-      // world-space shaft, not a screen-space strip that can drift while running.
+      // The opening begins exactly at the generated gap endpoints. Below that
+      // real terrain lip, its painted view narrows toward an unseen distance.
       const bottom=Math.max(y0,y1)+this.height+620,span=bottom-top;
-      const steps=Math.max(12,Math.ceil(span/72));
+      const steps=Math.max(16,Math.ceil(span/54));
       const hash=(n)=>{
         const value=Math.sin((section.start+section.end*.37+n*47.13)*.093)*43758.5453;
         return value-Math.floor(value);
       };
       const left=[],right=[];
       for(let i=0;i<=steps;i++){
-        const t=i/steps,eased=Math.pow(t,.58),pinch=width*.36*eased;
-        const rough=Math.sin(Math.PI*t)*width*.055;
-        const y=top+span*t;
-        left.push({x:section.start+width*.025+pinch+(hash(i)-.5)*rough,y});
-        right.push({x:section.end-width*.025-pinch-(hash(i+steps+11)-.5)*rough,y});
+        const t=i/steps,eased=Math.pow(t,.7),pinch=width*.39*eased;
+        const rough=Math.sin(Math.PI*t)*width*.04;
+        const leftY=y0+(bottom-y0)*t,rightY=y1+(bottom-y1)*t;
+        left.push({x:section.start+pinch+(hash(i)-.5)*rough,y:leftY});
+        right.push({x:section.end-pinch-(hash(i+steps+11)-.5)*rough,y:rightY});
       }
-      // Keep the opening edge rough and shallow; the sides then draw inward
-      // until the unseen lower canyon closes to a narrow, implied throat.
-      left[0]={x:section.start+2,y:y0+2};
-      right[0]={x:section.end-2,y:y1+2};
+      // Match the exact generated surface endpoints; no separately drawn rim
+      // can drift away from the ground or leave a hairline gap.
+      left[0]={x:section.start,y:y0};
+      right[0]={x:section.end,y:y1};
       const points=[...left,...right.reverse()];
       const shape={points,left,right,top,bottom,width,
         signature:points.map(p=>p.x.toFixed(2)+','+p.y.toFixed(2)).join(';')};
       this.abyssGeometryCache?.set(cacheKey,shape);
       return shape;
     }
-    abyssTextureView(section,shape,textureKey,alpha,activeKeys){
-      if(alpha<=.003||!this.textures?.exists?.(textureKey)||!this.add?.tileSprite||
-        !this.make?.graphics||!this.abyssTextureViews)return null;
+    abyssBackdropTexture(section,style){
+      const variants=ABYSS_BACKDROP_VARIANTS[style]||ABYSS_BACKDROP_VARIANTS.canyon;
+      const salt=style==='lava'?1703:103;
+      const value=Math.sin((section.start+section.end*.37+salt)*.037)*43758.5453;
+      return variants[Math.floor((value-Math.floor(value))*variants.length)];
+    }
+    abyssBackdropView(section,shape,textureKey,alpha,activeKeys){
+      if(alpha<=.003||!this.textures?.exists?.(textureKey)||!this.add?.image||
+        !this.make?.graphics||!this.abyssBackdropViews)return null;
       const key=[section.start,section.end,textureKey].join(':');
-      let view=this.abyssTextureViews.get(key);
+      let view=this.abyssBackdropViews.get(key);
       if(!view){
-        const sprite=this.add.tileSprite(0,0,1,1,textureKey)
-          .setOrigin(0,0).setDepth(.55).setVisible(false);
+        const sprite=this.add.image(0,0,textureKey)
+          .setOrigin(0,0).setDepth(.34).setVisible(false);
         const maskGraphics=this.make.graphics({x:0,y:0,add:false});
         const mask=maskGraphics.createGeometryMask();
         sprite.setMask(mask);
         view={sprite,maskGraphics,mask,geometrySignature:null,boundsSignature:null};
-        this.abyssTextureViews.set(key,view);
+        this.abyssBackdropViews.set(key,view);
       }
       const {sprite,maskGraphics}=view;
       const signature=shape.signature;
@@ -3855,69 +3866,43 @@ window.GRIM_CONFIG = Object.freeze({
         maskGraphics.fillPoints(shape.points,true);
         view.geometrySignature=signature;
       }
-      const bounds=[shape.top,shape.bottom,shape.width].join(':');
+      const source=this.textures.get(textureKey)?.getSourceImage?.();
+      const aspect=source?.width>0&&source?.height>0?source.width/source.height:1024/592;
+      const displayWidth=Math.max(this.width*1.12,shape.width*1.4);
+      const displayHeight=displayWidth/aspect;
+      const centerX=(section.start+section.end)/2;
+      const lipY=((Number.isFinite(section.y0)?section.y0:shape.top)+
+        (Number.isFinite(section.y1)?section.y1:shape.top))/2;
+      // The painted plate is centered behind each gap and kept at its original
+      // aspect ratio. Only the exact abyss mask exposes it; terrain is drawn
+      // above it in world space.
+      const x=centerX-displayWidth/2,y=lipY-displayHeight*.42;
+      const bounds=[x,y,displayWidth,displayHeight].map(value=>value.toFixed(2)).join(':');
       if(view.boundsSignature!==bounds){
-        sprite.setTexture(textureKey).setPosition(section.start,shape.top)
-          .setSize(shape.width,shape.bottom-shape.top)
-          .setTileScale(ABYSS_TEXTURE_SCALE,ABYSS_TEXTURE_SCALE)
-          .setTilePosition(section.start/ABYSS_TEXTURE_SCALE,shape.top/ABYSS_TEXTURE_SCALE);
+        sprite.setTexture(textureKey).setPosition(x,y).setDisplaySize(displayWidth,displayHeight);
         view.boundsSignature=bounds;
       }
       sprite.setAlpha(alpha).setVisible(true);
       activeKeys.add(key);
       return view;
     }
-    removeAbyssTextureView(key,view){
+    removeAbyssBackdropView(key,view){
       view.sprite?.clearMask?.(true);
       view.sprite?.destroy?.();
       view.mask?.destroy?.();
       view.maskGraphics?.destroy?.();
-      this.abyssTextureViews?.delete(key);
+      this.abyssBackdropViews?.delete(key);
     }
-    pruneAbyssTextureViews(activeKeys){
-      if(!this.abyssTextureViews)return;
-      for(const [key,view] of this.abyssTextureViews)
-        if(!activeKeys.has(key))this.removeAbyssTextureView(key,view);
+    pruneAbyssBackdropViews(activeKeys){
+      if(!this.abyssBackdropViews)return;
+      for(const [key,view] of this.abyssBackdropViews)
+        if(!activeKeys.has(key))this.removeAbyssBackdropView(key,view);
     }
-    destroyAbyssTextureViews(){
-      if(!this.abyssTextureViews)return;
-      for(const [key,view] of this.abyssTextureViews)
-        this.removeAbyssTextureView(key,view);
-      this.abyssTextureViews.clear();
-    }
-    drawAbyssRim(section,palette){
-      const g=this.abyssEdgeGraphics;
-      if(!g)return;
-      const x0=section.start,x1=section.end,w=Math.max(1,x1-x0);
-      const y0=Number.isFinite(section.y0)?section.y0:this.terrain.anchorAt(x0);
-      const y1=Number.isFinite(section.y1)?section.y1:y0;
-      const [body,edge,sheen,detail]=palette;
-      const seed=x0*.019+x1*.007;
-      const noise=n=>{const v=Math.sin(seed+n*11.7)*43758.5453;return v-Math.floor(v);};
-      const lipW=Math.min(w*.34,10+noise(1)*12);
-      const lipH=22+noise(2)*13;
-      const makeLip=(x,y,side)=>{
-        const dir=side==='left'?1:-1,amount=lipW;
-        return [
-          {x,y:y+1},
-          {x:x+dir*amount*.38,y:y+3+noise(side==='left'?3:8)*3},
-          {x:x+dir*amount*.76,y:y+7+noise(side==='left'?4:9)*4},
-          {x:x+dir*amount*.62,y:y+12+noise(side==='left'?5:10)*4},
-          {x:x+dir*amount,y:y+lipH},
-          {x:x+dir*amount*.30,y:y+lipH-3},
-          {x,y:y+lipH+4}
-        ];
-      };
-      for(const [x,y,side] of [[x0,y0,'left'],[x1,y1,'right']]){
-        const points=makeLip(x,y,side);
-        g.fillStyle(body,.92);g.fillPoints(points,true);
-        g.lineStyle(2,edge,.62);
-        g.lineBetween(points[1].x,points[1].y,points[2].x,points[2].y);
-        g.lineStyle(1.2,sheen,.40);
-        g.lineBetween(points[3].x,points[3].y,points[4].x,points[4].y-2);
-        g.lineStyle(1,detail,.36);
-        g.lineBetween(points[2].x,points[2].y+4,points[5].x,points[5].y-5);
-      }
+    destroyAbyssBackdropViews(){
+      if(!this.abyssBackdropViews)return;
+      for(const [key,view] of this.abyssBackdropViews)
+        this.removeAbyssBackdropView(key,view);
+      this.abyssBackdropViews.clear();
     }
     groundPalette(m) {
       const blend=(a,b,t)=>{
@@ -3940,7 +3925,8 @@ window.GRIM_CONFIG = Object.freeze({
       const g=this.world;g.clear();
       const base=this.terrainBase||g;
       if(base!==g)base.clear();
-      this.abyssEdgeGraphics?.clear();
+      const abyssFallback=this.abyssFallback||base;
+      if(abyssFallback!==base)abyssFallback.clear();
       const activeTerrainViews=new Set(),activeSurfaceViews=new Set();
       const activeAbyssViews=new Set();
       const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
@@ -3953,18 +3939,16 @@ window.GRIM_CONFIG = Object.freeze({
         if(to<=from)continue;
         const meters=(section.start+section.end-2*startX)/(2*C.pxPerMeter);
         const weights=this.terrainBiomeWeights(meters);
-        const lavaWeight=clamp((weights.lava||0)+(weights.boss||0)*.62,0,1);
+        const lavaWeight=clamp((weights.lava||0)+(weights.boss||0),0,1);
         const shape=this.abyssGapPolygon(section);
-        // The dark bed is a reliable fallback; painted canyon tiles sit above
-        // it and are clipped to the same irregular, narrowing world-space shaft.
-        base.fillStyle(lavaWeight>.5?0x1d1118:0x100f1d,.98);
-        base.fillPoints(shape.points,true);
-        this.abyssTextureView(section,shape,'abyss-canyon-art',1,activeAbyssViews);
-        this.abyssTextureView(section,shape,'abyss-lava-art',lavaWeight,activeAbyssViews);
-        const palette=this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.worldGroundPalette
-          ?scope.GRIM_WORLD_ART.worldGroundPalette(meters)
-          :scope.GRIM_WORLD_ART?.underworldGroundPalette?.(meters)||this.groundPalette(meters);
-        this.drawAbyssRim(section,palette);
+        // The dark bed is the safe fallback. Non-repeating depth illustrations
+        // sit behind real terrain and are exposed only through the abyss mask.
+        abyssFallback.fillStyle(lavaWeight>.5?0x1d1118:0x100f1d,.98);
+        abyssFallback.fillPoints(shape.points,true);
+        this.abyssBackdropView(section,shape,
+          this.abyssBackdropTexture(section,'canyon'),1-lavaWeight,activeAbyssViews);
+        this.abyssBackdropView(section,shape,
+          this.abyssBackdropTexture(section,'lava'),lavaWeight,activeAbyssViews);
       }
       for(const section of sections){
         if(section.kind==='gap')continue;
@@ -4060,7 +4044,7 @@ window.GRIM_CONFIG = Object.freeze({
         // Full depth material faces and tapered rock cheeks are drawn with
         // the section above; the walkable contour and one-way collision stay exact.
       }
-      this.pruneAbyssTextureViews(activeAbyssViews);
+      this.pruneAbyssBackdropViews(activeAbyssViews);
       this.pruneTerrainTextureViews(activeTerrainViews);
       this.pruneTerrainSurfaceViews(activeSurfaceViews);
       this.releaseInactiveTerrainMaterials(keepTerrainMaterials);

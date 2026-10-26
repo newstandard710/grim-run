@@ -72,13 +72,14 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - The cap's upper edge follows the existing terrain contour exactly and all decoration stays on or below that line. Follow slopes and rubble naturally, end at gaps and ledge edges, and leave the abyss open. Do not change terrain geometry or collision.
 - Keep the material translucent enough for each approved ground texture to show through. Use a softened, irregular lower edge and restrained broken highlights; let the biome material show through instead of forming a hard band. Keep the running contact contour locked to existing terrain and collision. Keep all marks readable at phone scale without competing with Reaper feet, enemies, hazards, pickups, or foreground details.
 
-## Canyon and lava chasm art — v0.13.0
+## Receding canyon depth art — v0.13.1
 
-- Use `assets/visuals/terrain/abyss-canyon-v1.webp` for deep shadowed rock walls and `assets/visuals/terrain/abyss-lava-v1.webp` for dark basalt with thin molten seams. These original painterly materials are 768 × 768px runtime WebP images.
-- Clip abyss art to seeded gap profiles in world space. Each opening has an irregular rock lip and walls that converge well below the viewport; never show a floor, bottom, or screen-fixed band.
-- Fade the basalt-and-lava art in with the Lava biome and carry its restrained glow into the lava-lit Boss Biome. Remove the former rectangle underfill, flat lava strip, hard edge, and detached lava cracks.
-- Continue generated terrain and one-way Soul ledge faces below the phone view with irregular rock shoulders. Keep the exact walkable top contour, slopes, gap widths, collision, fall rules, and route progression unchanged.
-- Anchor texture phase to world coordinates and cache masks. Keep glowing seams narrow and low contrast so hazards, pickups, and character art remain readable.
+- Use `abyss-canyon-depth-01.webp` and `abyss-canyon-depth-02.webp` for rock canyons; use `abyss-lava-depth-01.webp` and `abyss-lava-depth-02.webp` for Lava and the lava-lit Boss Biome. These are complete painted background scenes, not repeatable wall textures.
+- Place the art behind generated terrain and reveal it only through a mask for the real gap. Pin the top corners to the gap's actual terrain endpoints; draw the terrain bodies above the image so no image seam or detached rim appears at the lips.
+- Keep each scene world-anchored so it scrolls with its gap. Preserve the illustration's aspect ratio and use deterministic scene selection; do not tile or stretch a canyon wall across successive openings.
+- Let canyon walls angle and narrow into the dark distance below the viewport. Never expose a floor or bottom. Use the non-lava canyon scenes through Surface and other non-lava areas, then crossfade to the lava scenes through Lava and the Boss Biome.
+- The canyon is background art. Terrain and platforms remain the foreground and continue below the phone view; their generated contours, walkable top, collisions, fall rules, and route progression stay unchanged.
+- Do not add a second synthetic lip, a screen-space band, a detached foreground canyon wall, or surface lava cracks.
 
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.

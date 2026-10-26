@@ -1,16 +1,24 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.13.0 — *Painted Canyon & Lava Chasms*.
+**Current production build:** v0.13.1 — *Receding Canyon Depths*.
 
-This release replaces the flat abyss fills with painted, narrowing canyon and lava openings, and extends generated ledge faces below the camera while keeping the existing run surface and collision geometry.
+This release replaces the repeating canyon-wall treatment with painted depth scenes behind generated gaps. Real terrain defines and covers each opening lip; the new canyon and lava scenes narrow into unseen distance without changing gameplay geometry.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.13.0 — *Painted Canyon & Lava Chasms*
+**Release:** v0.13.1 — *Receding Canyon Depths*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local gameplay regression and GitHub actual-Chromium checks pass on the release candidate, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. Pages deployment is triggered by the merge; Android device frame-rate and play-feel review will follow deployment.
+**Verification:** Local regression suites pass, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. GitHub actual-Chromium checks run on the release branch before deployment. Android device frame-rate and play-feel review remains for playtesting.
+
+## v0.13.1 — Receding Canyon Depths
+
+- Replaced the tiled canyon and lava-wall renderer with four original, non-repeating painted depth scenes.
+- Render the scenes behind real terrain. The gap mask begins at the generated section's exact endpoints, then narrows below the viewport; terrain and platform bodies draw above it to keep the lips attached.
+- Select canyon art for the Surface and non-lava Underworld; crossfade to lava canyon art in Lava and the Boss Biome. No canyon floor is visible.
+- Removed the previous canyon/lava attempt and detached surface crack marks from the active build. Surface art, procedural geometry, collisions, movement, and progression remain unchanged.
+- Local gameplay regression suites pass. Actual Chromium validation and GitHub Pages deployment run through the release workflow; Android device play-feel remains for the user playtest.
 
 ## v0.13.0 — Painted Canyon & Lava Chasms
 
