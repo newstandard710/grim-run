@@ -837,7 +837,7 @@ const server=http.createServer((req,res)=>{
         canyonTextureLoaded:scene.textures.exists('abyss-canyon-art'),
         lavaTextureLoaded:scene.textures.exists('abyss-lava-art'),
         visibleAbyssViews:[...scene.abyssTextureViews.values()].filter(view=>view.sprite.visible)
-          .map(view=>view.sprite.texture.key)};
+          .map(view=>view.sprite.displayTexture?.key||view.sprite.texture.key)};
     },target.meters);
     console.log(target.name+' abyss setup: '+JSON.stringify(location));
     assert.equal(location.gapVisible,true,target.name+' generated gap is in the camera view');
@@ -848,7 +848,7 @@ const server=http.createServer((req,res)=>{
     const abyss=await skeletalPage.evaluate(({gapKey,expectedTexture})=>{
       const scene=window.grimRun.scene.scenes[0],shape=scene.abyssGeometryCache.get(gapKey);
       const gapViews=[...scene.abyssTextureViews.values()].filter(view=>view.sprite.visible);
-      const textureView=gapViews.find(view=>view.sprite.texture.key===expectedTexture);
+      const textureView=gapViews.find(view=>view.sprite.displayTexture?.key===expectedTexture);
       const topWidth=shape.right.at(-1).x-shape.left[0].x;
       const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
       const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
@@ -860,7 +860,7 @@ const server=http.createServer((req,res)=>{
         key.startsWith('platform:')&&view.sprite.visible);
       const platformBottom=platformView
         ?platformView[1].sprite.y+platformView[1].sprite.displayHeight:null;
-      return {textureKey:textureView?.sprite.texture.key,textureViews:gapViews.length,
+      return {textureKey:textureView?.sprite.displayTexture?.key,textureViews:gapViews.length,
         topWidth,bottomWidth,visibleWidth,shaftDepth:shape.bottom-shape.top,
         visibleBottomY:scene.cameraY+scene.height,platformBottom,
         platformExtendsBelow:platformBottom!==null&&platformBottom>scene.cameraY+scene.height+100,
