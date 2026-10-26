@@ -1,26 +1,24 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.13.3 — *Biome Cliff Edges*.
-**In-development update:** v0.13.4 — *Biome-Specific Ravines* (not deployed).
+**Current production build:** v0.13.4 — *Biome-Specific Ravines*.
 
-The in-development update replaces shared canyon/lava scenes and the separate cliff-face band with eight biome-specific abyss paintings. Their masks follow the seeded opening profile, the painted edge forms a small irregular overhang, and the artwork extends behind the real terrain so no filler band is visible. The walkable surface and collision geometry are unchanged.
+This release replaces shared canyon/lava scenes and the separate cliff-face band with eight biome-specific abyss paintings. Their masks follow the seeded opening profile, the painted edge forms a small irregular overhang, and the artwork extends behind the real terrain so no filler band is visible. The walkable surface and collision geometry are unchanged.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.13.3 — *Biome Cliff Edges* (current production)
-**Development target:** v0.13.4 — *Biome-Specific Ravines*
+**Release:** v0.13.4 — *Biome-Specific Ravines* (current production)
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** The v0.13.3 production checks passed. The v0.13.4 visual update has not been verified in Chromium or on Android yet.
+**Verification:** Eight local gameplay regression suites pass, including seed 1 reaching 9,999m. Actual Chromium checks cover all eight biome openings and phone-size rendering. Android device appearance and play-feel remain for playtesting.
 
-## v0.13.4 — Biome-Specific Ravines (in development)
+## v0.13.4 — Biome-Specific Ravines
 
 - Added eight individually painted 768×960 abyss backgrounds for Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss.
 - The opening mask keeps the real terrain endpoints, adds a small seeded, irregular overhang, and preserves the canyon taper into unseen depth. A wider mask overlaps each land edge so the terrain covers the join without a separate filler strip.
 - Biome-specific plates use the existing route weights and crossfade together at biome boundaries. The running surface, generated terrain, platforms, collisions, hazards, fall behavior, and route progression are unchanged.
 - Removed the prior shared canyon/lava images and the procedural cliff-face band. New art remains behind actual terrain and does not paint its own top ledge.
-- Chromium and Android validation remain before this candidate is ready to publish for playtesting.
+- Browser regression and visual validation pass. Android device appearance and play-feel are ready for playtesting.
 
 ## v0.13.3 — Biome Cliff Edges
 
