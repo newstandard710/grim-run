@@ -2,12 +2,20 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.0 — Biome Obstacle Variety**
+**Current build: v0.14.1 — Obstacle Scale Pass**
 
-- Adds 93 biome-exclusive obstacle sprites: three jump, slide, and cut visuals per biome, three fire visuals in each fire biome, plus the requested air-tuck, air-bramble, and snapping-bramble art. Each sprite is tagged to one biome; no obstacle image is shared across biome folders.
-- Obstacle selection is deterministic from world position. Hitboxes, obstacle types, placements, spawn timing/rates, route progression, and gameplay RNG are unchanged. Optional sprite-load failures use the existing visual fallback.
+- Enlarges the jump sprites to 2.5×, cuttable trees to 2×, corn-like cut art to 1.3× taller, and slide-under sprites to 3.25×. Slide sprites now replace the old placeholder pillar and align their lowest visible point to the existing clearance line.
+- Keeps the biome-exclusive obstacle art set: three jump, slide, and cut visuals per biome, three fire visuals in each fire biome, plus the air-tuck, air-bramble, and snapping-bramble sprites.
+- Obstacle selection, hitboxes, types, placements, spawn timing/rates, route progression, and gameplay RNG are unchanged. Optional sprite-load failures use a short ledge fallback for slide obstacles.
 - [Obstacle art catalog](assets/obstacles/README.md) lists all skins by biome. The matching runtime metadata is in `assets/visuals/obstacle-catalog.js`.
 - The playable update is ready for Android device testing. [Open the game](https://newstandard710.github.io/grim-run/).
+
+## v0.14.1 — Obstacle Scale Pass
+
+- Enlarged jump art to 2.5× its former display size and grounded each sprite to the existing obstacle location.
+- Enlarged named tree and sapling cut art to 2×; other cuttable sprites are 1.3× taller to keep corn and similar plants proportional.
+- Enlarged slide art to 3.25×, removed the old full-height pillar and rim, and aligned each sprite's lowest illustrated point with the existing slide-clearance contour. The art rotates slightly with nearby terrain.
+- Gameplay collision boxes, spawn selection and rates, obstacle positions, timing, and mechanics are unchanged. Chromium checks cover all 93 skins, their display scales, ground anchors, and the slide rendering path.
 
 ## v0.14.0 — Biome Obstacle Variety
 

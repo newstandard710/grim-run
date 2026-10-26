@@ -1,4 +1,4 @@
-/* Biome-exclusive obstacle art catalog for v0.14.0. Purely visual metadata. */
+/* Biome-exclusive obstacle art catalog for v0.14.1. Purely visual metadata. */
 (function(scope){'use strict';scope.GRIM_OBSTACLE_SPRITES=Object.freeze([
   {
     "id": "forest_jump_root-knot",
@@ -8,6 +8,7 @@
     "name": "root-knot",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.875,
     "src": "assets/obstacles/jump/forest/forest_jump_root-knot.png",
     "key": "obstacle-forest_jump_root-knot"
   },
@@ -19,6 +20,7 @@
     "name": "mossy-stone-pair",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8472,
     "src": "assets/obstacles/jump/forest/forest_jump_mossy-stone-pair.png",
     "key": "obstacle-forest_jump_mossy-stone-pair"
   },
@@ -30,6 +32,7 @@
     "name": "root-bone-clump",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.7708,
     "src": "assets/obstacles/jump/forest/forest_jump_root-bone-clump.png",
     "key": "obstacle-forest_jump_root-bone-clump"
   },
@@ -41,6 +44,7 @@
     "name": "dead-bough-curtain",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.6238,
     "src": "assets/obstacles/slide/forest/forest_slide_dead-bough-curtain.png",
     "key": "obstacle-forest_slide_dead-bough-curtain"
   },
@@ -52,6 +56,7 @@
     "name": "root-shelf",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.7524,
     "src": "assets/obstacles/slide/forest/forest_slide_root-shelf.png",
     "key": "obstacle-forest_slide_root-shelf"
   },
@@ -63,6 +68,7 @@
     "name": "thorn-canopy",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.7714,
     "src": "assets/obstacles/slide/forest/forest_slide_thorn-canopy.png",
     "key": "obstacle-forest_slide_thorn-canopy"
   },
@@ -74,6 +80,7 @@
     "name": "thorny-young-pine",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.9977,
     "src": "assets/obstacles/cut/forest/forest_cut_thorny-young-pine.png",
     "key": "obstacle-forest_cut_thorny-young-pine"
   },
@@ -107,6 +114,7 @@
     "name": "slate-scree",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9167,
     "src": "assets/obstacles/jump/foothills/foothills_jump_slate-scree.png",
     "key": "obstacle-foothills_jump_slate-scree"
   },
@@ -118,6 +126,7 @@
     "name": "broken-fence-pile",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.7778,
     "src": "assets/obstacles/jump/foothills/foothills_jump_broken-fence-pile.png",
     "key": "obstacle-foothills_jump_broken-fence-pile"
   },
@@ -129,6 +138,7 @@
     "name": "heather-root-ball",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8819,
     "src": "assets/obstacles/jump/foothills/foothills_jump_heather-root-ball.png",
     "key": "obstacle-foothills_jump_heather-root-ball"
   },
@@ -140,6 +150,7 @@
     "name": "rock-lip",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.6476,
     "src": "assets/obstacles/slide/foothills/foothills_slide_rock-lip.png",
     "key": "obstacle-foothills_slide_rock-lip"
   },
@@ -151,6 +162,7 @@
     "name": "fallen-pine-overhang",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.8238,
     "src": "assets/obstacles/slide/foothills/foothills_slide_fallen-pine-overhang.png",
     "key": "obstacle-foothills_slide_fallen-pine-overhang"
   },
@@ -162,6 +174,7 @@
     "name": "grass-root-ledge",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.8143,
     "src": "assets/obstacles/slide/foothills/foothills_slide_grass-root-ledge.png",
     "key": "obstacle-foothills_slide_grass-root-ledge"
   },
@@ -173,6 +186,7 @@
     "name": "aspen-scrub",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6667,
     "src": "assets/obstacles/cut/foothills/foothills_cut_aspen-scrub.png",
     "key": "obstacle-foothills_cut_aspen-scrub"
   },
@@ -184,6 +198,7 @@
     "name": "dead-mountain-tree",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.7546,
     "src": "assets/obstacles/cut/foothills/foothills_cut_dead-mountain-tree.png",
     "key": "obstacle-foothills_cut_dead-mountain-tree"
   },
@@ -195,6 +210,7 @@
     "name": "antler-thicket",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6644,
     "src": "assets/obstacles/cut/foothills/foothills_cut_antler-thicket.png",
     "key": "obstacle-foothills_cut_antler-thicket"
   },
@@ -206,6 +222,7 @@
     "name": "ice-boulder",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9028,
     "src": "assets/obstacles/jump/tundra/tundra_jump_ice-boulder.png",
     "key": "obstacle-tundra_jump_ice-boulder"
   },
@@ -217,6 +234,7 @@
     "name": "snow-drift-rock",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.7778,
     "src": "assets/obstacles/jump/tundra/tundra_jump_snow-drift-rock.png",
     "key": "obstacle-tundra_jump_snow-drift-rock"
   },
@@ -228,6 +246,7 @@
     "name": "frozen-bone-clump",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9444,
     "src": "assets/obstacles/jump/tundra/tundra_jump_frozen-bone-clump.png",
     "key": "obstacle-tundra_jump_frozen-bone-clump"
   },
@@ -239,6 +258,7 @@
     "name": "ice-lip",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.6095,
     "src": "assets/obstacles/slide/tundra/tundra_slide_ice-lip.png",
     "key": "obstacle-tundra_slide_ice-lip"
   },
@@ -250,6 +270,7 @@
     "name": "frozen-pine-limbs",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.9952,
     "src": "assets/obstacles/slide/tundra/tundra_slide_frozen-pine-limbs.png",
     "key": "obstacle-tundra_slide_frozen-pine-limbs"
   },
@@ -261,6 +282,7 @@
     "name": "snow-shelf",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.6571,
     "src": "assets/obstacles/slide/tundra/tundra_slide_snow-shelf.png",
     "key": "obstacle-tundra_slide_snow-shelf"
   },
@@ -272,6 +294,7 @@
     "name": "frozen-dead-pine",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6667,
     "src": "assets/obstacles/cut/tundra/tundra_cut_frozen-dead-pine.png",
     "key": "obstacle-tundra_cut_frozen-dead-pine"
   },
@@ -283,6 +306,7 @@
     "name": "frostthorn-bush",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.662,
     "src": "assets/obstacles/cut/tundra/tundra_cut_frostthorn-bush.png",
     "key": "obstacle-tundra_cut_frostthorn-bush"
   },
@@ -294,6 +318,7 @@
     "name": "winter-reeds",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.662,
     "src": "assets/obstacles/cut/tundra/tundra_cut_winter-reeds.png",
     "key": "obstacle-tundra_cut_winter-reeds"
   },
@@ -305,6 +330,7 @@
     "name": "stalagmite-clump",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.875,
     "src": "assets/obstacles/jump/caves/caves_jump_stalagmite-clump.png",
     "key": "obstacle-caves_jump_stalagmite-clump"
   },
@@ -316,6 +342,7 @@
     "name": "fossil-ribs",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9028,
     "src": "assets/obstacles/jump/caves/caves_jump_fossil-ribs.png",
     "key": "obstacle-caves_jump_fossil-ribs"
   },
@@ -327,6 +354,7 @@
     "name": "limestone-blocks",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8958,
     "src": "assets/obstacles/jump/caves/caves_jump_limestone-blocks.png",
     "key": "obstacle-caves_jump_limestone-blocks"
   },
@@ -338,6 +366,7 @@
     "name": "stalactite-curtain",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.6286,
     "src": "assets/obstacles/slide/caves/caves_slide_stalactite-curtain.png",
     "key": "obstacle-caves_slide_stalactite-curtain"
   },
@@ -349,6 +378,7 @@
     "name": "fossil-rib-arch",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.9571,
     "src": "assets/obstacles/slide/caves/caves_slide_fossil-rib-arch.png",
     "key": "obstacle-caves_slide_fossil-rib-arch"
   },
@@ -360,6 +390,7 @@
     "name": "hanging-roots",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.719,
     "src": "assets/obstacles/slide/caves/caves_slide_hanging-roots.png",
     "key": "obstacle-caves_slide_hanging-roots"
   },
@@ -371,6 +402,7 @@
     "name": "root-bramble",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6644,
     "src": "assets/obstacles/cut/caves/caves_cut_root-bramble.png",
     "key": "obstacle-caves_cut_root-bramble"
   },
@@ -382,6 +414,7 @@
     "name": "mushroom-tangle",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6539,
     "src": "assets/obstacles/cut/caves/caves_cut_mushroom-tangle.png",
     "key": "obstacle-caves_cut_mushroom-tangle"
   },
@@ -393,6 +426,7 @@
     "name": "fossil-antlers",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6655,
     "src": "assets/obstacles/cut/caves/caves_cut_fossil-antlers.png",
     "key": "obstacle-caves_cut_fossil-antlers"
   },
@@ -404,6 +438,7 @@
     "name": "blue-crystal-rock",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9722,
     "src": "assets/obstacles/jump/crystals/crystals_jump_blue-crystal-rock.png",
     "key": "obstacle-crystals_jump_blue-crystal-rock"
   },
@@ -415,6 +450,7 @@
     "name": "violet-shard-mound",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8681,
     "src": "assets/obstacles/jump/crystals/crystals_jump_violet-shard-mound.png",
     "key": "obstacle-crystals_jump_violet-shard-mound"
   },
@@ -426,6 +462,7 @@
     "name": "mixed-geode-clump",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8819,
     "src": "assets/obstacles/jump/crystals/crystals_jump_mixed-geode-clump.png",
     "key": "obstacle-crystals_jump_mixed-geode-clump"
   },
@@ -437,6 +474,7 @@
     "name": "blue-crystal-ceiling",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.619,
     "src": "assets/obstacles/slide/crystals/crystals_slide_blue-crystal-ceiling.png",
     "key": "obstacle-crystals_slide_blue-crystal-ceiling"
   },
@@ -448,6 +486,7 @@
     "name": "violet-geode-shelf",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.7333,
     "src": "assets/obstacles/slide/crystals/crystals_slide_violet-geode-shelf.png",
     "key": "obstacle-crystals_slide_violet-geode-shelf"
   },
@@ -459,6 +498,7 @@
     "name": "prism-canopy",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.6238,
     "src": "assets/obstacles/slide/crystals/crystals_slide_prism-canopy.png",
     "key": "obstacle-crystals_slide_prism-canopy"
   },
@@ -470,6 +510,7 @@
     "name": "crystal-vine",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6562,
     "src": "assets/obstacles/cut/crystals/crystals_cut_crystal-vine.png",
     "key": "obstacle-crystals_cut_crystal-vine"
   },
@@ -481,6 +522,7 @@
     "name": "blue-briar",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6586,
     "src": "assets/obstacles/cut/crystals/crystals_cut_blue-briar.png",
     "key": "obstacle-crystals_cut_blue-briar"
   },
@@ -492,6 +534,7 @@
     "name": "amethyst-thorn",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6609,
     "src": "assets/obstacles/cut/crystals/crystals_cut_amethyst-thorn.png",
     "key": "obstacle-crystals_cut_amethyst-thorn"
   },
@@ -503,6 +546,7 @@
     "name": "charred-root-mass",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9583,
     "src": "assets/obstacles/jump/ashlands/ashlands_jump_charred-root-mass.png",
     "key": "obstacle-ashlands_jump_charred-root-mass"
   },
@@ -514,6 +558,7 @@
     "name": "cinder-mound",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8611,
     "src": "assets/obstacles/jump/ashlands/ashlands_jump_cinder-mound.png",
     "key": "obstacle-ashlands_jump_cinder-mound"
   },
@@ -525,6 +570,7 @@
     "name": "scorched-bone-pile",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8889,
     "src": "assets/obstacles/jump/ashlands/ashlands_jump_scorched-bone-pile.png",
     "key": "obstacle-ashlands_jump_scorched-bone-pile"
   },
@@ -536,6 +582,7 @@
     "name": "charred-bough",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.7571,
     "src": "assets/obstacles/slide/ashlands/ashlands_slide_charred-bough.png",
     "key": "obstacle-ashlands_slide_charred-bough"
   },
@@ -547,6 +594,7 @@
     "name": "basalt-shelf",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.8524,
     "src": "assets/obstacles/slide/ashlands/ashlands_slide_basalt-shelf.png",
     "key": "obstacle-ashlands_slide_basalt-shelf"
   },
@@ -558,6 +606,7 @@
     "name": "blackroot-curtain",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.919,
     "src": "assets/obstacles/slide/ashlands/ashlands_slide_blackroot-curtain.png",
     "key": "obstacle-ashlands_slide_blackroot-curtain"
   },
@@ -569,6 +618,7 @@
     "name": "charred-sapling",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6701,
     "src": "assets/obstacles/cut/ashlands/ashlands_cut_charred-sapling.png",
     "key": "obstacle-ashlands_cut_charred-sapling"
   },
@@ -580,6 +630,7 @@
     "name": "black-briar",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.8044,
     "src": "assets/obstacles/cut/ashlands/ashlands_cut_black-briar.png",
     "key": "obstacle-ashlands_cut_black-briar"
   },
@@ -591,6 +642,7 @@
     "name": "ember-branch-shrub",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6632,
     "src": "assets/obstacles/cut/ashlands/ashlands_cut_ember-branch-shrub.png",
     "key": "obstacle-ashlands_cut_ember-branch-shrub"
   },
@@ -602,6 +654,7 @@
     "name": "basalt-teeth",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8472,
     "src": "assets/obstacles/jump/lava/lava_jump_basalt-teeth.png",
     "key": "obstacle-lava_jump_basalt-teeth"
   },
@@ -613,6 +666,7 @@
     "name": "cooled-lava-bulb",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9028,
     "src": "assets/obstacles/jump/lava/lava_jump_cooled-lava-bulb.png",
     "key": "obstacle-lava_jump_cooled-lava-bulb"
   },
@@ -624,6 +678,7 @@
     "name": "magma-crust-mound",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8125,
     "src": "assets/obstacles/jump/lava/lava_jump_magma-crust-mound.png",
     "key": "obstacle-lava_jump_magma-crust-mound"
   },
@@ -635,6 +690,7 @@
     "name": "basalt-lip",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.8238,
     "src": "assets/obstacles/slide/lava/lava_slide_basalt-lip.png",
     "key": "obstacle-lava_slide_basalt-lip"
   },
@@ -646,6 +702,7 @@
     "name": "slag-teeth",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.5952,
     "src": "assets/obstacles/slide/lava/lava_slide_slag-teeth.png",
     "key": "obstacle-lava_slide_slag-teeth"
   },
@@ -657,6 +714,7 @@
     "name": "lava-glass-shelf",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.7571,
     "src": "assets/obstacles/slide/lava/lava_slide_lava-glass-shelf.png",
     "key": "obstacle-lava_slide_lava-glass-shelf"
   },
@@ -668,6 +726,7 @@
     "name": "ember-root-plant",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6597,
     "src": "assets/obstacles/cut/lava/lava_cut_ember-root-plant.png",
     "key": "obstacle-lava_cut_ember-root-plant"
   },
@@ -679,6 +738,7 @@
     "name": "lava-glass-thorn",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.816,
     "src": "assets/obstacles/cut/lava/lava_cut_lava-glass-thorn.png",
     "key": "obstacle-lava_cut_lava-glass-thorn"
   },
@@ -690,6 +750,7 @@
     "name": "scorched-corn",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6609,
     "src": "assets/obstacles/cut/lava/lava_cut_scorched-corn.png",
     "key": "obstacle-lava_cut_scorched-corn"
   },
@@ -701,6 +762,7 @@
     "name": "broken-tombstone",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.9306,
     "src": "assets/obstacles/jump/boss/boss_jump_broken-tombstone.png",
     "key": "obstacle-boss_jump_broken-tombstone"
   },
@@ -712,6 +774,7 @@
     "name": "skull-rubble",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8333,
     "src": "assets/obstacles/jump/boss/boss_jump_skull-rubble.png",
     "key": "obstacle-boss_jump_skull-rubble"
   },
@@ -723,6 +786,7 @@
     "name": "castle-block-pile",
     "gameW": 54,
     "gameH": 48,
+    "groundAnchorY": 0.8611,
     "src": "assets/obstacles/jump/boss/boss_jump_castle-block-pile.png",
     "key": "obstacle-boss_jump_castle-block-pile"
   },
@@ -734,6 +798,7 @@
     "name": "chain-stone-lintel",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.7048,
     "src": "assets/obstacles/slide/boss/boss_slide_chain-stone-lintel.png",
     "key": "obstacle-boss_slide_chain-stone-lintel"
   },
@@ -745,6 +810,7 @@
     "name": "bone-arch",
     "gameW": 74,
     "gameH": 70,
+    "groundAnchorY": 0.6333,
     "src": "assets/obstacles/slide/boss/boss_slide_bone-arch.png",
     "key": "obstacle-boss_slide_bone-arch"
   },
@@ -767,6 +833,7 @@
     "name": "bone-bramble",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.662,
     "src": "assets/obstacles/cut/boss/boss_cut_bone-bramble.png",
     "key": "obstacle-boss_cut_bone-bramble"
   },
@@ -778,6 +845,7 @@
     "name": "castle-creeper",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6632,
     "src": "assets/obstacles/cut/boss/boss_cut_castle-creeper.png",
     "key": "obstacle-boss_cut_castle-creeper"
   },
@@ -789,6 +857,7 @@
     "name": "spearbone-thicket",
     "gameW": 60,
     "gameH": 288,
+    "groundAnchorY": 0.6632,
     "src": "assets/obstacles/cut/boss/boss_cut_spearbone-thicket.png",
     "key": "obstacle-boss_cut_spearbone-thicket"
   },

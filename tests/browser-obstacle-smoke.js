@@ -39,24 +39,45 @@ const server=http.createServer((req,res)=>{
         const source=s.textures.get(skin.key).getSourceImage();
         return source.width!==skin.gameW*3||source.height!==skin.gameH*3;
       }).map(skin=>skin.id);
+      const alphaCanvas=document.createElement('canvas');
+      const alphaContext=alphaCanvas.getContext('2d',{willReadFrequently:true});
+      const baselineErrors=[];
+      for(const skin of skins.filter(item=>['jump','slide','cut'].includes(item.category))){
+        const source=s.textures.get(skin.key).getSourceImage();
+        alphaCanvas.width=source.width;alphaCanvas.height=source.height;
+        alphaContext.drawImage(source,0,0);
+        const pixels=alphaContext.getImageData(0,0,source.width,source.height).data;
+        let bottom=source.height;
+        outer:for(let y=source.height-1;y>=0;y--){
+          for(let x=0;x<source.width;x++)if(pixels[(y*source.width+x)*4+3]>32){
+            bottom=y+1;break outer;
+          }
+        }
+        const actual=skin.groundAnchorY??1,expected=bottom/source.height;
+        if(Math.abs(actual-expected)>.0006)baselineErrors.push({id:skin.id,actual,expected});
+      }
       return {count:skins.length,missing,wrongSize,
         badge:document.querySelector('.mini')?.textContent.trim(),
-        images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length};
+        images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length,
+        baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.0 · OBSTACLE VARIETY','visible version badge matches the obstacle release');
+    assert.equal(loaded.badge,'v0.14.1 · OBSTACLE SCALE','visible version badge matches the obstacle scale release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,93,'no obstacle texture key is missing or duplicated');
+    assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
     const exercise=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],skins=window.GRIM_OBSTACLE_SPRITES;
+      document.querySelector('#menu')?.classList.add('hidden');
       const biomeRange={forest:[0,900],foothills:[900,2300],tundra:[2300,5000],
         caves:[5000,6000],crystals:[6000,7000],ashlands:[7000,8000],lava:[8000,9999],boss:[9999,20000]};
       const obstacleType={jump:'rock',slide:'branch',cut:'bramble',fire:'fire',
         'air-tuck':'tuckGate','air-bramble':'airBramble','snapping-bramble':'snappingBramble'};
       s.startX=200;
       const checked=[];
+      const renderFailures=[];
       let selectorMisses=0,renderMisses=0;
       for(const skin of skins){
         const range=biomeRange[skin.biome],base=s.startX+((range[0]+range[1])/2)*window.GRIM_CONFIG.pxPerMeter;
@@ -67,51 +88,88 @@ const server=http.createServer((req,res)=>{
           if(s.obstacleSkinFor(candidate)?.id===skin.id){found=candidate;break;}
         }
         if(!found){selectorMisses++;continue;}
-        const o={...found,y:80,width:skin.gameW,height:skin.gameH,variant:0,destroyed:false};
+        const o={...found,y:80,width:skin.gameW,
+          height:type==='bramble'?220:skin.gameH,variant:0,destroyed:false};
         if(type==='tuckGate'){o.height=1433;o.y=0;}
         if(type==='snappingBramble')s.snappingBox=()=>({x:o.x,y:o.y,width:o.width,height:o.height});
-        const placement=type==='branch'?{x:skin.gameW/2,y:skin.gameH/2,
-          width:skin.gameW,height:skin.gameH}:null;
+        const scale=s.obstacleSpriteScaleFor(skin,type);
+        const placement=type==='branch'?{x:skin.gameW/2,y:180,
+          width:skin.gameW*scale.x,height:skin.gameH*scale.y,
+          originY:skin.groundAnchorY??1}:null;
         const ok=s.drawObstacleSprite(o,placement),image=s.obstacleSpriteObjects.get(o);
+        const expected=placement?{width:placement.width,height:placement.height}:
+          type==='tuckGate'?{width:o.width,height:skin.gameH}:
+          type==='snappingBramble'?{width:o.width,height:o.height}:
+          {width:o.width*scale.x,height:o.height*scale.y};
         if(!ok||!image||image.texture.key!==skin.key||
-          image.displayWidth!==skin.gameW||image.displayHeight!==skin.gameH)renderMisses++;
+          Math.abs(image?.displayWidth-expected.width)>.001||
+          Math.abs(image?.displayHeight-expected.height)>.001){
+          renderMisses++;renderFailures.push({id:skin.id,expected,actual:image&&
+            {width:image.displayWidth,height:image.displayHeight}});
+        }
+        if((skin.category==='jump'||(skin.category==='cut'&&type==='bramble'))&&
+          (!image||image.originY!==(skin.groundAnchorY??1)||image.y!==o.y+o.height)){
+          renderMisses++;renderFailures.push({id:skin.id,anchor:{originY:image?.originY,y:image?.y},
+            expectedAnchor:{originY:skin.groundAnchorY??1,y:o.y+o.height}});
+        }
+        if(placement&&(!image||image.originY!==placement.originY||image.y!==placement.y)){
+          renderMisses++;renderFailures.push({id:skin.id,placement:{originY:image?.originY,y:image?.y},
+            expectedPlacement:{originY:placement.originY,y:placement.y}});
+        }
         image?.destroy();s.obstacleSpriteObjects.delete(o);
         checked.push(skin.id);
       }
+      const oldGroundAt=s.terrain.groundAt,oldAnchorAt=s.terrain.anchorAt;
+      s.terrain.groundAt=()=>300;s.terrain.anchorAt=()=>300;
+      const branch={type:'branch',x:s.startX+400*window.GRIM_CONFIG.pxPerMeter,
+        y:-1700,width:74,height:1924,variant:0,destroyed:false};
+      s.drawObstacle(branch);
+      const branchImage=s.obstacleSpriteObjects.get(branch);
+      const branchSkin=branchImage&&skins.find(skin=>skin.key===branchImage.texture.key);
+      if(!branchImage||Math.abs(branchImage.displayWidth-74*3.25)>.001||
+        Math.abs(branchImage.displayHeight-70*3.25)>.001||branchImage.y!==224||
+        branchImage.originY!==(branchSkin?.groundAnchorY??1)){
+        renderMisses++;renderFailures.push({id:'actual-slide-render',actual:branchImage&&
+          {width:branchImage.displayWidth,height:branchImage.displayHeight,y:branchImage.y,
+            originY:branchImage.originY},skin:branchSkin?.id});
+      }
+      branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
+      s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       const board=[
-        ['forest_jump_root-knot',78,203],
-        ['caves_slide_stalactite-curtain',210,168],
-        ['lava_cut_lava-glass-thorn',342,194],
-        ['lava_fire_lava-flare',474,331],
-        ['ashlands_air-tuck_basalt-tuck-gate',606,214],
-        ['crystals_air-bramble_floating-prism-briar',738,270],
-        ['tundra_snapping-bramble_frost-snap-vine',870,306]
+        ['forest_jump_root-knot',106,328,'rock'],
+        ['caves_slide_stalactite-curtain',322,252,'branch'],
+        ['forest_cut_thorny-young-pine',552,328,'bramble'],
+        ['forest_cut_corn-tangle',700,328,'bramble'],
+        ['lava_fire_lava-flare',855,328,'fire']
       ];
       const background=s.add.graphics().setScrollFactor(0).setDepth(39);
       background.fillStyle(0x111722,1).fillRect(0,0,950,430);
-      s.add.text(475,18,'OBSTACLE ART — GAME-SIZE PREVIEW',{
+      s.add.text(475,18,'OBSTACLE ART — PHONE-SCALE PREVIEW',{
         fontFamily:'system-ui,Arial',fontSize:'16px',fontStyle:'bold',color:'#e8f5f4'
       }).setOrigin(.5).setScrollFactor(0).setDepth(42);
-      for(const [id,x,y] of board){
+      for(const [id,x,y,type] of board){
         const skin=skins.find(item=>item.id===id);
-        const image=s.add.image(x,y,skin.key).setOrigin(.5).setScrollFactor(0).setDepth(41)
-          .setDisplaySize(skin.gameW,skin.gameH);
+        const scale=s.obstacleSpriteScaleFor(skin,type);
+        const baseHeight=type==='bramble'?220:skin.gameH;
+        const groundAnchored=['jump','slide','cut'].includes(skin.category);
+        const image=s.add.image(x,y,skin.key).setOrigin(.5,groundAnchored?(skin.groundAnchorY??1):.5)
+          .setScrollFactor(0).setDepth(41).setDisplaySize(skin.gameW*scale.x,baseHeight*scale.y);
         s.add.text(x,409,skin.category.toUpperCase(),{
           fontFamily:'system-ui,Arial',fontSize:'10px',fontStyle:'bold',color:'#a9c4c7'
         }).setOrigin(.5).setScrollFactor(0).setDepth(42);
         image.setVisible(true);
       }
-      return {checked:checked.length,selectorMisses,renderMisses};
+      return {checked:checked.length,selectorMisses,renderMisses,renderFailures};
     });
-    assert.deepEqual(exercise,{checked:93,selectorMisses:0,renderMisses:0},
-      'every biome skin is selectable and displays at its authored game size');
+    assert.deepEqual(exercise,{checked:93,selectorMisses:0,renderMisses:0,renderFailures:[]},
+      'every biome skin is selectable, scaled, and anchored at its intended baseline');
 
     await page.waitForTimeout(100);
     const resultDir=path.join(root,'test-results');
     fs.mkdirSync(resultDir,{recursive:true});
     await page.locator('#game canvas').screenshot({path:path.join(resultDir,'obstacle-sprites-phone-scale.png')});
     assert.deepEqual(errors,[],'obstacle loading and rendering produce no browser exceptions');
-    console.log('PASS actual Chromium: all 93 biome-exclusive obstacle sprites load, select deterministically, and render at game scale.');
+    console.log('PASS actual Chromium: all 93 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');
   }finally{
     await browser.close();
     await new Promise(resolve=>server.close(resolve));
