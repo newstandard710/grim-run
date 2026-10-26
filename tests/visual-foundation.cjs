@@ -13,7 +13,7 @@ assert.ok(html.includes('ABYSS_BACKDROP_FILES')&&
  html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog')"),
  'Biome-specific abyss paintings load in the production scene');
 assert.ok(html.includes("this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog')")&&
- html.includes('const ABYSS_FOG_LAYER_ALPHA=.27')&&
+ html.includes('const ABYSS_FOG_LAYER_ALPHA=.34')&&
  html.includes('this.abyssFogView(section,shape,id,alpha,activeAbyssFogViews)')&&
  html.includes('.setDepth(.46)')&&html.includes('this.pruneAbyssFogViews(activeAbyssFogViews)'),
  'Shared translucent fog stays above the abyss art, below ground, and is pruned with offscreen gaps');

@@ -1505,7 +1505,7 @@ window.GRIM_CONFIG = Object.freeze({
   const ABYSS_OPENING_LIP_MAX=13;
   const ABYSS_ART_TOP_INSET_PX=34;
   const ABYSS_ART_TOP_JITTER_PX=14;
-  const ABYSS_FOG_LAYER_ALPHA=.27;
+  const ABYSS_FOG_LAYER_ALPHA=.34;
   const ABYSS_FOG_TINTS=Object.freeze({
     forest:0xa6c0b5,foothills:0xaab8c2,tundra:0xd1e0ed,caves:0x8596c4,
     crystals:0x78bdca,ashlands:0x9f879f,lava:0xc78b74,boss:0xa58ca7
@@ -4012,13 +4012,18 @@ window.GRIM_CONFIG = Object.freeze({
           .setRotation(artTop.rotation);
         view.boundsSignature=bounds;
       }
+      // Bring the fog bank into the phone-visible part of the opening. The
+      // transparent upper margin of the source art otherwise leaves only
+      // empty pixels under a short viewport. The fixed ravine mask still owns
+      // the actual edge, so this offset cannot move fog onto solid terrain.
+      const fogOffsetY=-displayHeight*.40;
       // Let the broad, transparent veils drift almost imperceptibly inside the
       // fixed ravine mask. The art stays clipped to world geometry and cannot
       // creep onto the running surface or expose a rectangular image edge.
       const now=(this.time?.now||0)*.00006;
       const driftX=Math.sin(now+section.start*.0013)*3.5;
       const driftY=Math.cos(now*.72+section.end*.0011)*1.5;
-      const px=x+driftX,py=y+driftY;
+      const px=x+driftX,py=y+fogOffsetY+driftY;
       const position=[px,py].map(value=>value.toFixed(2)).join(':');
       if(view.positionSignature!==position){
         sprite.setPosition(px,py);
@@ -4028,6 +4033,7 @@ window.GRIM_CONFIG = Object.freeze({
       view.artTopLeft=artTop.left;view.artTopRight=artTop.right;
       view.artTopInsetPx=ABYSS_ART_TOP_INSET_PX;view.artRotation=artTop.rotation;
       view.bleedPx=bleed;view.driftX=driftX;view.driftY=driftY;
+      view.textureOffsetRatioY=fogOffsetY/displayHeight;
       view.geometryBounds={left:section.start-bleed,right:section.end+bleed};
       if(view.tint!==tint){sprite.setTint(tint);view.tint=tint;}
       const fogAlpha=alpha*ABYSS_FOG_LAYER_ALPHA;

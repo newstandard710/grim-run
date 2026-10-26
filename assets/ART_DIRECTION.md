@@ -87,6 +87,7 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - Use `assets/visuals/terrain/abyss-fog-v1.webp`, a transparent 768×1152px painterly mist texture, as one shared atmosphere layer for all eight ravine biomes.
 - Draw fog above the matching abyss painting at depth 0.46 and below the solid terrain at depth 0.62. Reuse the same jagged opening mask, sloped top edge, 34px lip inset, and hidden side underlap as the ravine painting so fog cannot spill onto the running surface or expose a rectangular edge.
 - Keep opacity low enough to preserve the canyon's painted depth. Crossfade the fog tint with the same biome weights as the ravine images and ground: Forest `#A6C0B5`, Foothills `#AAB8C2`, Tundra `#D1E0ED`, Caves `#8596C4`, Crystals `#78BDCA`, Ashlands `#9F879F`, Lava `#C78B74`, and Boss `#A58CA7`.
+- Offset the transparent source upward by about 40% of its rendered height inside the mask. This places the painted mist bank within the short phone viewport while keeping the visible mask edge 34px below the terrain lip.
 - Drift the texture only a few pixels over a long interval. Keep all fog movement clipped to the fixed world-space gap geometry; never move the ground, opening mask, or ravine plate to create the effect.
 - Allocate one shared texture, cache the per-opening masks, and destroy views when their gaps leave the camera or the scene shuts down. Missing fog art must not block gameplay.
 - Do not change terrain geometry, terrain art, collisions, obstacles, enemies, controls, or route progression as part of this visual layer.
