@@ -57,6 +57,7 @@ const server=http.createServer((req,res)=>{
         'air-tuck':'tuckGate','air-bramble':'airBramble','snapping-bramble':'snappingBramble'};
       s.startX=200;
       const checked=[];
+      const renderFailures=[];
       let selectorMisses=0,renderMisses=0;
       for(const skin of skins){
         const range=biomeRange[skin.biome],base=s.startX+((range[0]+range[1])/2)*window.GRIM_CONFIG.pxPerMeter;
@@ -81,10 +82,20 @@ const server=http.createServer((req,res)=>{
           type==='snappingBramble'?{width:o.width,height:o.height}:
           {width:o.width*scale.x,height:o.height*scale.y};
         if(!ok||!image||image.texture.key!==skin.key||
-          image.displayWidth!==expected.width||image.displayHeight!==expected.height)renderMisses++;
+          Math.abs(image?.displayWidth-expected.width)>.001||
+          Math.abs(image?.displayHeight-expected.height)>.001){
+          renderMisses++;renderFailures.push({id:skin.id,expected,actual:image&&
+            {width:image.displayWidth,height:image.displayHeight}});
+        }
         if((skin.category==='jump'||(skin.category==='cut'&&type==='bramble'))&&
-          (!image||image.originY!==(skin.groundAnchorY??1)||image.y!==o.y+o.height))renderMisses++;
-        if(placement&&(!image||image.originY!==placement.originY||image.y!==placement.y))renderMisses++;
+          (!image||image.originY!==(skin.groundAnchorY??1)||image.y!==o.y+o.height)){
+          renderMisses++;renderFailures.push({id:skin.id,anchor:{originY:image?.originY,y:image?.y},
+            expectedAnchor:{originY:skin.groundAnchorY??1,y:o.y+o.height}});
+        }
+        if(placement&&(!image||image.originY!==placement.originY||image.y!==placement.y)){
+          renderMisses++;renderFailures.push({id:skin.id,placement:{originY:image?.originY,y:image?.y},
+            expectedPlacement:{originY:placement.originY,y:placement.y}});
+        }
         image?.destroy();s.obstacleSpriteObjects.delete(o);
         checked.push(skin.id);
       }
@@ -97,7 +108,11 @@ const server=http.createServer((req,res)=>{
       const branchSkin=branchImage&&skins.find(skin=>skin.key===branchImage.texture.key);
       if(!branchImage||Math.abs(branchImage.displayWidth-74*3.25)>.001||
         Math.abs(branchImage.displayHeight-70*3.25)>.001||branchImage.y!==224||
-        branchImage.originY!==(branchSkin?.groundAnchorY??1))renderMisses++;
+        branchImage.originY!==(branchSkin?.groundAnchorY??1)){
+        renderMisses++;renderFailures.push({id:'actual-slide-render',actual:branchImage&&
+          {width:branchImage.displayWidth,height:branchImage.displayHeight,y:branchImage.y,
+            originY:branchImage.originY},skin:branchSkin?.id});
+      }
       branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       const board=[
@@ -124,9 +139,9 @@ const server=http.createServer((req,res)=>{
         }).setOrigin(.5).setScrollFactor(0).setDepth(42);
         image.setVisible(true);
       }
-      return {checked:checked.length,selectorMisses,renderMisses};
+      return {checked:checked.length,selectorMisses,renderMisses,renderFailures};
     });
-    assert.deepEqual(exercise,{checked:93,selectorMisses:0,renderMisses:0},
+    assert.deepEqual(exercise,{checked:93,selectorMisses:0,renderMisses:0,renderFailures:[]},
       'every biome skin is selectable, scaled, and anchored at its intended baseline');
 
     await page.waitForTimeout(100);
