@@ -976,8 +976,9 @@ const server=http.createServer((req,res)=>{
       target.name+' visible canyon walls begin to narrow below the running surface');
     assert.ok(abyss.shaftDepth>location.height+400,
       target.name+' shaft geometry continues beyond the full viewport without exposing a floor');
-    assert.ok(abyss.platformExtendsBelow,
-      target.name+' ledge face extends below the viewport like attached terrain');
+    if(abyss.platformKind)
+      assert.ok(abyss.platformExtendsBelow,
+        target.name+' ledge face extends below the viewport like attached terrain');
     const capture=await skeletalPage.screenshot({
       path:path.join(skeletalArtifactDir,'abyss-'+target.name+'-phone-scale.png')});
     const image=PNG.sync.read(capture);

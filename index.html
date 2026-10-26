@@ -4018,6 +4018,33 @@ window.GRIM_CONFIG = Object.freeze({
         context.restore();
       };
       drawWall('left');drawWall('right');
+      // Paint the hidden overlap band independently of the jagged opening
+      // clip. The ground covers most of it, while the remaining pixels keep
+      // either terrain lip sealed even where the irregular wall profile shifts.
+      const drawUnderlap=(side)=>{
+        const isLeft=side==='left';
+        const edgeY=isLeft?(Number.isFinite(section.y0)?section.y0:shape.top)
+          :(Number.isFinite(section.y1)?section.y1:shape.top);
+        const x=isLeft?centerLeft-underlap:centerRight,y=edgeY-top;
+        const h=Math.max(1,height-y);
+        context.save();context.beginPath();context.rect(x,y,underlap,h);context.clip();
+        context.fillStyle=rgba(style.base,1);context.fillRect(x,y,underlap,h);
+        const shade=context.createLinearGradient(x,y,x+underlap,y+h);
+        shade.addColorStop(0,rgba(style.light,.24));
+        shade.addColorStop(.42,rgba(style.strata,.18));
+        shade.addColorStop(1,rgba(0x080b12,.56));
+        context.fillStyle=shade;context.fillRect(x,y,underlap,h);
+        for(let row=0,cell=0;row<h;row+=17+noise(cell,81)*11,cell++){
+          const markY=y+row+noise(cell,82)*4;
+          context.beginPath();context.moveTo(x,markY);
+          context.lineTo(x+underlap,markY+noise(cell,83)*3-1.5);
+          context.lineWidth=.65+noise(cell,84)*1.1;
+          context.strokeStyle=rgba(cell%2?style.light:style.detail,.12+noise(cell,85)*.14);
+          context.stroke();
+        }
+        context.restore();
+      };
+      drawUnderlap('left');drawUnderlap('right');
       // Broken highlights catch the upper overhang without forming a ruler-straight rim.
       for(let i=0;i<8;i++){
         const side=i%2?'right':'left',isLeft=side==='left';
@@ -4036,7 +4063,7 @@ window.GRIM_CONFIG = Object.freeze({
       const sprite=this.add.image(x,top,textureKey).setOrigin(0,0).setDepth(1.35).setVisible(true);
       view={sprite,textureKey,geometrySignature,boundsSignature:[x,top,width,height].join(':'),
         biomeId:style.biome,bleedPx:bleed,underlapPx:underlap,lipOverhangPx:lip,
-        maskOverlapPx:2,sideCount:2,backgroundLeft:x,backgroundRight:x+width,
+        maskOverlapPx:bleed,sideCount:2,backgroundLeft:x,backgroundRight:x+width,
         coverageDepth:height};
       this.abyssCliffViews.set(key,view);activeKeys.add(key);return view;
     }
