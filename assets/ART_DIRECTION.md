@@ -72,21 +72,15 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - The cap's upper edge follows the existing terrain contour exactly and all decoration stays on or below that line. Follow slopes and rubble naturally, end at gaps and ledge edges, and leave the abyss open. Do not change terrain geometry or collision.
 - Keep the material translucent enough for each approved ground texture to show through. Use a softened, irregular lower edge and restrained broken highlights; let the biome material show through instead of forming a hard band. Keep the running contact contour locked to existing terrain and collision. Keep all marks readable at phone scale without competing with Reaper feet, enemies, hazards, pickups, or foreground details.
 
-## Gap-fitted abyss depth art — v0.13.2
+## Biome cliff edges and abyss overlap — v0.13.3
 
-- Use `abyss-canyon-gap-01.webp` and `abyss-canyon-gap-02.webp` for rock canyons; use `abyss-lava-gap-01.webp` and `abyss-lava-gap-02.webp` for Lava and the lava-lit Boss Biome. These are portrait background scenes painted to frame a narrow opening.
-- Size each plate from that opening's generated width, center it on the gap, and align the painted near cliff lip to the actual terrain endpoint. The gap mask still follows the generated terrain profile exactly.
-- Keep the plates behind real terrain and world-anchored to each gap. Do not scale them to the full viewport or use a panoramic center crop; that hides the cliff walls inside narrow openings.
-- Let irregular canyon walls recede and narrow into dark distance below the viewport. Never expose a bottom. Select rock scenes through Surface and other non-lava areas, then crossfade to lava scenes through Lava and the Boss Biome.
-- Terrain and platforms remain the foreground and continue below the phone view; their contours, walkable top, collisions, fall rules, and route progression stay unchanged.
-- Do not add a second synthetic lip, a screen-space band, a detached foreground canyon wall, or surface lava cracks.
-
-- Use `abyss-canyon-depth-01.webp` and `abyss-canyon-depth-02.webp` for rock canyons; use `abyss-lava-depth-01.webp` and `abyss-lava-depth-02.webp` for Lava and the lava-lit Boss Biome. These are complete painted background scenes, not repeatable wall textures.
-- Place the art behind generated terrain and reveal it only through a mask for the real gap. Pin the top corners to the gap's actual terrain endpoints; draw the terrain bodies above the image so no image seam or detached rim appears at the lips.
-- Keep each scene world-anchored so it scrolls with its gap. Preserve the illustration's aspect ratio and use deterministic scene selection; do not tile or stretch a canyon wall across successive openings.
-- Let canyon walls angle and narrow into the dark distance below the viewport. Never expose a floor or bottom. Use the non-lava canyon scenes through Surface and other non-lava areas, then crossfade to the lava scenes through Lava and the Boss Biome.
-- The canyon is background art. Terrain and platforms remain the foreground and continue below the phone view; their generated contours, walkable top, collisions, fall rules, and route progression stay unchanged.
-- Do not add a second synthetic lip, a screen-space band, a detached foreground canyon wall, or surface lava cracks.
+- Keep `abyss-canyon-gap-01.webp` and `abyss-canyon-gap-02.webp` for rock canyons; use `abyss-lava-gap-01.webp` and `abyss-lava-gap-02.webp` for Lava and the lava-lit Boss Biome. These portrait paintings stay world-anchored and narrow toward dark distance with no visible bottom.
+- Extend each backplate and its mask at least 24px beneath both terrain edges. The solid terrain, its painted material, and the cliff-face layer draw above that overlap. Do not let the mask shrink away from the ground and expose blank side gaps.
+- Keep the real terrain and its collision profile authoritative. The visible gap is covered by the backplate plus two cliff-face shapes; the face edge overlaps the backplate by at least 2px, and its landward edge overlaps the ground by at least 24px.
+- Add a small overhang at each opening lip and an irregular, chipped wall profile below it. Use stable, terrain-seeded shapes so edges do not flicker as the camera moves. Avoid a perfectly straight edge or a continuous outlined rim.
+- Give cliff faces their own material, distinct from the ground tile. Use biome-matched colors and restrained details for roots and moss, foothill strata, ice, cavern slate, crystal facets, ash, basalt, and boss stone. Keep transitions consistent with the existing biome fades.
+- Keep lava scenes through Lava and the Boss Biome; use rock canyon scenes through Surface and other non-lava areas. Do not tile cliff walls or add detached lava cracks.
+- The walkable surface, slopes, platforms, collision, fall rules, controls, hazards, and route progression stay unchanged. The cliff lip is a visual layer only.
 
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.

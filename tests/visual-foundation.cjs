@@ -5,9 +5,9 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.2-gap-fitted-abyss"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.3-biome-cliff-edges"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.2-gap-fitted-abyss"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.3-biome-cliff-edges"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('ABYSS_BACKDROP_VARIANTS')&&
  html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp')"),
@@ -19,7 +19,7 @@ assert.ok(html.includes('this.add.image(0,0,textureKey)')&&
 assert.ok(html.includes('left[0]={x:section.start,y:y0}')&&
  html.includes('right[0]={x:section.end,y:y1}')&&
  !html.includes('drawAbyssRim'),
- 'The opening edges are pinned to real gap endpoints and have no separate synthetic rim');
+ 'The opening profile stays pinned to terrain while the cliff lip remains a visual layer');
 assert.ok(!html.includes('abyss-canyon-v1.webp')&&!html.includes('abyss-lava-v1.webp')&&
  !html.includes('UNDERWORLD_ABYSS_PALETTE')&&!html.includes('lavaY='),
  'The previous canyon texture and flat lava treatments are removed');
@@ -31,9 +31,16 @@ for(const asset of ['abyss-canyon-depth-01.webp','abyss-canyon-depth-02.webp',
  'abyss-lava-depth-01.webp','abyss-lava-depth-02.webp'])
  assert.ok(!fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain',asset)),
    `${asset} is removed from the gap-fitted release`);
-assert.ok(html.includes('const displayWidth=Math.max(shape.width*1.08,96)')&&
- html.includes('const lipAnchor=.12')&&html.includes('y=lipY-displayHeight*lipAnchor'),
- 'Portrait depth plates scale to each generated gap and pin their painted lips to the terrain');
+assert.ok(html.includes('const ABYSS_BACKDROP_BLEED_MIN=24')&&
+ html.includes('const displayWidth=shape.width+bleed*2')&&
+ html.includes('Math.min(point.x,section.start-bleed)')&&
+ html.includes('Math.max(point.x,section.end+bleed)'),
+ 'Portrait abyss plates and masks overlap beneath both ground edges to prevent seams');
+assert.ok(html.includes('abyssCliffEdgeView(section,shape,meters,activeAbyssCliffViews)')&&
+ html.includes('const ABYSS_CLIFF_LIP_OVERHANG=13')&&
+ html.includes('const ABYSS_CLIFF_UNDERLAP=24')&&
+ html.includes('abyssCliffStyle(meters)'),
+ 'Jagged cliff faces use biome-specific textures, a visual overhang, and a terrain underlap');
 assert.ok(!fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain','abyss-canyon-v1.webp'))&&
  !fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain','abyss-lava-v1.webp')),
  'The previous tiled canyon and lava assets are removed from the release');

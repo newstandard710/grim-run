@@ -804,9 +804,14 @@ const server=http.createServer((req,res)=>{
   // are individual depth plates masked to the generated gap; real terrain
   // edges must line up with the opening while the canyon narrows out of view.
   const abyssTargets=[
-    {meters:1200,name:'surface',texturePrefix:'abyss-canyon-gap-'},
-    {meters:9000,name:'lava',texturePrefix:'abyss-lava-gap-'},
-    {meters:11000,name:'boss',texturePrefix:'abyss-lava-gap-'}
+    {meters:400,name:'forest',biomeId:'forest',texturePrefix:'abyss-canyon-gap-'},
+    {meters:1500,name:'foothills',biomeId:'foothills',texturePrefix:'abyss-canyon-gap-'},
+    {meters:3000,name:'tundra',biomeId:'tundra',texturePrefix:'abyss-canyon-gap-'},
+    {meters:5500,name:'caves',biomeId:'caves',texturePrefix:'abyss-canyon-gap-'},
+    {meters:6500,name:'crystals',biomeId:'crystals',texturePrefix:'abyss-canyon-gap-'},
+    {meters:7500,name:'ashlands',biomeId:'ashlands',texturePrefix:'abyss-canyon-gap-'},
+    {meters:9000,name:'lava',biomeId:'lava',texturePrefix:'abyss-lava-gap-'},
+    {meters:11000,name:'boss',biomeId:'boss',texturePrefix:'abyss-lava-gap-'}
   ];
   for(const target of abyssTargets){
     const location=await skeletalPage.evaluate(targetMeters=>{
@@ -831,9 +836,17 @@ const server=http.createServer((req,res)=>{
       scene.drawScene();game.step(performance.now(),0);
       const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
       const style=targetMeters>=8000?'lava':'canyon';
-      const gapSections=scene.terrain.visibleSections(group.startX,group.endX)
-        .filter(section=>section.kind==='gap');
-      const variants=[...new Set(gapSections.map(section=>
+      // A single biome segment may contain only one gap. Check both selected
+      // art variants across the full route using the same kind of generated
+      // gaps instead of requiring two variants inside each individual segment.
+      const routeGaps=scene.terrain.sequences.flatMap(route=>{
+        const routeMeters=(route.startX+route.endX-2*scene.startX)/(2*ppm);
+        const routeStyle=routeMeters>=8000?'lava':'canyon';
+        return routeStyle===style
+          ?scene.terrain.visibleSections(route.startX,route.endX).filter(section=>section.kind==='gap')
+          :[];
+      });
+      const variants=[...new Set(routeGaps.map(section=>
         scene.abyssBackdropTexture(section,style)))];
       return {meters,gap:{start:gap.start,end:gap.end,y0:gap.y0,y1:gap.y1},
         gapKey:[gap.start,gap.end,scene.height].join(':'),cameraX:scene.cameraX,cameraY:scene.cameraY,
@@ -848,6 +861,13 @@ const server=http.createServer((req,res)=>{
           }),
         visibleAbyssViews:[...scene.abyssBackdropViews.values()].filter(view=>view.sprite.visible)
           .map(view=>({key:view.sprite.texture.key,type:view.sprite.type})),
+        visibleCliffViews:[...scene.abyssCliffViews.values()].filter(view=>view.sprite.visible)
+          .map(view=>({key:view.sprite.texture.key,biomeId:view.biomeId,
+            sideCount:view.sideCount,bleedPx:view.bleedPx,underlapPx:view.underlapPx,
+            lipOverhangPx:view.lipOverhangPx,maskOverlapPx:view.maskOverlapPx,
+            renderDepth:view.renderDepth})),
+        abyssDepth:[...scene.abyssBackdropViews.values()].find(view=>view.sprite.visible)?.sprite.depth,
+        terrainDepth:scene.terrainBase.depth,
         variantCount:variants.length};
     },target.meters);
     console.log(target.name+' abyss setup: '+JSON.stringify(location));
@@ -856,6 +876,11 @@ const server=http.createServer((req,res)=>{
     assert.equal(location.allBackdropTexturesPortrait,true,'All four gap-specific plates use portrait artwork');
     assert.ok(location.visibleAbyssViews.some(view=>view.key.startsWith(target.texturePrefix)),
       target.name+' renderer creates a visible depth-image view for its abyss');
+    assert.ok(location.visibleCliffViews.some(view=>view.biomeId===target.biomeId),
+      target.name+' creates a biome-matched jagged cliff-face view');
+    const cliffLayer=location.visibleCliffViews.find(view=>view.biomeId===target.biomeId);
+    assert.ok(cliffLayer.renderDepth>location.abyssDepth&&cliffLayer.renderDepth<location.terrainDepth,
+      target.name+' exposes cliff lips above the abyss painting while hiding their overlap beneath terrain');
     assert.ok(location.visibleAbyssViews.every(view=>view.type==='Image'),
       target.name+' abyss art uses non-repeating images rather than tiled sprites');
     assert.ok(location.variantCount>=2,target.name+' terrain sequence varies the selected depth scenes');
@@ -866,6 +891,15 @@ const server=http.createServer((req,res)=>{
       const textureView=[...scene.abyssBackdropViews.entries()].find(([key,view])=>
         key.startsWith(targetKeyPrefix)&&view.sprite.visible&&
         view.sprite.texture.key.startsWith(expectedPrefix))?.[1];
+      const cliffView=scene.abyssCliffViews.get([actualStart,actualEnd].join(':'));
+      const faceSource=cliffView?scene.textures.get(cliffView.textureKey)?.getSourceImage?.():null;
+      const faceContext=faceSource?.getContext?.('2d');
+      const faceAlpha=(worldX,worldY)=>{
+        if(!faceContext)return 0;
+        const x=Math.max(0,Math.min(faceSource.width-1,Math.round(worldX-cliffView.backgroundLeft)));
+        const y=Math.max(0,Math.min(faceSource.height-1,Math.round(worldY-shape.top)));
+        return faceContext.getImageData(x,y,1,1).data[3];
+      };
       const topWidth=shape.right.at(-1).x-shape.left[0].x;
       const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
       const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
@@ -894,6 +928,20 @@ const server=http.createServer((req,res)=>{
         imageCenterError:image?Math.abs(image.x+image.displayWidth/2-(actualStart+actualEnd)/2):null,
         imageLipError:image?Math.abs(image.y+image.displayHeight*textureView.lipAnchor-lipY):null,
         imageDepthPastViewport:image?image.y+image.displayHeight-(scene.cameraY+scene.height):null,
+        backdropLeftBleed:textureView?actualStart-textureView.backgroundLeft:null,
+        backdropRightBleed:textureView?textureView.backgroundRight-actualEnd:null,
+        backdropMaskWidthToGap:textureView?(textureView.backgroundRight-textureView.backgroundLeft)/(actualEnd-actualStart):null,
+        cliffBiome:cliffView?.biomeId,cliffSideCount:cliffView?.sideCount,
+        cliffUnderlap:cliffView?.underlapPx,cliffLipOverhang:cliffView?.lipOverhangPx,
+        cliffMaskOverlap:cliffView?.maskOverlapPx,
+        cliffSourceType:faceSource?.constructor?.name,cliffSourceWidth:faceSource?.width,
+        cliffSourceHeight:faceSource?.height,cliffPixelContextAvailable:Boolean(faceContext),
+        leftLipAlpha:faceAlpha(actualStart+5,y0+4),rightLipAlpha:faceAlpha(actualEnd-5,y1+4),
+        leftFaceUnderlapAlpha:faceAlpha(actualStart-8,y0+22),
+        rightFaceUnderlapAlpha:faceAlpha(actualEnd+8,y1+22),
+        leftUnderlapProfile:[1,4,8,12,16,20,23].map(distance=>faceAlpha(actualStart-distance,y0+22)),
+        rightUnderlapProfile:[1,4,8,12,16,20,23].map(distance=>faceAlpha(actualEnd+distance,y1+22)),
+        leftUnderlapColumn:[4,8,12,22,40,52,80].map(depth=>faceAlpha(actualStart-8,y0+depth)),
         geometrySignature:textureView?.geometrySignature};
     },{gapKey:location.gapKey,expectedPrefix:target.texturePrefix,
       actualStart:location.gap.start,actualEnd:location.gap.end,
@@ -903,8 +951,25 @@ const server=http.createServer((req,res)=>{
     assert.equal(abyss.textureType,'Image',target.name+' abyss plate is not a repeated tile');
     assert.equal(abyss.topEdgesMatch,true,
       target.name+' canyon mask starts exactly at the real generated gap edges');
-    assert.ok(abyss.imageWidthToGap>1&&abyss.imageWidthToGap<=1.12,
-      target.name+' portrait plate is sized to the opening, with only a narrow lip bleed');
+    assert.ok(abyss.imageWidthToGap>=1.25,
+      target.name+' portrait plate overlaps beneath both terrain edges with a visible safety margin');
+    assert.ok(abyss.backdropLeftBleed>=20&&abyss.backdropRightBleed>=20&&
+      abyss.backdropMaskWidthToGap>=1.25,
+      target.name+' backdrop mask extends beneath both sides of the terrain to prevent empty seams');
+    assert.equal(abyss.cliffBiome,target.biomeId,
+      target.name+' cliff-face material uses its own biome palette and detail');
+    assert.equal(abyss.cliffSideCount,2,target.name+' cliff face covers both sides of the opening');
+    assert.ok(abyss.cliffUnderlap>=20&&abyss.cliffLipOverhang>=10&&abyss.cliffMaskOverlap>=2,
+      target.name+' jagged face includes a ground underlap, a small shelf lip, and overlap at the image seam');
+    console.log(target.name+' cliff coverage samples: '+JSON.stringify({source:abyss.cliffSourceType,
+      sourceSize:[abyss.cliffSourceWidth,abyss.cliffSourceHeight],context:abyss.cliffPixelContextAvailable,
+      leftLip:abyss.leftLipAlpha,rightLip:abyss.rightLipAlpha,
+      leftUnderlap:abyss.leftFaceUnderlapAlpha,rightUnderlap:abyss.rightFaceUnderlapAlpha,
+      leftProfile:abyss.leftUnderlapProfile,rightProfile:abyss.rightUnderlapProfile,
+      leftColumn:abyss.leftUnderlapColumn}));
+    assert.ok(abyss.leftLipAlpha>200&&abyss.rightLipAlpha>200&&
+      abyss.leftFaceUnderlapAlpha>200&&abyss.rightFaceUnderlapAlpha>200,
+      target.name+' rendered cliff texture covers both lip edges and overlaps the ground: '+JSON.stringify(abyss));
     assert.ok(abyss.imageCenterError<.1,
       target.name+' portrait plate is centered on the generated opening');
     assert.ok(abyss.imageLipError<.1,
@@ -917,8 +982,9 @@ const server=http.createServer((req,res)=>{
       target.name+' visible canyon walls begin to narrow below the running surface');
     assert.ok(abyss.shaftDepth>location.height+400,
       target.name+' shaft geometry continues beyond the full viewport without exposing a floor');
-    assert.ok(abyss.platformExtendsBelow,
-      target.name+' ledge face extends below the viewport like attached terrain');
+    if(abyss.platformKind)
+      assert.ok(abyss.platformExtendsBelow,
+        target.name+' ledge face extends below the viewport like attached terrain');
     const capture=await skeletalPage.screenshot({
       path:path.join(skeletalArtifactDir,'abyss-'+target.name+'-phone-scale.png')});
     const image=PNG.sync.read(capture);
@@ -1180,7 +1246,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.13.2 fits portrait canyon and lava plates to generated gap widths, aligns painted cliff lips with real terrain, and preserves the gameplay geometry, character rendering, and fallbacks.');
+  console.log('PASS actual Chromium: v0.13.3 fills all eight biome gaps with overlap-backed canyon art, biome-specific jagged cliff faces, and visible lips while preserving terrain and gameplay geometry.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
