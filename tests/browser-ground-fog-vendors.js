@@ -62,7 +62,9 @@ const server=http.createServer((req,res)=>{
         s.drawScene();game.step(performance.now(),0);
         const fog=[...s.groundFogViews.values()].filter(v=>v.visible);
         const vendor=[...s.vendorSpriteObjects.values()].filter(v=>v.visible);
-        return {fog:fog.length,colors:[...new Set(fog.map(v=>v.tintTopLeft))],
+        return {fog:fog.length,onscreenFog:fog.filter(v=>
+            v.x>=s.cameraX&&v.x<=s.cameraX+s.width).length,
+          colors:[...new Set(fog.map(v=>v.tintTopLeft))],
           fogDepth:fog[0]?.depth,mask:!!fog[0]?.mask,
           reaperDepth:s.visuals?.reaper?.depth,actorDepth:s.actor.depth,
           vendor:vendor.map(v=>({key:v.texture.key,depth:v.depth,height:v.displayHeight})),
@@ -70,6 +72,7 @@ const server=http.createServer((req,res)=>{
           supportDepth:.53,obstacleDepth:s.obstacleFront.depth};
       },meters);
       assert(result.fog>0,name+' has visible terrain fog');
+      assert(result.onscreenFog>0,name+' has a mist bank on the visible ground');
       assert(result.mask,name+' fog has a solid-terrain mask');
       assert.equal(result.fogDepth,15,name+' fog is in front of Reaper');
       assert(result.reaperDepth<result.fogDepth&&result.actorDepth<result.fogDepth,

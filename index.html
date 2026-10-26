@@ -3465,8 +3465,9 @@ window.GRIM_CONFIG = Object.freeze({
       mask.clear();mask.fillStyle(0xffffff,1);
       // One world-space mask follows solid terrain and ends at each real gap.
       // The art does not add a surface or change any terrain geometry.
-      for(const section of this.terrain.visibleSections(left,right)){
-        if(section.kind==='gap')continue;
+      const solidSections=this.terrain.visibleSections(left,right)
+        .filter(section=>section.kind!=='gap');
+      for(const section of solidSections){
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
         const y0=Number.isFinite(section.y0)?section.y0:section.y;
@@ -3482,6 +3483,7 @@ window.GRIM_CONFIG = Object.freeze({
         mask.fillPoints(points,true);
       }
       const active=new Set();
+      const placedCenters=[];
       const first=Math.floor(left/GROUND_FOG_STRIDE)-1;
       const last=Math.ceil(right/GROUND_FOG_STRIDE)+1;
       for(let index=first;index<=last;index++){
@@ -3508,6 +3510,33 @@ window.GRIM_CONFIG = Object.freeze({
           .setDisplaySize(width,height).setFlipX(Boolean(this.groundFogHash(index,251)&1))
           .setTint(shade.tint).setAlpha(alpha).setVisible(true);
         active.add(index);
+        placedCenters.push(x);
+      }
+      // Short ledges and split ground can fall between the world-spaced banks.
+      // Give a substantial solid section one localized wisp if it has none.
+      for(const section of solidSections){
+        const from=Math.max(left,section.start),to=Math.min(right,section.end);
+        if(to-from<110||placedCenters.some(x=>x>=from&&x<=to))continue;
+        const x=(from+to)/2,ground=this.terrain.groundAt(x);
+        if(!Number.isFinite(ground))continue;
+        const seed=Math.round(section.start*10);
+        const key=GROUND_FOG_KEYS[this.groundFogHash(seed,313)%GROUND_FOG_KEYS.length];
+        if(!this.textures?.exists?.(key))continue;
+        const id='section:'+section.start+':'+section.end;
+        const shade=this.groundFogColorAt(x);
+        let sprite=views.get(id);
+        if(!sprite){
+          sprite=this.add.image(x,ground+3,key).setOrigin(.5,1)
+            .setDepth(15).setMask(this.groundFogMask);
+          views.set(id,sprite);
+        }
+        sprite.setTexture(key).setPosition(x+
+          Math.sin(this.elapsed*.22+seed*.017)*3,ground+3)
+          .setDisplaySize(Math.min(430,Math.max(200,to-from+50)),
+            136+this.groundFogHash(seed,479)%19)
+          .setFlipX(Boolean(this.groundFogHash(seed,503)&1))
+          .setTint(shade.tint).setAlpha(shade.opacity*.70).setVisible(true);
+        active.add(id);
       }
       for(const [index,sprite] of views){
         if(active.has(index))continue;
