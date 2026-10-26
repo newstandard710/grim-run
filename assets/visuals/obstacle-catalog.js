@@ -1,4 +1,4 @@
-/* Biome-exclusive obstacle art catalog for v0.14.4. Purely visual metadata. */
+/* Biome-exclusive obstacle art catalog for v0.14.5. Purely visual metadata. */
 (function(scope){'use strict';scope.GRIM_OBSTACLE_SPRITES=Object.freeze([
   {
     "id": "forest_jump_root-knot",
@@ -9,6 +9,7 @@
     "gameW": 54,
     "gameH": 48,
     "groundAnchorY": 0.875,
+    "visualInsetPx": 6,
     "src": "assets/obstacles/jump/forest/forest_jump_root-knot.png",
     "key": "obstacle-forest_jump_root-knot"
   },
@@ -33,6 +34,7 @@
     "gameW": 54,
     "gameH": 48,
     "groundAnchorY": 0.7708,
+    "visualInsetPx": 5,
     "src": "assets/obstacles/jump/forest/forest_jump_root-bone-clump.png",
     "key": "obstacle-forest_jump_root-bone-clump"
   },
@@ -47,6 +49,8 @@
     "src": "assets/obstacles/slide-v3/forest/forest_dead-bough-curtain-front.webp",
     "backSrc": "assets/obstacles/slide-v3/forest/forest_dead-bough-curtain-back.webp",
     "backKey": "obstacle-back-forest_dead-bough-curtain",
+    "supportSrc": "assets/obstacles/slide-support/forest/forest_dead-bough-curtain-support.webp",
+    "supportKey": "obstacle-support-forest_dead-bough-curtain",
     "key": "obstacle-forest_slide_dead-bough-curtain"
   },
   {
@@ -60,6 +64,8 @@
     "src": "assets/obstacles/slide-v3/forest/forest_root-shelf-front.webp",
     "backSrc": "assets/obstacles/slide-v3/forest/forest_root-shelf-back.webp",
     "backKey": "obstacle-back-forest_root-shelf",
+    "supportSrc": "assets/obstacles/slide-support/forest/forest_root-shelf-support.webp",
+    "supportKey": "obstacle-support-forest_root-shelf",
     "key": "obstacle-forest_slide_root-shelf"
   },
   {
@@ -73,6 +79,8 @@
     "src": "assets/obstacles/slide-v3/forest/forest_thorn-canopy-front.webp",
     "backSrc": "assets/obstacles/slide-v3/forest/forest_thorn-canopy-back.webp",
     "backKey": "obstacle-back-forest_thorn-canopy",
+    "supportSrc": "assets/obstacles/slide-support/forest/forest_thorn-canopy-support.webp",
+    "supportKey": "obstacle-support-forest_thorn-canopy",
     "key": "obstacle-forest_slide_thorn-canopy"
   },
   {
@@ -84,6 +92,7 @@
     "gameW": 60,
     "gameH": 288,
     "groundAnchorY": 0.9977,
+    "visualInsetPx": 11,
     "src": "assets/obstacles/cut/forest/forest_cut_thorny-young-pine.png",
     "key": "obstacle-forest_cut_thorny-young-pine"
   },
@@ -95,6 +104,7 @@
     "name": "dead-oak-sapling",
     "gameW": 60,
     "gameH": 288,
+    "visualInsetPx": 10,
     "src": "assets/obstacles/cut/forest/forest_cut_dead-oak-sapling.png",
     "key": "obstacle-forest_cut_dead-oak-sapling"
   },

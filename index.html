@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.14.4</title>
+  <title>GRIM RUN — v0.14.5</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.14.4 · SLIDE READABILITY</div>
+      <div class="mini">v0.14.5 · FOREST OBSTACLES</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1529,8 +1529,9 @@ window.GRIM_CONFIG = Object.freeze({
         this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog');
       this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog');
       for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
-        this.load.image(skin.key,skin.src+'?v=0.14.4-slide-readability');
-        if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.4-slide-readability');
+        this.load.image(skin.key,skin.src+'?v=0.14.5-forest-obstacles');
+        if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.5-forest-obstacles');
+        if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.14.5-forest-obstacles');
       }
     }
     create() {
@@ -1598,6 +1599,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.obstacleSpriteObjects=new Map();
       this.obstacleBackObjects=new Map();
+      this.obstacleSupportObjects=new Map();
       this.souls = [];
       this.coins = [];
       this.tips = [];
@@ -4322,14 +4324,18 @@ window.GRIM_CONFIG = Object.freeze({
       if(skin.category==='slide')return {x:3.25,y:3.25};
       if(skin.category==='fire')return {x:2,y:2};
       if(skin.category==='cut'&&type==='bramble'){
+        if(skin.id==='forest_cut_corn-tangle')return {x:1.3,y:1.69};
+        if(skin.id==='forest_cut_thorny-young-pine'||
+          skin.id==='forest_cut_dead-oak-sapling')return {x:3,y:3};
         const isTree=/(?:tree|pine|oak|sapling)/i.test(skin.name);
         return isTree?{x:2,y:2}:{x:1,y:1.3};
       }
       return {x:1,y:1};
     }
-    obstacleVisualInset(o){
-      if(o.type==='rock')return 8;
-      if(o.type==='bramble')return 9;
+    obstacleVisualInset(o,skin=null){
+      const extra=skin?.visualInsetPx??0;
+      if(o.type==='rock')return 8+extra;
+      if(o.type==='bramble')return 9+extra;
       if(o.type==='fire')return 5;
       if(o.type==='snappingBramble')return 6;
       return 0;
@@ -4337,6 +4343,9 @@ window.GRIM_CONFIG = Object.freeze({
     drawObstacleContact(o){
       const skin=this.obstacleSkinFor(o);
       const width=skin?.category==='jump'?Math.min(115,o.width*1.8):
+        skin?.category==='cut'&&skin.biome==='forest'&&
+          (skin.id==='forest_cut_thorny-young-pine'||skin.id==='forest_cut_dead-oak-sapling')
+          ?Math.min(165,o.width*2.7):
         skin?.category==='cut'?Math.min(105,o.width*1.5):o.width*1.05;
       const ground=o.type==='snappingBramble'?this.terrain.anchorAt(o.x):o.y+o.height;
       this.world.fillStyle(0x0b1118,.27);
@@ -4353,8 +4362,22 @@ window.GRIM_CONFIG = Object.freeze({
       image.setOrigin(.5,1).setPosition(x,y).setDisplaySize(width,height)
         .setRotation(rotation).setVisible(true);
     }
+    drawObstacleSupport(o,skin,x,underside,width,ground,rotation){
+      if(!skin?.supportKey||!this.textures?.exists?.(skin.supportKey))return;
+      let image=this.obstacleSupportObjects.get(o);
+      if(image&&image.texture?.key!==skin.supportKey){image.destroy();image=null;}
+      if(!image){
+        image=this.add.image(0,0,skin.supportKey).setDepth(.53);
+        this.obstacleSupportObjects.set(o,image);
+      }
+      const bottom=ground+20;
+      const height=Math.max(130,bottom-underside+96);
+      image.setOrigin(.5,1).setPosition(x,bottom).setDisplaySize(width,height)
+        .setRotation(rotation).setTint(0x91a298).setAlpha(.7).setVisible(true);
+    }
     cleanupObstacleSprites(){
-      if(!this.obstacleSpriteObjects?.size&&!this.obstacleBackObjects?.size)return;
+      if(!this.obstacleSpriteObjects?.size&&!this.obstacleBackObjects?.size&&
+        !this.obstacleSupportObjects?.size)return;
       const active=new Set(this.obstacles.filter(o=>!o.destroyed));
       for(const [ob,image] of this.obstacleSpriteObjects){
         if(active.has(ob))continue;
@@ -4363,6 +4386,10 @@ window.GRIM_CONFIG = Object.freeze({
       for(const [ob,image] of this.obstacleBackObjects){
         if(active.has(ob))continue;
         image.destroy();this.obstacleBackObjects.delete(ob);
+      }
+      for(const [ob,image] of this.obstacleSupportObjects){
+        if(active.has(ob))continue;
+        image.destroy();this.obstacleSupportObjects.delete(ob);
       }
     }
     drawObstacleSprite(o,placement=null){
@@ -4390,7 +4417,7 @@ window.GRIM_CONFIG = Object.freeze({
       }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
         width=o.width*scale.x;height=o.height*scale.y;
-        x=o.x+o.width/2;y=o.y+o.height+this.obstacleVisualInset(o);
+        x=o.x+o.width/2;y=o.y+o.height+this.obstacleVisualInset(o,skin);
         originY=skin.groundAnchorY??1;
       }else{
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
@@ -4494,6 +4521,8 @@ window.GRIM_CONFIG = Object.freeze({
         const rotation=Math.max(-.22,Math.min(.22,Math.atan2(delta,width)));
         const underside=Core.slideCeilingBottomAt(groundAt,centerX,C.slideClearancePx)
           ??(this.terrain.anchorAt(centerX)-C.slideClearancePx);
+        const surface=groundAt(centerX)??this.terrain.anchorAt(centerX);
+        this.drawObstacleSupport(o,skin,centerX,underside,width,surface,rotation);
         this.drawObstacleBack(o,skin,centerX,underside,width,height,rotation);
         if(!this.drawObstacleSprite(o,{x:centerX,y:underside,width,height,rotation,
           originY:1})){
