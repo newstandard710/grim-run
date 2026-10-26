@@ -37,6 +37,10 @@ for(const [category,count] of Object.entries(counts)){
   for(const skin of group){
     perBiome[skin.biome]=(perBiome[skin.biome]||0)+1;
     assert.deepEqual([skin.gameW,skin.gameH],dimensions[category],skin.id+' game footprint');
+    if(skin.groundAnchorY!==undefined){
+      assert.ok(Number.isFinite(skin.groundAnchorY)&&skin.groundAnchorY>.5&&skin.groundAnchorY<=1,
+        skin.id+' has a normalized illustrated baseline');
+    }
     assert.ok(!files.has(skin.src),'a file is not assigned to multiple catalog entries: '+skin.src);
     assert.ok(!keys.has(skin.key),'texture keys are unique: '+skin.key);
     assert.ok(!ids.has(skin.id),'sprite ids are unique: '+skin.id);
@@ -83,4 +87,4 @@ assert.equal(files.size,93);
 assert.equal(keys.size,93);
 assert.equal(ids.size,93);
 assert.equal(hashes.size,93);
-console.log('PASS v0.14.0: 93 unique biome-exclusive obstacle PNGs; catalog counts, paths, 3x footprints, alpha format, CRCs, and decoded pixel extents verified.');
+console.log('PASS v0.14.1: 93 unique biome-exclusive obstacle PNGs; catalog counts, paths, 3x footprints, ground anchors, alpha format, CRCs, and decoded pixel extents verified.');

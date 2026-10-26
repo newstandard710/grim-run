@@ -1,6 +1,6 @@
-# Obstacle Sprite Catalog — v0.14.0
+# Obstacle Sprite Catalog — v0.14.1
 
-All sprites are transparent RGBA PNGs authored at three times their intended game display size. The runtime uses the dimensions in `assets/visuals/obstacle-catalog.js` and matches a sprite to the obstacle's world biome. No sprite file is assigned to more than one biome.
+All sprites are transparent RGBA PNGs authored at three times their base display dimensions. Runtime visual multipliers enlarge jump, slide, and cut art without changing hitboxes. Grounded sprites use per-image alpha baselines to sit on the terrain or clearance line. Every skin remains assigned to one biome.
 
 The core obstacle families have three skins per biome (50% more than the two-skin baseline). Fire keeps three skins in each biome where fire hazards appear. The biome folders and metadata below are the implementation map.
 
@@ -22,4 +22,5 @@ The core obstacle families have three skins per biome (50% more than the two-ski
 - Air-tuck art is assigned to Ashlands and Lava; occurrences in other biomes keep the existing procedural gate rendering.
 - Snapping bramble only spawns in Tundra, so its one sprite has a single valid biome.
 - Sprite choice is deterministic from obstacle position. It does not consume gameplay RNG or read the obstacle's gameplay variant.
-- `jump`, `slide`, `cut`, and `fire` art is sized to the existing hitbox. Branch art is confined to the existing safe-side rim; gate and snapping art follow their existing display box. No placement, collision, spawn, or timing values are changed.
+- Jump art draws at 2.5× its base size. Named trees and saplings in the cut family draw at 2×; the other cut sprites are 1.3× taller. Fire sprites and air tuck, air bramble, and snapping bramble retain their current display sizing.
+- Slide-under art draws at 3.25× its base size and replaces the old procedural pillar. Its lowest visible point sits at the existing slide-clearance contour and the artwork follows nearby terrain slope. No placement, collision, spawn, or timing values are changed.
