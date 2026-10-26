@@ -4,6 +4,12 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 
 **Current production build: v0.13.3 — Biome Cliff Edges**
 
+**In-development update: v0.13.4 — Biome-Specific Ravines**
+
+- Adds a distinct deep-abyss painting for each of the eight biomes. The art is clipped to the seeded ravine opening, widened beneath the real terrain, and crossfades with the existing biome palette.
+- Removes the shared canyon/lava plates and the separate procedural cliff-face band. The painted opening itself forms a small irregular lip; terrain artwork stays above the overlap, and terrain/collision geometry is unchanged.
+- This update is not deployed yet.
+
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
@@ -25,7 +31,7 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
 
-## v0.13.3 — Biome Cliff Edges
+## v0.13.3 — Biome Cliff Edges (current production)
 
 - Fixed the side gaps around abyss paintings by extending each backplate and its mask beneath the ground on both sides. Real terrain and cliff faces draw above the overlap.
 - Added cached jagged cliff faces with a small overhang. Their rock, ice, roots, crystal, ash, and ember details change with the biome and remain visually separate from the walkable ground texture.

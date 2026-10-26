@@ -72,15 +72,13 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - The cap's upper edge follows the existing terrain contour exactly and all decoration stays on or below that line. Follow slopes and rubble naturally, end at gaps and ledge edges, and leave the abyss open. Do not change terrain geometry or collision.
 - Keep the material translucent enough for each approved ground texture to show through. Use a softened, irregular lower edge and restrained broken highlights; let the biome material show through instead of forming a hard band. Keep the running contact contour locked to existing terrain and collision. Keep all marks readable at phone scale without competing with Reaper feet, enemies, hazards, pickups, or foreground details.
 
-## Biome cliff edges and abyss overlap — v0.13.3
+## Biome-specific abyss paintings — v0.13.4
 
-- Keep `abyss-canyon-gap-01.webp` and `abyss-canyon-gap-02.webp` for rock canyons; use `abyss-lava-gap-01.webp` and `abyss-lava-gap-02.webp` for Lava and the lava-lit Boss Biome. These portrait paintings stay world-anchored and narrow toward dark distance with no visible bottom.
-- Extend each backplate and its mask at least 24px beneath both terrain edges. The solid terrain, its painted material, and the cliff-face layer draw above that overlap. Do not let the mask shrink away from the ground and expose blank side gaps.
-- Keep the real terrain and its collision profile authoritative. The visible gap is covered by the backplate plus two cliff-face shapes; the face edge overlaps the backplate by at least 2px, and its landward edge overlaps the ground by at least 24px.
-- Add a small overhang at each opening lip and an irregular, chipped wall profile below it. Use stable, terrain-seeded shapes so edges do not flicker as the camera moves. Avoid a perfectly straight edge or a continuous outlined rim.
-- Give cliff faces their own material, distinct from the ground tile. Use biome-matched colors and restrained details for roots and moss, foothill strata, ice, cavern slate, crystal facets, ash, basalt, and boss stone. Keep transitions consistent with the existing biome fades.
-- Keep lava scenes through Lava and the Boss Biome; use rock canyon scenes through Surface and other non-lava areas. Do not tile cliff walls or add detached lava cracks.
-- The walkable surface, slopes, platforms, collision, fall rules, controls, hazards, and route progression stay unchanged. The cliff lip is a visual layer only.
+- Use `abyss-depth-forest.webp`, `abyss-depth-foothills.webp`, `abyss-depth-tundra.webp`, `abyss-depth-caves.webp`, `abyss-depth-crystals.webp`, `abyss-depth-ashlands.webp`, `abyss-depth-lava.webp`, and `abyss-depth-boss.webp` for their matching biomes. Each portrait painting is a background plate with no baked-in top ledge or visible bottom.
+- Clip the paintings to the stable, terrain-seeded ravine shape. Start each opening at the exact generated ground endpoints, then add only a small irregular visual overhang and let the walls narrow into dark distance.
+- Extend the same artwork and mask at least 36px or 18% of gap width beneath both land edges. Real terrain and its painted ground material render above this overlap, hiding the seam. Do not add a separate filler band or procedural cliff-face texture.
+- Crossfade neighboring abyss paintings with the same biome weights used by the ground and backgrounds. Keep the art world-anchored, full-bleed, and wide enough to cover both sides without blank margins.
+- The terrain top, platform profiles, collisions, fall rules, controls, hazards, and route progression remain unchanged. Visible cliff edges are formed by the opening mask over the biome painting, not by a second foreground wall.
 
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.
