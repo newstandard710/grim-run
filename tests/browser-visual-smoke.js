@@ -843,22 +843,29 @@ const server=http.createServer((req,res)=>{
       const visibleViews=[...scene.abyssBackdropViews.values()].filter(view=>view.sprite.visible)
         .map(view=>({key:view.sprite.texture.key,type:view.sprite.type,depth:view.sprite.depth}));
       const source=scene.textures.get(expectedTexture)?.getSourceImage?.();
-      const mask=shape?scene.abyssBackdropPolygon(gap,shape,textureView?.bleedPx||36):[];
+      const mask=shape?scene.abyssBackdropPolygon(gap,shape,textureView?.bleedPx||36,
+        textureView?.artTopInsetPx||34):[];
+      const sloped={...gap,y0:gap.y0-12,y1:gap.y1+18};
+      const slopedTop=scene.abyssBackdropTopEdge(sloped,34);
       return {meters,gap:{start:gap.start,end:gap.end,y0:gap.y0,y1:gap.y1},gapKey,
         cameraX:scene.cameraX,cameraY:scene.cameraY,width:scene.width,height:scene.height,
         gapVisible:visibleSections.some(section=>section.kind==='gap'&&section.start===gap.start),
         allBackdropTexturesLoaded:textureKeys.every(key=>scene.textures.exists(key)),
         allBackdropTexturesSized:textureKeys.every(key=>{
           const image=scene.textures.get(key)?.getSourceImage?.();
-          return image?.width===768&&image?.height===960;
+          return image?.width===768&&image?.height===624;
         }),
         visibleViews,view:textureView?{key:textureView.sprite.texture.key,
           type:textureView.sprite.type,depth:textureView.sprite.depth,
           backgroundLeft:textureView.backgroundLeft,backgroundRight:textureView.backgroundRight,
-          lipAnchor:textureView.lipAnchor,lipY:textureView.lipY,
+          artTopLeft:textureView.artTopLeft,artTopRight:textureView.artTopRight,
+          artTopInsetPx:textureView.artTopInsetPx,artRotation:textureView.artRotation,
+          lipY:textureView.lipY,
           x:textureView.sprite.x,y:textureView.sprite.y,
           displayWidth:textureView.sprite.displayWidth,displayHeight:textureView.sprite.displayHeight,
           bleedPx:textureView.bleedPx}:null,
+        slopedTop:{left:slopedTop.left,right:slopedTop.right,rotation:slopedTop.rotation,
+          expectedLeft:sloped.y0+34,expectedRight:sloped.y1+34},
         imageWidth:source?.width,imageHeight:source?.height,
         terrainDepth:scene.terrainBase.depth,
         shape:shape?{left:shape.left,right:shape.right,top:shape.top,bottom:shape.bottom,width:shape.width}:null,
@@ -869,7 +876,7 @@ const server=http.createServer((req,res)=>{
     console.log(target.name+' abyss setup: '+JSON.stringify(location));
     assert.equal(location.gapVisible,true,target.name+' generated gap is in the camera view');
     assert.equal(location.allBackdropTexturesLoaded,true,'All eight biome depth plates load');
-    assert.equal(location.allBackdropTexturesSized,true,'Depth plates use optimized 768x960 images');
+    assert.equal(location.allBackdropTexturesSized,true,'Depth plates use cropped 768x624 images');
     assert.ok(location.visibleViews.some(view=>view.key==='abyss-depth-'+target.biomeId),
       target.name+' renderer uses its own biome-specific depth image');
     assert.ok(location.visibleViews.every(view=>view.type==='Image'),
@@ -911,7 +918,9 @@ const server=http.createServer((req,res)=>{
       const platformBottom=platformPoints.length?Math.max(...platformPoints.map(point=>point.y)):null;
       const topEdgesMatch=topLeft.x===actualStart&&topLeft.y===y0&&
         topRight.x===actualEnd&&topRight.y===y1;
-      const lipY=(y0+y1)/2;
+      const artTopInset=view?.artTopInsetPx||34;
+      const projectedLeftY=image?image.y+Math.tan(image.rotation)*(actualStart-image.x):null;
+      const projectedRightY=image?image.y+Math.tan(image.rotation)*(actualEnd-image.x):null;
       return {textureKey:image?.texture.key,textureType:image?.type,topEdgesMatch,
         leftLipShape:leftLip.x>topLeft.x&&leftLip.y>topLeft.y&&leftReturn.x<leftLip.x,
         rightLipShape:rightLip.x<topRight.x&&rightLip.y>topRight.y&&rightReturn.x>rightLip.x,
@@ -919,12 +928,14 @@ const server=http.createServer((req,res)=>{
         visibleBottomY:scene.cameraY+scene.height,platformBottom,platformKind:platform?.kind,
         platformExtendsBelow:platformBottom!==null&&platformBottom>scene.cameraY+scene.height+100,
         imageWidthToGap:image?image.displayWidth/(actualEnd-actualStart):null,
-        imageCenterError:image?Math.abs(image.x+image.displayWidth/2-(actualStart+actualEnd)/2):null,
-        imageTopReferenceError:image?Math.abs(image.y+image.displayHeight*view.lipAnchor-lipY):null,
-        imageDepthPastViewport:image?image.y+image.displayHeight-(scene.cameraY+scene.height):null,
-        backdropLeftBleed:view?actualStart-view.backgroundLeft:null,
-        backdropRightBleed:view?view.backgroundRight-actualEnd:null,
-        backdropMaskWidthToGap:view?(view.backgroundRight-view.backgroundLeft)/(actualEnd-actualStart):null};
+        imageCenterError:image?Math.abs(image.x-(actualStart+actualEnd)/2):null,
+        imageLeftTopInsetError:image?Math.abs(projectedLeftY-(y0+artTopInset)):null,
+        imageRightTopInsetError:image?Math.abs(projectedRightY-(y1+artTopInset)):null,
+        imageDepthPastViewport:view?view.backgroundBottom-(scene.cameraY+scene.height):null,
+        backdropLeftBleed:mask.length?actualStart-Math.min(...mask.map(point=>point.x)):null,
+        backdropRightBleed:mask.length?Math.max(...mask.map(point=>point.x))-actualEnd:null,
+        backdropMaskWidthToGap:mask.length?(Math.max(...mask.map(point=>point.x))-
+          Math.min(...mask.map(point=>point.x)))/(actualEnd-actualStart):null};
     },{gapKey:location.gapKey,expectedTexture:'abyss-depth-'+target.biomeId,
       actualStart:location.gap.start,actualEnd:location.gap.end,y0:location.gap.y0,y1:location.gap.y1});
     assert.equal(abyss.textureKey,'abyss-depth-'+target.biomeId,
@@ -941,8 +952,12 @@ const server=http.createServer((req,res)=>{
       target.name+' jagged image mask covers both side overlaps without a filler band');
     assert.ok(abyss.imageCenterError<.1,
       target.name+' depth plate is centered on the generated opening');
-    assert.ok(abyss.imageTopReferenceError<.1,
-      target.name+' image framing follows the real terrain endpoint height');
+    assert.ok(abyss.imageLeftTopInsetError<.1&&abyss.imageRightTopInsetError<.1,
+      target.name+' image top follows each terrain endpoint one Reaper head-height below the rim');
+    assert.ok(Math.abs(location.slopedTop.left.y-location.slopedTop.expectedLeft)<.001&&
+      Math.abs(location.slopedTop.right.y-location.slopedTop.expectedRight)<.001&&
+      Math.abs(location.slopedTop.rotation)>0,
+      target.name+' sloped synthetic ravine keeps both art endpoints aligned independently');
     assert.ok(abyss.imageDepthPastViewport>80,
       target.name+' painted depth continues below the phone viewport');
     assert.ok(abyss.topWidth>abyss.bottomWidth&&abyss.bottomWidth>0,
@@ -1215,7 +1230,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.13.4 fills all eight biome gaps with widened, biome-specific depth paintings and terrain-matched jagged lips while preserving gameplay geometry.');
+  console.log('PASS actual Chromium: v0.13.5 fills all eight biome gaps with cropped, biome-specific depth paintings, per-edge lip alignment, and terrain-matched jagged lips while preserving gameplay geometry.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

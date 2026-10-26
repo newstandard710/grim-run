@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.13.4</title>
+  <title>GRIM RUN — v0.13.5</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.13.4 · BIOME RAVINES</div>
+      <div class="mini">v0.13.5 · RAVINE ART REFRAME</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.13.4',
+  version: '0.13.5',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.13.4-biome-ravines"></script>
-  <script src="assets/visuals/visual-system.js?v=0.13.4-biome-ravines"></script>
+  <script src="assets/visuals/world-art.js?v=0.13.5-ravine-reframe"></script>
+  <script src="assets/visuals/visual-system.js?v=0.13.5-ravine-reframe"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1503,6 +1503,8 @@ window.GRIM_CONFIG = Object.freeze({
   const ABYSS_BACKDROP_BLEED_MIN=36;
   const ABYSS_BACKDROP_BLEED_RATIO=.18;
   const ABYSS_OPENING_LIP_MAX=13;
+  const ABYSS_ART_TOP_INSET_PX=34;
+  const ABYSS_ART_TOP_JITTER_PX=6;
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
   const TUNDRA_TERRAIN_TILE_SCALE=.48;
@@ -1518,7 +1520,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.load.image('terrain-source-forest',
         'assets/visuals/terrain/'+BIOME_TERRAIN_FILES.forest);
       for(const key of Object.values(ABYSS_BACKDROP_FILES))
-        this.load.image(key,'assets/visuals/terrain/'+key+'.webp');
+        this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.5-ravine-reframe');
     }
     create() {
       this.width = this.scale.width;
@@ -3858,11 +3860,49 @@ window.GRIM_CONFIG = Object.freeze({
       const id=typeof section==='string'?section:biome;
       return ABYSS_BACKDROP_FILES[id]||ABYSS_BACKDROP_FILES.forest;
     }
-    abyssBackdropPolygon(section,shape,bleed){
+    abyssBackdropTopEdge(section,inset){
+      const y0=Number.isFinite(section.y0)?section.y0:this.terrain.anchorAt(section.start);
+      const y1=Number.isFinite(section.y1)?section.y1:y0;
+      const width=Math.max(1,section.end-section.start);
+      const hash=(n)=>{
+        const value=Math.sin((section.start+section.end*.37+n*47.13)*.093)*43758.5453;
+        return value-Math.floor(value);
+      };
+      const count=Math.max(4,Math.ceil(width/34)),points=[];
+      for(let i=0;i<=count;i++){
+        const t=i/count,jitter=i===0||i===count?0:
+          (hash(i+71)-.5)*2*ABYSS_ART_TOP_JITTER_PX*Math.sin(Math.PI*t);
+        points.push({x:section.start+width*t,
+          y:y0+(y1-y0)*t+inset+jitter});
+      }
+      return {left:points[0],right:points.at(-1),points,
+        centerX:(section.start+section.end)/2,
+        centerY:(points[0].y+points.at(-1).y)/2,
+        rotation:Math.atan2(y1-y0,width)};
+    }
+    abyssBackdropPolygon(section,shape,bleed,inset=0){
+      if(inset>0){
+        const edge=this.abyssBackdropTopEdge(section,inset);
+        const slope=(edge.right.y-edge.left.y)/Math.max(1,section.end-section.start);
+        const extendedTop=[
+          {x:section.start-bleed,y:edge.left.y-slope*bleed},
+          ...edge.points.slice(1,-1),
+          {x:section.end+bleed,y:edge.right.y+slope*bleed}
+        ];
+        const left=[extendedTop[0],
+          ...shape.left.filter(point=>point.y>edge.left.y)
+            .map(point=>({x:point.x-bleed,y:point.y}))];
+        const rightBottomToTop=shape.right.slice().reverse()
+          .filter(point=>point.y>edge.right.y)
+          .map(point=>({x:point.x+bleed,y:point.y}));
+        rightBottomToTop.push(extendedTop.at(-1));
+        return [...left,...rightBottomToTop,...extendedTop.slice(1,-1).reverse()];
+      }
       // Translate the real jagged opening profile outward on both sides. This
       // keeps its natural taper while hiding the mask seam under solid ground.
       const left=shape.left.map(point=>({x:point.x-bleed,y:point.y}));
-      const right=shape.right.map(point=>({x:point.x+bleed,y:point.y}));
+      const right=shape.right.slice().reverse()
+        .map(point=>({x:point.x+bleed,y:point.y}));
       return [...left,...right];
     }
     abyssBackdropView(section,shape,textureKey,alpha,activeKeys){
@@ -3882,34 +3922,42 @@ window.GRIM_CONFIG = Object.freeze({
       const {sprite,maskGraphics}=view;
       const bleed=Math.max(ABYSS_BACKDROP_BLEED_MIN,
         Math.ceil(shape.width*ABYSS_BACKDROP_BLEED_RATIO));
-      const backgroundPoints=this.abyssBackdropPolygon(section,shape,bleed);
-      const signature=shape.signature+':bleed:'+bleed;
+      const artTop=this.abyssBackdropTopEdge(section,ABYSS_ART_TOP_INSET_PX);
+      const backgroundPoints=this.abyssBackdropPolygon(section,shape,bleed,
+        ABYSS_ART_TOP_INSET_PX);
+      const signature=shape.signature+':bleed:'+bleed+':top:'+ABYSS_ART_TOP_INSET_PX;
       if(view.geometrySignature!==signature){
         maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);
         maskGraphics.fillPoints(backgroundPoints,true);
         view.geometrySignature=signature;
       }
       const source=this.textures.get(textureKey)?.getSourceImage?.();
-      const aspect=source?.width>0&&source?.height>0?source.width/source.height:9/16;
-      // Map the portrait scene to the opening plus a hidden underlap. The real
-      // ground, drawn above, covers this margin and prevents blank seams at
-      // both sides of the canyon.
-      const displayWidth=shape.width+bleed*2;
-      const displayHeight=Math.max(this.height*1.05,displayWidth/aspect);
-      const lipY=((Number.isFinite(section.y0)?section.y0:shape.top)+
-        (Number.isFinite(section.y1)?section.y1:shape.top))/2;
-      // No ledge is baked into these paintings. Terrain clips the image at its
-      // real profile, with a small top crop allowance to keep the depth framed.
-      const lipAnchor=.055;
-      const x=section.start-bleed,y=lipY-displayHeight*lipAnchor;
-      const bounds=[x,y,displayWidth,displayHeight].map(value=>value.toFixed(2)).join(':');
+      const aspect=source?.width>0&&source?.height>0?source.width/source.height:1.23;
+      // Preserve the cropped painting's proportions. The wider image is clipped
+      // to the actual opening, which magnifies the canyon instead of squeezing
+      // the full concept into a narrow slot.
+      const maskWidth=shape.width+bleed*2;
+      const displayHeight=Math.max(this.height*1.05,maskWidth/aspect);
+      const displayWidth=displayHeight*aspect;
+      const x=artTop.centerX,y=artTop.centerY;
+      const rotation=artTop.rotation;
+      const bounds=[x,y,displayWidth,displayHeight,rotation].map(value=>value.toFixed(3)).join(':');
       if(view.boundsSignature!==bounds){
-        sprite.setTexture(textureKey).setPosition(x,y).setDisplaySize(displayWidth,displayHeight);
+        sprite.setOrigin(.5,0).setTexture(textureKey).setPosition(x,y)
+          .setDisplaySize(displayWidth,displayHeight).setRotation(rotation);
         view.boundsSignature=bounds;
       }
-      view.lipY=lipY;view.lipAnchor=lipAnchor;
-      view.bleedPx=bleed;view.backgroundLeft=x;view.backgroundRight=x+displayWidth;
-      view.backgroundTop=y;view.backgroundBottom=y+displayHeight;
+      const c=Math.cos(rotation),s=Math.sin(rotation),halfWidth=displayWidth/2;
+      const corners=[[-halfWidth,0],[halfWidth,0],[-halfWidth,displayHeight],[halfWidth,displayHeight]]
+        .map(([localX,localY])=>({x:x+localX*c-localY*s,y:y+localX*s+localY*c}));
+      view.lipY=(artTop.left.y+artTop.right.y)/2-ABYSS_ART_TOP_INSET_PX;
+      view.artTopLeft=artTop.left;view.artTopRight=artTop.right;
+      view.artTopInsetPx=ABYSS_ART_TOP_INSET_PX;view.artRotation=rotation;
+      view.bleedPx=bleed;
+      view.backgroundLeft=Math.min(...corners.map(point=>point.x));
+      view.backgroundRight=Math.max(...corners.map(point=>point.x));
+      view.backgroundTop=Math.min(...corners.map(point=>point.y));
+      view.backgroundBottom=Math.max(...corners.map(point=>point.y));
       sprite.setAlpha(alpha).setVisible(true);
       activeKeys.add(key);
       return view;

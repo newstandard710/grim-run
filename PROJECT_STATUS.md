@@ -1,16 +1,23 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.13.4 — *Biome-Specific Ravines*.
+**Current production build:** v0.13.5 — *Ravine Art Reframe*.
 
-This release replaces shared canyon/lava scenes and the separate cliff-face band with eight biome-specific abyss paintings. Their masks follow the seeded opening profile, the painted edge forms a small irregular overhang, and the artwork extends behind the real terrain so no filler band is visible. The walkable surface and collision geometry are unchanged.
+This release crops the upper 35% from the eight biome-specific ravine paintings, then places each plate about one Reaper head-height below the opening. The top edge follows both real terrain endpoints independently, including sloped gaps, while a jagged mask and terrain underlap keep the join covered. The normal biome backgrounds, walkable surface, and collision geometry are unchanged.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.13.4 — *Biome-Specific Ravines* (current production)
+**Release:** v0.13.5 — *Ravine Art Reframe* (current production)
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Eight local gameplay regression suites pass, including seed 1 reaching 9,999m. Actual Chromium checks cover all eight biome openings and phone-size rendering. Android device appearance and play-feel remain for playtesting.
+**Verification:** Eight local gameplay regression suites pass, including seed 1 reaching 9,999m. Actual Chromium checks cover all eight biome openings, independently aligned sloped edges, and phone-size rendering. Android device appearance and play-feel remain for playtesting.
+
+## v0.13.5 — Ravine Art Reframe
+
+- Cropped the upper 35% from each of the eight abyss paintings, removing sky and moon content from the area below the ground while leaving the regular biome skies unchanged.
+- Zoomed the remaining artwork without stretching it. The image top begins about 34px below each terrain endpoint and rotates with the opening's slope; a small irregular mask edge keeps the transition from reading as a hard stripe.
+- Preserved the widened overlap behind both sides of the real terrain. No filler band, terrain geometry, surface, collision, or gameplay behavior was added or changed.
+- Seed 1 reaches the expected 9,999m win state. Eight biome openings and a synthetic sloped opening are covered by the phone-scale Chromium check.
 
 ## v0.13.4 — Biome-Specific Ravines
 
