@@ -67,13 +67,11 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.6 · FOREST OBSTACLES','visible version badge matches the forest art release');
+    assert.equal(loaded.badge,'v0.14.7 · SLIDE OBSTACLES','visible version badge matches the slide art release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
-    assert.equal(loaded.images,120,'all 24 upper paintings and three forest supports load');
-    assert.deepEqual(loaded.supports,[
-      'forest_slide_dead-bough-curtain','forest_slide_root-shelf','forest_slide_thorn-canopy'
-    ],'only forest slide skins have unique paired supports');
+    assert.equal(loaded.images,141,'all 24 upper paintings and 24 unique supports load');
+    assert.equal(loaded.supports.length,24,'every slide variant has a paired support');
     assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
     const exercise=await page.evaluate(()=>{
@@ -206,10 +204,20 @@ const server=http.createServer((req,res)=>{
     await page.locator('#game canvas').screenshot({path:path.join(resultDir,'obstacle-sprites-phone-scale.png')});
     await page.reload({waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu');
-    for(const name of ['dead-bough-curtain','root-shelf','thorn-canopy']){
-      await page.evaluate(name=>{
+    const slides=[
+      ['forest','dead-bough-curtain'],['forest','root-shelf'],['forest','thorn-canopy'],
+      ['foothills','rock-lip'],['foothills','fallen-pine-overhang'],['foothills','grass-root-ledge'],
+      ['tundra','ice-lip'],['tundra','frozen-pine-limbs'],['tundra','snow-shelf'],
+      ['caves','stalactite-curtain'],['caves','fossil-rib-arch'],['caves','hanging-roots'],
+      ['crystals','blue-crystal-ceiling'],['crystals','violet-geode-shelf'],['crystals','prism-canopy'],
+      ['ashlands','charred-bough'],['ashlands','basalt-shelf'],['ashlands','blackroot-curtain'],
+      ['lava','basalt-lip'],['lava','slag-teeth'],['lava','lava-glass-shelf'],
+      ['boss','chain-stone-lintel'],['boss','bone-arch'],['boss','ruined-portcullis']
+    ];
+    for(const [biome,name] of slides){
+      const view=await page.evaluate(({biome,name})=>{
         const s=window.grimRun.scene.scenes[0];
-        const skin=window.GRIM_OBSTACLE_SPRITES.find(item=>item.id==='forest_slide_'+name);
+        const skin=window.GRIM_OBSTACLE_SPRITES.find(item=>item.id===biome+'_slide_'+name);
         document.querySelector('#menu')?.classList.add('hidden');
         for(const image of window.forestArtPreview||[])image.destroy();
         const x=475,underside=252,bottom=348,width=74*3.25;
@@ -223,10 +231,75 @@ const server=http.createServer((req,res)=>{
           s.add.image(x,underside,skin.key).setOrigin(.5,1)
             .setDisplaySize(width,height).setDepth(2.15).setScrollFactor(0)
         ];
-      },name);
+        return window.forestArtPreview.map(image=>({key:image.texture.key,depth:image.depth}));
+      },{biome,name});
+      assert.deepEqual(view,[
+        {key:'obstacle-support-'+biome+'_'+name,depth:.53},
+        {key:'obstacle-back-'+biome+'_'+name,depth:.55},
+        {key:'obstacle-'+biome+'_slide_'+name,depth:2.15}
+      ],biome+' '+name+' retains its unique aligned layer pair');
+      await page.waitForTimeout(35);
+      await page.locator('#game canvas').screenshot({path:path.join(resultDir,
+        biome+'-slide-'+name+'-phone-scene.png')});
+    }
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu');
+    await page.locator('#start-btn').click();
+    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing');
+    await page.evaluate(()=>{
+      const s=window.grimRun.scene.scenes[0];
+      s.state='paused';s.enemies=[];s.obstacles=[];
+    });
+    const biomePreviews=[
+      [1500,'foothills','fallen-pine-overhang'],[3400,'tundra','snow-shelf'],
+      [5500,'caves','fossil-rib-arch'],[6500,'crystals','blue-crystal-ceiling'],
+      [7500,'ashlands','charred-bough'],[9000,'lava','basalt-lip'],
+      [11000,'boss','ruined-portcullis']
+    ];
+    for(const [meters,biome,name] of biomePreviews){
+      await page.evaluate(m=>{
+        const game=window.grimRun,s=game.scene.scenes[0],ppm=window.GRIM_CONFIG.pxPerMeter;
+        s.distance=m;s.hasTeleported=m>=5000;
+        s.player.x=s.startX+m*ppm;
+        s.player.y=s.terrain.groundAt(s.player.x)??s.terrain.anchorAt(s.player.x);
+        s.player.grounded=true;s.player.velocityY=0;
+        s.cameraX=s.player.x-s.width*window.GRIM_CONFIG.reaperXRatio;
+        s.cameraY=s.player.y-s.groundY;
+        s.cameras.main.setScroll(s.cameraX,s.cameraY);
+        s.drawScene();game.step(performance.now(),0);
+      },meters);
+      await page.waitForFunction(id=>{
+        const s=window.grimRun?.scene?.scenes?.[0];
+        return s?.terrainMaterialIds?.has(id)&&
+          [...s.terrainTextureViews.values()].some(view=>view.id===id&&view.sprite.visible);
+      },biome,{timeout:45000});
+      const view=await page.evaluate(({biome,name})=>{
+        const s=window.grimRun.scene.scenes[0];
+        const skin=window.GRIM_OBSTACLE_SPRITES.find(item=>item.id===biome+'_slide_'+name);
+        for(const image of window.biomeArtPreview||[])image.destroy();
+        let worldX=s.cameraX+475;
+        for(const offset of [0,40,-40,80,-80,120,-120]){
+          const candidate=s.cameraX+475+offset;
+          if(Number.isFinite(s.terrain.groundAt(candidate))){worldX=candidate;break;}
+        }
+        const ground=s.terrain.groundAt(worldX)??s.terrain.anchorAt(worldX);
+        const underside=ground-window.GRIM_CONFIG.slideClearancePx;
+        const width=74*3.25,height=Math.max(s.height*1.22,475),bottom=ground+20;
+        window.biomeArtPreview=[
+          s.add.image(worldX,bottom,skin.supportKey).setOrigin(.5,1)
+            .setDisplaySize(width*1.6,Math.max(210,(bottom-underside+96)*1.6))
+            .setDepth(.53).setTint(0xbfc6bf).setAlpha(.95),
+          s.add.image(worldX,underside,skin.backKey).setOrigin(.5,1)
+            .setDisplaySize(width,height).setDepth(.55),
+          s.add.image(worldX,underside,skin.key).setOrigin(.5,1)
+            .setDisplaySize(width,height).setDepth(2.15)
+        ];
+        return {biome,ground,under:underside,keys:window.biomeArtPreview.map(i=>i.texture.key)};
+      },{biome,name});
+      assert.equal(view.keys[0],'obstacle-support-'+biome+'_'+name);
       await page.waitForTimeout(80);
       await page.locator('#game canvas').screenshot({path:path.join(resultDir,
-        'forest-slide-'+name+'-phone-scene.png')});
+        biome+'-slide-in-biome-phone.png')});
     }
     assert.deepEqual(errors,[],'obstacle loading and rendering produce no browser exceptions');
     console.log('PASS actual Chromium: all 93 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');

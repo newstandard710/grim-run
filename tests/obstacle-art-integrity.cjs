@@ -64,15 +64,13 @@ for(const [category,count] of Object.entries(counts)){
       assert.equal(bytes.toString('ascii',8,12),'WEBP',skin.id+' front image');
       assert.equal(backing.toString('ascii',8,12),'WEBP',skin.id+' upper image');
       assert.ok(bytes.length>1000&&backing.length>1000,skin.id+' both painted layers present');
-      if(skin.biome==='forest'){
-        assert.ok(skin.supportSrc&&skin.supportKey,skin.id+' has its own terrain connection');
-        assert.ok(!files.has(skin.supportSrc)&&!keys.has(skin.supportKey),skin.id+' support is unique');
-        files.add(skin.supportSrc);keys.add(skin.supportKey);
-        const support=fs.readFileSync(path.resolve(root,skin.supportSrc));
-        assert.equal(support.toString('ascii',0,4),'RIFF',skin.id+' support WebP');
-        assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
-        assert.ok(support.length>1000,skin.id+' painted forest connection present');
-      }else assert.ok(!skin.supportSrc&&!skin.supportKey,skin.id+' unchanged outside forest');
+      assert.ok(skin.supportSrc&&skin.supportKey,skin.id+' has its own terrain connection');
+      assert.ok(!files.has(skin.supportSrc)&&!keys.has(skin.supportKey),skin.id+' support is unique');
+      files.add(skin.supportSrc);keys.add(skin.supportKey);
+      const support=fs.readFileSync(path.resolve(root,skin.supportSrc));
+      assert.equal(support.toString('ascii',0,4),'RIFF',skin.id+' support WebP');
+      assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
+      assert.ok(support.length>1000,skin.id+' painted connection present');
       continue;
     }
     assert.deepEqual([...bytes.subarray(0,8)],[137,80,78,71,13,10,26,10],skin.id+' PNG signature');
@@ -104,8 +102,8 @@ for(const [category,count] of Object.entries(counts)){
   assert.deepEqual(perBiome,biomeCounts[category],category+' biome coverage');
 }
 
-assert.equal(files.size,120);
-assert.equal(keys.size,120);
+assert.equal(files.size,141);
+assert.equal(keys.size,141);
 assert.equal(ids.size,93);
 assert.equal(hashes.size,93);
-console.log('PASS v0.14.6: 93 biome-exclusive skins, three paired forest connections, and original PNG integrity verified.');
+console.log('PASS v0.14.7: 93 biome-exclusive skins, 24 unique paired slide connections, and original PNG integrity verified.');

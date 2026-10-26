@@ -1,4 +1,4 @@
-/* Biome-exclusive obstacle art catalog for v0.14.6. Purely visual metadata. */
+/* Biome-exclusive obstacle art catalog for v0.14.7. Purely visual metadata. */
 (function(scope){'use strict';scope.GRIM_OBSTACLE_SPRITES=Object.freeze([
   {
     "id": "forest_jump_root-knot",
@@ -166,6 +166,8 @@
     "src": "assets/obstacles/slide-v3/foothills/foothills_rock-lip-front.webp",
     "backSrc": "assets/obstacles/slide-v3/foothills/foothills_rock-lip-back.webp",
     "backKey": "obstacle-back-foothills_rock-lip",
+    "supportSrc": "assets/obstacles/slide-support/foothills/foothills_rock-lip-support.webp",
+    "supportKey": "obstacle-support-foothills_rock-lip",
     "key": "obstacle-foothills_slide_rock-lip"
   },
   {
@@ -179,6 +181,8 @@
     "src": "assets/obstacles/slide-v3/foothills/foothills_fallen-pine-overhang-front.webp",
     "backSrc": "assets/obstacles/slide-v3/foothills/foothills_fallen-pine-overhang-back.webp",
     "backKey": "obstacle-back-foothills_fallen-pine-overhang",
+    "supportSrc": "assets/obstacles/slide-support/foothills/foothills_fallen-pine-overhang-support.webp",
+    "supportKey": "obstacle-support-foothills_fallen-pine-overhang",
     "key": "obstacle-foothills_slide_fallen-pine-overhang"
   },
   {
@@ -192,6 +196,8 @@
     "src": "assets/obstacles/slide-v3/foothills/foothills_grass-root-ledge-front.webp",
     "backSrc": "assets/obstacles/slide-v3/foothills/foothills_grass-root-ledge-back.webp",
     "backKey": "obstacle-back-foothills_grass-root-ledge",
+    "supportSrc": "assets/obstacles/slide-support/foothills/foothills_grass-root-ledge-support.webp",
+    "supportKey": "obstacle-support-foothills_grass-root-ledge",
     "key": "obstacle-foothills_slide_grass-root-ledge"
   },
   {
@@ -277,6 +283,8 @@
     "src": "assets/obstacles/slide-v3/tundra/tundra_ice-lip-front.webp",
     "backSrc": "assets/obstacles/slide-v3/tundra/tundra_ice-lip-back.webp",
     "backKey": "obstacle-back-tundra_ice-lip",
+    "supportSrc": "assets/obstacles/slide-support/tundra/tundra_ice-lip-support.webp",
+    "supportKey": "obstacle-support-tundra_ice-lip",
     "key": "obstacle-tundra_slide_ice-lip"
   },
   {
@@ -290,6 +298,8 @@
     "src": "assets/obstacles/slide-v3/tundra/tundra_frozen-pine-limbs-front.webp",
     "backSrc": "assets/obstacles/slide-v3/tundra/tundra_frozen-pine-limbs-back.webp",
     "backKey": "obstacle-back-tundra_frozen-pine-limbs",
+    "supportSrc": "assets/obstacles/slide-support/tundra/tundra_frozen-pine-limbs-support.webp",
+    "supportKey": "obstacle-support-tundra_frozen-pine-limbs",
     "key": "obstacle-tundra_slide_frozen-pine-limbs"
   },
   {
@@ -303,6 +313,8 @@
     "src": "assets/obstacles/slide-v3/tundra/tundra_snow-shelf-front.webp",
     "backSrc": "assets/obstacles/slide-v3/tundra/tundra_snow-shelf-back.webp",
     "backKey": "obstacle-back-tundra_snow-shelf",
+    "supportSrc": "assets/obstacles/slide-support/tundra/tundra_snow-shelf-support.webp",
+    "supportKey": "obstacle-support-tundra_snow-shelf",
     "key": "obstacle-tundra_slide_snow-shelf"
   },
   {
@@ -388,6 +400,8 @@
     "src": "assets/obstacles/slide-v3/caves/caves_stalactite-curtain-front.webp",
     "backSrc": "assets/obstacles/slide-v3/caves/caves_stalactite-curtain-back.webp",
     "backKey": "obstacle-back-caves_stalactite-curtain",
+    "supportSrc": "assets/obstacles/slide-support/caves/caves_stalactite-curtain-support.webp",
+    "supportKey": "obstacle-support-caves_stalactite-curtain",
     "key": "obstacle-caves_slide_stalactite-curtain"
   },
   {
@@ -401,6 +415,8 @@
     "src": "assets/obstacles/slide-v3/caves/caves_fossil-rib-arch-front.webp",
     "backSrc": "assets/obstacles/slide-v3/caves/caves_fossil-rib-arch-back.webp",
     "backKey": "obstacle-back-caves_fossil-rib-arch",
+    "supportSrc": "assets/obstacles/slide-support/caves/caves_fossil-rib-arch-support.webp",
+    "supportKey": "obstacle-support-caves_fossil-rib-arch",
     "key": "obstacle-caves_slide_fossil-rib-arch"
   },
   {
@@ -414,6 +430,8 @@
     "src": "assets/obstacles/slide-v3/caves/caves_hanging-roots-front.webp",
     "backSrc": "assets/obstacles/slide-v3/caves/caves_hanging-roots-back.webp",
     "backKey": "obstacle-back-caves_hanging-roots",
+    "supportSrc": "assets/obstacles/slide-support/caves/caves_hanging-roots-support.webp",
+    "supportKey": "obstacle-support-caves_hanging-roots",
     "key": "obstacle-caves_slide_hanging-roots"
   },
   {
@@ -499,6 +517,8 @@
     "src": "assets/obstacles/slide-v3/crystals/crystals_blue-crystal-ceiling-front.webp",
     "backSrc": "assets/obstacles/slide-v3/crystals/crystals_blue-crystal-ceiling-back.webp",
     "backKey": "obstacle-back-crystals_blue-crystal-ceiling",
+    "supportSrc": "assets/obstacles/slide-support/crystals/crystals_blue-crystal-ceiling-support.webp",
+    "supportKey": "obstacle-support-crystals_blue-crystal-ceiling",
     "key": "obstacle-crystals_slide_blue-crystal-ceiling"
   },
   {
@@ -512,6 +532,8 @@
     "src": "assets/obstacles/slide-v3/crystals/crystals_violet-geode-shelf-front.webp",
     "backSrc": "assets/obstacles/slide-v3/crystals/crystals_violet-geode-shelf-back.webp",
     "backKey": "obstacle-back-crystals_violet-geode-shelf",
+    "supportSrc": "assets/obstacles/slide-support/crystals/crystals_violet-geode-shelf-support.webp",
+    "supportKey": "obstacle-support-crystals_violet-geode-shelf",
     "key": "obstacle-crystals_slide_violet-geode-shelf"
   },
   {
@@ -525,6 +547,8 @@
     "src": "assets/obstacles/slide-v3/crystals/crystals_prism-canopy-front.webp",
     "backSrc": "assets/obstacles/slide-v3/crystals/crystals_prism-canopy-back.webp",
     "backKey": "obstacle-back-crystals_prism-canopy",
+    "supportSrc": "assets/obstacles/slide-support/crystals/crystals_prism-canopy-support.webp",
+    "supportKey": "obstacle-support-crystals_prism-canopy",
     "key": "obstacle-crystals_slide_prism-canopy"
   },
   {
@@ -610,6 +634,8 @@
     "src": "assets/obstacles/slide-v3/ashlands/ashlands_charred-bough-front.webp",
     "backSrc": "assets/obstacles/slide-v3/ashlands/ashlands_charred-bough-back.webp",
     "backKey": "obstacle-back-ashlands_charred-bough",
+    "supportSrc": "assets/obstacles/slide-support/ashlands/ashlands_charred-bough-support.webp",
+    "supportKey": "obstacle-support-ashlands_charred-bough",
     "key": "obstacle-ashlands_slide_charred-bough"
   },
   {
@@ -623,6 +649,8 @@
     "src": "assets/obstacles/slide-v3/ashlands/ashlands_basalt-shelf-front.webp",
     "backSrc": "assets/obstacles/slide-v3/ashlands/ashlands_basalt-shelf-back.webp",
     "backKey": "obstacle-back-ashlands_basalt-shelf",
+    "supportSrc": "assets/obstacles/slide-support/ashlands/ashlands_basalt-shelf-support.webp",
+    "supportKey": "obstacle-support-ashlands_basalt-shelf",
     "key": "obstacle-ashlands_slide_basalt-shelf"
   },
   {
@@ -636,6 +664,8 @@
     "src": "assets/obstacles/slide-v3/ashlands/ashlands_blackroot-curtain-front.webp",
     "backSrc": "assets/obstacles/slide-v3/ashlands/ashlands_blackroot-curtain-back.webp",
     "backKey": "obstacle-back-ashlands_blackroot-curtain",
+    "supportSrc": "assets/obstacles/slide-support/ashlands/ashlands_blackroot-curtain-support.webp",
+    "supportKey": "obstacle-support-ashlands_blackroot-curtain",
     "key": "obstacle-ashlands_slide_blackroot-curtain"
   },
   {
@@ -721,6 +751,8 @@
     "src": "assets/obstacles/slide-v3/lava/lava_basalt-lip-front.webp",
     "backSrc": "assets/obstacles/slide-v3/lava/lava_basalt-lip-back.webp",
     "backKey": "obstacle-back-lava_basalt-lip",
+    "supportSrc": "assets/obstacles/slide-support/lava/lava_basalt-lip-support.webp",
+    "supportKey": "obstacle-support-lava_basalt-lip",
     "key": "obstacle-lava_slide_basalt-lip"
   },
   {
@@ -734,6 +766,8 @@
     "src": "assets/obstacles/slide-v3/lava/lava_slag-teeth-front.webp",
     "backSrc": "assets/obstacles/slide-v3/lava/lava_slag-teeth-back.webp",
     "backKey": "obstacle-back-lava_slag-teeth",
+    "supportSrc": "assets/obstacles/slide-support/lava/lava_slag-teeth-support.webp",
+    "supportKey": "obstacle-support-lava_slag-teeth",
     "key": "obstacle-lava_slide_slag-teeth"
   },
   {
@@ -747,6 +781,8 @@
     "src": "assets/obstacles/slide-v3/lava/lava_lava-glass-shelf-front.webp",
     "backSrc": "assets/obstacles/slide-v3/lava/lava_lava-glass-shelf-back.webp",
     "backKey": "obstacle-back-lava_lava-glass-shelf",
+    "supportSrc": "assets/obstacles/slide-support/lava/lava_lava-glass-shelf-support.webp",
+    "supportKey": "obstacle-support-lava_lava-glass-shelf",
     "key": "obstacle-lava_slide_lava-glass-shelf"
   },
   {
@@ -832,6 +868,8 @@
     "src": "assets/obstacles/slide-v3/boss/boss_chain-stone-lintel-front.webp",
     "backSrc": "assets/obstacles/slide-v3/boss/boss_chain-stone-lintel-back.webp",
     "backKey": "obstacle-back-boss_chain-stone-lintel",
+    "supportSrc": "assets/obstacles/slide-support/boss/boss_chain-stone-lintel-support.webp",
+    "supportKey": "obstacle-support-boss_chain-stone-lintel",
     "key": "obstacle-boss_slide_chain-stone-lintel"
   },
   {
@@ -845,6 +883,8 @@
     "src": "assets/obstacles/slide-v3/boss/boss_bone-arch-front.webp",
     "backSrc": "assets/obstacles/slide-v3/boss/boss_bone-arch-back.webp",
     "backKey": "obstacle-back-boss_bone-arch",
+    "supportSrc": "assets/obstacles/slide-support/boss/boss_bone-arch-support.webp",
+    "supportKey": "obstacle-support-boss_bone-arch",
     "key": "obstacle-boss_slide_bone-arch"
   },
   {
@@ -858,6 +898,8 @@
     "src": "assets/obstacles/slide-v3/boss/boss_ruined-portcullis-front.webp",
     "backSrc": "assets/obstacles/slide-v3/boss/boss_ruined-portcullis-back.webp",
     "backKey": "obstacle-back-boss_ruined-portcullis",
+    "supportSrc": "assets/obstacles/slide-support/boss/boss_ruined-portcullis-support.webp",
+    "supportKey": "obstacle-support-boss_ruined-portcullis",
     "key": "obstacle-boss_slide_ruined-portcullis"
   },
   {
