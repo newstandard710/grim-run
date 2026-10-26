@@ -799,6 +799,106 @@ const server=http.createServer((req,res)=>{
     }
     console.log('Rendered '+biome+' ground material at '+meters+'m');
   }
+  // Inspect actual chasm openings in the surface, Lava, and Boss Biome. Each
+  // capture uses the generated gap/profile, while the renderer assertions check
+  // that the painted wall narrows below the phone viewport and platform faces
+  // continue below it without changing the collision surface.
+  const abyssTargets=[
+    {meters:1200,name:'surface',texture:'abyss-canyon-art'},
+    {meters:9000,name:'lava',texture:'abyss-lava-art'},
+    {meters:11000,name:'boss',texture:'abyss-lava-art'}
+  ];
+  for(const target of abyssTargets){
+    const location=await skeletalPage.evaluate(targetMeters=>{
+      const game=window.grimRun,scene=game.scene.scenes[0],ppm=window.GRIM_CONFIG.pxPerMeter;
+      const group=scene.terrain.sequences.slice().sort((a,b)=>{
+        const am=(a.startX+a.endX-2*scene.startX)/(2*ppm);
+        const bm=(b.startX+b.endX-2*scene.startX)/(2*ppm);
+        return Math.abs(am-targetMeters)-Math.abs(bm-targetMeters);
+      })[0];
+      const sections=scene.terrain.visibleSections(group.startX,group.endX);
+      const gap=sections.filter(section=>section.kind==='gap')
+        .sort((a,b)=>Math.abs((a.start+a.end)/2-(group.startX+group.endX)/2)-
+          Math.abs((b.start+b.end)/2-(group.startX+group.endX)/2))[0];
+      const meters=(gap.start+gap.end-2*scene.startX)/(2*ppm);
+      scene.distance=meters;scene.hasTeleported=meters>=5000;
+      scene.player.x=gap.start-52;
+      scene.player.y=scene.terrain.groundAt(scene.player.x)??scene.terrain.anchorAt(scene.player.x);
+      scene.player.grounded=true;scene.player.velocityY=0;
+      scene.cameraX=scene.player.x-scene.width*window.GRIM_CONFIG.reaperXRatio;
+      scene.cameraY=scene.player.y-scene.groundY;
+      scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
+      scene.drawScene();game.step(performance.now(),0);
+      const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
+      return {meters,gap:{start:gap.start,end:gap.end,y0:gap.y0,y1:gap.y1},
+        gapKey:[gap.start,gap.end,scene.height].join(':'),cameraX:scene.cameraX,cameraY:scene.cameraY,
+        width:scene.width,height:scene.height,
+        gapVisible:visibleSections.some(section=>section.kind==='gap'&&section.start===gap.start),
+        canyonTextureLoaded:scene.textures.exists('abyss-canyon-art'),
+        lavaTextureLoaded:scene.textures.exists('abyss-lava-art'),
+        visibleAbyssViews:[...scene.abyssTextureViews.values()].filter(view=>view.sprite.visible)
+          .map(view=>view.sprite.displayTexture?.key||view.sprite.texture.key)};
+    },target.meters);
+    console.log(target.name+' abyss setup: '+JSON.stringify(location));
+    assert.equal(location.gapVisible,true,target.name+' generated gap is in the camera view');
+    assert.equal(location.canyonTextureLoaded,true,'Canyon art is preloaded before scene drawing');
+    assert.equal(location.lavaTextureLoaded,true,'Lava art is preloaded before scene drawing');
+    assert.ok(location.visibleAbyssViews.includes(target.texture),
+      target.name+' renderer creates a visible view for its selected abyss texture');
+    const abyss=await skeletalPage.evaluate(({gapKey,expectedTexture})=>{
+      const scene=window.grimRun.scene.scenes[0],shape=scene.abyssGeometryCache.get(gapKey);
+      const gapViews=[...scene.abyssTextureViews.values()].filter(view=>view.sprite.visible);
+      const textureView=gapViews.find(view=>view.sprite.displayTexture?.key===expectedTexture);
+      const topWidth=shape.right.at(-1).x-shape.left[0].x;
+      const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
+      const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
+        scene.cameraY+scene.height-shape.top));
+      const sampleIndex=Math.min(shape.left.length-1,
+        Math.floor(visibleDepth/(shape.bottom-shape.top)*(shape.left.length-1)));
+      const visibleWidth=shape.right[shape.right.length-1-sampleIndex].x-shape.left[sampleIndex].x;
+      const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,
+        scene.cameraX+scene.width+170);
+      const platform=visibleSections.find(section=>section.kind==='platform');
+      const platformDepth=platform
+        ?Math.max(platform.y0,platform.y1)+scene.height+500:null;
+      const platformPoints=platform?scene.terrainBodyPoints(platform,platform.start,platform.end,
+        platform.y0,platform.y1,platformDepth):[];
+      const platformBottom=platformPoints.length?Math.max(...platformPoints.map(point=>point.y)):null;
+      return {textureKey:textureView?.sprite.displayTexture?.key,textureViews:gapViews.length,
+        topWidth,bottomWidth,visibleWidth,shaftDepth:shape.bottom-shape.top,
+        visibleBottomY:scene.cameraY+scene.height,platformBottom,platformKind:platform?.kind,
+        platformExtendsBelow:platformBottom!==null&&platformBottom>scene.cameraY+scene.height+100,
+        geometrySignature:textureView?.geometrySignature};
+    },{gapKey:location.gapKey,expectedTexture:target.texture});
+    assert.equal(abyss.textureKey,target.texture,target.name+' opening uses its painted abyss art');
+    assert.ok(abyss.topWidth>abyss.bottomWidth&&abyss.bottomWidth>0,
+      target.name+' canyon profile narrows continuously toward its unseen depth');
+    assert.ok(abyss.visibleWidth<abyss.topWidth*.94,
+      target.name+' visible canyon walls begin to narrow below the running surface');
+    assert.ok(abyss.shaftDepth>location.height+400,
+      target.name+' shaft geometry continues beyond the full viewport without exposing a floor');
+    assert.ok(abyss.platformExtendsBelow,
+      target.name+' ledge face extends below the viewport like attached terrain');
+    const capture=await skeletalPage.screenshot({
+      path:path.join(skeletalArtifactDir,'abyss-'+target.name+'-phone-scale.png')});
+    const image=PNG.sync.read(capture);
+    const probe={
+      x:Math.max(0,Math.floor(location.gap.start-location.cameraX+9)),
+      y:Math.max(0,Math.floor(location.gap.y0-location.cameraY+24)),
+      width:Math.max(1,Math.min(image.width-1,Math.ceil(location.gap.end-location.gap.start-18))),
+      height:Math.max(1,Math.min(image.height-1,Math.ceil(location.height-(location.gap.y0-location.cameraY)-28)))
+    };
+    const colors=new Set();
+    for(let y=probe.y;y<Math.min(image.height,probe.y+probe.height);y++)
+      for(let x=probe.x;x<Math.min(image.width,probe.x+probe.width);x++){
+        const i=(y*image.width+x)*4;
+        colors.add((image.data[i]<<16)|(image.data[i+1]<<8)|image.data[i+2]);
+      }
+    assert.ok(colors.size>40,target.name+' painted chasm texture contributes varied pixels; found '+colors.size);
+    console.log(target.name+' abyss render: '+abyss.textureViews+' cached layers, '+
+      Math.round(abyss.topWidth)+'px to '+Math.round(abyss.bottomWidth)+
+      'px profile, '+Math.round(abyss.shaftDepth)+'px deep; '+colors.size+' phone pixels sampled');
+  }
   await skeletalPage.close();
 
   await page.click('#start-btn');
@@ -1040,7 +1140,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.12.3 renders all eight ground materials with aligned cached biome surfaces and world-space underworld bounds, keeps approved backgrounds and gameplay geometry, and preserves character scale, motion, and fallbacks.');
+  console.log('PASS actual Chromium: v0.13.0 renders all eight ground materials and abyss art with narrowing, world-anchored canyon and lava textures, while preserving gameplay geometry, character scale, motion, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

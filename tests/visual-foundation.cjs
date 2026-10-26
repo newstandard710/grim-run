@@ -5,10 +5,19 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.12.0-ground-materials-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.0-canyon-abyss-art"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.12.0-ground-materials-v1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.0-canyon-abyss-art"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
+assert.ok(html.includes("this.load.image('abyss-canyon-art','assets/visuals/terrain/abyss-canyon-v1.webp')"),
+ 'The painted canyon texture is loaded by the production scene');
+assert.ok(html.includes("this.load.image('abyss-lava-art','assets/visuals/terrain/abyss-lava-v1.webp')"),
+ 'The painted lava texture is loaded by the production scene');
+assert.ok(!html.includes('UNDERWORLD_ABYSS_PALETTE')&&!html.includes('lavaY='),
+ 'The old flat abyss and lava bands are removed');
+for(const asset of ['abyss-canyon-v1.webp','abyss-lava-v1.webp'])
+ assert.ok(fs.statSync(path.join(__dirname,'..','assets','visuals','terrain',asset)).size>10000,
+   `${asset} is a complete generated terrain texture`);
 assert.ok(html.includes('slideClearancePx: 76'),'Raised slide opening stays below the 79px standing collider');
 assert.ok(html.includes('else this.visuals.beginReviewV2()'),'Twelve-pose Reaper motion art is the main-game default');
 assert.ok(html.includes("artMode==='illustrated'"),'Previous illustrated art remains available for comparison');

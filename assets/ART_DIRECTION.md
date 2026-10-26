@@ -62,7 +62,7 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 ## Ground and foreground materials
 
 - Use `assets/visuals/terrain/ground-forest-v1.webp`, `ground-foothills-v1.webp`, `ground-tundra-v1.webp`, `ground-caves-v1.webp`, `ground-crystals-v1.webp`, `ground-ashlands-v1.webp`, `ground-lava-v1.webp`, and `ground-boss-v1.webp` for the corresponding eight biomes.
-- Treat these as world-space surface materials. Clip them to the generated ground profile so plains, slopes, rubble, cliffs, ledges and the foreground follow the actual terrain. Leave procedural gaps open; preserve the existing dark and lava abyss fills behind them.
+- Treat these as world-space surface materials. Clip them to the generated ground profile so plains, slopes, rubble, cliffs, ledges and the foreground follow the actual terrain. Gap openings use the painted canyon and lava art described below; do not add fixed screen-space bands or flat underfills.
 - Use the same biome boundaries and easing as the backgrounds, including the hard Tundra-to-Caves handoff at the 5,000m portal. Avoid fixed screen-space ground bands or geometry changes.
 - Keep surface marks and edge highlights restrained so the Reaper, enemies, hazards and pickups remain readable at phone scale. Do not regenerate or replace the approved background concepts as part of ground-material work.
 
@@ -71,6 +71,14 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - Give the walkable edge a clearly visible but narrow material cap, about 8–10px deep at the current phone review scale. The approved Forest direction uses a moss-toned top and a slim darker soil seam; carry that role through gravel and stone in Foothills, snow and ice in Tundra, layered rock in Caves, cool mineral accents in Crystals, ash and ember seams in Ashlands, volcanic crust in Lava, and dark castle stone in the Boss Biome.
 - The cap's upper edge follows the existing terrain contour exactly and all decoration stays on or below that line. Follow slopes and rubble naturally, end at gaps and ledge edges, and leave the abyss open. Do not change terrain geometry or collision.
 - Keep the material translucent enough for each approved ground texture to show through. Use a softened, irregular lower edge and restrained broken highlights; let the biome material show through instead of forming a hard band. Keep the running contact contour locked to existing terrain and collision. Keep all marks readable at phone scale without competing with Reaper feet, enemies, hazards, pickups, or foreground details.
+
+## Canyon and lava chasm art — v0.13.0
+
+- Use `assets/visuals/terrain/abyss-canyon-v1.webp` for deep shadowed rock walls and `assets/visuals/terrain/abyss-lava-v1.webp` for dark basalt with thin molten seams. These original painterly materials are 768 × 768px runtime WebP images.
+- Clip abyss art to seeded gap profiles in world space. Each opening has an irregular rock lip and walls that converge well below the viewport; never show a floor, bottom, or screen-fixed band.
+- Fade the basalt-and-lava art in with the Lava biome and carry its restrained glow into the lava-lit Boss Biome. Remove the former rectangle underfill, flat lava strip, hard edge, and detached lava cracks.
+- Continue generated terrain and one-way Soul ledge faces below the phone view with irregular rock shoulders. Keep the exact walkable top contour, slopes, gap widths, collision, fall rules, and route progression unchanged.
+- Anchor texture phase to world coordinates and cache masks. Keep glowing seams narrow and low contrast so hazards, pickups, and character art remain readable.
 
 ## Validation and deployment
 Image loading checks exact byte counts, PNG chunk checksums, and SHA-256 when browser cryptography is available. A failed pose disables that character's art set and retains its procedural fallback. The asset integrity check covers Reaper and Cavern Bat runtime poses and all three accepted enemy illustrations. Browser checks inspect decoded pixels and capture mobile-scale scene screenshots; device review remains necessary.

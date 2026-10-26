@@ -2,12 +2,12 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current production build: v0.12.3 — Natural Ground & Underworld Rendering Fixes**
+**Current production build: v0.13.0 — Painted Canyon & Lava Chasms**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
-- Eight matching ground materials now cover generated terrain and foreground platforms in their biome. Materials follow the exact slopes and cliffs; gaps stay open over the existing abyss, which retains its dark or lava underfill. No terrain, collision, or hazard geometry changes.
+- Eight biome materials cover generated terrain and foreground platforms. Gap openings now show painted canyon walls that taper into unseen depth, with a separate lava-seamed basalt treatment through Lava and the Boss Biome. The old flat abyss fill and straight lava band are removed; terrain generation, collisions, and hazards stay unchanged.
 - All eight approved biome concepts remain the only background art. The old procedural sky, mountain, tree, cave, ash, and lava overlays have been removed. Image and ground materials share the gently drifting 360m crossfades; at 5,000m the portal switches directly from Tundra to Caves.
 - Biome crossfades define their own easing helper, preventing an out-of-scope function error from aborting background and ground rendering at fade boundaries.
 - Surface backgrounds load first. Underworld backgrounds are loaded during the portal sequence, then replace and release the Surface textures to reduce memory use on phones.
@@ -24,6 +24,15 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
+
+## v0.13.0 — Painted Canyon & Lava Chasms
+
+- Added two original 768px terrain textures: layered shadowed canyon rock and fractured basalt with restrained molten seams.
+- Gap art follows seeded, world-space opening shapes. Ragged rock lips meet the existing terrain profile; the walls narrow far below the phone view, with no visible canyon floor.
+- Generated jump ledges and Soul-step platforms now carry irregular biome material faces below the camera. Their walkable tops, gap widths, and collision rules remain unchanged.
+- The previous rectangle abyss fill, flat lava band, hard lava edge, and detached surface crack marks are removed. Lava texture fades in with the biome and remains clipped to actual gaps.
+- Cached art masks stay anchored to world coordinates and are reused during camera movement. Gameplay and phone-size Chromium checks cover the existing seed 1 win and all route systems.
+- [Open the production game](https://newstandard710.github.io/grim-run/).
 
 ## v0.12.0 — Biome Ground Materials
 

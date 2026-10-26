@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.12.3</title>
+  <title>GRIM RUN — v0.13.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.12.3 · BIOME SURFACE & PERFORMANCE PASS</div>
+      <div class="mini">v0.13.0 · CANYON & LAVA ABYSS ART</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.12.3',
+  version: '0.13.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.12.0-ground-materials-v1"></script>
-  <script src="assets/visuals/visual-system.js?v=0.12.0-ground-materials-v1"></script>
+  <script src="assets/visuals/world-art.js?v=0.13.0-canyon-abyss-art"></script>
+  <script src="assets/visuals/visual-system.js?v=0.13.0-canyon-abyss-art"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1494,14 +1494,10 @@ window.GRIM_CONFIG = Object.freeze({
   });
   const TERRAIN_BIOME_ORDER=['forest','foothills','tundra','caves',
     'crystals','ashlands','lava','boss'];
+  const ABYSS_TEXTURE_SCALE=.68;
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
   const TUNDRA_TERRAIN_TILE_SCALE=.48;
-  const UNDERWORLD_ABYSS_PALETTE=Object.freeze({
-    ashlands:Object.freeze({fill:0x2b1d23,edge:0x98514d,fillAlpha:.9,edgeAlpha:.58}),
-    lava:Object.freeze({fill:0x4e1f1b,edge:0xf17b3b,fillAlpha:.92,edgeAlpha:.76}),
-    boss:Object.freeze({fill:0x261720,edge:0x9f4e5b,fillAlpha:.82,edgeAlpha:.68})
-  });
 
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
@@ -1513,6 +1509,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
       this.load.image('terrain-source-forest',
         'assets/visuals/terrain/'+BIOME_TERRAIN_FILES.forest);
+      this.load.image('abyss-canyon-art','assets/visuals/terrain/abyss-canyon-v1.webp');
+      this.load.image('abyss-lava-art','assets/visuals/terrain/abyss-lava-v1.webp');
     }
     create() {
       this.width = this.scale.width;
@@ -1540,6 +1538,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.createBackdropGroundVeil();
       this.resizeBiomeBackdrops();
       this.terrainBase=this.add.graphics().setDepth(0);
+      this.abyssEdgeGraphics=this.add.graphics().setDepth(1.58);
+      this.abyssTextureViews=new Map();
+      this.abyssGeometryCache=new Map();
       this.terrainTextureViews=new Map();
       this.terrainSurfaceViews=new Map();
       this.terrainMaterialIds=new Set();
@@ -1548,6 +1549,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrainMaterialQueue=[];
       if(this.textures?.exists?.('terrain-source-forest'))this.bakeTerrainMaterial('forest');
       this.events?.once?.('shutdown',()=>{
+        this.destroyAbyssTextureViews();
         this.destroyTerrainTextureViews();
         this.destroyTerrainSurfaceViews();
       });
@@ -3639,7 +3641,6 @@ window.GRIM_CONFIG = Object.freeze({
         this.removeTerrainSurfaceView(key,view);
       this.terrainSurfaceViews.clear();
     }
-
     tundraTerrainTextureView(section,key,textureKey,depth){
       let view=this.terrainTextureViews.get(key);
       if(view)return view;
@@ -3708,8 +3709,8 @@ window.GRIM_CONFIG = Object.freeze({
       // are ready, then composite the newer tile over the older one by weight.
       if(active.some(([id])=>!this.terrainMaterialIds.has(id)))return;
       const sectionKey=[section.kind,section.start,section.end].join(':');
-      const points=[{x:sectionFrom,y:sectionY0},{x:sectionTo,y:sectionY1},
-        {x:sectionTo,y:sectionBottom},{x:sectionFrom,y:sectionBottom}];
+      const points=this.terrainBodyPoints(section,sectionFrom,sectionTo,
+        sectionY0,sectionY1,sectionBottom);
       for(let i=0;i<active.length;i++){
         const [id,weight]=active[i],textureKey='terrain-material-'+id;
         const key=sectionKey+':'+id;
@@ -3771,6 +3772,153 @@ window.GRIM_CONFIG = Object.freeze({
         this.removeTerrainTextureView(key,view);
       this.terrainTextureViews.clear();
     }
+    terrainBodyPoints(section,from,to,y0,y1,bottom){
+      if(section.kind!=='platform'&&section.kind!=='soul-platform')
+        return [{x:from,y:y0},{x:to,y:y1},{x:to,y:bottom},{x:from,y:bottom}];
+      const seed=section.start*.017+section.end*.003;
+      const noise=(n)=>{
+        const value=Math.sin(seed+n*19.19)*43758.5453;
+        return value-Math.floor(value);
+      };
+      const span=Math.max(1,bottom-Math.max(y0,y1));
+      const left=[
+        {x:section.start,y:y0},
+        {x:section.start+3+noise(1)*5,y:y0+9},
+        {x:section.start+7+noise(2)*8,y:y0+23},
+        {x:section.start+2+noise(3)*7,y:y0+43},
+        {x:section.start+5+noise(4)*8,y:y0+72},
+        {x:section.start,y:Math.min(bottom,y0+Math.min(128,span*.22))},
+        {x:section.start,y:bottom}
+      ];
+      const right=[
+        {x:section.end,y:y1},
+        {x:section.end-3-noise(5)*5,y:y1+9},
+        {x:section.end-7-noise(6)*8,y:y1+23},
+        {x:section.end-2-noise(7)*7,y:y1+43},
+        {x:section.end-5-noise(8)*8,y:y1+72},
+        {x:section.end,y:Math.min(bottom,y1+Math.min(128,span*.22))},
+        {x:section.end,y:bottom}
+      ];
+      return [left[0],right[0],...right.slice(1),...left.slice(1).reverse()];
+    }
+    abyssGapPolygon(section){
+      const cacheKey=[section.start,section.end,this.height].join(':');
+      const cached=this.abyssGeometryCache?.get(cacheKey);
+      if(cached)return cached;
+      const y0=Number.isFinite(section.y0)?section.y0:this.terrain.anchorAt(section.start);
+      const y1=Number.isFinite(section.y1)?section.y1:y0;
+      const top=Math.min(y0,y1),width=Math.max(1,section.end-section.start);
+      // The lower closure remains well below the camera. This is a continuous
+      // world-space shaft, not a screen-space strip that can drift while running.
+      const bottom=Math.max(y0,y1)+this.height+620,span=bottom-top;
+      const steps=Math.max(12,Math.ceil(span/72));
+      const hash=(n)=>{
+        const value=Math.sin((section.start+section.end*.37+n*47.13)*.093)*43758.5453;
+        return value-Math.floor(value);
+      };
+      const left=[],right=[];
+      for(let i=0;i<=steps;i++){
+        const t=i/steps,eased=Math.pow(t,.58),pinch=width*.36*eased;
+        const rough=Math.sin(Math.PI*t)*width*.055;
+        const y=top+span*t;
+        left.push({x:section.start+width*.025+pinch+(hash(i)-.5)*rough,y});
+        right.push({x:section.end-width*.025-pinch-(hash(i+steps+11)-.5)*rough,y});
+      }
+      // Keep the opening edge rough and shallow; the sides then draw inward
+      // until the unseen lower canyon closes to a narrow, implied throat.
+      left[0]={x:section.start+2,y:y0+2};
+      right[0]={x:section.end-2,y:y1+2};
+      const points=[...left,...right.reverse()];
+      const shape={points,left,right,top,bottom,width,
+        signature:points.map(p=>p.x.toFixed(2)+','+p.y.toFixed(2)).join(';')};
+      this.abyssGeometryCache?.set(cacheKey,shape);
+      return shape;
+    }
+    abyssTextureView(section,shape,textureKey,alpha,activeKeys){
+      if(alpha<=.003||!this.textures?.exists?.(textureKey)||!this.add?.tileSprite||
+        !this.make?.graphics||!this.abyssTextureViews)return null;
+      const key=[section.start,section.end,textureKey].join(':');
+      let view=this.abyssTextureViews.get(key);
+      if(!view){
+        const sprite=this.add.tileSprite(0,0,1,1,textureKey)
+          .setOrigin(0,0).setDepth(.55).setVisible(false);
+        const maskGraphics=this.make.graphics({x:0,y:0,add:false});
+        const mask=maskGraphics.createGeometryMask();
+        sprite.setMask(mask);
+        view={sprite,maskGraphics,mask,geometrySignature:null,boundsSignature:null};
+        this.abyssTextureViews.set(key,view);
+      }
+      const {sprite,maskGraphics}=view;
+      const signature=shape.signature;
+      if(view.geometrySignature!==signature){
+        maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);
+        maskGraphics.fillPoints(shape.points,true);
+        view.geometrySignature=signature;
+      }
+      const bounds=[shape.top,shape.bottom,shape.width].join(':');
+      if(view.boundsSignature!==bounds){
+        sprite.setTexture(textureKey).setPosition(section.start,shape.top)
+          .setSize(shape.width,shape.bottom-shape.top)
+          .setTileScale(ABYSS_TEXTURE_SCALE,ABYSS_TEXTURE_SCALE)
+          .setTilePosition(section.start/ABYSS_TEXTURE_SCALE,shape.top/ABYSS_TEXTURE_SCALE);
+        view.boundsSignature=bounds;
+      }
+      sprite.setAlpha(alpha).setVisible(true);
+      activeKeys.add(key);
+      return view;
+    }
+    removeAbyssTextureView(key,view){
+      view.sprite?.clearMask?.(true);
+      view.sprite?.destroy?.();
+      view.mask?.destroy?.();
+      view.maskGraphics?.destroy?.();
+      this.abyssTextureViews?.delete(key);
+    }
+    pruneAbyssTextureViews(activeKeys){
+      if(!this.abyssTextureViews)return;
+      for(const [key,view] of this.abyssTextureViews)
+        if(!activeKeys.has(key))this.removeAbyssTextureView(key,view);
+    }
+    destroyAbyssTextureViews(){
+      if(!this.abyssTextureViews)return;
+      for(const [key,view] of this.abyssTextureViews)
+        this.removeAbyssTextureView(key,view);
+      this.abyssTextureViews.clear();
+    }
+    drawAbyssRim(section,palette){
+      const g=this.abyssEdgeGraphics;
+      if(!g)return;
+      const x0=section.start,x1=section.end,w=Math.max(1,x1-x0);
+      const y0=Number.isFinite(section.y0)?section.y0:this.terrain.anchorAt(x0);
+      const y1=Number.isFinite(section.y1)?section.y1:y0;
+      const [body,edge,sheen,detail]=palette;
+      const seed=x0*.019+x1*.007;
+      const noise=n=>{const v=Math.sin(seed+n*11.7)*43758.5453;return v-Math.floor(v);};
+      const lipW=Math.min(w*.34,10+noise(1)*12);
+      const lipH=22+noise(2)*13;
+      const makeLip=(x,y,side)=>{
+        const dir=side==='left'?1:-1,amount=lipW;
+        return [
+          {x,y:y+1},
+          {x:x+dir*amount*.38,y:y+3+noise(side==='left'?3:8)*3},
+          {x:x+dir*amount*.76,y:y+7+noise(side==='left'?4:9)*4},
+          {x:x+dir*amount*.62,y:y+12+noise(side==='left'?5:10)*4},
+          {x:x+dir*amount,y:y+lipH},
+          {x:x+dir*amount*.30,y:y+lipH-3},
+          {x,y:y+lipH+4}
+        ];
+      };
+      for(const [x,y,side] of [[x0,y0,'left'],[x1,y1,'right']]){
+        const points=makeLip(x,y,side);
+        g.fillStyle(body,.92);g.fillPoints(points,true);
+        g.lineStyle(2,edge,.62);
+        g.lineBetween(points[1].x,points[1].y,points[2].x,points[2].y);
+        g.lineStyle(1.2,sheen,.40);
+        g.lineBetween(points[3].x,points[3].y,points[4].x,points[4].y-2);
+        g.lineStyle(1,detail,.36);
+        g.lineBetween(points[2].x,points[2].y+4,points[5].x,points[5].y-5);
+      }
+    }
     groundPalette(m) {
       const blend=(a,b,t)=>{
         t=clamp(t,0,1);
@@ -3792,48 +3940,31 @@ window.GRIM_CONFIG = Object.freeze({
       const g=this.world;g.clear();
       const base=this.terrainBase||g;
       if(base!==g)base.clear();
+      this.abyssEdgeGraphics?.clear();
       const activeTerrainViews=new Set(),activeSurfaceViews=new Set();
+      const activeAbyssViews=new Set();
       const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const sections=this.terrain.visibleSections(left,right);
       const startX=this.startX??200;
-      for(const group of this.terrain.sequences){
-        if(group.endX<left||group.startX>right)continue;
-        const groupMeters=(group.startX+group.endX-2*startX)/(2*C.pxPerMeter);
-        const groupStartY=Number.isFinite(group.initialY)?group.initialY:
-          (this.terrain.anchorAt(group.startX)??this.groundY);
-        const groupEndY=this.terrain.anchorAt(Math.max(group.startX,group.endX-.01));
-        // These are world coordinates. Ground descends thousands of pixels
-        // after the portal, so using the fixed screen ground line here made
-        // abyss fills end above the terrain and clipped away underworld art.
-        const groupBottom=Math.max(groupStartY,Number.isFinite(groupEndY)?groupEndY:groupStartY)
-          +this.height+1500;
-        if(groupMeters>=8000){
-          const lavaY=(this.terrain.anchorAt(group.startX)??groupStartY)-5;
-          const weights=this.terrainBiomeWeights(groupMeters);
-          const total=Object.values(weights).reduce((sum,weight)=>sum+weight,0)||1;
-          const weightedColor=key=>{
-            const channel=shift=>{
-              let value=0;
-              for(const [id,weight] of Object.entries(weights)){
-                const color=(UNDERWORLD_ABYSS_PALETTE[id]||UNDERWORLD_ABYSS_PALETTE.lava)[key];
-                value+=((color>>shift)&255)*weight;
-              }
-              return Math.round(value/total);
-            };
-            return (channel(16)<<16)|(channel(8)<<8)|channel(0);
-          };
-          const weightedAlpha=key=>Object.entries(weights).reduce((sum,[id,weight])=>
-            sum+(UNDERWORLD_ABYSS_PALETTE[id]||UNDERWORLD_ABYSS_PALETTE.lava)[key]*weight,0)/total;
-          base.fillStyle(weightedColor('fill'),weightedAlpha('fillAlpha'));
-          base.fillRect(group.startX,lavaY,group.endX-group.startX,Math.max(1,groupBottom-lavaY));
-          base.lineStyle(4,weightedColor('edge'),weightedAlpha('edgeAlpha'));
-          base.lineBetween(group.startX,lavaY,group.endX,lavaY);
-        }else{
-          const fillTop=groupStartY+36;
-          base.fillStyle(0x190c2a,.58);
-          base.fillRect(group.startX,fillTop,group.endX-group.startX,Math.max(1,groupBottom-fillTop));
-        }
+      for(const section of sections){
+        if(section.kind!=='gap')continue;
+        const from=Math.max(left,section.start),to=Math.min(right,section.end);
+        if(to<=from)continue;
+        const meters=(section.start+section.end-2*startX)/(2*C.pxPerMeter);
+        const weights=this.terrainBiomeWeights(meters);
+        const lavaWeight=clamp((weights.lava||0)+(weights.boss||0)*.62,0,1);
+        const shape=this.abyssGapPolygon(section);
+        // The dark bed is a reliable fallback; painted canyon tiles sit above
+        // it and are clipped to the same irregular, narrowing world-space shaft.
+        base.fillStyle(lavaWeight>.5?0x1d1118:0x100f1d,.98);
+        base.fillPoints(shape.points,true);
+        this.abyssTextureView(section,shape,'abyss-canyon-art',1,activeAbyssViews);
+        this.abyssTextureView(section,shape,'abyss-lava-art',lavaWeight,activeAbyssViews);
+        const palette=this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.worldGroundPalette
+          ?scope.GRIM_WORLD_ART.worldGroundPalette(meters)
+          :scope.GRIM_WORLD_ART?.underworldGroundPalette?.(meters)||this.groundPalette(meters);
+        this.drawAbyssRim(section,palette);
       }
       for(const section of sections){
         if(section.kind==='gap')continue;
@@ -3845,7 +3976,8 @@ window.GRIM_CONFIG = Object.freeze({
         const surfaceY1=Number.isFinite(section.y1)?section.y1:h1;
         // End the world-space texture mask safely below this section's own
         // profile. The bound stays fixed while the camera scrolls vertically.
-        const depth=Math.max(surfaceY0,surfaceY1,h0,h1)+this.height+1500;
+        const depth=Math.max(surfaceY0,surfaceY1,h0,h1)+this.height+
+          (section.kind==='platform'?500:1500);
         const openingWorldArt=!this.hasTeleported&&m>=-40&&m<=900&&
           section.kind!=='platform'&&scope.GRIM_WORLD_ART;
         const foothillsWorldArt=!this.hasTeleported&&
@@ -3862,9 +3994,12 @@ window.GRIM_CONFIG = Object.freeze({
           :foothillsWorldArt?scope.GRIM_WORLD_ART.foothillsGroundPalette(m)
           :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette()
           :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
-        const underside=section.kind==='platform'?Math.max(surfaceY0,surfaceY1)+68:depth;
+        const underside=depth;
         base.fillStyle(body);
-        base.fillPoints([{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}],true);
+        const bodyPoints=section.kind==='platform'
+          ?this.terrainBodyPoints(section,section.start,section.end,surfaceY0,surfaceY1,underside)
+          :[{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}];
+        base.fillPoints(bodyPoints,true);
         this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews);
         if(section.kind==='rubble'&&!tundraBiomeWorldArt){
           // Small embedded stone facets follow the local surface and stay
@@ -3884,12 +4019,6 @@ window.GRIM_CONFIG = Object.freeze({
         const surfaceBiome=Object.entries(weights).sort((a,b)=>b[1]-a[1])[0]?.[0]||'caves';
         if(!this.terrainSurfaceView(section,edge,sheen,detail,activeSurfaceViews,surfaceBiome))
           this.drawTerrainSurfaceFallback(section,edge,sheen,detail,surfaceBiome);
-        const cliff=sections.some(t=>t.kind==='gap'&&(Math.abs(t.start-section.end)<.02||Math.abs(t.end-section.start)<.02));
-        if(cliff){
-          const x=Math.abs(section.end-to)<.01?section.end:section.start;
-          const y=this.terrain.anchorAt(x+.01)??h0;
-          g.lineStyle(4,detail,.66);g.lineBetween(x,y+7,x,y+105);
-        }
         if(tundraWorldArt)scope.GRIM_WORLD_ART.drawTundraGround(this,g,from,to);
         else if(foothillsWorldArt)scope.GRIM_WORLD_ART.drawFoothillsGround(this,g,from,to);
         else if(openingWorldArt)scope.GRIM_WORLD_ART.drawOpeningGround(this,g,from,to);
@@ -3900,9 +4029,6 @@ window.GRIM_CONFIG = Object.freeze({
           g.fillStyle(detail,.38);g.fillEllipse(x+9,y+18+variation*8,9+variation*7,4);
           if(m<1050){
             g.lineStyle(2,sheen,.53);g.lineBetween(x+9,y,x+12,y-6-variation*7);
-          }else if(m>7550){
-            g.lineStyle(2,0xff7b31,.18+clamp((m-7550)/650,0,1)*.32);
-            g.lineBetween(x+9,y+17,x+18,y+26);g.lineBetween(x+18,y+26,x+22,y+20);
           }else{
             g.lineStyle(2,sheen,.30);g.lineBetween(x+4,y+11,x+13,y+19);
           }
@@ -3911,34 +4037,30 @@ window.GRIM_CONFIG = Object.freeze({
       // Lightweight one-way ledges; only top surfaces catch a falling player.
       for(const plat of this.soulPlatform||[]){
         if(plat.x+plat.width<left||plat.x>right)continue;
-        base.fillStyle(plat.biome==='hell'?0x4a2727:0x213840,.93);base.fillRoundedRect(plat.x,plat.y,plat.width,11,4);
         const platformSection={kind:'soul-platform',start:plat.x,end:plat.x+plat.width,
           y0:plat.y,y1:plat.y};
         const platformMeters=(plat.x+plat.width/2-this.startX)/C.pxPerMeter;
-        const platformDepth=plat.y+this.height+1500;
-        this.drawTerrainTexture(platformSection,plat.x,plat.x+plat.width,plat.y,plat.y,
-          plat.y+11,platformDepth,platformMeters,activeTerrainViews);
+        const floor=this.terrain.groundAt(plat.x+plat.width/2)??plat.y;
+        const platformDepth=Math.max(plat.y,floor)+this.height+500;
         const platformPalette=this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.worldGroundPalette
           ?scope.GRIM_WORLD_ART.worldGroundPalette(platformMeters)
           :plat.biome==='hell'?[0x211216,0x8e3b2b,0xff9251,0x5d2924]
           :scope.GRIM_WORLD_ART?.tundraGroundPalette?.(platformMeters)||[0x202a28,0x52675a,0x87947a,0x39433d];
+        base.fillStyle(platformPalette[0],.96);
+        base.fillPoints(this.terrainBodyPoints(platformSection,plat.x,plat.x+plat.width,
+          plat.y,plat.y,platformDepth),true);
+        this.drawTerrainTexture(platformSection,plat.x,plat.x+plat.width,plat.y,plat.y,
+          platformDepth,platformDepth,platformMeters,activeTerrainViews);
         const [,,platformSheen,platformDetail]=platformPalette,platformEdge=platformPalette[1];
         if(!this.terrainSurfaceView(platformSection,platformEdge,platformSheen,platformDetail,activeSurfaceViews))
           this.drawTerrainSurfaceFallback(platformSection,platformEdge,platformSheen,platformDetail);
-        g.lineStyle(2,0x6ca99d,.7);
-        for(let x=plat.x+20;x<plat.x+plat.width-8;x+=37)g.lineBetween(x,plat.y+6,x+12,plat.y+10);
       }
       for(const section of sections){
         if(section.kind!=='platform')continue;
-        const from=Math.max(left,section.start),to=Math.min(right,section.end);
-        const meters=(from+to-2*startX)/(2*C.pxPerMeter);
-        if(!this.hasTeleported&&meters>=1900&&meters<=5000)continue;
-        g.lineStyle(3,0x96a9a5,.38);
-        for(let x=Math.ceil(from/36)*36;x<to;x+=36){
-          const y=this.terrain.groundAt(x);
-          if(y!==null)g.lineBetween(x,y+10,x+3,y+29);
-        }
+        // Full depth material faces and tapered rock cheeks are drawn with
+        // the section above; the walkable contour and one-way collision stay exact.
       }
+      this.pruneAbyssTextureViews(activeAbyssViews);
       this.pruneTerrainTextureViews(activeTerrainViews);
       this.pruneTerrainSurfaceViews(activeSurfaceViews);
       this.releaseInactiveTerrainMaterials(keepTerrainMaterials);
