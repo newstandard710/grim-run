@@ -856,13 +856,17 @@ const server=http.createServer((req,res)=>{
       const sampleIndex=Math.min(shape.left.length-1,
         Math.floor(visibleDepth/(shape.bottom-shape.top)*(shape.left.length-1)));
       const visibleWidth=shape.right[shape.right.length-1-sampleIndex].x-shape.left[sampleIndex].x;
-      const platformView=[...scene.terrainTextureViews.entries()].find(([key,view])=>
-        key.startsWith('platform:')&&view.sprite.visible);
-      const platformBottom=platformView
-        ?platformView[1].sprite.y+platformView[1].sprite.displayHeight:null;
+      const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,
+        scene.cameraX+scene.width+170);
+      const platform=visibleSections.find(section=>section.kind==='platform');
+      const platformDepth=platform
+        ?Math.max(platform.y0,platform.y1)+scene.height+500:null;
+      const platformPoints=platform?scene.terrainBodyPoints(platform,platform.start,platform.end,
+        platform.y0,platform.y1,platformDepth):[];
+      const platformBottom=platformPoints.length?Math.max(...platformPoints.map(point=>point.y)):null;
       return {textureKey:textureView?.sprite.displayTexture?.key,textureViews:gapViews.length,
         topWidth,bottomWidth,visibleWidth,shaftDepth:shape.bottom-shape.top,
-        visibleBottomY:scene.cameraY+scene.height,platformBottom,
+        visibleBottomY:scene.cameraY+scene.height,platformBottom,platformKind:platform?.kind,
         platformExtendsBelow:platformBottom!==null&&platformBottom>scene.cameraY+scene.height+100,
         geometrySignature:textureView?.geometrySignature};
     },{gapKey:location.gapKey,expectedTexture:target.texture});
