@@ -3943,7 +3943,7 @@ window.GRIM_CONFIG = Object.freeze({
           context.lineTo(width,height);
         }
         context.closePath();context.clip();
-        context.fillStyle=style.base;context.fillRect(0,0,width,height);
+        context.fillStyle=rgba(style.base,1);context.fillRect(0,0,width,height);
         const shade=context.createLinearGradient(0,offsetY,0,height);
         shade.addColorStop(0,rgba(style.light,.32));
         shade.addColorStop(.28,rgba(style.strata,.18));

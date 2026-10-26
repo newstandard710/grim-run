@@ -933,6 +933,9 @@ const server=http.createServer((req,res)=>{
         leftLipAlpha:faceAlpha(actualStart+5,y0+4),rightLipAlpha:faceAlpha(actualEnd-5,y1+4),
         leftFaceUnderlapAlpha:faceAlpha(actualStart-8,y0+22),
         rightFaceUnderlapAlpha:faceAlpha(actualEnd+8,y1+22),
+        leftUnderlapProfile:[1,4,8,12,16,20,23].map(distance=>faceAlpha(actualStart-distance,y0+22)),
+        rightUnderlapProfile:[1,4,8,12,16,20,23].map(distance=>faceAlpha(actualEnd+distance,y1+22)),
+        leftUnderlapColumn:[4,8,12,22,40,52,80].map(depth=>faceAlpha(actualStart-8,y0+depth)),
         geometrySignature:textureView?.geometrySignature};
     },{gapKey:location.gapKey,expectedPrefix:target.texturePrefix,
       actualStart:location.gap.start,actualEnd:location.gap.end,
@@ -955,7 +958,9 @@ const server=http.createServer((req,res)=>{
     console.log(target.name+' cliff coverage samples: '+JSON.stringify({source:abyss.cliffSourceType,
       sourceSize:[abyss.cliffSourceWidth,abyss.cliffSourceHeight],context:abyss.cliffPixelContextAvailable,
       leftLip:abyss.leftLipAlpha,rightLip:abyss.rightLipAlpha,
-      leftUnderlap:abyss.leftFaceUnderlapAlpha,rightUnderlap:abyss.rightFaceUnderlapAlpha}));
+      leftUnderlap:abyss.leftFaceUnderlapAlpha,rightUnderlap:abyss.rightFaceUnderlapAlpha,
+      leftProfile:abyss.leftUnderlapProfile,rightProfile:abyss.rightUnderlapProfile,
+      leftColumn:abyss.leftUnderlapColumn}));
     assert.ok(abyss.leftLipAlpha>200&&abyss.rightLipAlpha>200&&
       abyss.leftFaceUnderlapAlpha>200&&abyss.rightFaceUnderlapAlpha>200,
       target.name+' rendered cliff texture covers both lip edges and overlaps the ground: '+JSON.stringify(abyss));
