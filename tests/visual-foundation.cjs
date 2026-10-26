@@ -35,6 +35,8 @@ for(const asset of ['abyss-canyon-gap-01.webp','abyss-canyon-gap-02.webp',
 assert.ok(html.includes('const ABYSS_BACKDROP_BLEED_MIN=36')&&
  html.includes('const displayWidth=displayHeight*aspect')&&
  html.includes('const ABYSS_ART_TOP_INSET_PX=34')&&
+ html.includes('const ABYSS_ART_TOP_JITTER_PX=14')&&
+ html.includes('Math.ceil(width/14)')&&
  html.includes('setOrigin(.5,0)')&&html.includes('setRotation(rotation)')&&
  html.includes('abyssBackdropTopEdge(section,ABYSS_ART_TOP_INSET_PX)')&&
  html.includes('shape.right.slice().reverse()')&&

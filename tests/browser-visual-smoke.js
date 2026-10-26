@@ -847,6 +847,10 @@ const server=http.createServer((req,res)=>{
         textureView?.artTopInsetPx||34):[];
       const sloped={...gap,y0:gap.y0-12,y1:gap.y1+18};
       const slopedTop=scene.abyssBackdropTopEdge(sloped,34);
+      const slopedDeviations=slopedTop.points.map(point=>
+        point.y-(sloped.y0+(sloped.y1-sloped.y0)*
+          ((point.x-sloped.start)/(sloped.end-sloped.start))+34));
+      const slopedEdgeVariation=Math.max(...slopedDeviations)-Math.min(...slopedDeviations);
       return {meters,gap:{start:gap.start,end:gap.end,y0:gap.y0,y1:gap.y1},gapKey,
         cameraX:scene.cameraX,cameraY:scene.cameraY,width:scene.width,height:scene.height,
         gapVisible:visibleSections.some(section=>section.kind==='gap'&&section.start===gap.start),
@@ -865,7 +869,8 @@ const server=http.createServer((req,res)=>{
           displayWidth:textureView.sprite.displayWidth,displayHeight:textureView.sprite.displayHeight,
           bleedPx:textureView.bleedPx}:null,
         slopedTop:{left:slopedTop.left,right:slopedTop.right,rotation:slopedTop.rotation,
-          expectedLeft:sloped.y0+34,expectedRight:sloped.y1+34},
+          expectedLeft:sloped.y0+34,expectedRight:sloped.y1+34,
+          variation:slopedEdgeVariation},
         imageWidth:source?.width,imageHeight:source?.height,
         terrainDepth:scene.terrainBase.depth,
         shape:shape?{left:shape.left,right:shape.right,top:shape.top,bottom:shape.bottom,width:shape.width}:null,
@@ -959,8 +964,8 @@ const server=http.createServer((req,res)=>{
       target.name+' image top follows each terrain endpoint one Reaper head-height below the rim');
     assert.ok(Math.abs(location.slopedTop.left.y-location.slopedTop.expectedLeft)<.001&&
       Math.abs(location.slopedTop.right.y-location.slopedTop.expectedRight)<.001&&
-      Math.abs(location.slopedTop.rotation)>0,
-      target.name+' sloped synthetic ravine keeps both art endpoints aligned independently');
+      Math.abs(location.slopedTop.rotation)>0&&location.slopedTop.variation>=4,
+      target.name+' sloped synthetic ravine keeps both lips aligned and the narrow art edge irregular');
     assert.ok(abyss.imageDepthPastViewport>80,
       target.name+' painted depth continues below the phone viewport');
     assert.ok(abyss.topWidth>abyss.bottomWidth&&abyss.bottomWidth>0,
