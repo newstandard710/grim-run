@@ -889,9 +889,18 @@ const server=http.createServer((req,res)=>{
       const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
       const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
         scene.cameraY+scene.height-shape.top));
-      const sampleIndex=Math.min(shape.left.length-1,
-        Math.floor(visibleDepth/(shape.bottom-shape.top)*(shape.left.length-1)));
-      const visibleWidth=shape.right[shape.right.length-1-sampleIndex].x-shape.left[sampleIndex].x;
+      const xAtY=(points,y)=>{
+        for(let i=0;i<points.length-1;i++){
+          const a=points[i],b=points[i+1];
+          if(y>=Math.min(a.y,b.y)&&y<=Math.max(a.y,b.y)){
+            const t=a.y===b.y?0:(y-a.y)/(b.y-a.y);
+            return a.x+(b.x-a.x)*t;
+          }
+        }
+        return points.at(-1).x;
+      };
+      const visibleY=shape.top+visibleDepth;
+      const visibleWidth=xAtY(shape.right.slice().reverse(),visibleY)-xAtY(shape.left,visibleY);
       const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,
         scene.cameraX+scene.width+170);
       const platform=visibleSections.find(section=>section.kind==='platform');
