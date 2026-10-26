@@ -1,16 +1,26 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.13.5 — *Ravine Art Reframe*.
+**Current production build:** v0.13.6 — *Abyss Fog*.
 
-This release crops the upper 35% from the eight biome-specific ravine paintings, then places each plate about one Reaper head-height below the opening. The top edge follows both real terrain endpoints independently, including sloped gaps, while a jagged mask and terrain underlap keep the join covered. The normal biome backgrounds, walkable surface, and collision geometry are unchanged.
+This release adds a subtle, biome-tinted fog overlay inside each of the eight abyss openings. It follows the same jagged, sloped terrain mask as the ravine art, sits above that art and below the real ground, and moves only a few pixels over time. The normal biome backgrounds, walkable surface, and collision geometry are unchanged.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.13.5 — *Ravine Art Reframe* (current production)
+**Release:** v0.13.6 — *Abyss Fog* (current production)
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Eight local gameplay regression suites pass, including seed 1 reaching 9,999m. Actual Chromium checks cover all eight biome openings, independently aligned sloped edges, and phone-size rendering. Android device appearance and play-feel remain for playtesting.
+**Verification:** Eight local gameplay regression suites pass, including seed 1 reaching 9,999m. Actual Chromium checks cover all eight biome openings, biome-tinted fog, shared mask and draw order, independently aligned sloped edges, and phone-size rendering. Android device appearance and play-feel remain for playtesting.
+
+## v0.13.6 — Abyss Fog
+
+- Added one transparent painterly fog texture, tinted per biome and crossfaded with the existing terrain and ravine art.
+- The fog uses the same opening mask and 34px lip inset as its ravine painting, follows each gap's slope and jagged edges, and stays between the canyon art and real terrain in render order.
+- Its very slow, small drift is clipped to that mask. The shared texture and cached mask keep the visual layer bounded and lightweight.
+- Gameplay geometry, running surface, collision, hazards, enemies, and route progression remain unchanged.
+- Chromium phone-scale rendering checks cover all eight biome fog colors, mask alignment, draw order, and abyss screenshots. Device frame rate and appearance remain for Android playtesting.
+
+## v0.13.5 — Ravine Art Reframe
 
 ## v0.13.5 — Ravine Art Reframe
 

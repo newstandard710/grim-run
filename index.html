@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.13.5</title>
+  <title>GRIM RUN — v0.13.6</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.13.5 · RAVINE ART REFRAME</div>
+      <div class="mini">v0.13.6 · ABYSS FOG</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +379,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.13.5',
+  version: '0.13.6',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1458,8 +1458,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.13.5-ravine-reframe"></script>
-  <script src="assets/visuals/visual-system.js?v=0.13.5-ravine-reframe"></script>
+  <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
+  <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1505,6 +1505,11 @@ window.GRIM_CONFIG = Object.freeze({
   const ABYSS_OPENING_LIP_MAX=13;
   const ABYSS_ART_TOP_INSET_PX=34;
   const ABYSS_ART_TOP_JITTER_PX=14;
+  const ABYSS_FOG_LAYER_ALPHA=.34;
+  const ABYSS_FOG_TINTS=Object.freeze({
+    forest:0xa6c0b5,foothills:0xaab8c2,tundra:0xd1e0ed,caves:0x8596c4,
+    crystals:0x78bdca,ashlands:0x9f879f,lava:0xc78b74,boss:0xa58ca7
+  });
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
   const TUNDRA_TERRAIN_TILE_SCALE=.48;
@@ -1520,7 +1525,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.load.image('terrain-source-forest',
         'assets/visuals/terrain/'+BIOME_TERRAIN_FILES.forest);
       for(const key of Object.values(ABYSS_BACKDROP_FILES))
-        this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.5-ravine-reframe');
+        this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog');
+      this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog');
     }
     create() {
       this.width = this.scale.width;
@@ -1552,6 +1558,7 @@ window.GRIM_CONFIG = Object.freeze({
       // silhouette, so background pixels can never leave a seam at a gap lip.
       this.terrainBase=this.add.graphics().setDepth(.62);
       this.abyssBackdropViews=new Map();
+      this.abyssFogViews=new Map();
       this.abyssGeometryCache=new Map();
       this.terrainTextureViews=new Map();
       this.terrainSurfaceViews=new Map();
@@ -1562,6 +1569,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.textures?.exists?.('terrain-source-forest'))this.bakeTerrainMaterial('forest');
       this.events?.once?.('shutdown',()=>{
         this.destroyAbyssBackdropViews();
+        this.destroyAbyssFogViews();
         this.destroyTerrainTextureViews();
         this.destroyTerrainSurfaceViews();
       });
@@ -3962,6 +3970,78 @@ window.GRIM_CONFIG = Object.freeze({
       activeKeys.add(key);
       return view;
     }
+    abyssFogView(section,shape,biome,alpha,activeKeys){
+      const textureKey='abyss-fog';
+      if(alpha<=.003||!this.textures?.exists?.(textureKey)||!this.add?.image||
+        !this.make?.graphics||!this.abyssFogViews)return null;
+      const tint=ABYSS_FOG_TINTS[biome]||ABYSS_FOG_TINTS.forest;
+      const key=[section.start,section.end,biome].join(':');
+      let view=this.abyssFogViews.get(key);
+      if(!view){
+        const sprite=this.add.image(0,0,textureKey)
+          .setOrigin(.5,0).setDepth(.46).setVisible(false);
+        const maskGraphics=this.make.graphics({x:0,y:0,add:false});
+        const mask=maskGraphics.createGeometryMask();
+        sprite.setMask(mask);
+        view={sprite,maskGraphics,mask,geometrySignature:null,boundsSignature:null,
+          positionSignature:null,biome};
+        this.abyssFogViews.set(key,view);
+      }
+      const {sprite,maskGraphics}=view;
+      const bleed=Math.max(ABYSS_BACKDROP_BLEED_MIN,
+        Math.ceil(shape.width*ABYSS_BACKDROP_BLEED_RATIO));
+      const artTop=this.abyssBackdropTopEdge(section,ABYSS_ART_TOP_INSET_PX);
+      const maskPoints=this.abyssBackdropPolygon(section,shape,bleed,
+        ABYSS_ART_TOP_INSET_PX);
+      const signature=shape.signature+':bleed:'+bleed+':top:'+ABYSS_ART_TOP_INSET_PX;
+      if(view.geometrySignature!==signature){
+        maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);
+        maskGraphics.fillPoints(maskPoints,true);
+        view.geometrySignature=signature;
+      }
+      const source=this.textures.get(textureKey)?.getSourceImage?.();
+      const aspect=source?.width>0&&source?.height>0?source.width/source.height:2/3;
+      const maskWidth=shape.width+bleed*2;
+      const displayHeight=Math.max(this.height*1.05,maskWidth/aspect);
+      const displayWidth=displayHeight*aspect;
+      const x=artTop.centerX,y=artTop.centerY;
+      const bounds=[x,y,displayWidth,displayHeight,artTop.rotation]
+        .map(value=>value.toFixed(3)).join(':');
+      if(view.boundsSignature!==bounds){
+        sprite.setTexture(textureKey).setDisplaySize(displayWidth,displayHeight)
+          .setRotation(artTop.rotation);
+        view.boundsSignature=bounds;
+      }
+      // Bring the fog bank into the phone-visible part of the opening. The
+      // transparent upper margin of the source art otherwise leaves only
+      // empty pixels under a short viewport. The fixed ravine mask still owns
+      // the actual edge, so this offset cannot move fog onto solid terrain.
+      const fogOffsetY=-displayHeight*.40;
+      // Let the broad, transparent veils drift almost imperceptibly inside the
+      // fixed ravine mask. The art stays clipped to world geometry and cannot
+      // creep onto the running surface or expose a rectangular image edge.
+      const now=(this.time?.now||0)*.00006;
+      const driftX=Math.sin(now+section.start*.0013)*3.5;
+      const driftY=Math.cos(now*.72+section.end*.0011)*1.5;
+      const px=x+driftX,py=y+fogOffsetY+driftY;
+      const position=[px,py].map(value=>value.toFixed(2)).join(':');
+      if(view.positionSignature!==position){
+        sprite.setPosition(px,py);
+        view.positionSignature=position;
+      }
+      view.artAnchorX=x;view.artAnchorY=y;
+      view.artTopLeft=artTop.left;view.artTopRight=artTop.right;
+      view.artTopInsetPx=ABYSS_ART_TOP_INSET_PX;view.artRotation=artTop.rotation;
+      view.bleedPx=bleed;view.driftX=driftX;view.driftY=driftY;
+      view.textureOffsetRatioY=fogOffsetY/displayHeight;
+      view.geometryBounds={left:section.start-bleed,right:section.end+bleed};
+      if(view.tint!==tint){sprite.setTint(tint);view.tint=tint;}
+      const fogAlpha=alpha*ABYSS_FOG_LAYER_ALPHA;
+      if(view.fogAlpha!==fogAlpha){sprite.setAlpha(fogAlpha);view.fogAlpha=fogAlpha;}
+      if(!sprite.visible)sprite.setVisible(true);
+      activeKeys.add(key);
+      return view;
+    }
     removeAbyssBackdropView(key,view){
       view.sprite?.clearMask?.(true);
       view.sprite?.destroy?.();
@@ -3979,6 +4059,24 @@ window.GRIM_CONFIG = Object.freeze({
       for(const [key,view] of this.abyssBackdropViews)
         this.removeAbyssBackdropView(key,view);
       this.abyssBackdropViews.clear();
+    }
+    removeAbyssFogView(key,view){
+      view.sprite?.clearMask?.(true);
+      view.sprite?.destroy?.();
+      view.mask?.destroy?.();
+      view.maskGraphics?.destroy?.();
+      this.abyssFogViews?.delete(key);
+    }
+    pruneAbyssFogViews(activeKeys){
+      if(!this.abyssFogViews)return;
+      for(const [key,view] of this.abyssFogViews)
+        if(!activeKeys.has(key))this.removeAbyssFogView(key,view);
+    }
+    destroyAbyssFogViews(){
+      if(!this.abyssFogViews)return;
+      for(const [key,view] of this.abyssFogViews)
+        this.removeAbyssFogView(key,view);
+      this.abyssFogViews.clear();
     }
     groundPalette(m) {
       const blend=(a,b,t)=>{
@@ -4004,7 +4102,7 @@ window.GRIM_CONFIG = Object.freeze({
       const abyssFallback=this.abyssFallback||base;
       if(abyssFallback!==base)abyssFallback.clear();
       const activeTerrainViews=new Set(),activeSurfaceViews=new Set();
-      const activeAbyssViews=new Set();
+      const activeAbyssViews=new Set(),activeAbyssFogViews=new Set();
       const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       const sections=this.terrain.visibleSections(left,right);
@@ -4033,6 +4131,18 @@ window.GRIM_CONFIG = Object.freeze({
           this.abyssBackdropView(section,shape,
             this.abyssBackdropTexture(id),alpha,activeAbyssViews);
           accumulatedWeight+=weight;
+        }
+        // Fog is one shared translucent texture, tinted through the same
+        // biome crossfade as the canyon and ground. Its depth sits above the
+        // painting (.34) and below real terrain (.62).
+        let accumulatedFogWeight=0;
+        for(const id of TERRAIN_BIOME_ORDER){
+          const weight=Math.max(0,weights[id]||0);
+          if(weight<=.003)continue;
+          const alpha=accumulatedFogWeight===0?1:
+            weight/(accumulatedFogWeight+weight);
+          this.abyssFogView(section,shape,id,alpha,activeAbyssFogViews);
+          accumulatedFogWeight+=weight;
         }
       }
       for(const section of sections){
@@ -4130,6 +4240,7 @@ window.GRIM_CONFIG = Object.freeze({
         // the section above; the walkable contour and one-way collision stay exact.
       }
       this.pruneAbyssBackdropViews(activeAbyssViews);
+      this.pruneAbyssFogViews(activeAbyssFogViews);
       this.pruneTerrainTextureViews(activeTerrainViews);
       this.pruneTerrainSurfaceViews(activeSurfaceViews);
       this.releaseInactiveTerrainMaterials(keepTerrainMaterials);

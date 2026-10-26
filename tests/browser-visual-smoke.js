@@ -813,8 +813,10 @@ const server=http.createServer((req,res)=>{
     {meters:11000,name:'boss',biomeId:'boss'}
   ];
   const abyssTextureKeys=abyssTargets.map(target=>'abyss-depth-'+target.biomeId);
+  const abyssFogTints={forest:0xa6c0b5,foothills:0xaab8c2,tundra:0xd1e0ed,
+    caves:0x8596c4,crystals:0x78bdca,ashlands:0x9f879f,lava:0xc78b74,boss:0xa58ca7};
   for(const target of abyssTargets){
-    const location=await skeletalPage.evaluate(({targetMeters,expectedTexture,textureKeys})=>{
+    const location=await skeletalPage.evaluate(({targetMeters,expectedTexture,textureKeys,expectedFogBiome})=>{
       const game=window.grimRun,scene=game.scene.scenes[0],ppm=window.GRIM_CONFIG.pxPerMeter;
       const group=scene.terrain.sequences.slice().sort((a,b)=>{
         const am=(a.startX+a.endX-2*scene.startX)/(2*ppm);
@@ -840,6 +842,8 @@ const server=http.createServer((req,res)=>{
       const prefix=[gap.start,gap.end].join(':')+':';
       const textureView=[...scene.abyssBackdropViews.entries()].find(([key,view])=>
         key.startsWith(prefix)&&view.sprite.visible&&view.sprite.texture.key===expectedTexture)?.[1];
+      const fogView=[...scene.abyssFogViews.entries()].find(([key,view])=>
+        key.startsWith(prefix)&&view.sprite.visible&&view.biome===expectedFogBiome)?.[1];
       const visibleViews=[...scene.abyssBackdropViews.values()].filter(view=>view.sprite.visible)
         .map(view=>({key:view.sprite.texture.key,type:view.sprite.type,depth:view.sprite.depth}));
       const source=scene.textures.get(expectedTexture)?.getSourceImage?.();
@@ -859,6 +863,19 @@ const server=http.createServer((req,res)=>{
           const image=scene.textures.get(key)?.getSourceImage?.();
           return image?.width===768&&image?.height===624;
         }),
+        fogTextureLoaded:scene.textures.exists('abyss-fog'),
+        fogTextureSize:(()=>{
+          const image=scene.textures.get('abyss-fog')?.getSourceImage?.();
+          return [image?.width,image?.height];
+        })(),
+        fogView:fogView?{key:fogView.sprite.texture.key,type:fogView.sprite.type,
+          depth:fogView.sprite.depth,alpha:fogView.sprite.alpha,tint:fogView.tint,
+          biome:fogView.biome,artTopInsetPx:fogView.artTopInsetPx,
+          textureOffsetRatioY:fogView.textureOffsetRatioY,
+          sameMaskGeometry:fogView.geometrySignature===textureView?.geometrySignature,
+          anchorCenterError:Math.abs(fogView.artAnchorX-textureView?.sprite.x),
+          anchorYError:Math.abs(fogView.artAnchorY-textureView?.sprite.y),
+          driftMagnitude:Math.hypot(fogView.driftX,fogView.driftY)}:null,
         visibleViews,view:textureView?{key:textureView.sprite.texture.key,
           type:textureView.sprite.type,depth:textureView.sprite.depth,
           backgroundLeft:textureView.backgroundLeft,backgroundRight:textureView.backgroundRight,
@@ -877,11 +894,34 @@ const server=http.createServer((req,res)=>{
         maskLeft:mask.length?Math.min(...mask.map(point=>point.x)):null,
         maskRight:mask.length?Math.max(...mask.map(point=>point.x)):null};
     },{targetMeters:target.meters,expectedTexture:'abyss-depth-'+target.biomeId,
-      textureKeys:abyssTextureKeys});
+      textureKeys:abyssTextureKeys,expectedFogBiome:target.biomeId});
     console.log(target.name+' abyss setup: '+JSON.stringify(location));
     assert.equal(location.gapVisible,true,target.name+' generated gap is in the camera view');
     assert.equal(location.allBackdropTexturesLoaded,true,'All eight biome depth plates load');
     assert.equal(location.allBackdropTexturesSized,true,'Depth plates use cropped 768x624 images');
+    assert.equal(location.fogTextureLoaded,true,'Shared transparent abyss fog texture loads');
+    assert.deepEqual(location.fogTextureSize,[768,1152],'Fog texture is phone-scale and downsampled');
+    assert.ok(location.fogView,target.name+' has a visible biome-tinted fog layer');
+    assert.equal(location.fogView.key,'abyss-fog');
+    assert.equal(location.fogView.type,'Image');
+    assert.equal(location.fogView.biome,target.biomeId);
+    assert.equal(location.fogView.tint,abyssFogTints[target.biomeId],
+      target.name+' fog tint matches its biome');
+    assert.ok(location.fogView.alpha>0&&location.fogView.alpha<=.34,
+      target.name+' fog remains translucent over the ravine painting');
+    assert.ok(Math.abs(location.fogView.textureOffsetRatioY+.40)<.001,
+      target.name+' mist band is visible near the top of the phone-sized opening');
+    assert.equal(location.fogView.artTopInsetPx,34,
+      target.name+' fog begins below the terrain lip');
+    assert.equal(location.fogView.sameMaskGeometry,true,
+      target.name+' fog follows the same sloped, jagged opening mask as the canyon');
+    assert.ok(location.fogView.anchorCenterError<.1&&location.fogView.anchorYError<.1,
+      target.name+' fog stays anchored to the canyon painting');
+    assert.ok(location.fogView.driftMagnitude<=4,
+      target.name+' fog drift remains subtle and clipped inside the ravine');
+    assert.ok(location.view&&location.view.depth<location.fogView.depth&&
+      location.fogView.depth<location.terrainDepth,
+      target.name+' render order places fog over the canyon and beneath the ground');
     assert.ok(location.visibleViews.some(view=>view.key==='abyss-depth-'+target.biomeId),
       target.name+' renderer uses its own biome-specific depth image');
     assert.ok(location.visibleViews.every(view=>view.type==='Image'),
@@ -1238,7 +1278,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.13.5 fills all eight biome gaps with cropped, biome-specific depth paintings, per-edge lip alignment, and terrain-matched jagged lips while preserving gameplay geometry.');
+  console.log('PASS actual Chromium: v0.13.6 fills all eight biome gaps with cropped biome-specific depth paintings and biome-tinted fog beneath terrain, while preserving gameplay geometry.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
