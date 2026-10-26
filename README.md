@@ -2,9 +2,9 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.3 — Slide Sprite Rework**
+**Current build: v0.14.4 — Slide Readability Pass**
 
-The 24 slide variants now use new painted overhead structures. Their upper and lower sections are two transparent layers from the same composition: the upper art draws in front of the abyss and background but behind physical ground, while the lower hazard draws above ground and below the Reaper. The generic support shapes are removed. Fire art displays at 2× and stays grounded. Gameplay collision, placement, cadence, and mechanics remain unchanged.
+All 24 slide variants have revised painted silhouettes: a solid central bough, stone, bone, ice, crystal, or gate section marks the existing slide collision area. Thin roots, leaves, branches, and secondary tips sit higher so the ducking point is readable at phone scale. Upper and lower sections remain two transparent layers from the same painting. Fire art remains at 2× and grounded. Gameplay collision, placement, cadence, and mechanics remain unchanged.
 
 Ground jump and cut obstacle art keeps the terrain overlap approved in v0.14.2.
 

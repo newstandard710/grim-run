@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.14.3</title>
+  <title>GRIM RUN — v0.14.4</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.14.3 · SLIDE ART</div>
+      <div class="mini">v0.14.4 · SLIDE READABILITY</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1529,8 +1529,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog');
       this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog');
       for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
-        this.load.image(skin.key,skin.src+'?v=0.14.3-slide-art');
-        if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.3-slide-art');
+        this.load.image(skin.key,skin.src+'?v=0.14.4-slide-readability');
+        if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.4-slide-readability');
       }
     }
     create() {

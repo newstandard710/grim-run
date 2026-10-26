@@ -65,7 +65,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.3 · SLIDE ART','visible version badge matches the slide art release');
+    assert.equal(loaded.badge,'v0.14.4 · SLIDE READABILITY','visible version badge matches the slide art release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,117,'all 24 matched slide upper paintings load');
