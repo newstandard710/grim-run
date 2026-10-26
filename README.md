@@ -2,12 +2,12 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current production build: v0.13.5 — Ravine Art Reframe**
+**Current production build: v0.13.6 — Abyss Fog**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
 - The Underworld now moves through caves (5,000–6,000m), crystal caverns (6,000–7,000m), skyless Ashlands (7,000–8,000m), lava (8,000–9,999m), and the lava-lit castle Boss Biome (9,999–20,000m).
-- Eight biome materials cover generated terrain and foreground platforms. v0.13.5 reframes all eight ravine paintings below the rim, aligns each art top edge to its own real terrain lip, and keeps the images behind the ground. Terrain generation, the running surface, collisions, hazards, and route progression stay unchanged.
+- Eight biome materials cover generated terrain and foreground platforms. v0.13.5 reframes all eight ravine paintings below the rim, aligns each art top edge to its own real terrain lip, and keeps the images behind the ground. v0.13.6 adds restrained, biome-tinted fog over the ravine art and beneath real terrain. Terrain generation, the running surface, collisions, hazards, and route progression stay unchanged.
 - All eight approved biome concepts remain the only background art. The old procedural sky, mountain, tree, cave, ash, and lava overlays have been removed. Image and ground materials share the gently drifting 360m crossfades; at 5,000m the portal switches directly from Tundra to Caves.
 - Biome crossfades define their own easing helper, preventing an out-of-scope function error from aborting background and ground rendering at fade boundaries.
 - Surface backgrounds load first. Underworld backgrounds are loaded during the portal sequence, then replace and release the Surface textures to reduce memory use on phones.
@@ -25,7 +25,14 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
 
-## v0.13.5 — Ravine Art Reframe (current production)
+## v0.13.6 — Abyss Fog (current production)
+
+- Adds one transparent painterly fog layer inside abyss openings. It uses the same jagged, sloped terrain mask as the ravine painting, sits above the painting and beneath the real ground, and drifts only a few pixels over time.
+- Fog color crossfades with the matching biome across Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss. It leaves the walkable surface, terrain geometry, collisions, enemies, and route progression unchanged.
+- Actual Chromium checks cover all eight biome openings, fog tint and mask alignment, draw order, and phone-scale screenshots. The Android build is ready for device playtesting.
+- [Open the production game](https://newstandard710.github.io/grim-run/).
+
+## v0.13.5 — Ravine Art Reframe
 
 - Crops the upper 35% from each of the eight biome-specific abyss paintings, removing above-ground sky and moon imagery while preserving the normal biome backgrounds.
 - Positions the cropped art about one Reaper head-height below each ravine rim. Both sides follow their own terrain endpoint, including sloped openings, while an irregular inset edge and an underlapping mask keep the transition covered.

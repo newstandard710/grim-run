@@ -5,13 +5,20 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.5-ravine-reframe"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.5-ravine-reframe"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('ABYSS_BACKDROP_FILES')&&
- html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.5-ravine-reframe')"),
+ html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog')"),
  'Biome-specific abyss paintings load in the production scene');
+assert.ok(html.includes("this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog')")&&
+ html.includes('const ABYSS_FOG_LAYER_ALPHA=.27')&&
+ html.includes('this.abyssFogView(section,shape,id,alpha,activeAbyssFogViews)')&&
+ html.includes('.setDepth(.46)')&&html.includes('this.pruneAbyssFogViews(activeAbyssFogViews)'),
+ 'Shared translucent fog stays above the abyss art, below ground, and is pruned with offscreen gaps');
+assert.ok(fs.statSync(path.join(__dirname,'..','assets','visuals','terrain','abyss-fog-v1.webp')).size>50000,
+ 'Transparent abyss fog texture is present as a full-resolution runtime asset');
 assert.ok(html.includes('this.add.image(0,0,textureKey)')&&
  html.includes('this.abyssBackdropView(section,shape,')&&
  !html.includes('abyssTextureView('),
