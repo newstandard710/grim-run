@@ -67,7 +67,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.5 · FOREST OBSTACLES','visible version badge matches the forest art release');
+    assert.equal(loaded.badge,'v0.14.6 · FOREST OBSTACLES','visible version badge matches the forest art release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,120,'all 24 upper paintings and three forest supports load');
@@ -151,7 +151,9 @@ const server=http.createServer((req,res)=>{
       }
       if(!branchSupport||branchSupport.texture.key!==branchSkin?.supportKey||
         branchSupport.depth!==.53||branchSupport.y!==320||
-        Math.abs(branchSupport.displayHeight-192)>.001){
+        Math.abs(branchSupport.displayWidth-74*3.25*1.6)>.001||
+        Math.abs(branchSupport.displayHeight-307.2)>.001||
+        branchSupport.alpha!==.95){
         renderMisses++;renderFailures.push({id:'forest-slide-support-missing'});
       }
       branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
@@ -172,8 +174,8 @@ const server=http.createServer((req,res)=>{
       ground.lineStyle(4,0x617b70,.85).lineBetween(0,328,950,328);
       const forestSkin=skins.find(item=>item.id==='forest_slide_root-shelf');
       s.add.image(322,348,forestSkin.supportKey).setOrigin(.5,1)
-        .setDisplaySize(74*3.25,348-252+96).setScrollFactor(0).setDepth(37.5)
-        .setTint(0x91a298).setAlpha(.7);
+        .setDisplaySize(74*3.25*1.6,(348-252+96)*1.6).setScrollFactor(0).setDepth(37.5)
+        .setTint(0xbfc6bf).setAlpha(.95);
       s.add.image(322,252,forestSkin.backKey).setOrigin(.5,1)
         .setDisplaySize(74*3.25,Math.max(s.height*1.22,475)).setScrollFactor(0).setDepth(38);
       s.add.text(475,18,'OBSTACLE ART — PHONE-SCALE PREVIEW',{
@@ -202,6 +204,30 @@ const server=http.createServer((req,res)=>{
     const resultDir=path.join(root,'test-results');
     fs.mkdirSync(resultDir,{recursive:true});
     await page.locator('#game canvas').screenshot({path:path.join(resultDir,'obstacle-sprites-phone-scale.png')});
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu');
+    for(const name of ['dead-bough-curtain','root-shelf','thorn-canopy']){
+      await page.evaluate(name=>{
+        const s=window.grimRun.scene.scenes[0];
+        const skin=window.GRIM_OBSTACLE_SPRITES.find(item=>item.id==='forest_slide_'+name);
+        document.querySelector('#menu')?.classList.add('hidden');
+        for(const image of window.forestArtPreview||[])image.destroy();
+        const x=475,underside=252,bottom=348,width=74*3.25;
+        const height=Math.max(s.height*1.22,475);
+        window.forestArtPreview=[
+          s.add.image(x,bottom,skin.supportKey).setOrigin(.5,1)
+            .setDisplaySize(width*1.6,(bottom-underside+96)*1.6)
+            .setDepth(.53).setScrollFactor(0).setTint(0xbfc6bf).setAlpha(.95),
+          s.add.image(x,underside,skin.backKey).setOrigin(.5,1)
+            .setDisplaySize(width,height).setDepth(.55).setScrollFactor(0),
+          s.add.image(x,underside,skin.key).setOrigin(.5,1)
+            .setDisplaySize(width,height).setDepth(2.15).setScrollFactor(0)
+        ];
+      },name);
+      await page.waitForTimeout(80);
+      await page.locator('#game canvas').screenshot({path:path.join(resultDir,
+        'forest-slide-'+name+'-phone-scene.png')});
+    }
     assert.deepEqual(errors,[],'obstacle loading and rendering produce no browser exceptions');
     console.log('PASS actual Chromium: all 93 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');
   }finally{

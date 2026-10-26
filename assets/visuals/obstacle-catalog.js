@@ -1,4 +1,4 @@
-/* Biome-exclusive obstacle art catalog for v0.14.5. Purely visual metadata. */
+/* Biome-exclusive obstacle art catalog for v0.14.6. Purely visual metadata. */
 (function(scope){'use strict';scope.GRIM_OBSTACLE_SPRITES=Object.freeze([
   {
     "id": "forest_jump_root-knot",
@@ -49,7 +49,7 @@
     "src": "assets/obstacles/slide-v3/forest/forest_dead-bough-curtain-front.webp",
     "backSrc": "assets/obstacles/slide-v3/forest/forest_dead-bough-curtain-back.webp",
     "backKey": "obstacle-back-forest_dead-bough-curtain",
-    "supportSrc": "assets/obstacles/slide-support/forest/forest_dead-bough-curtain-support.webp",
+    "supportSrc": "assets/obstacles/slide-support/forest/forest_dead-bough-curtain-support-v2.webp",
     "supportKey": "obstacle-support-forest_dead-bough-curtain",
     "key": "obstacle-forest_slide_dead-bough-curtain"
   },
@@ -64,7 +64,7 @@
     "src": "assets/obstacles/slide-v3/forest/forest_root-shelf-front.webp",
     "backSrc": "assets/obstacles/slide-v3/forest/forest_root-shelf-back.webp",
     "backKey": "obstacle-back-forest_root-shelf",
-    "supportSrc": "assets/obstacles/slide-support/forest/forest_root-shelf-support.webp",
+    "supportSrc": "assets/obstacles/slide-support/forest/forest_root-shelf-support-v2.webp",
     "supportKey": "obstacle-support-forest_root-shelf",
     "key": "obstacle-forest_slide_root-shelf"
   },
@@ -79,7 +79,7 @@
     "src": "assets/obstacles/slide-v3/forest/forest_thorn-canopy-front.webp",
     "backSrc": "assets/obstacles/slide-v3/forest/forest_thorn-canopy-back.webp",
     "backKey": "obstacle-back-forest_thorn-canopy",
-    "supportSrc": "assets/obstacles/slide-support/forest/forest_thorn-canopy-support.webp",
+    "supportSrc": "assets/obstacles/slide-support/forest/forest_thorn-canopy-support-v2.webp",
     "supportKey": "obstacle-support-forest_thorn-canopy",
     "key": "obstacle-forest_slide_thorn-canopy"
   },
