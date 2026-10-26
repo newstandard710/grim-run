@@ -2,13 +2,13 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.4 — Slide Readability Pass**
+**Current build: v0.14.5 — Forest Obstacle Trial**
 
-All 24 slide variants have revised painted silhouettes: a solid central bough, stone, bone, ice, crystal, or gate section marks the existing slide collision area. Thin roots, leaves, branches, and secondary tips sit higher so the ducking point is readable at phone scale. Upper and lower sections remain two transparent layers from the same painting. Fire art remains at 2× and grounded. Gameplay collision, placement, cadence, and mechanics remain unchanged.
+The three forest slide variants now each have a unique painted root support that always appears with its matching overhead art. The support draws behind physical terrain and behind the slide obstacle, while the Reaper stays in front; the solid foreground ducking point remains visible. The two forest cuttable trees display 50% larger, forest corn 30% larger, and selected point-bottomed forest sprites sit slightly deeper into the ground. Other biomes and all gameplay rules are unchanged.
 
 Ground jump and cut obstacle art keeps the terrain overlap approved in v0.14.2.
 
-- Jump sprites display at 2.5×, cuttable trees at 2×, and corn-like cut art 1.3× taller. Slide art retains its wide 3.25× footprint and now extends into the upper visible scene from the unchanged clearance line.
+- Jump sprites display at 2.5×. Forest cuttable trees display at 3× and forest corn at 1.3× wide and 1.69× tall; other biomes retain their previous scales. Slide art retains its wide 3.25× footprint and extends into the upper visible scene from the unchanged clearance line.
 - Keeps the biome-exclusive obstacle art set: three jump, slide, and cut visuals per biome, three fire visuals in each fire biome, plus the air-tuck, air-bramble, and snapping-bramble sprites.
 - Obstacle selection, hitboxes, types, placements, spawn timing/rates, route progression, and gameplay RNG are unchanged. Optional sprite-load failures use a short ledge fallback for slide obstacles.
 - [Obstacle art catalog](assets/obstacles/README.md) lists all skins by biome. The matching runtime metadata is in `assets/visuals/obstacle-catalog.js`.

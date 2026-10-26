@@ -34,7 +34,8 @@ const server=http.createServer((req,res)=>{
     const loaded=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],skins=window.GRIM_OBSTACLE_SPRITES||[];
       const missing=skins.filter(skin=>!s.textures.exists(skin.key)||
-        (skin.backKey&&!s.textures.exists(skin.backKey))).map(skin=>skin.id);
+        (skin.backKey&&!s.textures.exists(skin.backKey))||
+        (skin.supportKey&&!s.textures.exists(skin.supportKey))).map(skin=>skin.id);
       const wrongSize=skins.filter(skin=>{
         if(!s.textures.exists(skin.key))return false;
         const source=s.textures.get(skin.key).getSourceImage();
@@ -59,16 +60,20 @@ const server=http.createServer((req,res)=>{
         const actual=skin.groundAnchorY??1,expected=bottom/source.height;
         if(Math.abs(actual-expected)>.0006)baselineErrors.push({id:skin.id,actual,expected});
       }
-      return {count:skins.length,missing,wrongSize,
+      const supports=skins.filter(skin=>skin.supportKey).map(skin=>skin.id);
+      return {count:skins.length,missing,wrongSize,supports,
         badge:document.querySelector('.mini')?.textContent.trim(),
         images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length,
         baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.4 · SLIDE READABILITY','visible version badge matches the slide art release');
+    assert.equal(loaded.badge,'v0.14.5 · FOREST OBSTACLES','visible version badge matches the forest art release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
-    assert.equal(loaded.images,117,'all 24 matched slide upper paintings load');
+    assert.equal(loaded.images,120,'all 24 upper paintings and three forest supports load');
+    assert.deepEqual(loaded.supports,[
+      'forest_slide_dead-bough-curtain','forest_slide_root-shelf','forest_slide_thorn-canopy'
+    ],'only forest slide skins have unique paired supports');
     assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
     const exercise=await page.evaluate(()=>{
@@ -111,10 +116,10 @@ const server=http.createServer((req,res)=>{
         }
         if((skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&type==='bramble'))&&
           (!image||image.originY!==(skin.groundAnchorY??1)||
-            image.y!==o.y+o.height+s.obstacleVisualInset(o))){
+            image.y!==o.y+o.height+s.obstacleVisualInset(o,skin))){
           renderMisses++;renderFailures.push({id:skin.id,anchor:{originY:image?.originY,y:image?.y},
             expectedAnchor:{originY:skin.groundAnchorY??1,
-              y:o.y+o.height+s.obstacleVisualInset(o)}});
+              y:o.y+o.height+s.obstacleVisualInset(o,skin)}});
         }
         if(placement&&(!image||image.originY!==placement.originY||image.y!==placement.y)){
           renderMisses++;renderFailures.push({id:skin.id,placement:{originY:image?.originY,y:image?.y},
@@ -130,6 +135,7 @@ const server=http.createServer((req,res)=>{
       s.drawObstacle(branch);
       const branchImage=s.obstacleSpriteObjects.get(branch);
       const branchBack=s.obstacleBackObjects.get(branch);
+      const branchSupport=s.obstacleSupportObjects.get(branch);
       const branchSkin=branchImage&&skins.find(skin=>skin.key===branchImage.texture.key);
       if(!branchImage||Math.abs(branchImage.displayWidth-74*3.25)>.001||
         Math.abs(branchImage.displayHeight-Math.max(s.height*1.22,475))>.001||
@@ -143,12 +149,18 @@ const server=http.createServer((req,res)=>{
         branchImage.depth>=s.actor.depth){
         renderMisses++;renderFailures.push({id:'painted-slide-backing-missing'});
       }
+      if(!branchSupport||branchSupport.texture.key!==branchSkin?.supportKey||
+        branchSupport.depth!==.53||branchSupport.y!==320||
+        Math.abs(branchSupport.displayHeight-192)>.001){
+        renderMisses++;renderFailures.push({id:'forest-slide-support-missing'});
+      }
       branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
       branchBack?.destroy();s.obstacleBackObjects.delete(branch);
+      branchSupport?.destroy();s.obstacleSupportObjects.delete(branch);
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       const board=[
         ['forest_jump_root-knot',106,328,'rock'],
-        ['caves_slide_stalactite-curtain',322,252,'branch'],
+        ['forest_slide_root-shelf',322,252,'branch'],
         ['forest_cut_thorny-young-pine',552,328,'bramble'],
         ['forest_cut_corn-tangle',700,328,'bramble'],
         ['lava_fire_lava-flare',855,328,'fire']
@@ -158,8 +170,11 @@ const server=http.createServer((req,res)=>{
       const ground=s.add.graphics().setScrollFactor(0).setDepth(39);
       ground.fillStyle(0x273339,1).fillRect(0,328,950,102);
       ground.lineStyle(4,0x617b70,.85).lineBetween(0,328,950,328);
-      const caveSkin=skins.find(item=>item.id==='caves_slide_stalactite-curtain');
-      s.add.image(322,252,caveSkin.backKey).setOrigin(.5,1)
+      const forestSkin=skins.find(item=>item.id==='forest_slide_root-shelf');
+      s.add.image(322,348,forestSkin.supportKey).setOrigin(.5,1)
+        .setDisplaySize(74*3.25,348-252+96).setScrollFactor(0).setDepth(37.5)
+        .setTint(0x91a298).setAlpha(.7);
+      s.add.image(322,252,forestSkin.backKey).setOrigin(.5,1)
         .setDisplaySize(74*3.25,Math.max(s.height*1.22,475)).setScrollFactor(0).setDepth(38);
       s.add.text(475,18,'OBSTACLE ART — PHONE-SCALE PREVIEW',{
         fontFamily:'system-ui,Arial',fontSize:'16px',fontStyle:'bold',color:'#e8f5f4'

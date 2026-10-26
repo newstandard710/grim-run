@@ -1,8 +1,8 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.14.4 — *Slide Readability Pass*.
+**Current build:** v0.14.5 — *Forest Obstacle Trial*.
 
-All 24 slide variants have revised biome-exclusive painted structures reaching past the upper visible playfield. A substantial central low section now indicates the existing slide collision zone, with small dangling details raised away from the ducking point. Each composition is split into a background section behind physical terrain and a foreground hazard section in front of terrain; the Reaper remains above both. Fire remains at 2×. Grounded jump/cut art, collision geometry, object positions, rates, and mechanics remain unchanged.
+The three forest slide variants have unique paired root support sprites below their unchanged foreground hazard art. They sit above the backdrop and abyss but behind terrain, and continue slightly into the ground. Forest cuttable trees display 50% larger, forest corn 30% larger, and four selected forest jump/cut sprites sink a few extra visual pixels into terrain. All other biomes, hitboxes, spawn rates, placements, and mechanics are unchanged.
 
 Grounded jump, cut, fire, and snapping-bramble art sinks a few visual pixels into the terrain and receives a contact shadow. Slide art uses one connected painting split around the physical ground layer. The Reaper remains the foremost gameplay character. Obstacle spawn coordinates, collisions, clearance, cadence, and mechanics are unchanged.
 
@@ -12,7 +12,7 @@ This release adds a subtle, biome-tinted fog overlay inside each of the eight ab
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.14.4 — *Slide Readability Pass*
+**Release:** v0.14.5 — *Forest Obstacle Trial*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
