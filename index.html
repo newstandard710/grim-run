@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.14.2</title>
+  <title>GRIM RUN — v0.14.3</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.14.2 · OBSTACLE GROUNDING</div>
+      <div class="mini">v0.14.3 · SLIDE ART</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1528,8 +1528,10 @@ window.GRIM_CONFIG = Object.freeze({
       for(const key of Object.values(ABYSS_BACKDROP_FILES))
         this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog');
       this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog');
-      for(const skin of scope.GRIM_OBSTACLE_SPRITES||[])
-        this.load.image(skin.key,skin.src+'?v=0.14.2-obstacle-grounding');
+      for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
+        this.load.image(skin.key,skin.src+'?v=0.14.3-slide-art');
+        if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.3-slide-art');
+      }
     }
     create() {
       this.width = this.scale.width;
@@ -1577,7 +1579,6 @@ window.GRIM_CONFIG = Object.freeze({
         this.destroyTerrainSurfaceViews();
       });
       this.world = this.add.graphics().setDepth(2);
-      this.slideSupport = this.add.graphics().setDepth(1.8);
       this.fx = this.add.graphics().setDepth(5);
       this.actor = this.add.graphics().setDepth(14);
       this.foreground = this.add.graphics().setScrollFactor(0).setDepth(20);
@@ -1596,6 +1597,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.obstacleSpriteFamilies.get(family).push(skin);
       }
       this.obstacleSpriteObjects=new Map();
+      this.obstacleBackObjects=new Map();
       this.souls = [];
       this.coins = [];
       this.tips = [];
@@ -3389,7 +3391,6 @@ window.GRIM_CONFIG = Object.freeze({
       for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
       for(const soul of this.souls) if (!soul.taken) this.drawSoul(soul);
       this.cleanupObstacleSprites();
-      this.slideSupport?.clear();
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
       this.drawCombat();
       this.drawParticles();
@@ -4319,6 +4320,7 @@ window.GRIM_CONFIG = Object.freeze({
     obstacleSpriteScaleFor(skin,type){
       if(skin.category==='jump')return {x:2.5,y:2.5};
       if(skin.category==='slide')return {x:3.25,y:3.25};
+      if(skin.category==='fire')return {x:2,y:2};
       if(skin.category==='cut'&&type==='bramble'){
         const isTree=/(?:tree|pine|oak|sapling)/i.test(skin.name);
         return isTree?{x:2,y:2}:{x:1,y:1.3};
@@ -4340,52 +4342,27 @@ window.GRIM_CONFIG = Object.freeze({
       this.world.fillStyle(0x0b1118,.27);
       this.world.fillEllipse(o.x+o.width/2,ground+3,width,11);
     }
-    drawSlideSupport(o,skin,centerX,underside,width){
-      const g=this.slideSupport;
-      if(!g)return;
-      const biome=skin?.biome??this.obstacleBiomeFor(o);
-      const colors={forest:[0x192a25,0x425846],foothills:[0x293b3a,0x61726a],
-        tundra:[0x283947,0x77909c],caves:[0x242739,0x536079],
-        crystals:[0x252b45,0x657493],ashlands:[0x30272b,0x73514d],
-        lava:[0x322329,0x7e4b43],boss:[0x292833,0x686171]}[biome]||[0x293441,0x687985];
-      const top=this.cameraY-75,edge=underside-28;
-      const half=Math.min(width*.44,112),lean=(o.variant%3-1)*19;
-      const organic=biome==='forest'||biome==='foothills';
-      if(organic){
-        // An irregular trunk and branching limbs connect the illustrated
-        // canopy to the upper world; the Reaper remains in front of it.
-        g.lineStyle(37,colors[0],.71);
-        g.lineBetween(centerX+lean-half*.62,top,centerX-17,edge-76);
-        g.lineStyle(19,colors[0],.81);
-        g.lineBetween(centerX-17,edge-76,centerX+half*.33,edge+9);
-        g.lineBetween(centerX-26,edge-63,centerX-half*.72,edge-18);
-        g.lineStyle(5,colors[1],.34);
-        g.lineBetween(centerX+lean-half*.62+8,top,centerX-8,edge-80);
-      }else{
-        // Uneven lengths of the biome's back wall meet the detailed art.
-        // Narrow seams keep the support behind the Reaper and the safe gap.
-        for(let i=-1;i<=1;i++){
-          const start=centerX+i*half*.59+lean*.4;
-          const end=centerX+i*half*.49;
-          const tip=edge+7-Math.abs(i)*16;
-          const spread=i===0?23:18;
-          g.fillStyle(colors[0],i===0?.67:.51);
-          g.fillPoints([{x:start-spread,y:top},{x:start+spread,y:top},
-            {x:start+spread+7,y:top+53},{x:end+spread*.8,y:tip-84},
-            {x:end+spread*.65,y:tip-30},{x:end+7,y:tip},
-            {x:end-8,y:tip-5},{x:end-spread*.83,y:tip-52},
-            {x:start-spread-6,y:top+98}],true);
-          g.lineStyle(2,colors[1],.24);
-          g.lineBetween(start-6,top+22,end-3,tip-43);
-        }
+    drawObstacleBack(o,skin,x,y,width,height,rotation){
+      if(!skin?.backKey||!this.textures?.exists?.(skin.backKey))return;
+      let image=this.obstacleBackObjects.get(o);
+      if(image&&image.texture?.key!==skin.backKey){image.destroy();image=null;}
+      if(!image){
+        image=this.add.image(0,0,skin.backKey).setDepth(.55);
+        this.obstacleBackObjects.set(o,image);
       }
+      image.setOrigin(.5,1).setPosition(x,y).setDisplaySize(width,height)
+        .setRotation(rotation).setVisible(true);
     }
     cleanupObstacleSprites(){
-      if(!this.obstacleSpriteObjects?.size)return;
+      if(!this.obstacleSpriteObjects?.size&&!this.obstacleBackObjects?.size)return;
       const active=new Set(this.obstacles.filter(o=>!o.destroyed));
       for(const [ob,image] of this.obstacleSpriteObjects){
         if(active.has(ob))continue;
         image.destroy();this.obstacleSpriteObjects.delete(ob);
+      }
+      for(const [ob,image] of this.obstacleBackObjects){
+        if(active.has(ob))continue;
+        image.destroy();this.obstacleBackObjects.delete(ob);
       }
     }
     drawObstacleSprite(o,placement=null){
@@ -4410,7 +4387,7 @@ window.GRIM_CONFIG = Object.freeze({
       }else if(o.type==='snappingBramble'){
         const b=this.snappingBox(o);
         width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2+this.obstacleVisualInset(o);
-      }else if(skin.category==='jump'||(skin.category==='cut'&&o.type==='bramble')){
+      }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
         width=o.width*scale.x;height=o.height*scale.y;
         x=o.x+o.width/2;y=o.y+o.height+this.obstacleVisualInset(o);
@@ -4510,16 +4487,16 @@ window.GRIM_CONFIG = Object.freeze({
         const skin=this.obstacleSkinFor(o);
         const scale=skin?this.obstacleSpriteScaleFor(skin,o.type):{x:3.25,y:3.25};
         const width=(skin?.gameW??o.width)*scale.x;
-        const height=(skin?.gameH??70)*scale.y;
+        const height=Math.max(this.height*1.22,475);
         const leftGround=groundAt(centerX-width/2),rightGround=groundAt(centerX+width/2);
         const delta=Number.isFinite(leftGround)&&Number.isFinite(rightGround)
           ?rightGround-leftGround:0;
         const rotation=Math.max(-.22,Math.min(.22,Math.atan2(delta,width)));
         const underside=Core.slideCeilingBottomAt(groundAt,centerX,C.slideClearancePx)
           ??(this.terrain.anchorAt(centerX)-C.slideClearancePx);
-        this.drawSlideSupport(o,skin,centerX,underside,width);
+        this.drawObstacleBack(o,skin,centerX,underside,width,height,rotation);
         if(!this.drawObstacleSprite(o,{x:centerX,y:underside,width,height,rotation,
-          originY:skin?.groundAnchorY??1})){
+          originY:1})){
           // Texture loading fallback stays a short overhead ledge without
           // restoring the old full-height pillar.
           g.fillStyle(0x3b4652,.98);g.fillRoundedRect(x,underside-20,o.width,20,5);

@@ -1,6 +1,6 @@
-# Obstacle Sprite Catalog — v0.14.2
+# Obstacle Sprite Catalog — v0.14.3
 
-All sprites are transparent RGBA PNGs authored at three times their base display dimensions. Runtime visual multipliers enlarge jump, slide, and cut art without changing hitboxes. Grounded sprites use per-image alpha baselines plus a small visual inset into the terrain. Slide sprites use a biome-colored support behind the illustrated obstacle. Every skin remains assigned to one biome.
+The core catalog has 93 biome-exclusive skins. Jump, cut, fire, and special obstacle artwork remains transparent PNG; the 24 slide variants now have individually painted transparent WebP front/back pairs in `slide-v2`, derived from one connected composition per variant. Upper painting draws behind real ground; lower painting draws in front of ground and behind the Reaper. Grounded sprites use per-image alpha baselines plus a small visual inset into terrain. Fire artwork displays at 2×. Every skin remains assigned to one biome.
 
 The core obstacle families have three skins per biome (50% more than the two-skin baseline). Fire keeps three skins in each biome where fire hazards appear. The biome folders and metadata below are the implementation map.
 

@@ -49,11 +49,23 @@ for(const [category,count] of Object.entries(counts)){
     const filename=path.resolve(root,skin.src);
     assert.ok(filename.startsWith(root+path.sep),'sprite path stays inside the project');
     assert.equal(path.basename(path.dirname(filename)),skin.biome,skin.id+' biome folder');
-    assert.equal(path.basename(path.dirname(path.dirname(filename))),category,skin.id+' category folder');
+    assert.equal(path.basename(path.dirname(path.dirname(filename))),
+      category==='slide'?'slide-v2':category,skin.id+' category folder');
     const bytes=fs.readFileSync(filename);
     const digest=crypto.createHash('sha256').update(bytes).digest('hex');
     assert.ok(!hashes.has(digest),'sprite art is unique across biome/category entries: '+skin.id);
     hashes.add(digest);
+    if(category==='slide'){
+      assert.ok(skin.backSrc&&skin.backKey,skin.id+' has a matched upper painting');
+      assert.ok(!files.has(skin.backSrc)&&!keys.has(skin.backKey),skin.id+' backing is unique');
+      files.add(skin.backSrc);keys.add(skin.backKey);
+      const backing=fs.readFileSync(path.resolve(root,skin.backSrc));
+      assert.equal(bytes.toString('ascii',0,4),'RIFF',skin.id+' front WebP');
+      assert.equal(bytes.toString('ascii',8,12),'WEBP',skin.id+' front image');
+      assert.equal(backing.toString('ascii',8,12),'WEBP',skin.id+' upper image');
+      assert.ok(bytes.length>1000&&backing.length>1000,skin.id+' both painted layers present');
+      continue;
+    }
     assert.deepEqual([...bytes.subarray(0,8)],[137,80,78,71,13,10,26,10],skin.id+' PNG signature');
     let pos=8,width=0,height=0,colorType=0,bitDepth=0,ended=false;
     const imageData=[];
@@ -83,8 +95,8 @@ for(const [category,count] of Object.entries(counts)){
   assert.deepEqual(perBiome,biomeCounts[category],category+' biome coverage');
 }
 
-assert.equal(files.size,93);
-assert.equal(keys.size,93);
+assert.equal(files.size,117);
+assert.equal(keys.size,117);
 assert.equal(ids.size,93);
 assert.equal(hashes.size,93);
-console.log('PASS v0.14.1: 93 unique biome-exclusive obstacle PNGs; catalog counts, paths, 3x footprints, ground anchors, alpha format, CRCs, and decoded pixel extents verified.');
+console.log('PASS v0.14.3: 93 biome-exclusive skins, 24 matched slide front/back paintings, and original PNG integrity verified.');
