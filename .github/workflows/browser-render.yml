@@ -21,7 +21,7 @@ jobs:
           npx playwright install chromium
       - name: Verify gameplay and obstacle textures in actual Chromium Phaser
         run: node tests/browser-visual-smoke.js
-      - name: Verify biome obstacle sprite loading and game-scale rendering
+      - name: Verify biome obstacle sprite loading and phone-scale rendering
         run: node tests/browser-obstacle-smoke.js
       - name: Save mobile-size render evidence
         if: always()

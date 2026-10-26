@@ -51,6 +51,7 @@ const server=http.createServer((req,res)=>{
 
     const exercise=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],skins=window.GRIM_OBSTACLE_SPRITES;
+      document.querySelector('#menu')?.classList.add('hidden');
       const biomeRange={forest:[0,900],foothills:[900,2300],tundra:[2300,5000],
         caves:[5000,6000],crystals:[6000,7000],ashlands:[7000,8000],lava:[8000,9999],boss:[9999,20000]};
       const obstacleType={jump:'rock',slide:'branch',cut:'bramble',fire:'fire',
