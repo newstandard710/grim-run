@@ -584,9 +584,17 @@ const server=http.createServer((req,res)=>{
           (view.sprite.displayTexture?.key==='terrain-material-'+id||
             (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey))));
     },biome,{timeout:45000});
+    if(meters>=5000){
+      await skeletalPage.waitForFunction(id=>{
+        const scene=window.grimRun?.scene?.scenes?.[0];
+        return scene?.biomeBackdropGroup==='underworld'&&scene.biomeBackdropReady&&
+          scene.biomeBackdrops?.[id]?.visible===true;
+      },biome,{timeout:45000});
+    }
     const grounded=await skeletalPage.evaluate(id=>{
       const scene=window.grimRun.scene.scenes[0];
       const visible=[...scene.terrainTextureViews.values()].filter(view=>view.sprite.visible);
+      const materialViews=visible.filter(view=>view.id===id);
       const sections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
       const surfaceViews=[...scene.terrainSurfaceViews.entries()].filter(([,view])=>view.sprite.visible);
       const walkable=sections.filter(section=>section.kind==='ground'||section.kind==='rubble'||
@@ -673,6 +681,8 @@ const server=http.createServer((req,res)=>{
         .sort((a,b)=>Math.abs(a.x+30-scene.width/2)-Math.abs(b.x+30-scene.width/2))[0]||null;
       return {material:visible.some(view=>view.sprite.displayTexture?.key==='terrain-material-'+id||
           (id==='tundra'&&view.compositeTextureKey&&scene.textures.exists(view.compositeTextureKey))),
+        materialViewsReachBelowViewport:materialViews.some(view=>
+          view.sprite.y+view.sprite.displayHeight>scene.cameraY+scene.height+80),
         ground:[0,70,160,310].map(dx=>scene.terrain.groundAt(scene.player.x+dx)),
         groundedSections:sections.filter(section=>section.kind!=='gap').length,gaps,gapTextureViews,
         tundraGroundMaterialViews,groundFace,platformMaterialViews,platformFace,
@@ -682,6 +692,10 @@ const server=http.createServer((req,res)=>{
         drawGroundP95Ms:+timings[Math.floor(timings.length*.95)].toFixed(3)};
     },biome);
     assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
+    if(biome==='crystals')assert.equal(grounded.materialViewsReachBelowViewport,true,
+      biome+' ground material bounds extend below the camera in world coordinates');
+    if(biome==='boss')assert.ok(grounded.platformMaterialViews>0,
+      'Boss Biome applies its dark-stone material to visible ledges');
     assert.deepEqual(grounded.ground,terrainBefore,biome+' material rendering leaves generated ground unchanged');
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
     assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
@@ -706,6 +720,27 @@ const server=http.createServer((req,res)=>{
     }
     const terrainCapture=await skeletalPage.screenshot({
       path:path.join(skeletalArtifactDir,'terrain-'+biome+'-phone-scale.png')});
+    if(biome==='crystals'||biome==='boss'){
+      const image=PNG.sync.read(terrainCapture);
+      const colorsIn=(probe)=>{
+        const colors=new Set();
+        for(let y=probe.y;y<probe.y+probe.height;y++)for(let x=probe.x;x<probe.x+probe.width;x++){
+          const i=(y*image.width+x)*4;
+          colors.add((image.data[i]<<16)|(image.data[i+1]<<8)|image.data[i+2]);
+        }
+        return colors.size;
+      };
+      const bandWidth=Math.min(170,Math.floor(image.width/4)),bandHeight=92,bandY=94;
+      const backgroundBands=[18,Math.floor((image.width-bandWidth)/2),image.width-bandWidth-18]
+        .map(x=>colorsIn({x,y:bandY,width:bandWidth,height:bandHeight}));
+      assert.ok(backgroundBands.every(count=>count>100),
+        biome+' backdrop remains visible across left, center, and right portions; sampled '+backgroundBands);
+      const paintedFace=grounded.groundFace||grounded.platformFace;
+      assert.ok(paintedFace,biome+' has a visible textured ground or ledge face below the runner');
+      assert.ok(colorsIn(paintedFace)>100,
+        biome+' painted ground texture reaches the rendered face below the surface');
+      console.log(biome+' backdrop pixel variety across screen thirds: '+backgroundBands.join('/'));
+    }
     if(biome==='tundra'){
       assert.ok(grounded.platformFace,'Tundra screenshot has an unobstructed ledge face to inspect');
       const image=PNG.sync.read(terrainCapture);
@@ -1005,7 +1040,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.12.2 renders all eight ground materials with aligned cached biome surfaces, keeps approved backgrounds and gameplay geometry, and preserves character scale, motion, and fallbacks.');
+  console.log('PASS actual Chromium: v0.12.3 renders all eight ground materials with aligned cached biome surfaces and world-space underworld bounds, keeps approved backgrounds and gameplay geometry, and preserves character scale, motion, and fallbacks.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

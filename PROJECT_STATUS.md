@@ -1,16 +1,22 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.12.2 — *Biome Surface & Performance Pass*.
+**Current production build:** v0.12.3 — *Natural Ground & Underworld Rendering Fixes*.
 
-This release makes the run surface easier to read and removes repeated terrain rendering work from each frame.
+This release restores Crystal and Boss terrain rendering at deep world heights and softens the transition between each biome's walkable surface and foreground.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.12.2 — *Biome Surface & Performance Pass*
+**Release:** v0.12.3 — *Natural Ground & Underworld Rendering Fixes*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** GitHub regression and Chromium rendering workflows passed. Gameplay checks include 300 seeded terrain cases, five full runs to the normal 9,999m finish, the seed 1 win state, and 72 safe God Mode teleports across eight seeds through 20,000m. Chromium checked all eight biomes at phone dimensions for cap alignment, gaps, ledges, and cache reuse. The live Pages build is v0.12.2; an Android device playtest is still pending. CI drawGround timing averaged 0.09–0.60ms across its eight synthetic biome renders; this does not replace phone FPS testing.
+**Verification:** GitHub Regression and actual Chromium workflows passed. Gameplay checks include 300 seeded terrain cases, five full runs to the normal 9,999m finish, the seed 1 win state, and 72 safe God Mode teleports across eight seeds through 20,000m. Chromium confirmed all eight biome materials, surface caps, gaps, and ledges; Crystal and Boss backdrops and material-covered faces passed their screen-pixel checks. Mean `drawGround()` time was 0.09–0.54ms in the eight synthetic biome scenes, with cached caps and masks reused. Pages deployment is performed on merge; Android device frame-rate playtesting remains pending.
+
+## v0.12.3 — Natural Ground & Underworld Rendering Fixes
+
+- Terrain texture and abyss bounds now extend from each section's actual world-space profile, preventing Crystal and Boss artwork from being clipped at underworld heights.
+- The running-surface cap keeps its upper edge on the generated ground contour while using a softened, irregular lower edge and small biome-specific marks.
+- Actual Chromium checks pass for underworld backdrop coverage, Crystal ground depth, Boss ledge material, painted ground faces, cap alignment, gaps, and cache reuse. Gameplay and terrain geometry stay unchanged.
 
 ## v0.12.2 — Biome Surface & Performance Pass
 
