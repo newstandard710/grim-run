@@ -1,4 +1,4 @@
-/* Biome-exclusive obstacle art catalog for v0.14.1. Purely visual metadata. */
+/* Biome-exclusive obstacle art catalog for v0.14.3. Purely visual metadata. */
 (function(scope){'use strict';scope.GRIM_OBSTACLE_SPRITES=Object.freeze([
   {
     "id": "forest_jump_root-knot",
@@ -44,8 +44,9 @@
     "name": "dead-bough-curtain",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.6238,
-    "src": "assets/obstacles/slide/forest/forest_slide_dead-bough-curtain.png",
+    "src": "assets/obstacles/slide-v2/forest/forest_dead-bough-curtain-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/forest/forest_dead-bough-curtain-back.webp",
+    "backKey": "obstacle-back-forest_dead-bough-curtain",
     "key": "obstacle-forest_slide_dead-bough-curtain"
   },
   {
@@ -56,8 +57,9 @@
     "name": "root-shelf",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.7524,
-    "src": "assets/obstacles/slide/forest/forest_slide_root-shelf.png",
+    "src": "assets/obstacles/slide-v2/forest/forest_root-shelf-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/forest/forest_root-shelf-back.webp",
+    "backKey": "obstacle-back-forest_root-shelf",
     "key": "obstacle-forest_slide_root-shelf"
   },
   {
@@ -68,8 +70,9 @@
     "name": "thorn-canopy",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.7714,
-    "src": "assets/obstacles/slide/forest/forest_slide_thorn-canopy.png",
+    "src": "assets/obstacles/slide-v2/forest/forest_thorn-canopy-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/forest/forest_thorn-canopy-back.webp",
+    "backKey": "obstacle-back-forest_thorn-canopy",
     "key": "obstacle-forest_slide_thorn-canopy"
   },
   {
@@ -150,8 +153,9 @@
     "name": "rock-lip",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.6476,
-    "src": "assets/obstacles/slide/foothills/foothills_slide_rock-lip.png",
+    "src": "assets/obstacles/slide-v2/foothills/foothills_rock-lip-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/foothills/foothills_rock-lip-back.webp",
+    "backKey": "obstacle-back-foothills_rock-lip",
     "key": "obstacle-foothills_slide_rock-lip"
   },
   {
@@ -162,8 +166,9 @@
     "name": "fallen-pine-overhang",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.8238,
-    "src": "assets/obstacles/slide/foothills/foothills_slide_fallen-pine-overhang.png",
+    "src": "assets/obstacles/slide-v2/foothills/foothills_fallen-pine-overhang-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/foothills/foothills_fallen-pine-overhang-back.webp",
+    "backKey": "obstacle-back-foothills_fallen-pine-overhang",
     "key": "obstacle-foothills_slide_fallen-pine-overhang"
   },
   {
@@ -174,8 +179,9 @@
     "name": "grass-root-ledge",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.8143,
-    "src": "assets/obstacles/slide/foothills/foothills_slide_grass-root-ledge.png",
+    "src": "assets/obstacles/slide-v2/foothills/foothills_grass-root-ledge-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/foothills/foothills_grass-root-ledge-back.webp",
+    "backKey": "obstacle-back-foothills_grass-root-ledge",
     "key": "obstacle-foothills_slide_grass-root-ledge"
   },
   {
@@ -258,8 +264,9 @@
     "name": "ice-lip",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.6095,
-    "src": "assets/obstacles/slide/tundra/tundra_slide_ice-lip.png",
+    "src": "assets/obstacles/slide-v2/tundra/tundra_ice-lip-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/tundra/tundra_ice-lip-back.webp",
+    "backKey": "obstacle-back-tundra_ice-lip",
     "key": "obstacle-tundra_slide_ice-lip"
   },
   {
@@ -270,8 +277,9 @@
     "name": "frozen-pine-limbs",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.9952,
-    "src": "assets/obstacles/slide/tundra/tundra_slide_frozen-pine-limbs.png",
+    "src": "assets/obstacles/slide-v2/tundra/tundra_frozen-pine-limbs-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/tundra/tundra_frozen-pine-limbs-back.webp",
+    "backKey": "obstacle-back-tundra_frozen-pine-limbs",
     "key": "obstacle-tundra_slide_frozen-pine-limbs"
   },
   {
@@ -282,8 +290,9 @@
     "name": "snow-shelf",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.6571,
-    "src": "assets/obstacles/slide/tundra/tundra_slide_snow-shelf.png",
+    "src": "assets/obstacles/slide-v2/tundra/tundra_snow-shelf-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/tundra/tundra_snow-shelf-back.webp",
+    "backKey": "obstacle-back-tundra_snow-shelf",
     "key": "obstacle-tundra_slide_snow-shelf"
   },
   {
@@ -366,8 +375,9 @@
     "name": "stalactite-curtain",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.6286,
-    "src": "assets/obstacles/slide/caves/caves_slide_stalactite-curtain.png",
+    "src": "assets/obstacles/slide-v2/caves/caves_stalactite-curtain-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/caves/caves_stalactite-curtain-back.webp",
+    "backKey": "obstacle-back-caves_stalactite-curtain",
     "key": "obstacle-caves_slide_stalactite-curtain"
   },
   {
@@ -378,8 +388,9 @@
     "name": "fossil-rib-arch",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.9571,
-    "src": "assets/obstacles/slide/caves/caves_slide_fossil-rib-arch.png",
+    "src": "assets/obstacles/slide-v2/caves/caves_fossil-rib-arch-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/caves/caves_fossil-rib-arch-back.webp",
+    "backKey": "obstacle-back-caves_fossil-rib-arch",
     "key": "obstacle-caves_slide_fossil-rib-arch"
   },
   {
@@ -390,8 +401,9 @@
     "name": "hanging-roots",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.719,
-    "src": "assets/obstacles/slide/caves/caves_slide_hanging-roots.png",
+    "src": "assets/obstacles/slide-v2/caves/caves_hanging-roots-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/caves/caves_hanging-roots-back.webp",
+    "backKey": "obstacle-back-caves_hanging-roots",
     "key": "obstacle-caves_slide_hanging-roots"
   },
   {
@@ -474,8 +486,9 @@
     "name": "blue-crystal-ceiling",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.619,
-    "src": "assets/obstacles/slide/crystals/crystals_slide_blue-crystal-ceiling.png",
+    "src": "assets/obstacles/slide-v2/crystals/crystals_blue-crystal-ceiling-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/crystals/crystals_blue-crystal-ceiling-back.webp",
+    "backKey": "obstacle-back-crystals_blue-crystal-ceiling",
     "key": "obstacle-crystals_slide_blue-crystal-ceiling"
   },
   {
@@ -486,8 +499,9 @@
     "name": "violet-geode-shelf",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.7333,
-    "src": "assets/obstacles/slide/crystals/crystals_slide_violet-geode-shelf.png",
+    "src": "assets/obstacles/slide-v2/crystals/crystals_violet-geode-shelf-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/crystals/crystals_violet-geode-shelf-back.webp",
+    "backKey": "obstacle-back-crystals_violet-geode-shelf",
     "key": "obstacle-crystals_slide_violet-geode-shelf"
   },
   {
@@ -498,8 +512,9 @@
     "name": "prism-canopy",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.6238,
-    "src": "assets/obstacles/slide/crystals/crystals_slide_prism-canopy.png",
+    "src": "assets/obstacles/slide-v2/crystals/crystals_prism-canopy-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/crystals/crystals_prism-canopy-back.webp",
+    "backKey": "obstacle-back-crystals_prism-canopy",
     "key": "obstacle-crystals_slide_prism-canopy"
   },
   {
@@ -582,8 +597,9 @@
     "name": "charred-bough",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.7571,
-    "src": "assets/obstacles/slide/ashlands/ashlands_slide_charred-bough.png",
+    "src": "assets/obstacles/slide-v2/ashlands/ashlands_charred-bough-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/ashlands/ashlands_charred-bough-back.webp",
+    "backKey": "obstacle-back-ashlands_charred-bough",
     "key": "obstacle-ashlands_slide_charred-bough"
   },
   {
@@ -594,8 +610,9 @@
     "name": "basalt-shelf",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.8524,
-    "src": "assets/obstacles/slide/ashlands/ashlands_slide_basalt-shelf.png",
+    "src": "assets/obstacles/slide-v2/ashlands/ashlands_basalt-shelf-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/ashlands/ashlands_basalt-shelf-back.webp",
+    "backKey": "obstacle-back-ashlands_basalt-shelf",
     "key": "obstacle-ashlands_slide_basalt-shelf"
   },
   {
@@ -606,8 +623,9 @@
     "name": "blackroot-curtain",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.919,
-    "src": "assets/obstacles/slide/ashlands/ashlands_slide_blackroot-curtain.png",
+    "src": "assets/obstacles/slide-v2/ashlands/ashlands_blackroot-curtain-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/ashlands/ashlands_blackroot-curtain-back.webp",
+    "backKey": "obstacle-back-ashlands_blackroot-curtain",
     "key": "obstacle-ashlands_slide_blackroot-curtain"
   },
   {
@@ -690,8 +708,9 @@
     "name": "basalt-lip",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.8238,
-    "src": "assets/obstacles/slide/lava/lava_slide_basalt-lip.png",
+    "src": "assets/obstacles/slide-v2/lava/lava_basalt-lip-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/lava/lava_basalt-lip-back.webp",
+    "backKey": "obstacle-back-lava_basalt-lip",
     "key": "obstacle-lava_slide_basalt-lip"
   },
   {
@@ -702,8 +721,9 @@
     "name": "slag-teeth",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.5952,
-    "src": "assets/obstacles/slide/lava/lava_slide_slag-teeth.png",
+    "src": "assets/obstacles/slide-v2/lava/lava_slag-teeth-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/lava/lava_slag-teeth-back.webp",
+    "backKey": "obstacle-back-lava_slag-teeth",
     "key": "obstacle-lava_slide_slag-teeth"
   },
   {
@@ -714,8 +734,9 @@
     "name": "lava-glass-shelf",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.7571,
-    "src": "assets/obstacles/slide/lava/lava_slide_lava-glass-shelf.png",
+    "src": "assets/obstacles/slide-v2/lava/lava_lava-glass-shelf-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/lava/lava_lava-glass-shelf-back.webp",
+    "backKey": "obstacle-back-lava_lava-glass-shelf",
     "key": "obstacle-lava_slide_lava-glass-shelf"
   },
   {
@@ -798,8 +819,9 @@
     "name": "chain-stone-lintel",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.7048,
-    "src": "assets/obstacles/slide/boss/boss_slide_chain-stone-lintel.png",
+    "src": "assets/obstacles/slide-v2/boss/boss_chain-stone-lintel-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/boss/boss_chain-stone-lintel-back.webp",
+    "backKey": "obstacle-back-boss_chain-stone-lintel",
     "key": "obstacle-boss_slide_chain-stone-lintel"
   },
   {
@@ -810,8 +832,9 @@
     "name": "bone-arch",
     "gameW": 74,
     "gameH": 70,
-    "groundAnchorY": 0.6333,
-    "src": "assets/obstacles/slide/boss/boss_slide_bone-arch.png",
+    "src": "assets/obstacles/slide-v2/boss/boss_bone-arch-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/boss/boss_bone-arch-back.webp",
+    "backKey": "obstacle-back-boss_bone-arch",
     "key": "obstacle-boss_slide_bone-arch"
   },
   {
@@ -822,7 +845,9 @@
     "name": "ruined-portcullis",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/slide/boss/boss_slide_ruined-portcullis.png",
+    "src": "assets/obstacles/slide-v2/boss/boss_ruined-portcullis-front.webp",
+    "backSrc": "assets/obstacles/slide-v2/boss/boss_ruined-portcullis-back.webp",
+    "backKey": "obstacle-back-boss_ruined-portcullis",
     "key": "obstacle-boss_slide_ruined-portcullis"
   },
   {
@@ -869,6 +894,7 @@
     "name": "ghostflame",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.935,
     "src": "assets/obstacles/fire/caves/caves_fire_ghostflame.png",
     "key": "obstacle-caves_fire_ghostflame"
   },
@@ -880,6 +906,7 @@
     "name": "ember-vent",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.9187,
     "src": "assets/obstacles/fire/caves/caves_fire_ember-vent.png",
     "key": "obstacle-caves_fire_ember-vent"
   },
@@ -891,6 +918,7 @@
     "name": "fungal-fire",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.8943,
     "src": "assets/obstacles/fire/caves/caves_fire_fungal-fire.png",
     "key": "obstacle-caves_fire_fungal-fire"
   },
@@ -902,6 +930,7 @@
     "name": "cyan-geode-fire",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.8455,
     "src": "assets/obstacles/fire/crystals/crystals_fire_cyan-geode-fire.png",
     "key": "obstacle-crystals_fire_cyan-geode-fire"
   },
@@ -913,6 +942,7 @@
     "name": "violet-geode-fire",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.8455,
     "src": "assets/obstacles/fire/crystals/crystals_fire_violet-geode-fire.png",
     "key": "obstacle-crystals_fire_violet-geode-fire"
   },
@@ -924,6 +954,7 @@
     "name": "prismatic-vent",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.7886,
     "src": "assets/obstacles/fire/crystals/crystals_fire_prismatic-vent.png",
     "key": "obstacle-crystals_fire_prismatic-vent"
   },
@@ -935,6 +966,7 @@
     "name": "smolder-bed",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.7724,
     "src": "assets/obstacles/fire/ashlands/ashlands_fire_smolder-bed.png",
     "key": "obstacle-ashlands_fire_smolder-bed"
   },
@@ -946,6 +978,7 @@
     "name": "ash-crack-fire",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.9187,
     "src": "assets/obstacles/fire/ashlands/ashlands_fire_ash-crack-fire.png",
     "key": "obstacle-ashlands_fire_ash-crack-fire"
   },
@@ -957,6 +990,7 @@
     "name": "charred-flame-patch",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.8618,
     "src": "assets/obstacles/fire/ashlands/ashlands_fire_charred-flame-patch.png",
     "key": "obstacle-ashlands_fire_charred-flame-patch"
   },
@@ -968,6 +1002,7 @@
     "name": "molten-fissure",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.7967,
     "src": "assets/obstacles/fire/lava/lava_fire_molten-fissure.png",
     "key": "obstacle-lava_fire_molten-fissure"
   },
@@ -979,6 +1014,7 @@
     "name": "lava-flare",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.8537,
     "src": "assets/obstacles/fire/lava/lava_fire_lava-flare.png",
     "key": "obstacle-lava_fire_lava-flare"
   },
@@ -990,6 +1026,7 @@
     "name": "fire-vent",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.9837,
     "src": "assets/obstacles/fire/lava/lava_fire_fire-vent.png",
     "key": "obstacle-lava_fire_fire-vent"
   },
@@ -1001,6 +1038,7 @@
     "name": "rune-fire",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.8455,
     "src": "assets/obstacles/fire/boss/boss_fire_rune-fire.png",
     "key": "obstacle-boss_fire_rune-fire"
   },
@@ -1012,6 +1050,7 @@
     "name": "wraithfire-patch",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.9024,
     "src": "assets/obstacles/fire/boss/boss_fire_wraithfire-patch.png",
     "key": "obstacle-boss_fire_wraithfire-patch"
   },
@@ -1023,6 +1062,7 @@
     "name": "obsidian-embers",
     "gameW": 58,
     "gameH": 41,
+    "groundAnchorY": 0.8455,
     "src": "assets/obstacles/fire/boss/boss_fire_obsidian-embers.png",
     "key": "obstacle-boss_fire_obsidian-embers"
   },

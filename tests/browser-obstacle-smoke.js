@@ -33,16 +33,19 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:45000});
     const loaded=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],skins=window.GRIM_OBSTACLE_SPRITES||[];
-      const missing=skins.filter(skin=>!s.textures.exists(skin.key)).map(skin=>skin.id);
+      const missing=skins.filter(skin=>!s.textures.exists(skin.key)||
+        (skin.backKey&&!s.textures.exists(skin.backKey))).map(skin=>skin.id);
       const wrongSize=skins.filter(skin=>{
         if(!s.textures.exists(skin.key))return false;
         const source=s.textures.get(skin.key).getSourceImage();
-        return source.width!==skin.gameW*3||source.height!==skin.gameH*3;
+        return skin.category==='slide'?
+          source.width!==512||source.height<350:
+          source.width!==skin.gameW*3||source.height!==skin.gameH*3;
       }).map(skin=>skin.id);
       const alphaCanvas=document.createElement('canvas');
       const alphaContext=alphaCanvas.getContext('2d',{willReadFrequently:true});
       const baselineErrors=[];
-      for(const skin of skins.filter(item=>['jump','slide','cut'].includes(item.category))){
+      for(const skin of skins.filter(item=>['jump','cut','fire'].includes(item.category))){
         const source=s.textures.get(skin.key).getSourceImage();
         alphaCanvas.width=source.width;alphaCanvas.height=source.height;
         alphaContext.drawImage(source,0,0);
@@ -62,10 +65,10 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.2 · OBSTACLE GROUNDING','visible version badge matches the obstacle grounding release');
+    assert.equal(loaded.badge,'v0.14.3 · SLIDE ART','visible version badge matches the slide art release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
-    assert.equal(loaded.images,93,'no obstacle texture key is missing or duplicated');
+    assert.equal(loaded.images,117,'all 24 matched slide upper paintings load');
     assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
     const exercise=await page.evaluate(()=>{
@@ -94,8 +97,7 @@ const server=http.createServer((req,res)=>{
         if(type==='snappingBramble')s.snappingBox=()=>({x:o.x,y:o.y,width:o.width,height:o.height});
         const scale=s.obstacleSpriteScaleFor(skin,type);
         const placement=type==='branch'?{x:skin.gameW/2,y:180,
-          width:skin.gameW*scale.x,height:skin.gameH*scale.y,
-          originY:skin.groundAnchorY??1}:null;
+          width:skin.gameW*scale.x,height:Math.max(s.height*1.22,475),originY:1}:null;
         const ok=s.drawObstacleSprite(o,placement),image=s.obstacleSpriteObjects.get(o);
         const expected=placement?{width:placement.width,height:placement.height}:
           type==='tuckGate'?{width:o.width,height:skin.gameH}:
@@ -107,7 +109,7 @@ const server=http.createServer((req,res)=>{
           renderMisses++;renderFailures.push({id:skin.id,expected,actual:image&&
             {width:image.displayWidth,height:image.displayHeight}});
         }
-        if((skin.category==='jump'||(skin.category==='cut'&&type==='bramble'))&&
+        if((skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&type==='bramble'))&&
           (!image||image.originY!==(skin.groundAnchorY??1)||
             image.y!==o.y+o.height+s.obstacleVisualInset(o))){
           renderMisses++;renderFailures.push({id:skin.id,anchor:{originY:image?.originY,y:image?.y},
@@ -127,18 +129,22 @@ const server=http.createServer((req,res)=>{
         y:-1700,width:74,height:1924,variant:0,destroyed:false};
       s.drawObstacle(branch);
       const branchImage=s.obstacleSpriteObjects.get(branch);
+      const branchBack=s.obstacleBackObjects.get(branch);
       const branchSkin=branchImage&&skins.find(skin=>skin.key===branchImage.texture.key);
       if(!branchImage||Math.abs(branchImage.displayWidth-74*3.25)>.001||
-        Math.abs(branchImage.displayHeight-70*3.25)>.001||branchImage.y!==224||
-        branchImage.originY!==(branchSkin?.groundAnchorY??1)){
+        Math.abs(branchImage.displayHeight-Math.max(s.height*1.22,475))>.001||
+        branchImage.y!==224||branchImage.originY!==1){
         renderMisses++;renderFailures.push({id:'actual-slide-render',actual:branchImage&&
           {width:branchImage.displayWidth,height:branchImage.displayHeight,y:branchImage.y,
             originY:branchImage.originY},skin:branchSkin?.id});
       }
-      if(!s.slideSupport?.commandBuffer?.length){
-        renderMisses++;renderFailures.push({id:'slide-support-missing'});
+      if(!branchBack||branchBack.y!==224||branchBack.depth!==.55||
+        branchBack.displayHeight!==branchImage?.displayHeight||
+        branchImage.depth>=s.actor.depth){
+        renderMisses++;renderFailures.push({id:'painted-slide-backing-missing'});
       }
       branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
+      branchBack?.destroy();s.obstacleBackObjects.delete(branch);
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       const board=[
         ['forest_jump_root-knot',106,328,'rock'],
@@ -147,15 +153,14 @@ const server=http.createServer((req,res)=>{
         ['forest_cut_corn-tangle',700,328,'bramble'],
         ['lava_fire_lava-flare',855,328,'fire']
       ];
-      const background=s.add.graphics().setScrollFactor(0).setDepth(39);
-      background.fillStyle(0x111722,1).fillRect(0,0,950,430);
-      background.fillStyle(0x273339,1).fillRect(0,328,950,102);
-      background.lineStyle(4,0x617b70,.85).lineBetween(0,328,950,328);
-      const supportPreview=s.add.graphics().setScrollFactor(0).setDepth(40);
-      const actualSupport=s.slideSupport;s.slideSupport=supportPreview;
-      s.drawSlideSupport({variant:0},skins.find(item=>item.id==='caves_slide_stalactite-curtain'),
-        322,252,74*3.25);
-      s.slideSupport=actualSupport;
+      s.add.graphics().setScrollFactor(0).setDepth(37)
+        .fillStyle(0x111722,1).fillRect(0,0,950,430);
+      const ground=s.add.graphics().setScrollFactor(0).setDepth(39);
+      ground.fillStyle(0x273339,1).fillRect(0,328,950,102);
+      ground.lineStyle(4,0x617b70,.85).lineBetween(0,328,950,328);
+      const caveSkin=skins.find(item=>item.id==='caves_slide_stalactite-curtain');
+      s.add.image(322,252,caveSkin.backKey).setOrigin(.5,1)
+        .setDisplaySize(74*3.25,Math.max(s.height*1.22,475)).setScrollFactor(0).setDepth(38);
       s.add.text(475,18,'OBSTACLE ART — PHONE-SCALE PREVIEW',{
         fontFamily:'system-ui,Arial',fontSize:'16px',fontStyle:'bold',color:'#e8f5f4'
       }).setOrigin(.5).setScrollFactor(0).setDepth(42);
@@ -163,10 +168,11 @@ const server=http.createServer((req,res)=>{
         const skin=skins.find(item=>item.id===id);
         const scale=s.obstacleSpriteScaleFor(skin,type);
         const baseHeight=type==='bramble'?220:skin.gameH;
-        const groundAnchored=['jump','slide','cut'].includes(skin.category);
+        const groundAnchored=['jump','slide','cut','fire'].includes(skin.category);
         const inset=s.obstacleVisualInset({type});
-        const image=s.add.image(x,y+inset,skin.key).setOrigin(.5,groundAnchored?(skin.groundAnchorY??1):.5)
-          .setScrollFactor(0).setDepth(41).setDisplaySize(skin.gameW*scale.x,baseHeight*scale.y);
+        const image=s.add.image(x,y+inset,skin.key).setOrigin(.5,type==='branch'?1:
+          groundAnchored?(skin.groundAnchorY??1):.5).setScrollFactor(0).setDepth(41)
+          .setDisplaySize(skin.gameW*scale.x,type==='branch'?Math.max(s.height*1.22,475):baseHeight*scale.y);
         s.add.text(x,409,skin.category.toUpperCase(),{
           fontFamily:'system-ui,Arial',fontSize:'10px',fontStyle:'bold',color:'#a9c4c7'
         }).setOrigin(.5).setScrollFactor(0).setDepth(42);

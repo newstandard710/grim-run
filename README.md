@@ -2,11 +2,13 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.2 — Obstacle Grounding Pass**
+**Current build: v0.14.3 — Slide Sprite Rework**
 
-Ground obstacle art now overlaps the terrain edge slightly. Slide obstacle art has a biome-colored support wall or canopy behind it, connecting the overhead silhouette to the upper scene. The Reaper stays in front. The prior collision geometry and encounter placement remain the same.
+The 24 slide variants now use new painted overhead structures. Their upper and lower sections are two transparent layers from the same composition: the upper art draws in front of the abyss and background but behind physical ground, while the lower hazard draws above ground and below the Reaper. The generic support shapes are removed. Fire art displays at 2× and stays grounded. Gameplay collision, placement, cadence, and mechanics remain unchanged.
 
-- Enlarges the jump sprites to 2.5×, cuttable trees to 2×, corn-like cut art to 1.3× taller, and slide-under sprites to 3.25×. Slide sprites now replace the old placeholder pillar and align their lowest visible point to the existing clearance line.
+Ground jump and cut obstacle art keeps the terrain overlap approved in v0.14.2.
+
+- Jump sprites display at 2.5×, cuttable trees at 2×, and corn-like cut art 1.3× taller. Slide art retains its wide 3.25× footprint and now extends into the upper visible scene from the unchanged clearance line.
 - Keeps the biome-exclusive obstacle art set: three jump, slide, and cut visuals per biome, three fire visuals in each fire biome, plus the air-tuck, air-bramble, and snapping-bramble sprites.
 - Obstacle selection, hitboxes, types, placements, spawn timing/rates, route progression, and gameplay RNG are unchanged. Optional sprite-load failures use a short ledge fallback for slide obstacles.
 - [Obstacle art catalog](assets/obstacles/README.md) lists all skins by biome. The matching runtime metadata is in `assets/visuals/obstacle-catalog.js`.
