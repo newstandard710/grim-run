@@ -56,7 +56,7 @@ const server=http.createServer((req,res)=>{
           front:{key:front?.texture.key,w:front?.displayWidth,h:front?.displayHeight,
             y:front?.y,originY:front?.originY,depth:front?.depth},
           support:{key:support?.texture.key,w:support?.displayWidth,h:support?.displayHeight,
-            depth:support?.depth,alpha:support?.alpha},
+            y:support?.y,originY:support?.originY,depth:support?.depth,alpha:support?.alpha},
           reaperDepth:s.visuals?.reaper?.depth,groundDepth:s.terrainBase.depth};
         s.obstacles=saved;
         return info;
@@ -71,6 +71,8 @@ const server=http.createServer((req,res)=>{
         assert(view.front.w>=176&&view.front.h===400,'air-tuck gate art is larger');
         assert.equal(view.front.y,view.collision.y+view.collision.h,
           'illustrated lower edge aligns with the unchanged ducking line');
+        assert.equal(view.support.y,view.collision.y+view.collision.h+167-250,
+          'painted ceiling chains descend visibly into the upper gate');
       }else assert(view.front.w===148&&view.front.h===218,'air attack art is larger');
       await page.waitForTimeout(100);
       await page.locator('#game canvas').screenshot({path:path.join(dir,

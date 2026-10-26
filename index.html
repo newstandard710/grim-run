@@ -4580,9 +4580,12 @@ window.GRIM_CONFIG = Object.freeze({
           .setDisplaySize(415,335).setTint(0x89929b).setAlpha(.79);
       }else{
         // Recessed chain mount disappears beyond the screen ceiling; its
-        // lower links meet the upper part of the physical gate.
-        image.setOrigin(.5,1).setPosition(o.x+o.width/2,base-245)
-          .setDisplaySize(245,480).setTint(0xa6abb4).setAlpha(.86);
+        // painted lower links meet the upper part of the physical gate.
+        // The two source images have different transparent lower margins.
+        const ash=skin.biome==='ashlands';
+        image.setOrigin(.5,ash?586/720:339/720)
+          .setPosition(o.x+o.width/2,base-250)
+          .setDisplaySize(190,ash?170:230).setTint(0xa6abb4).setAlpha(.86);
       }
       image.setVisible(true);
     }
