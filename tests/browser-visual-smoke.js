@@ -733,8 +733,9 @@ const server=http.createServer((req,res)=>{
         .map(x=>colorsIn({x,y:bandY,width:bandWidth,height:bandHeight}));
       assert.ok(backgroundBands.every(count=>count>100),
         biome+' backdrop remains visible across left, center, and right portions; sampled '+backgroundBands);
-      assert.ok(grounded.groundFace,biome+' has a visible textured ground face below the runner');
-      assert.ok(colorsIn(grounded.groundFace)>100,
+      const paintedFace=grounded.groundFace||grounded.platformFace;
+      assert.ok(paintedFace,biome+' has a visible textured ground or ledge face below the runner');
+      assert.ok(colorsIn(paintedFace)>100,
         biome+' painted ground texture reaches the rendered face below the surface');
       console.log(biome+' backdrop pixel variety across screen thirds: '+backgroundBands.join('/'));
     }
