@@ -3477,7 +3477,7 @@ window.GRIM_CONFIG = Object.freeze({
       const y1=Number.isFinite(section.y1)?section.y1:section.y;
       if(!Number.isFinite(y0)||!Number.isFinite(y1)||to<=from)return null;
       const key=[section.kind,from,to].join(':');
-      const capDepth=section.kind==='soul-platform'?9:11;
+      const capDepth=section.kind==='soul-platform'?11:14;
       const geometrySignature=[y0.toFixed(2),y1.toFixed(2),edge,sheen,detail,biome,capDepth].join(':');
       let view=this.terrainSurfaceViews.get(key);
       if(view?.geometrySignature===geometrySignature){
@@ -3525,8 +3525,19 @@ window.GRIM_CONFIG = Object.freeze({
       context.clip();
       // The surface tint sits inside the real contact contour and lets the
       // painted biome material show through instead of forming a flat stripe.
-      context.fillStyle=rgba(edge,.46);
-      context.fillRect(0,0,width,height);
+      // Blend the surface into the material beneath it instead of ending in
+      // another hard stripe. Short profile-relative gradients preserve the
+      // look on slopes as well as on flat ground.
+      const gradientStep=7;
+      for(let x=0;x<width;x+=gradientStep){
+        const y=surfaceY(x),fade=context.createLinearGradient(x,y,x,y+capDepth+3);
+        fade.addColorStop(0,rgba(edge,.58));
+        fade.addColorStop(.22,rgba(edge,.48));
+        fade.addColorStop(.70,rgba(edge,.20));
+        fade.addColorStop(1,rgba(edge,.02));
+        context.fillStyle=fade;
+        context.fillRect(x,y,gradientStep,capDepth+3);
+      }
 
       const seamTop=contour(3.2,1.5,2),seamBottom=contour(capDepth*.78,3.4,3);
       context.beginPath();
@@ -3534,7 +3545,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const point of seamTop.slice(1))context.lineTo(point.x,point.y);
       for(const point of seamBottom.slice().reverse())context.lineTo(point.x,point.y);
       context.closePath();
-      context.fillStyle=rgba(detail,.22);
+      context.fillStyle=rgba(detail,.14);
       context.fill();
 
       // Broken marks keep the contact edge readable without drawing a
@@ -3589,7 +3600,7 @@ window.GRIM_CONFIG = Object.freeze({
       const y0=Number.isFinite(section.y0)?section.y0:section.y;
       const y1=Number.isFinite(section.y1)?section.y1:section.y;
       if(!Number.isFinite(y0)||!Number.isFinite(y1)||to<=from)return;
-      const lower=11,steps=Math.max(1,Math.ceil((to-from)/36));
+      const lower=14,steps=Math.max(1,Math.ceil((to-from)/36));
       for(let i=0;i<steps;i++){
         const x0=from+(to-from)*i/steps,x1=from+(to-from)*(i+1)/steps;
         const yAt=x=>y0+(y1-y0)*(x-from)/(to-from);
@@ -3628,6 +3639,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.removeTerrainSurfaceView(key,view);
       this.terrainSurfaceViews.clear();
     }
+
     tundraTerrainTextureView(section,key,textureKey,depth){
       let view=this.terrainTextureViews.get(key);
       if(view)return view;
