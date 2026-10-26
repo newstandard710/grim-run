@@ -890,6 +890,9 @@ const server=http.createServer((req,res)=>{
         key.startsWith(targetKeyPrefix)&&item.sprite.visible&&
         item.sprite.texture.key===expectedTexture)?.[1];
       const image=view?.sprite;
+      const gap={start:actualStart,end:actualEnd,y0,y1};
+      const mask=scene.abyssBackdropPolygon(gap,shape,view?.bleedPx||36,
+        view?.artTopInsetPx||34);
       const topLeft=shape.left[0],leftLip=shape.left[1],leftReturn=shape.left[2];
       const topRight=shape.right.at(-1),rightLip=shape.right.at(-2),rightReturn=shape.right.at(-3);
       const topWidth=topRight.x-topLeft.x;
