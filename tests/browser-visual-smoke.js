@@ -884,7 +884,7 @@ const server=http.createServer((req,res)=>{
         item.sprite.texture.key===expectedTexture)?.[1];
       const image=view?.sprite;
       const topLeft=shape.left[0],leftLip=shape.left[1],leftReturn=shape.left[2];
-      const topRight=shape.right.at(-1),rightLip=shape.right.at(-3),rightReturn=shape.right.at(-2);
+      const topRight=shape.right.at(-1),rightLip=shape.right.at(-2),rightReturn=shape.right.at(-3);
       const topWidth=topRight.x-topLeft.x;
       const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
       const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
