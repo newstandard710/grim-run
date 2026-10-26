@@ -113,8 +113,7 @@
         g.fillStyle(0x120d10,.40);g.fillEllipse(x+25,y+10+v*3,18+v*12,4+v*2);
         g.lineStyle(1.4,0xff7448,.15);g.lineBetween(x+48,y+15,x+56,y+21);
       }else if(meters<9999){
-        g.lineStyle(2.2,0xff7136,.44);g.lineBetween(x+13,y+16,x+20+v*7,y+25);
-        g.lineBetween(x+20+v*7,y+25,x+28,y+18);
+        // Painted lava seams are rendered inside the canyon opening, not as detached surface marks.
       }else{
         g.lineStyle(1.3,0x9c766c,.29);g.lineBetween(x+7,y+13,x+21,y+12);
         g.lineBetween(x+21,y+12,x+21,y+26);

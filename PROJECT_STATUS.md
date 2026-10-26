@@ -1,16 +1,24 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.12.3 — *Natural Ground & Underworld Rendering Fixes*.
+**Current production build:** v0.13.0 — *Painted Canyon & Lava Chasms*.
 
-This release restores Crystal and Boss terrain rendering at deep world heights and softens the transition between each biome's walkable surface and foreground.
+This release replaces the flat abyss fills with painted, narrowing canyon and lava openings, and extends generated ledge faces below the camera while keeping the existing run surface and collision geometry.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.12.3 — *Natural Ground & Underworld Rendering Fixes*
+**Release:** v0.13.0 — *Painted Canyon & Lava Chasms*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** GitHub Regression and actual Chromium workflows passed. Gameplay checks include 300 seeded terrain cases, five full runs to the normal 9,999m finish, the seed 1 win state, and 72 safe God Mode teleports across eight seeds through 20,000m. Chromium confirmed all eight biome materials, surface caps, gaps, and ledges; Crystal and Boss backdrops and material-covered faces passed their screen-pixel checks. Mean `drawGround()` time was 0.09–0.54ms in the eight synthetic biome scenes, with cached caps and masks reused. Pages deployment is performed on merge; Android device frame-rate playtesting remains pending.
+**Verification:** Local gameplay regression passes, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. GitHub actual-Chromium verification and Pages deployment for this release are pending; Android device frame-rate and play-feel review will follow deployment.
+
+## v0.13.0 — Painted Canyon & Lava Chasms
+
+- Added original canyon-wall and lava-seamed basalt WebP materials to the game loader.
+- Seeded gap geometry forms a jagged mouth and converges below the camera. Its art is clipped by cached masks tied to world coordinates; the visible bottom stays beyond the viewport.
+- Terrain platforms and Soul-step ledges now render deeper, irregular faces so their undersides continue out of view. Their top contours, generated gap widths, collisions, player fall rules, and progression are unchanged.
+- Removed the former sequence-wide abyss rectangles, the horizontal lava rectangle and edge, and procedural detached lava cracks.
+- Added Chromium checks for Surface, Lava, and Boss gap art, phone-scale texture pixels, narrowing profiles, and ledge depth. Performance remains measured alongside the existing material-mask cache checks.
 
 ## v0.12.3 — Natural Ground & Underworld Rendering Fixes
 
