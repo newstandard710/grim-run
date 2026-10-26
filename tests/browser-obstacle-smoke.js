@@ -39,15 +39,34 @@ const server=http.createServer((req,res)=>{
         const source=s.textures.get(skin.key).getSourceImage();
         return source.width!==skin.gameW*3||source.height!==skin.gameH*3;
       }).map(skin=>skin.id);
+      const alphaCanvas=document.createElement('canvas');
+      const alphaContext=alphaCanvas.getContext('2d',{willReadFrequently:true});
+      const baselineErrors=[];
+      for(const skin of skins.filter(item=>['jump','slide','cut'].includes(item.category))){
+        const source=s.textures.get(skin.key).getSourceImage();
+        alphaCanvas.width=source.width;alphaCanvas.height=source.height;
+        alphaContext.drawImage(source,0,0);
+        const pixels=alphaContext.getImageData(0,0,source.width,source.height).data;
+        let bottom=source.height;
+        outer:for(let y=source.height-1;y>=0;y--){
+          for(let x=0;x<source.width;x++)if(pixels[(y*source.width+x)*4+3]>32){
+            bottom=y+1;break outer;
+          }
+        }
+        const actual=skin.groundAnchorY??1,expected=bottom/source.height;
+        if(Math.abs(actual-expected)>.0006)baselineErrors.push({id:skin.id,actual,expected});
+      }
       return {count:skins.length,missing,wrongSize,
         badge:document.querySelector('.mini')?.textContent.trim(),
-        images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length};
+        images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length,
+        baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
     assert.equal(loaded.badge,'v0.14.1 · OBSTACLE SCALE','visible version badge matches the obstacle scale release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,93,'no obstacle texture key is missing or duplicated');
+    assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
     const exercise=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],skins=window.GRIM_OBSTACLE_SPRITES;
@@ -150,7 +169,7 @@ const server=http.createServer((req,res)=>{
     fs.mkdirSync(resultDir,{recursive:true});
     await page.locator('#game canvas').screenshot({path:path.join(resultDir,'obstacle-sprites-phone-scale.png')});
     assert.deepEqual(errors,[],'obstacle loading and rendering produce no browser exceptions');
-    console.log('PASS actual Chromium: all 93 biome-exclusive obstacle sprites load, select deterministically, and render at game scale.');
+    console.log('PASS actual Chromium: all 93 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');
   }finally{
     await browser.close();
     await new Promise(resolve=>server.close(resolve));
