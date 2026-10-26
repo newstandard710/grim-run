@@ -1,16 +1,24 @@
 # Grim Run — Project Status and Roadmap
 
-**Current production build:** v0.13.2 — *Gap-Fitted Abyss Art*.
+**Current production build:** v0.13.3 — *Biome Cliff Edges*.
 
-This release fixes the gap-to-art scale that hid the painted canyon and lava walls. Portrait scenes now fit each generated opening, with their near lips aligned to real terrain. The abyss remains background art behind the unchanged terrain and collision geometry.
+This release fills the side gaps around the painted abyss scenes, then adds jagged, biome-matched cliff faces with a small overhang. The abyss art extends behind the ground; the real terrain covers its overlap. The walkable surface and collision geometry are unchanged.
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.13.1 — *Receding Canyon Depths*
+**Release:** v0.13.3 — *Biome Cliff Edges*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local regression suites pass, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. GitHub actual-Chromium checks run on the release branch before deployment. Android device frame-rate and play-feel review remains for playtesting.
+**Verification:** Eight local regression suites pass, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. Actual-Chromium checks cover all eight biome gaps, lip coverage, overlap, and per-biome cliff materials. Android device appearance and play-feel review remains for playtesting.
+
+## v0.13.3 — Biome Cliff Edges
+
+- Widened the abyss artwork mask beyond both real terrain edges. It covers the full opening plus a 24px minimum underlap, and the terrain draws above it so the margin stays hidden.
+- Added a cached foreground cliff-face layer with irregular edges and a 13px visual lip. It overlaps the abyss image and the ground, keeping the junction covered as the wall narrows.
+- Added biome-specific cliff colors and details for Forest, Foothills, Tundra, Caves, Crystals, Ashlands, Lava, and Boss. Materials are drawn once per visible gap and reused while the camera moves.
+- Terrain generation, the walkable top, collisions, controls, hazards, and progression remain unchanged.
+- Local regression checks pass. Actual Chromium and GitHub Pages deployment checks gate the release; Android device play-feel remains for the user playtest.
 
 ## v0.13.2 — Gap-Fitted Abyss Art
 
