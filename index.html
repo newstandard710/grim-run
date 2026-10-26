@@ -4060,10 +4060,13 @@ window.GRIM_CONFIG = Object.freeze({
       }
       texture.refresh();
       const x=section.start-bleed;
-      const sprite=this.add.image(x,top,textureKey).setOrigin(0,0).setDepth(1.35).setVisible(true);
+      // Keep the underlap behind the real ground silhouette, but above the
+      // painted abyss plate so only its exposed lip and cliff face are seen.
+      const sprite=this.add.image(x,top,textureKey).setOrigin(0,0).setDepth(.55).setVisible(true);
       view={sprite,textureKey,geometrySignature,boundsSignature:[x,top,width,height].join(':'),
         biomeId:style.biome,bleedPx:bleed,underlapPx:underlap,lipOverhangPx:lip,
-        maskOverlapPx:bleed,sideCount:2,backgroundLeft:x,backgroundRight:x+width,
+        maskOverlapPx:bleed,sideCount:2,renderDepth:sprite.depth,
+        backgroundLeft:x,backgroundRight:x+width,
         coverageDepth:height};
       this.abyssCliffViews.set(key,view);activeKeys.add(key);return view;
     }

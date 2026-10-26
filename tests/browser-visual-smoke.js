@@ -864,7 +864,10 @@ const server=http.createServer((req,res)=>{
         visibleCliffViews:[...scene.abyssCliffViews.values()].filter(view=>view.sprite.visible)
           .map(view=>({key:view.sprite.texture.key,biomeId:view.biomeId,
             sideCount:view.sideCount,bleedPx:view.bleedPx,underlapPx:view.underlapPx,
-            lipOverhangPx:view.lipOverhangPx,maskOverlapPx:view.maskOverlapPx})),
+            lipOverhangPx:view.lipOverhangPx,maskOverlapPx:view.maskOverlapPx,
+            renderDepth:view.renderDepth})),
+        abyssDepth:[...scene.abyssBackdropViews.values()].find(view=>view.sprite.visible)?.sprite.depth,
+        terrainDepth:scene.terrainBase.depth,
         variantCount:variants.length};
     },target.meters);
     console.log(target.name+' abyss setup: '+JSON.stringify(location));
@@ -875,6 +878,9 @@ const server=http.createServer((req,res)=>{
       target.name+' renderer creates a visible depth-image view for its abyss');
     assert.ok(location.visibleCliffViews.some(view=>view.biomeId===target.biomeId),
       target.name+' creates a biome-matched jagged cliff-face view');
+    const cliffLayer=location.visibleCliffViews.find(view=>view.biomeId===target.biomeId);
+    assert.ok(cliffLayer.renderDepth>location.abyssDepth&&cliffLayer.renderDepth<location.terrainDepth,
+      target.name+' exposes cliff lips above the abyss painting while hiding their overlap beneath terrain');
     assert.ok(location.visibleAbyssViews.every(view=>view.type==='Image'),
       target.name+' abyss art uses non-repeating images rather than tiled sprites');
     assert.ok(location.variantCount>=2,target.name+' terrain sequence varies the selected depth scenes');
