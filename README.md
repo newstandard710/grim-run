@@ -2,7 +2,11 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.8 — Ground Fog and Vendors**
+**Current build: v0.14.9 — Airborne Art and Vendor Auras**
+
+The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
+
+## v0.14.8 — Ground Fog and Vendors
 
 Four irregular mist paintings form a semi-transparent ground-level fog band in every biome. World-anchored variation changes each bank's silhouette, width, height, position, and opacity; a terrain mask keeps it off the open gaps. Biome colors blend through existing transitions. The fog rises in thin wisps to the Reaper's chest and is strongest below the waist. Foreground obstacle art sits ahead of the fog; the Reaper and vendor sprites sit behind it in separate layers. New Angel and Demon Vendor cutouts replace their procedural silhouettes at the same existing stops. Vendor offers, timing, positions, obstacle collisions, spawns, and all mechanics are unchanged. The earlier abyss fog remains inside the gaps on its original layer.
 

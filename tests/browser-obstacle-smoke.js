@@ -66,12 +66,12 @@ const server=http.createServer((req,res)=>{
         images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length,
         baselineErrors};
     });
-    assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.8 · FOG & VENDORS','visible version badge matches the current art release');
-    assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
+    assert.equal(loaded.count,96,'catalog is loaded in the game');
+    assert.equal(loaded.badge,'v0.14.9 · AIRBORNE ART & AURAS','visible version badge matches the current art release');
+    assert.deepEqual(loaded.missing,[],'all 96 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
-    assert.equal(loaded.images,141,'all 24 upper paintings and 24 unique supports load');
-    assert.equal(loaded.supports.length,24,'every slide variant has a paired support');
+    assert.equal(loaded.images,152,'all 24 upper paintings and 32 unique supports load');
+    assert.equal(loaded.supports.length,32,'every slide and airborne variant has a paired support');
     assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
     const exercise=await page.evaluate(()=>{
@@ -103,7 +103,8 @@ const server=http.createServer((req,res)=>{
           width:skin.gameW*scale.x,height:Math.max(s.height*1.22,475),originY:1}:null;
         const ok=s.drawObstacleSprite(o,placement),image=s.obstacleSpriteObjects.get(o);
         const expected=placement?{width:placement.width,height:placement.height}:
-          type==='tuckGate'?{width:o.width,height:skin.gameH}:
+          type==='tuckGate'?{width:skin.biome==='ashlands'?196:176,height:400}:
+          type==='airBramble'?{width:148,height:218}:
           type==='snappingBramble'?{width:o.width,height:o.height}:
           {width:o.width*scale.x,height:o.height*scale.y};
         if(!ok||!image||image.texture.key!==skin.key||
@@ -195,7 +196,7 @@ const server=http.createServer((req,res)=>{
       }
       return {checked:checked.length,selectorMisses,renderMisses,renderFailures};
     });
-    assert.deepEqual(exercise,{checked:93,selectorMisses:0,renderMisses:0,renderFailures:[]},
+    assert.deepEqual(exercise,{checked:96,selectorMisses:0,renderMisses:0,renderFailures:[]},
       'every biome skin is selectable, scaled, and anchored at its intended baseline');
 
     await page.waitForTimeout(100);
@@ -302,7 +303,7 @@ const server=http.createServer((req,res)=>{
         biome+'-slide-in-biome-phone.png')});
     }
     assert.deepEqual(errors,[],'obstacle loading and rendering produce no browser exceptions');
-    console.log('PASS actual Chromium: all 93 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');
+    console.log('PASS actual Chromium: all 96 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');
   }finally{
     await browser.close();
     await new Promise(resolve=>server.close(resolve));

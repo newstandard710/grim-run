@@ -10,9 +10,9 @@ const root=path.resolve(__dirname,'..');
 const scope={};
 vm.runInNewContext(fs.readFileSync(path.join(root,'assets/visuals/obstacle-catalog.js'),'utf8'),{window:scope});
 const skins=scope.GRIM_OBSTACLE_SPRITES;
-assert.equal(skins.length,93,'all planned obstacle skins are cataloged');
+assert.equal(skins.length,96,'all planned obstacle skins are cataloged');
 
-const counts={jump:24,slide:24,cut:24,fire:15,'air-tuck':2,'air-bramble':3,'snapping-bramble':1};
+const counts={jump:24,slide:24,cut:24,fire:15,'air-tuck':2,'air-bramble':6,'snapping-bramble':1};
 const dimensions={jump:[54,48],slide:[74,70],cut:[60,288],fire:[58,41],
   'air-tuck':[80,340],'air-bramble':[80,143],'snapping-bramble':[62,78]};
 const biomeCounts={
@@ -21,7 +21,7 @@ const biomeCounts={
   cut:{forest:3,foothills:3,tundra:3,caves:3,crystals:3,ashlands:3,lava:3,boss:3},
   fire:{caves:3,crystals:3,ashlands:3,lava:3,boss:3},
   'air-tuck':{ashlands:1,lava:1},
-  'air-bramble':{foothills:1,crystals:1,lava:1},
+  'air-bramble':{foothills:1,crystals:1,lava:1,tundra:1,caves:1,ashlands:1},
   'snapping-bramble':{tundra:1}
 };
 const files=new Set(),keys=new Set(),ids=new Set(),hashes=new Set();
@@ -73,6 +73,15 @@ for(const [category,count] of Object.entries(counts)){
       assert.ok(support.length>1000,skin.id+' painted connection present');
       continue;
     }
+    if(category==='air-tuck'||category==='air-bramble'){
+      assert.ok(skin.supportSrc&&skin.supportKey,skin.id+' has its own background support');
+      assert.ok(!files.has(skin.supportSrc)&&!keys.has(skin.supportKey),skin.id+' support is unique');
+      files.add(skin.supportSrc);keys.add(skin.supportKey);
+      const support=fs.readFileSync(path.resolve(root,skin.supportSrc));
+      assert.equal(support.toString('ascii',0,4),'RIFF',skin.id+' support WebP');
+      assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
+      assert.ok(support.length>1000,skin.id+' support painted');
+    }
     assert.deepEqual([...bytes.subarray(0,8)],[137,80,78,71,13,10,26,10],skin.id+' PNG signature');
     let pos=8,width=0,height=0,colorType=0,bitDepth=0,ended=false;
     const imageData=[];
@@ -102,8 +111,8 @@ for(const [category,count] of Object.entries(counts)){
   assert.deepEqual(perBiome,biomeCounts[category],category+' biome coverage');
 }
 
-assert.equal(files.size,141);
-assert.equal(keys.size,141);
-assert.equal(ids.size,93);
-assert.equal(hashes.size,93);
-console.log('PASS v0.14.7: 93 biome-exclusive skins, 24 unique paired slide connections, and original PNG integrity verified.');
+assert.equal(files.size,152);
+assert.equal(keys.size,152);
+assert.equal(ids.size,96);
+assert.equal(hashes.size,96);
+console.log('PASS v0.14.9: 96 biome-exclusive skins, 32 unique paired supports, and original PNG integrity verified.');

@@ -1,6 +1,10 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.14.8 — *Ground Fog and Vendors*.
+**Current build:** v0.14.9 — *Airborne Art and Vendor Auras*.
+
+The six jump-plus-attack brambles now each have dedicated biome foreground art and a paired, dimmer cliff tether; the new skins fill Tundra, Caverns, and Ashlands. Both jump-plus-tuck gates have unique ceiling mounts and enlarged foregrounds whose visible lower edges follow the original clearance line. Angel and Demon Vendor auras glow behind their figures. These are visual-only changes: spawn rates, encounter positions, collisions, clearance, and gameplay logic are unchanged.
+
+## v0.14.8 — Ground Fog and Vendors
 
 Four distinct transparent mist sprites render as a varied, world-anchored fog across all eight biomes. Fog color follows existing biome blends and a terrain mask excludes gaps. The mist is most substantial around the Reaper's lower body and tapers into chest-height wisps. Two illustrated merchant sprites replace the procedural Angel and Demon Vendor figures at their existing stops. The world-space stack is obstacle fronts, ground fog, Reaper, vendors, ground, paired slide supports, then the existing abyss and biome art. Screen overlays remain for damage and UI. No vendor logic, obstacle mechanics, collisions, spawn rates, or placements changed.
 
@@ -16,7 +20,7 @@ This release adds a subtle, biome-tinted fog overlay inside each of the eight ab
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.14.8 — *Ground Fog and Vendors*
+**Release:** v0.14.9 — *Airborne Art and Vendor Auras*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
