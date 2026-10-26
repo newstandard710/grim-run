@@ -1,6 +1,8 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.14.1 — *Obstacle Scale Pass*.
+**Current build:** v0.14.2 — *Obstacle Grounding Pass*.
+
+Grounded jump, cut, fire, and snapping-bramble art sinks a few visual pixels into the terrain and receives a contact shadow. Slide art gains a local biome-colored wall or canopy support behind the Reaper and the detailed obstacle sprite. The Reaper remains the foremost gameplay character. Obstacle spawn coordinates, collisions, clearance, cadence, and mechanics are unchanged.
 
 This update enlarges the obstacle sprite set so hazards read clearly at phone scale. Jump sprites draw at 2.5×, tree and sapling cut sprites at 2×, corn-like cut sprites 1.3× taller, and slide-under sprites at 3.25×. Slide sprites replace the old placeholder pillar and their lowest visible art follows the existing clearance line. Obstacle selection, hitboxes, placements, rates, timing, route progression, and gameplay RNG remain unchanged. The update is ready for Android device testing.
 
@@ -8,7 +10,7 @@ This release adds a subtle, biome-tinted fog overlay inside each of the eight ab
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.14.1 — *Obstacle Scale Pass*
+**Release:** v0.14.2 — *Obstacle Grounding Pass*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  

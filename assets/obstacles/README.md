@@ -1,6 +1,6 @@
-# Obstacle Sprite Catalog — v0.14.1
+# Obstacle Sprite Catalog — v0.14.2
 
-All sprites are transparent RGBA PNGs authored at three times their base display dimensions. Runtime visual multipliers enlarge jump, slide, and cut art without changing hitboxes. Grounded sprites use per-image alpha baselines to sit on the terrain or clearance line. Every skin remains assigned to one biome.
+All sprites are transparent RGBA PNGs authored at three times their base display dimensions. Runtime visual multipliers enlarge jump, slide, and cut art without changing hitboxes. Grounded sprites use per-image alpha baselines plus a small visual inset into the terrain. Slide sprites use a biome-colored support behind the illustrated obstacle. Every skin remains assigned to one biome.
 
 The core obstacle families have three skins per biome (50% more than the two-skin baseline). Fire keeps three skins in each biome where fire hazards appear. The biome folders and metadata below are the implementation map.
 

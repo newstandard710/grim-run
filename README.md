@@ -2,7 +2,9 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.1 — Obstacle Scale Pass**
+**Current build: v0.14.2 — Obstacle Grounding Pass**
+
+Ground obstacle art now overlaps the terrain edge slightly. Slide obstacle art has a biome-colored support wall or canopy behind it, connecting the overhead silhouette to the upper scene. The Reaper stays in front. The prior collision geometry and encounter placement remain the same.
 
 - Enlarges the jump sprites to 2.5×, cuttable trees to 2×, corn-like cut art to 1.3× taller, and slide-under sprites to 3.25×. Slide sprites now replace the old placeholder pillar and align their lowest visible point to the existing clearance line.
 - Keeps the biome-exclusive obstacle art set: three jump, slide, and cut visuals per biome, three fire visuals in each fire biome, plus the air-tuck, air-bramble, and snapping-bramble sprites.
