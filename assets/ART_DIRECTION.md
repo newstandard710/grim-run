@@ -72,7 +72,14 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - The cap's upper edge follows the existing terrain contour exactly and all decoration stays on or below that line. Follow slopes and rubble naturally, end at gaps and ledge edges, and leave the abyss open. Do not change terrain geometry or collision.
 - Keep the material translucent enough for each approved ground texture to show through. Use a softened, irregular lower edge and restrained broken highlights; let the biome material show through instead of forming a hard band. Keep the running contact contour locked to existing terrain and collision. Keep all marks readable at phone scale without competing with Reaper feet, enemies, hazards, pickups, or foreground details.
 
-## Receding canyon depth art — v0.13.1
+## Gap-fitted abyss depth art — v0.13.2
+
+- Use `abyss-canyon-gap-01.webp` and `abyss-canyon-gap-02.webp` for rock canyons; use `abyss-lava-gap-01.webp` and `abyss-lava-gap-02.webp` for Lava and the lava-lit Boss Biome. These are portrait background scenes painted to frame a narrow opening.
+- Size each plate from that opening's generated width, center it on the gap, and align the painted near cliff lip to the actual terrain endpoint. The gap mask still follows the generated terrain profile exactly.
+- Keep the plates behind real terrain and world-anchored to each gap. Do not scale them to the full viewport or use a panoramic center crop; that hides the cliff walls inside narrow openings.
+- Let irregular canyon walls recede and narrow into dark distance below the viewport. Never expose a bottom. Select rock scenes through Surface and other non-lava areas, then crossfade to lava scenes through Lava and the Boss Biome.
+- Terrain and platforms remain the foreground and continue below the phone view; their contours, walkable top, collisions, fall rules, and route progression stay unchanged.
+- Do not add a second synthetic lip, a screen-space band, a detached foreground canyon wall, or surface lava cracks.
 
 - Use `abyss-canyon-depth-01.webp` and `abyss-canyon-depth-02.webp` for rock canyons; use `abyss-lava-depth-01.webp` and `abyss-lava-depth-02.webp` for Lava and the lava-lit Boss Biome. These are complete painted background scenes, not repeatable wall textures.
 - Place the art behind generated terrain and reveal it only through a mask for the real gap. Pin the top corners to the gap's actual terrain endpoints; draw the terrain bodies above the image so no image seam or detached rim appears at the lips.

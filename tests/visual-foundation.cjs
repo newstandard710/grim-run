@@ -5,9 +5,9 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.1-receding-abyss"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.2-gap-fitted-abyss"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.1-receding-abyss"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.2-gap-fitted-abyss"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('ABYSS_BACKDROP_VARIANTS')&&
  html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp')"),
@@ -23,10 +23,17 @@ assert.ok(html.includes('left[0]={x:section.start,y:y0}')&&
 assert.ok(!html.includes('abyss-canyon-v1.webp')&&!html.includes('abyss-lava-v1.webp')&&
  !html.includes('UNDERWORLD_ABYSS_PALETTE')&&!html.includes('lavaY='),
  'The previous canyon texture and flat lava treatments are removed');
+for(const asset of ['abyss-canyon-gap-01.webp','abyss-canyon-gap-02.webp',
+ 'abyss-lava-gap-01.webp','abyss-lava-gap-02.webp'])
+ assert.ok(fs.statSync(path.join(__dirname,'..','assets','visuals','terrain',asset)).size>10000,
+   `${asset} is a complete gap-fitted depth illustration`);
 for(const asset of ['abyss-canyon-depth-01.webp','abyss-canyon-depth-02.webp',
  'abyss-lava-depth-01.webp','abyss-lava-depth-02.webp'])
- assert.ok(fs.statSync(path.join(__dirname,'..','assets','visuals','terrain',asset)).size>10000,
-   `${asset} is a complete non-repeating depth illustration`);
+ assert.ok(!fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain',asset)),
+   `${asset} is removed from the gap-fitted release`);
+assert.ok(html.includes('const displayWidth=Math.max(shape.width*1.08,96)')&&
+ html.includes('const lipAnchor=.12')&&html.includes('y=lipY-displayHeight*lipAnchor'),
+ 'Portrait depth plates scale to each generated gap and pin their painted lips to the terrain');
 assert.ok(!fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain','abyss-canyon-v1.webp'))&&
  !fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain','abyss-lava-v1.webp')),
  'The previous tiled canyon and lava assets are removed from the release');

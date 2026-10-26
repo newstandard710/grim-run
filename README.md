@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current production build: v0.13.1 — Receding Canyon Depths**
+**Current production build: v0.13.2 — Gap-Fitted Abyss Art**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
@@ -24,6 +24,15 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
+
+## v0.13.2 — Gap-Fitted Abyss Art
+
+- Fixed the canyon and lava openings that showed only a narrow dark slot. The prior panoramic scenes were scaled to the full screen even though the terrain mask revealed only a much narrower gap, hiding the painted cliffs.
+- Added four portrait depth paintings, two rock canyon scenes and two lava scenes. Each plate is sized from its actual generated gap, centered on it, and places the painted near cliff lips at the real terrain edge.
+- Keep the images behind the exact gap mask and draw terrain above them. The walls frame the opening, narrow into dark distance, and continue below the phone viewport without exposing a floor.
+- Removed the previous canyon and lava depth paintings. Terrain shape, surfaces, collisions, movement, fall rules, controls, and the 9,999m finish are unchanged.
+- Regression tests and actual Chromium rendering checks gate deployment; Android device play-feel remains for the playtest.
+- [Open the production game](https://newstandard710.github.io/grim-run/).
 
 ## v0.13.1 — Receding Canyon Depths
 
