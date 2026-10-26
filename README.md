@@ -2,7 +2,7 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current production build: v0.13.3 — Biome Cliff Edges**
+**Current production build: v0.13.4 — Biome-Specific Ravines**
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.
@@ -24,6 +24,13 @@ A landscape, mobile-first side-scrolling action roguelike starring the Grim Reap
 - [Development status and playtest checklist](PROJECT_STATUS.md)
 - [v0.9.1 rollback branch](https://github.com/newstandard710/grim-run/tree/backup/v0.9.1)
 - [v0.10.2 stable fallback](https://github.com/newstandard710/grim-run/tree/backup/v0.10.2)
+
+## v0.13.4 — Biome-Specific Ravines (current production)
+
+- Adds a distinct deep-abyss painting for each of the eight biomes. The art is clipped to the seeded ravine opening, widened beneath the real terrain, and crossfades with the existing biome palette.
+- Removes the shared canyon/lava plates and separate procedural cliff-face band. The painted opening forms a small irregular lip, while the terrain covers the overlap and hides seams.
+- Keeps terrain, collisions, hazards, route progression, and the 9,999m finish unchanged. Local gameplay regressions and the phone-size Chromium render checks pass; Android device appearance and play-feel are ready for playtesting.
+- [Open the production game](https://newstandard710.github.io/grim-run/).
 
 ## v0.13.3 — Biome Cliff Edges
 
