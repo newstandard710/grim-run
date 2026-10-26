@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.14.7</title>
+  <title>GRIM RUN — v0.14.8</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.14.7 · SLIDE OBSTACLES</div>
+      <div class="mini">v0.14.8 · FOG & VENDORS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1511,6 +1511,17 @@ window.GRIM_CONFIG = Object.freeze({
     forest:0xa6c0b5,foothills:0xaab8c2,tundra:0xd1e0ed,caves:0x8596c4,
     crystals:0x78bdca,ashlands:0x9f879f,lava:0xc78b74,boss:0xa58ca7
   });
+  const GROUND_FOG_KEYS=Object.freeze(['ground-fog-drift','ground-fog-curl',
+    'ground-fog-veil','ground-fog-shreds']);
+  const GROUND_FOG_COLORS=Object.freeze({
+    forest:0xaacac5,foothills:0xb5c8cf,tundra:0xd4e5ed,caves:0x9ba9c6,
+    crystals:0x9cd7de,ashlands:0xb89c9b,lava:0xd3a18b,boss:0xb8a5bf
+  });
+  const GROUND_FOG_OPACITY=Object.freeze({
+    forest:.52,foothills:.48,tundra:.49,caves:.44,
+    crystals:.48,ashlands:.42,lava:.38,boss:.45
+  });
+  const GROUND_FOG_STRIDE=340;
   const TERRAIN_TEXTURE_SIZE=768;
   const TERRAIN_TILE_SCALE=.75;
   const TUNDRA_TERRAIN_TILE_SCALE=.48;
@@ -1528,6 +1539,12 @@ window.GRIM_CONFIG = Object.freeze({
       for(const key of Object.values(ABYSS_BACKDROP_FILES))
         this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog');
       this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog');
+      for(const name of ['drift','curl','veil','shreds'])
+        this.load.image('ground-fog-'+name,
+          'assets/visuals/ground-fog/mist-'+name+'-v1.webp?v=0.14.8');
+      for(const type of ['angel','demon'])
+        this.load.image('vendor-'+type,
+          'assets/characters/vendors/'+type+'-vendor-v1.webp?v=0.14.8');
       for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
         this.load.image(skin.key,skin.src+'?v=0.14.5-forest-obstacles');
         if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.5-forest-obstacles');
@@ -1581,8 +1598,21 @@ window.GRIM_CONFIG = Object.freeze({
       });
       this.world = this.add.graphics().setDepth(2);
       this.fx = this.add.graphics().setDepth(5);
+      this.vendorFallback=this.add.graphics().setDepth(10);
       this.actor = this.add.graphics().setDepth(14);
+      this.obstacleFront=this.add.graphics().setDepth(16);
       this.foreground = this.add.graphics().setScrollFactor(0).setDepth(20);
+      this.vendorSpriteObjects=new Map();
+      this.groundFogViews=new Map();
+      this.groundFogMaskGraphics=this.make?.graphics?.({x:0,y:0,add:false})||null;
+      this.groundFogMask=this.groundFogMaskGraphics?.createGeometryMask?.()||null;
+      this.events?.once?.('shutdown',()=>{
+        for(const sprite of this.vendorSpriteObjects.values())sprite.destroy();
+        this.vendorSpriteObjects.clear();
+        for(const sprite of this.groundFogViews.values())sprite.destroy();
+        this.groundFogViews.clear();
+        this.groundFogMaskGraphics?.destroy?.();
+      });
       this.state = 'menu';
       this.countdownMs = 0;
       this.goFlashMs = 0;
@@ -3388,17 +3418,130 @@ window.GRIM_CONFIG = Object.freeze({
       this.updateBiomeBackdrops();
       this.updateBackdropGroundVeil();
       this.drawGround();
+      this.drawGroundFog();
       this.drawPortals();
       this.drawVendors();
       for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
       for(const soul of this.souls) if (!soul.taken) this.drawSoul(soul);
       this.cleanupObstacleSprites();
+      this.obstacleFront?.clear();
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
       this.drawCombat();
       this.drawParticles();
       this.drawReaper();
       this.drawForeground();
       if(this.visuals)this.visuals.render();
+    }
+    groundFogHash(index,salt){
+      let h=Math.imul(index^salt,0x45d9f3b);
+      h=Math.imul(h^(h>>>16),0x45d9f3b);
+      return (h^(h>>>16))>>>0;
+    }
+    groundFogColorAt(x){
+      const meters=(x-(this.startX??200))/C.pxPerMeter;
+      const weights=this.terrainBiomeWeights(meters);
+      let red=0,green=0,blue=0,opacity=0,total=0;
+      for(const [id,weight] of Object.entries(weights)){
+        if(!weight||!GROUND_FOG_COLORS[id])continue;
+        const color=GROUND_FOG_COLORS[id];
+        red+=((color>>16)&255)*weight;
+        green+=((color>>8)&255)*weight;
+        blue+=(color&255)*weight;
+        opacity+=GROUND_FOG_OPACITY[id]*weight;
+        total+=weight;
+      }
+      if(!total)return {tint:GROUND_FOG_COLORS.forest,opacity:GROUND_FOG_OPACITY.forest};
+      const tint=(Math.round(red/total)<<16)|(Math.round(green/total)<<8)|Math.round(blue/total);
+      return {tint,opacity:opacity/total};
+    }
+    drawGroundFog(){
+      const views=this.groundFogViews,mask=this.groundFogMaskGraphics;
+      if(!views||!mask||!this.groundFogMask||!this.add?.image||
+        !this.terrain?.visibleSections||this.state==='menu'){
+        for(const sprite of views?.values()||[])sprite.setVisible(false);
+        return;
+      }
+      const left=this.cameraX-400,right=this.cameraX+this.width+400;
+      mask.clear();mask.fillStyle(0xffffff,1);
+      // One world-space mask follows solid terrain and ends at each real gap.
+      // The art does not add a surface or change any terrain geometry.
+      const solidSections=this.terrain.visibleSections(left,right)
+        .filter(section=>section.kind!=='gap');
+      for(const section of solidSections){
+        const from=Math.max(left,section.start),to=Math.min(right,section.end);
+        if(to<=from)continue;
+        const y0=Number.isFinite(section.y0)?section.y0:section.y;
+        const y1=Number.isFinite(section.y1)?section.y1:y0;
+        if(!Number.isFinite(y0)||!Number.isFinite(y1))continue;
+        const surface=x=>y0+(y1-y0)*(x-section.start)/(section.end-section.start);
+        const samples=[from];
+        for(let x=Math.ceil(from/24)*24;x<to;x+=24)if(x>from)samples.push(x);
+        samples.push(to);
+        const points=samples.map(x=>({x,y:surface(x)-158}));
+        for(let i=samples.length-1;i>=0;i--)
+          points.push({x:samples[i],y:surface(samples[i])+54});
+        mask.fillPoints(points,true);
+      }
+      const active=new Set();
+      const placedCenters=[];
+      const first=Math.floor(left/GROUND_FOG_STRIDE)-1;
+      const last=Math.ceil(right/GROUND_FOG_STRIDE)+1;
+      for(let index=first;index<=last;index++){
+        const variant=this.groundFogHash(index,37)%GROUND_FOG_KEYS.length;
+        const key=GROUND_FOG_KEYS[variant];
+        if(!this.textures?.exists?.(key))continue;
+        const spread=this.groundFogHash(index,91)%105-52;
+        const x=(index+.5)*GROUND_FOG_STRIDE+spread;
+        const ground=this.terrain.groundAt(x);
+        if(!Number.isFinite(ground))continue;
+        const width=350+this.groundFogHash(index,131)%180;
+        const height=139+this.groundFogHash(index,167)%21;
+        const shade=this.groundFogColorAt(x);
+        const alpha=shade.opacity*(.68+(this.groundFogHash(index,211)%43)/100);
+        let sprite=views.get(index);
+        if(!sprite){
+          sprite=this.add.image(x,ground+3,key).setOrigin(.5,1)
+            .setDepth(15).setMask(this.groundFogMask);
+          views.set(index,sprite);
+        }
+        const drift=Math.sin(this.elapsed*.24+index*1.83)*4;
+        sprite.setTexture(key).setPosition(x+drift,ground+3+
+          Math.sin(this.elapsed*.18+index*.77)*2)
+          .setDisplaySize(width,height).setFlipX(Boolean(this.groundFogHash(index,251)&1))
+          .setTint(shade.tint).setAlpha(alpha).setVisible(true);
+        active.add(index);
+        placedCenters.push(x);
+      }
+      // Short ledges and split ground can fall between the world-spaced banks.
+      // Give a substantial solid section one localized wisp if it has none.
+      for(const section of solidSections){
+        const from=Math.max(left,section.start),to=Math.min(right,section.end);
+        if(to-from<110||placedCenters.some(x=>x>=from&&x<=to))continue;
+        const x=(from+to)/2,ground=this.terrain.groundAt(x);
+        if(!Number.isFinite(ground))continue;
+        const seed=Math.round(section.start*10);
+        const key=GROUND_FOG_KEYS[this.groundFogHash(seed,313)%GROUND_FOG_KEYS.length];
+        if(!this.textures?.exists?.(key))continue;
+        const id='section:'+section.start+':'+section.end;
+        const shade=this.groundFogColorAt(x);
+        let sprite=views.get(id);
+        if(!sprite){
+          sprite=this.add.image(x,ground+3,key).setOrigin(.5,1)
+            .setDepth(15).setMask(this.groundFogMask);
+          views.set(id,sprite);
+        }
+        sprite.setTexture(key).setPosition(x+
+          Math.sin(this.elapsed*.22+seed*.017)*3,ground+3)
+          .setDisplaySize(Math.min(430,Math.max(200,to-from+50)),
+            136+this.groundFogHash(seed,479)%19)
+          .setFlipX(Boolean(this.groundFogHash(seed,503)&1))
+          .setTint(shade.tint).setAlpha(shade.opacity*.70).setVisible(true);
+        active.add(id);
+      }
+      for(const [index,sprite] of views){
+        if(active.has(index))continue;
+        sprite.destroy();views.delete(index);
+      }
     }
     drawPortals(){
       const g=this.world;
@@ -3419,12 +3562,30 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     drawVendors(){
-      if(!Number.isFinite(this.startX)||this.state==='menu')return;
-      const g=this.world;
+      const g=this.vendorFallback;
+      g?.clear();
+      if(!Number.isFinite(this.startX)||this.state==='menu'){
+        for(const sprite of this.vendorSpriteObjects?.values()||[])sprite.setVisible(false);
+        return;
+      }
+      const active=new Set();
       for(let k=1;k<=14;k++){
         const x=this.startX+k*C.vendorEveryMeters*C.pxPerMeter;
         if(Math.abs(x-this.player.x)>this.width*1.4)continue;
         const devil=k>=8,y=this.terrain.groundAt(x)??this.terrain.anchorAt(x);
+        const key=devil?'vendor-demon':'vendor-angel';
+        if(this.textures?.exists?.(key)&&this.add?.image){
+          let sprite=this.vendorSpriteObjects.get(k);
+          if(!sprite){
+            sprite=this.add.image(x,y+4,key).setOrigin(.5,1).setDepth(10);
+            this.vendorSpriteObjects.set(k,sprite);
+          }
+          sprite.setTexture(key).setPosition(x,y+4).setDisplaySize(devil?166:160,142)
+            .setVisible(true);
+          active.add(k);
+          continue;
+        }
+        if(!g)continue;
         const aura=devil?0xf36b47:0xf5dd9b;
         g.fillStyle(aura,.10);g.fillEllipse(x,y-61,110,135);
         g.fillStyle(devil?0x341c2b:0xdbe2e0,.94);g.fillEllipse(x,y-32,44,56);
@@ -3440,6 +3601,8 @@ window.GRIM_CONFIG = Object.freeze({
         g.fillStyle(devil?0x922d2b:0x776342,.88);g.fillRoundedRect(x-31,y-120,62,17,4);
         g.lineStyle(2,aura,.95);g.strokeRoundedRect(x-31,y-120,62,17,4);
       }
+      for(const [number,sprite] of this.vendorSpriteObjects||[])
+        if(!active.has(number))sprite.setVisible(false);
     }
     bakeTerrainMaterial(id,sourceOverride=null){
       if(this.terrainMaterialIds?.has(id))return true;
@@ -4341,6 +4504,7 @@ window.GRIM_CONFIG = Object.freeze({
       return 0;
     }
     drawObstacleContact(o){
+      const g=this.obstacleFront||this.world;
       const skin=this.obstacleSkinFor(o);
       const width=skin?.category==='jump'?Math.min(115,o.width*1.8):
         skin?.category==='cut'&&skin.biome==='forest'&&
@@ -4348,8 +4512,8 @@ window.GRIM_CONFIG = Object.freeze({
           ?Math.min(165,o.width*2.7):
         skin?.category==='cut'?Math.min(105,o.width*1.5):o.width*1.05;
       const ground=o.type==='snappingBramble'?this.terrain.anchorAt(o.x):o.y+o.height;
-      this.world.fillStyle(0x0b1118,.27);
-      this.world.fillEllipse(o.x+o.width/2,ground+3,width,11);
+      g.fillStyle(0x0b1118,.27);
+      g.fillEllipse(o.x+o.width/2,ground+3,width,11);
     }
     drawObstacleBack(o,skin,x,y,width,height,rotation){
       if(!skin?.backKey||!this.textures?.exists?.(skin.backKey))return;
@@ -4398,7 +4562,7 @@ window.GRIM_CONFIG = Object.freeze({
       let image=this.obstacleSpriteObjects.get(o);
       if(image&&image.texture?.key!==skin.key){image.destroy();this.obstacleSpriteObjects.delete(o);image=null;}
       if(!image){
-        image=this.add.image(0,0,skin.key).setOrigin(.5).setDepth(2.15);
+        image=this.add.image(0,0,skin.key).setOrigin(.5).setDepth(16);
         this.obstacleSpriteObjects.set(o,image);
       }
       let x,y,width,height,originY=.5,rotation=0;
@@ -4431,7 +4595,8 @@ window.GRIM_CONFIG = Object.freeze({
       return true;
     }
     drawObstacle(o) {
-      const g=this.world, x=o.x, ground=this.terrain.anchorAt(o.x);
+      const g=this.obstacleFront||this.world, x=o.x,
+        ground=this.terrain.anchorAt(o.x);
       const v=o.variant%6;
       if(o.type!=='branch'&&this.drawObstacleSprite(o)){
         if(this.obstacleVisualInset(o))this.drawObstacleContact(o);

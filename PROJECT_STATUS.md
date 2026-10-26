@@ -1,6 +1,10 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.14.7 — *Slide Backdrops Across All Biomes*.
+**Current build:** v0.14.8 — *Ground Fog and Vendors*.
+
+Four distinct transparent mist sprites render as a varied, world-anchored fog across all eight biomes. Fog color follows existing biome blends and a terrain mask excludes gaps. The mist is most substantial around the Reaper's lower body and tapers into chest-height wisps. Two illustrated merchant sprites replace the procedural Angel and Demon Vendor figures at their existing stops. The world-space stack is obstacle fronts, ground fog, Reaper, vendors, ground, paired slide supports, then the existing abyss and biome art. Screen overlays remain for damage and UI. No vendor logic, obstacle mechanics, collisions, spawn rates, or placements changed.
+
+## v0.14.7 — Slide Backdrops Across All Biomes
 
 All 24 slide variants have unique paired support sprites: three established forest root supports and 21 newly painted supports across foothills, tundra, caves, crystals, ashlands, lava, and boss. Their materials and contours match each foreground, and their broad side structures are behind terrain and slide fronts but above backdrop and abyss. The Reaper remains in front. Forest cuttable trees display 50% larger, forest corn 30% larger, and four forest jump/cut sprites sit slightly deeper in terrain. Hitboxes, spawn rates, placements, and mechanics are unchanged.
 
@@ -12,7 +16,7 @@ This release adds a subtle, biome-tinted fog overlay inside each of the eight ab
 
 The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art. Their art, timing, scale and collision behavior stay unchanged during World & Atmosphere work.
 
-**Release:** v0.14.7 — *Slide Backdrops Across All Biomes*
+**Release:** v0.14.8 — *Ground Fog and Vendors*
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
