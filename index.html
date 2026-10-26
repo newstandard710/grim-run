@@ -4362,16 +4362,22 @@ window.GRIM_CONFIG = Object.freeze({
         g.lineStyle(5,colors[1],.34);
         g.lineBetween(centerX+lean-half*.62+8,top,centerX-8,edge-80);
       }else{
-        // A subdued piece of the biome's back wall reaches the ceiling.
-        // Its soft edge sits behind the detailed obstacle, never in the gap.
-        g.fillStyle(colors[0],.62);
-        g.fillPoints([{x:centerX-half+lean,y:top},{x:centerX+half+lean,y:top},
-          {x:centerX+half*.80,y:edge-103},{x:centerX+half*.72,y:edge-43},
-          {x:centerX+half*.48,y:edge+7},{x:centerX-half*.37,y:edge+4},
-          {x:centerX-half*.76,y:edge-47},{x:centerX-half*.91,y:edge-111}],true);
-        g.lineStyle(3,colors[1],.24);
-        g.lineBetween(centerX-half*.53,top+24,centerX-half*.31,edge-59);
-        g.lineBetween(centerX+half*.36,top+45,centerX+half*.49,edge-47);
+        // Uneven lengths of the biome's back wall meet the detailed art.
+        // Narrow seams keep the support behind the Reaper and the safe gap.
+        for(let i=-1;i<=1;i++){
+          const start=centerX+i*half*.59+lean*.4;
+          const end=centerX+i*half*.49;
+          const tip=edge+7-Math.abs(i)*16;
+          const spread=i===0?23:18;
+          g.fillStyle(colors[0],i===0?.67:.51);
+          g.fillPoints([{x:start-spread,y:top},{x:start+spread,y:top},
+            {x:start+spread+7,y:top+53},{x:end+spread*.8,y:tip-84},
+            {x:end+spread*.65,y:tip-30},{x:end+7,y:tip},
+            {x:end-8,y:tip-5},{x:end-spread*.83,y:tip-52},
+            {x:start-spread-6,y:top+98}],true);
+          g.lineStyle(2,colors[1],.24);
+          g.lineBetween(start-6,top+22,end-3,tip-43);
+        }
       }
     }
     cleanupObstacleSprites(){
