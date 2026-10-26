@@ -2,7 +2,20 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current production build: v0.13.6 — Abyss Fog**
+**Current build: v0.14.0 — Biome Obstacle Variety**
+
+- Adds 93 biome-exclusive obstacle sprites: three jump, slide, and cut visuals per biome, three fire visuals in each fire biome, plus the requested air-tuck, air-bramble, and snapping-bramble art. Each sprite is tagged to one biome; no obstacle image is shared across biome folders.
+- Obstacle selection is deterministic from world position. Hitboxes, obstacle types, placements, spawn timing/rates, route progression, and gameplay RNG are unchanged. Optional sprite-load failures use the existing visual fallback.
+- [Obstacle art catalog](assets/obstacles/README.md) lists all skins by biome. The matching runtime metadata is in `assets/visuals/obstacle-catalog.js`.
+- The playable update is ready for Android device testing. [Open the game](https://newstandard710.github.io/grim-run/).
+
+## v0.14.0 — Biome Obstacle Variety
+
+- Added 24 jump, 24 slide-under, 24 cuttable, and 15 fire sprites, plus 2 air-tuck, 3 air-bramble, and 1 snapping-bramble sprites. Assets are transparent PNGs authored at three times their intended display size and organized by biome.
+- The three core visual families have three choices in each biome. Fire has three choices in Caves, Crystals, Ashlands, Lava, and Boss. Dedicated air-bramble skins use the biome's cuttable artwork where no dedicated air-bramble skin is assigned; Air Tuck art is assigned to Ashlands and Lava, and snapping bramble art is assigned to Tundra.
+- Obstacle skin selection uses biome and world position only; it does not consume gameplay RNG or read gameplay variants. Existing hitboxes, obstacle placements, spawn rates, timing, movement, combat rules, and progression are unchanged.
+- All 93 PNGs pass catalog, biome, uniqueness, alpha-channel, size, and decode checks. Existing gameplay regression suites pass; Chromium also checks texture loading, biome selection, and phone-size rendering. Physical Android appearance and performance remain the device playtest.
+- [Open the playable update](https://newstandard710.github.io/grim-run/).
 
 - The Reaper, Cavern Bat, Skeletal Bat, Bone Crawler and Ember Imp art are approved and enabled by default. The procedural fallback remains available if an art file fails to load.
 - Approved forest, foothills, and mountain concept art now covers the full above-ground route through 5,000m.

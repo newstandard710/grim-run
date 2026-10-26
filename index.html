@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.13.6</title>
+  <title>GRIM RUN — v0.14.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -1460,6 +1460,7 @@ window.GRIM_CONFIG = Object.freeze({
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
+  <script src="assets/visuals/obstacle-catalog.js?v=0.14.0-obstacles"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1527,6 +1528,8 @@ window.GRIM_CONFIG = Object.freeze({
       for(const key of Object.values(ABYSS_BACKDROP_FILES))
         this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog');
       this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog');
+      for(const skin of scope.GRIM_OBSTACLE_SPRITES||[])
+        this.load.image(skin.key,skin.src+'?v=0.14.0-obstacles');
     }
     create() {
       this.width = this.scale.width;
@@ -1585,6 +1588,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.player = { x: 200, y:this.groundY, grounded:true, coyoteMs:0, velocityY:0, hp:C.startingHP, maxHp:C.startingHP, invulMs:0, slowMs:0, slowCooldownMs:0, slideConsumed:false,airTuck:false,slideReleaseBufferMs:0,jumpsUsed:0,
         attackMs:0, attackCooldownMs:0, slideMs:0, sliding:false, holdSlide:false, jumpHeld:false, jumpAgeMs:0,hovering:false,hoverBudgetMs:0,onSoulPlatform:false,airJumpUsed:false,hoverHoldMs:0,hoverPressKind:'none',fireproofCooldownMs:0 };
       this.obstacles = [];
+      this.obstacleSpriteFamilies=new Map();
+      for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
+        const family=`${skin.category}:${skin.biome}`;
+        if(!this.obstacleSpriteFamilies.has(family))this.obstacleSpriteFamilies.set(family,[]);
+        this.obstacleSpriteFamilies.get(family).push(skin);
+      }
+      this.obstacleSpriteObjects=new Map();
       this.souls = [];
       this.coins = [];
       this.tips = [];
@@ -3377,6 +3387,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawVendors();
       for(const coin of this.coins) if (!coin.taken) this.drawCoin(coin);
       for(const soul of this.souls) if (!soul.taken) this.drawSoul(soul);
+      this.cleanupObstacleSprites();
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
       this.drawCombat();
       this.drawParticles();
@@ -4274,9 +4285,73 @@ window.GRIM_CONFIG = Object.freeze({
       }
       // Rare souls glow visibly more than ordinary coins.
     }
+    obstacleBiomeFor(o){
+      const meters=(o.x-(this.startX??200))/C.pxPerMeter;
+      if(meters<900)return 'forest';
+      if(meters<2300)return 'foothills';
+      if(meters<5000)return 'tundra';
+      if(meters<6000)return 'caves';
+      if(meters<7000)return 'crystals';
+      if(meters<8000)return 'ashlands';
+      if(meters<9999)return 'lava';
+      return 'boss';
+    }
+    obstacleSkinFor(o){
+      const biome=this.obstacleBiomeFor(o);
+      let family={rock:'jump',branch:'slide',fire:'fire',bramble:'cut',
+        tuckGate:'air-tuck',airBramble:'air-bramble',
+        snappingBramble:'snapping-bramble'}[o.type];
+      if(!family)return null;
+      let skins=this.obstacleSpriteFamilies?.get(`${family}:${biome}`)||[];
+      // Air brambles share the existing cuttable visual family where no
+      // dedicated air-bramble art is assigned; every selected file remains
+      // biome-exclusive and collision/type behavior is unchanged.
+      if(o.type==='airBramble'&&!skins.length)
+        skins=this.obstacleSpriteFamilies?.get(`cut:${biome}`)||[];
+      if(!skins.length)return null;
+      const token=`${biome}:${family}:${Math.round((o.x-(this.startX??200))*10)}`;
+      let hash=2166136261;
+      for(let i=0;i<token.length;i++)hash=Math.imul(hash^token.charCodeAt(i),16777619);
+      return skins[(hash>>>0)%skins.length];
+    }
+    cleanupObstacleSprites(){
+      if(!this.obstacleSpriteObjects?.size)return;
+      const active=new Set(this.obstacles.filter(o=>!o.destroyed));
+      for(const [ob,image] of this.obstacleSpriteObjects){
+        if(active.has(ob))continue;
+        image.destroy();this.obstacleSpriteObjects.delete(ob);
+      }
+    }
+    drawObstacleSprite(o,placement=null){
+      const skin=this.obstacleSkinFor(o);
+      if(!skin||!this.textures?.exists?.(skin.key)||!this.add?.image)return false;
+      let image=this.obstacleSpriteObjects.get(o);
+      if(image&&image.texture?.key!==skin.key){image.destroy();this.obstacleSpriteObjects.delete(o);image=null;}
+      if(!image){
+        image=this.add.image(0,0,skin.key).setOrigin(.5).setDepth(2.15);
+        this.obstacleSpriteObjects.set(o,image);
+      }
+      let x,y,width,height;
+      if(placement){({x,y,width,height}=placement);}
+      else if(o.type==='tuckGate'){
+        const bottom=o.y+o.height;
+        width=o.width;height=skin.gameH;
+        x=o.x+o.width/2;y=bottom-height/2;
+      }else if(o.type==='snappingBramble'){
+        const b=this.snappingBox(o);
+        width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2;
+      }else{
+        width=o.width;height=o.height;x=o.x+o.width/2;y=o.y+o.height/2;
+      }
+      image.setPosition(x,y).setDisplaySize(width,height).setVisible(true);
+      if(o.type==='fire')image.setAlpha(.96+.04*Math.sin(this.elapsed*11+o.x*.017));
+      else image.setAlpha(1);
+      return true;
+    }
     drawObstacle(o) {
       const g=this.world, x=o.x, ground=this.terrain.anchorAt(o.x);
       const v=o.variant%6;
+      if(o.type!=='branch'&&this.drawObstacleSprite(o))return;
       if(o.type==='snappingBramble'){
         const b=this.snappingBox(o),top=b.y;
         const t=this.elapsed*5.1+o.variant*1.7;
@@ -4387,6 +4462,9 @@ window.GRIM_CONFIG = Object.freeze({
         for(let i=1;i<contour.length;i++){
           const a=contour[i-1],b=contour[i];g.lineBetween(a.x,a.y-8,b.x,b.y-8);
         }
+        const safeTop=Math.min(...contour.map(pt=>pt.y));
+        this.drawObstacleSprite(o,{x:x+o.width/2,y:safeTop-35,
+          width:o.width,height:70});
         return;
       }
       // Cuttable obstacles are screen-bounded with matching hitboxes.
