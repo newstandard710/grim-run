@@ -692,8 +692,8 @@ const server=http.createServer((req,res)=>{
         drawGroundP95Ms:+timings[Math.floor(timings.length*.95)].toFixed(3)};
     },biome);
     assert.equal(grounded.material,true,biome+' material is drawn on the visible terrain');
-    if(meters>=5000)assert.equal(grounded.materialViewsReachBelowViewport,true,
-      biome+' material bounds extend below the camera in world coordinates');
+    if(biome==='crystals'||biome==='boss')assert.equal(grounded.materialViewsReachBelowViewport,true,
+      biome+' ground material bounds extend below the camera in world coordinates');
     assert.deepEqual(grounded.ground,terrainBefore,biome+' material rendering leaves generated ground unchanged');
     assert.ok(grounded.groundedSections>0,biome+' view includes generated solid terrain');
     assert.equal(grounded.gapTextureViews,0,biome+' leaves generated gaps untextured');
