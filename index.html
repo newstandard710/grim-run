@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.14.5</title>
+  <title>GRIM RUN — v0.14.6</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.14.5 · FOREST OBSTACLES</div>
+      <div class="mini">v0.14.6 · FOREST OBSTACLES</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1460,7 +1460,7 @@ window.GRIM_CONFIG = Object.freeze({
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/visuals/obstacle-catalog.js?v=0.14.0-obstacles"></script>
+  <script src="assets/visuals/obstacle-catalog.js?v=0.14.6-forest-support"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1531,7 +1531,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
         this.load.image(skin.key,skin.src+'?v=0.14.5-forest-obstacles');
         if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.5-forest-obstacles');
-        if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.14.5-forest-obstacles');
+        if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.14.6-forest-support');
       }
     }
     create() {
@@ -4371,9 +4371,9 @@ window.GRIM_CONFIG = Object.freeze({
         this.obstacleSupportObjects.set(o,image);
       }
       const bottom=ground+20;
-      const height=Math.max(130,bottom-underside+96);
-      image.setOrigin(.5,1).setPosition(x,bottom).setDisplaySize(width,height)
-        .setRotation(rotation).setTint(0x91a298).setAlpha(.7).setVisible(true);
+      const height=Math.max(210,(bottom-underside+96)*1.6);
+      image.setOrigin(.5,1).setPosition(x,bottom).setDisplaySize(width*1.6,height)
+        .setRotation(rotation).setTint(0xbfc6bf).setAlpha(.95).setVisible(true);
     }
     cleanupObstacleSprites(){
       if(!this.obstacleSpriteObjects?.size&&!this.obstacleBackObjects?.size&&

@@ -108,4 +108,4 @@ assert.equal(files.size,120);
 assert.equal(keys.size,120);
 assert.equal(ids.size,93);
 assert.equal(hashes.size,93);
-console.log('PASS v0.14.5: 93 biome-exclusive skins, three paired forest connections, and original PNG integrity verified.');
+console.log('PASS v0.14.6: 93 biome-exclusive skins, three paired forest connections, and original PNG integrity verified.');

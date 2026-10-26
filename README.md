@@ -2,9 +2,9 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.5 — Forest Obstacle Trial**
+**Current build: v0.14.6 — Forest Obstacle Backdrop Rework**
 
-The three forest slide variants now each have a unique painted root support that always appears with its matching overhead art. The support draws behind physical terrain and behind the slide obstacle, while the Reaper stays in front; the solid foreground ducking point remains visible. The two forest cuttable trees display 50% larger, forest corn 30% larger, and selected point-bottomed forest sprites sit slightly deeper into the ground. Other biomes and all gameplay rules are unchanged.
+The three forest slide variants now each have a broader, brighter, uniquely painted root support that follows its corresponding overhead shape and reaches into the terrain. Each support remains behind the ground and slide front, while the Reaper stays in front and the solid ducking point remains visible. The two forest cuttable trees display 50% larger, forest corn 30% larger, and selected point-bottomed forest sprites sit slightly deeper into the ground. Other biomes and all gameplay rules are unchanged.
 
 Ground jump and cut obstacle art keeps the terrain overlap approved in v0.14.2.
 
