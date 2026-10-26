@@ -2,7 +2,11 @@
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.7 — Slide Backdrops Across All Biomes**
+**Current build: v0.14.8 — Ground Fog and Vendors**
+
+Four irregular mist paintings form a semi-transparent ground-level fog band in every biome. World-anchored variation changes each bank's silhouette, width, height, position, and opacity; a terrain mask keeps it off the open gaps. Biome colors blend through existing transitions. The fog rises in thin wisps to the Reaper's chest and is strongest below the waist. Foreground obstacle art sits ahead of the fog; the Reaper and vendor sprites sit behind it in separate layers. New Angel and Demon Vendor cutouts replace their procedural silhouettes at the same existing stops. Vendor offers, timing, positions, obstacle collisions, spawns, and all mechanics are unchanged. The earlier abyss fog remains inside the gaps on its original layer.
+
+## v0.14.7 — Slide Backdrops Across All Biomes
 
 All 24 slide variants now have a unique painted support paired with their respective foreground obstacle. Each support follows its obstacle's material and contours, reaches into the terrain, and draws behind the ground and slide front; the Reaper and solid ducking point stay visually foremost. The three forest supports retain their v0.14.6 art, along with the forest tree, corn, and ground contact improvements. Hitboxes, slide clearance, spawn rates, placement, and mechanics are unchanged.
 

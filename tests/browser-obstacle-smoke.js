@@ -67,7 +67,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.7 · SLIDE OBSTACLES','visible version badge matches the slide art release');
+    assert.equal(loaded.badge,'v0.14.8 · FOG & VENDORS','visible version badge matches the current art release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,141,'all 24 upper paintings and 24 unique supports load');
@@ -144,7 +144,7 @@ const server=http.createServer((req,res)=>{
       }
       if(!branchBack||branchBack.y!==224||branchBack.depth!==.55||
         branchBack.displayHeight!==branchImage?.displayHeight||
-        branchImage.depth>=s.actor.depth){
+        branchImage.depth!==16||branchImage.depth<=s.actor.depth){
         renderMisses++;renderFailures.push({id:'painted-slide-backing-missing'});
       }
       if(!branchSupport||branchSupport.texture.key!==branchSkin?.supportKey||
@@ -229,14 +229,14 @@ const server=http.createServer((req,res)=>{
           s.add.image(x,underside,skin.backKey).setOrigin(.5,1)
             .setDisplaySize(width,height).setDepth(.55).setScrollFactor(0),
           s.add.image(x,underside,skin.key).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(2.15).setScrollFactor(0)
+            .setDisplaySize(width,height).setDepth(16).setScrollFactor(0)
         ];
         return window.forestArtPreview.map(image=>({key:image.texture.key,depth:image.depth}));
       },{biome,name});
       assert.deepEqual(view,[
         {key:'obstacle-support-'+biome+'_'+name,depth:.53},
         {key:'obstacle-back-'+biome+'_'+name,depth:.55},
-        {key:'obstacle-'+biome+'_slide_'+name,depth:2.15}
+        {key:'obstacle-'+biome+'_slide_'+name,depth:16}
       ],biome+' '+name+' retains its unique aligned layer pair');
       await page.waitForTimeout(35);
       await page.locator('#game canvas').screenshot({path:path.join(resultDir,
@@ -292,7 +292,7 @@ const server=http.createServer((req,res)=>{
           s.add.image(worldX,underside,skin.backKey).setOrigin(.5,1)
             .setDisplaySize(width,height).setDepth(.55),
           s.add.image(worldX,underside,skin.key).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(2.15)
+            .setDisplaySize(width,height).setDepth(16)
         ];
         return {biome,ground,under:underside,keys:window.biomeArtPreview.map(i=>i.texture.key)};
       },{biome,name});
