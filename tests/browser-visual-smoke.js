@@ -829,27 +829,39 @@ const server=http.createServer((req,res)=>{
       scene.cameraY=scene.player.y-scene.groundY;
       scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
       scene.drawScene();game.step(performance.now(),0);
+      const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
       return {meters,gap:{start:gap.start,end:gap.end,y0:gap.y0,y1:gap.y1},
         gapKey:[gap.start,gap.end,scene.height].join(':'),cameraX:scene.cameraX,cameraY:scene.cameraY,
-        width:scene.width,height:scene.height};
+        width:scene.width,height:scene.height,
+        gapVisible:visibleSections.some(section=>section.kind==='gap'&&section.start===gap.start),
+        canyonTextureLoaded:scene.textures.exists('abyss-canyon-art'),
+        lavaTextureLoaded:scene.textures.exists('abyss-lava-art'),
+        visibleAbyssViews:[...scene.abyssTextureViews.values()].filter(view=>view.sprite.visible)
+          .map(view=>view.sprite.texture.key)};
     },target.meters);
-    await skeletalPage.waitForFunction(({texture})=>{
-      const scene=window.grimRun?.scene?.scenes?.[0];
-      return [...(scene?.abyssTextureViews?.values()||[])].some(view=>
-        view.sprite.visible&&view.sprite.texture.key===texture);
-    },{texture:target.texture},{timeout:15000});
+    console.log(target.name+' abyss setup: '+JSON.stringify(location));
+    assert.equal(location.gapVisible,true,target.name+' generated gap is in the camera view');
+    assert.equal(location.canyonTextureLoaded,true,'Canyon art is preloaded before scene drawing');
+    assert.equal(location.lavaTextureLoaded,true,'Lava art is preloaded before scene drawing');
+    assert.ok(location.visibleAbyssViews.includes(target.texture),
+      target.name+' renderer creates a visible view for its selected abyss texture');
     const abyss=await skeletalPage.evaluate(({gapKey,expectedTexture})=>{
       const scene=window.grimRun.scene.scenes[0],shape=scene.abyssGeometryCache.get(gapKey);
       const gapViews=[...scene.abyssTextureViews.values()].filter(view=>view.sprite.visible);
       const textureView=gapViews.find(view=>view.sprite.texture.key===expectedTexture);
       const topWidth=shape.right.at(-1).x-shape.left[0].x;
       const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
+      const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
+        scene.cameraY+scene.height-shape.top));
+      const sampleIndex=Math.min(shape.left.length-1,
+        Math.floor(visibleDepth/(shape.bottom-shape.top)*(shape.left.length-1)));
+      const visibleWidth=shape.right[shape.right.length-1-sampleIndex].x-shape.left[sampleIndex].x;
       const platformView=[...scene.terrainTextureViews.entries()].find(([key,view])=>
         key.startsWith('platform:')&&view.sprite.visible);
       const platformBottom=platformView
         ?platformView[1].sprite.y+platformView[1].sprite.displayHeight:null;
       return {textureKey:textureView?.sprite.texture.key,textureViews:gapViews.length,
-        topWidth,bottomWidth,shaftDepth:shape.bottom-shape.top,
+        topWidth,bottomWidth,visibleWidth,shaftDepth:shape.bottom-shape.top,
         visibleBottomY:scene.cameraY+scene.height,platformBottom,
         platformExtendsBelow:platformBottom!==null&&platformBottom>scene.cameraY+scene.height+100,
         geometrySignature:textureView?.geometrySignature};
@@ -857,6 +869,8 @@ const server=http.createServer((req,res)=>{
     assert.equal(abyss.textureKey,target.texture,target.name+' opening uses its painted abyss art');
     assert.ok(abyss.topWidth>abyss.bottomWidth&&abyss.bottomWidth>0,
       target.name+' canyon profile narrows continuously toward its unseen depth');
+    assert.ok(abyss.visibleWidth<abyss.topWidth*.94,
+      target.name+' visible canyon walls begin to narrow below the running surface');
     assert.ok(abyss.shaftDepth>location.height+400,
       target.name+' shaft geometry continues beyond the full viewport without exposing a floor');
     assert.ok(abyss.platformExtendsBelow,

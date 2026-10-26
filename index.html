@@ -3818,7 +3818,7 @@ window.GRIM_CONFIG = Object.freeze({
       };
       const left=[],right=[];
       for(let i=0;i<=steps;i++){
-        const t=i/steps,eased=t*t*(2-t),pinch=width*.36*eased;
+        const t=i/steps,eased=Math.pow(t,.58),pinch=width*.36*eased;
         const rough=Math.sin(Math.PI*t)*width*.055;
         const y=top+span*t;
         left.push({x:section.start+width*.025+pinch+(hash(i)-.5)*rough,y});
