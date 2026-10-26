@@ -39,12 +39,15 @@ const server=http.createServer((req,res)=>{
         attacks:s.obstacles.filter(o=>o.type==='airBramble').length};
     });
     assert(available.tucks>=2&&available.attacks>=1,'both actual combo types are generated');
-    for(const type of ['tuckGate','airBramble']){
-      const view=await page.evaluate(type=>{
+    for(const [type,biome,filename] of [
+      ['tuckGate','ashlands','air-tuck-ashlands-jump-slide-phone.png'],
+      ['tuckGate','lava','air-tuck-lava-jump-slide-phone.png'],
+      ['airBramble','foothills','air-bramble-jump-attack-phone.png']]){
+      const view=await page.evaluate(({type,biome})=>{
         const game=window.grimRun,s=game.scene.scenes[0],C=window.GRIM_CONFIG;
         const candidates=s.obstacles.filter(o=>o.type===type);
-        const o=candidates.find(ob=>s.obstacleBiomeFor(ob)===(type==='tuckGate'?'ashlands':'foothills'))||
-          candidates[0];
+        const o=candidates.find(ob=>s.obstacleBiomeFor(ob)===biome);
+        if(!o)return {missing:biome+' '+type};
         const saved=s.obstacles;s.obstacles=[o];
         s.distance=(o.x-s.startX)/C.pxPerMeter;s.hasTeleported=s.distance>=5000;
         s.player.x=o.x-180;s.player.y=o.baseY;s.player.grounded=true;s.player.velocityY=0;
@@ -60,7 +63,8 @@ const server=http.createServer((req,res)=>{
           reaperDepth:s.visuals?.reaper?.depth,groundDepth:s.terrainBase.depth};
         s.obstacles=saved;
         return info;
-      },type);
+      },{type,biome});
+      assert(!view.missing,'an actual generated '+biome+' '+type+' encounter is available');
       assert(view.front.key.startsWith('obstacle-'),type+' has its foreground sprite');
       assert(view.support.key.startsWith('obstacle-support-'),type+' has paired support');
       assert(view.front.depth>view.reaperDepth&&view.groundDepth>view.support.depth,
@@ -75,8 +79,7 @@ const server=http.createServer((req,res)=>{
           'painted ceiling chains descend visibly into the upper gate');
       }else assert(view.front.w===148&&view.front.h===218,'air attack art is larger');
       await page.waitForTimeout(100);
-      await page.locator('#game canvas').screenshot({path:path.join(dir,
-        type==='tuckGate'?'air-tuck-jump-slide-phone.png':'air-bramble-jump-attack-phone.png')});
+      await page.locator('#game canvas').screenshot({path:path.join(dir,filename)});
       console.log(type+' screenshot',view.biome,view.front.key,view.support.key);
     }
     assert.deepEqual(errors,[],'no page errors in airborne encounter render');
