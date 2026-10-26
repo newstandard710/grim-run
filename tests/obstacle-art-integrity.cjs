@@ -50,7 +50,7 @@ for(const [category,count] of Object.entries(counts)){
     assert.ok(filename.startsWith(root+path.sep),'sprite path stays inside the project');
     assert.equal(path.basename(path.dirname(filename)),skin.biome,skin.id+' biome folder');
     assert.equal(path.basename(path.dirname(path.dirname(filename))),
-      category==='slide'?'slide-v2':category,skin.id+' category folder');
+      category==='slide'?'slide-v3':category,skin.id+' category folder');
     const bytes=fs.readFileSync(filename);
     const digest=crypto.createHash('sha256').update(bytes).digest('hex');
     assert.ok(!hashes.has(digest),'sprite art is unique across biome/category entries: '+skin.id);
@@ -99,4 +99,4 @@ assert.equal(files.size,117);
 assert.equal(keys.size,117);
 assert.equal(ids.size,93);
 assert.equal(hashes.size,93);
-console.log('PASS v0.14.3: 93 biome-exclusive skins, 24 matched slide front/back paintings, and original PNG integrity verified.');
+console.log('PASS v0.14.4: 93 biome-exclusive skins, 24 matched slide front/back paintings, and original PNG integrity verified.');
