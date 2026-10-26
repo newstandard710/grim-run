@@ -10,7 +10,7 @@ The user accepted the Reaper, regular Cavern Bat, Skeletal Bat, Bone Crawler and
 **Platform:** Landscape browser / Android prototype using Phaser 3.90.0, `index.html` and transparent PNG character art  
 **Source:** `main/index.html`  
 **Rollback:** `backup/v0.10.2` preserves the prior published game; `backup/v0.9.1` preserves the last fully user-tested pre-art gameplay version.  
-**Verification:** Local gameplay regression passes, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. GitHub actual-Chromium verification and Pages deployment for this release are pending; Android device frame-rate and play-feel review will follow deployment.
+**Verification:** Local gameplay regression and GitHub actual-Chromium checks pass on the release candidate, including 300 seeded terrain cases, five complete wins including seed 1, and 72 God Mode teleports through 20,000m. Pages deployment is triggered by the merge; Android device frame-rate and play-feel review will follow deployment.
 
 ## v0.13.0 — Painted Canyon & Lava Chasms
 
