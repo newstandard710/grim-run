@@ -62,7 +62,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,93,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.14.1 · OBSTACLE SCALE','visible version badge matches the obstacle scale release');
+    assert.equal(loaded.badge,'v0.14.2 · OBSTACLE GROUNDING','visible version badge matches the obstacle grounding release');
     assert.deepEqual(loaded.missing,[],'all 93 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,93,'no obstacle texture key is missing or duplicated');
@@ -108,9 +108,11 @@ const server=http.createServer((req,res)=>{
             {width:image.displayWidth,height:image.displayHeight}});
         }
         if((skin.category==='jump'||(skin.category==='cut'&&type==='bramble'))&&
-          (!image||image.originY!==(skin.groundAnchorY??1)||image.y!==o.y+o.height)){
+          (!image||image.originY!==(skin.groundAnchorY??1)||
+            image.y!==o.y+o.height+s.obstacleVisualInset(o))){
           renderMisses++;renderFailures.push({id:skin.id,anchor:{originY:image?.originY,y:image?.y},
-            expectedAnchor:{originY:skin.groundAnchorY??1,y:o.y+o.height}});
+            expectedAnchor:{originY:skin.groundAnchorY??1,
+              y:o.y+o.height+s.obstacleVisualInset(o)}});
         }
         if(placement&&(!image||image.originY!==placement.originY||image.y!==placement.y)){
           renderMisses++;renderFailures.push({id:skin.id,placement:{originY:image?.originY,y:image?.y},
@@ -133,6 +135,9 @@ const server=http.createServer((req,res)=>{
           {width:branchImage.displayWidth,height:branchImage.displayHeight,y:branchImage.y,
             originY:branchImage.originY},skin:branchSkin?.id});
       }
+      if(!s.slideSupport?.commandBuffer?.length){
+        renderMisses++;renderFailures.push({id:'slide-support-missing'});
+      }
       branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       const board=[
@@ -144,6 +149,13 @@ const server=http.createServer((req,res)=>{
       ];
       const background=s.add.graphics().setScrollFactor(0).setDepth(39);
       background.fillStyle(0x111722,1).fillRect(0,0,950,430);
+      background.fillStyle(0x273339,1).fillRect(0,328,950,102);
+      background.lineStyle(4,0x617b70,.85).lineBetween(0,328,950,328);
+      const supportPreview=s.add.graphics().setScrollFactor(0).setDepth(40);
+      const actualSupport=s.slideSupport;s.slideSupport=supportPreview;
+      s.drawSlideSupport({variant:0},skins.find(item=>item.id==='caves_slide_stalactite-curtain'),
+        322,252,74*3.25);
+      s.slideSupport=actualSupport;
       s.add.text(475,18,'OBSTACLE ART — PHONE-SCALE PREVIEW',{
         fontFamily:'system-ui,Arial',fontSize:'16px',fontStyle:'bold',color:'#e8f5f4'
       }).setOrigin(.5).setScrollFactor(0).setDepth(42);
@@ -152,7 +164,8 @@ const server=http.createServer((req,res)=>{
         const scale=s.obstacleSpriteScaleFor(skin,type);
         const baseHeight=type==='bramble'?220:skin.gameH;
         const groundAnchored=['jump','slide','cut'].includes(skin.category);
-        const image=s.add.image(x,y,skin.key).setOrigin(.5,groundAnchored?(skin.groundAnchorY??1):.5)
+        const inset=s.obstacleVisualInset({type});
+        const image=s.add.image(x,y+inset,skin.key).setOrigin(.5,groundAnchored?(skin.groundAnchorY??1):.5)
           .setScrollFactor(0).setDepth(41).setDisplaySize(skin.gameW*scale.x,baseHeight*scale.y);
         s.add.text(x,409,skin.category.toUpperCase(),{
           fontFamily:'system-ui,Arial',fontSize:'10px',fontStyle:'bold',color:'#a9c4c7'
