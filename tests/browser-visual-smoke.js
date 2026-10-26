@@ -836,9 +836,17 @@ const server=http.createServer((req,res)=>{
       scene.drawScene();game.step(performance.now(),0);
       const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
       const style=targetMeters>=8000?'lava':'canyon';
-      const gapSections=scene.terrain.visibleSections(group.startX,group.endX)
-        .filter(section=>section.kind==='gap');
-      const variants=[...new Set(gapSections.map(section=>
+      // A single biome segment may contain only one gap. Check both selected
+      // art variants across the full route using the same kind of generated
+      // gaps instead of requiring two variants inside each individual segment.
+      const routeGaps=scene.terrain.sequences.flatMap(route=>{
+        const routeMeters=(route.startX+route.endX-2*scene.startX)/(2*ppm);
+        const routeStyle=routeMeters>=8000?'lava':'canyon';
+        return routeStyle===style
+          ?scene.terrain.visibleSections(route.startX,route.endX).filter(section=>section.kind==='gap')
+          :[];
+      });
+      const variants=[...new Set(routeGaps.map(section=>
         scene.abyssBackdropTexture(section,style)))];
       return {meters,gap:{start:gap.start,end:gap.end,y0:gap.y0,y1:gap.y1},
         gapKey:[gap.start,gap.end,scene.height].join(':'),cameraX:scene.cameraX,cameraY:scene.cameraY,
