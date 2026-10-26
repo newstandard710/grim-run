@@ -862,7 +862,10 @@ const server=http.createServer((req,res)=>{
     const abyss=await skeletalPage.evaluate(({gapKey,expectedPrefix,actualStart,actualEnd,y0,y1})=>{
       const scene=window.grimRun.scene.scenes[0],shape=scene.abyssGeometryCache.get(gapKey);
       const gapViews=[...scene.abyssBackdropViews.values()].filter(view=>view.sprite.visible);
-      const textureView=gapViews.find(view=>view.sprite.texture.key.startsWith(expectedPrefix));
+      const targetKeyPrefix=[actualStart,actualEnd].join(':')+':';
+      const textureView=[...scene.abyssBackdropViews.entries()].find(([key,view])=>
+        key.startsWith(targetKeyPrefix)&&view.sprite.visible&&
+        view.sprite.texture.key.startsWith(expectedPrefix))?.[1];
       const topWidth=shape.right.at(-1).x-shape.left[0].x;
       const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
       const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
