@@ -72,12 +72,14 @@ The atlas `ember_imp_atlas_v1.png` is 768 × 512px with six 256 × 256 frames an
 - The cap's upper edge follows the existing terrain contour exactly and all decoration stays on or below that line. Follow slopes and rubble naturally, end at gaps and ledge edges, and leave the abyss open. Do not change terrain geometry or collision.
 - Keep the material translucent enough for each approved ground texture to show through. Use a softened, irregular lower edge and restrained broken highlights; let the biome material show through instead of forming a hard band. Keep the running contact contour locked to existing terrain and collision. Keep all marks readable at phone scale without competing with Reaper feet, enemies, hazards, pickups, or foreground details.
 
-## Biome-specific abyss paintings — v0.13.4
+## Biome-specific abyss paintings — v0.13.5
 
-- Use `abyss-depth-forest.webp`, `abyss-depth-foothills.webp`, `abyss-depth-tundra.webp`, `abyss-depth-caves.webp`, `abyss-depth-crystals.webp`, `abyss-depth-ashlands.webp`, `abyss-depth-lava.webp`, and `abyss-depth-boss.webp` for their matching biomes. Each portrait painting is a background plate with no baked-in top ledge or visible bottom.
-- Clip the paintings to the stable, terrain-seeded ravine shape. Start each opening at the exact generated ground endpoints, then add only a small irregular visual overhang and let the walls narrow into dark distance.
+- Use `abyss-depth-forest.webp`, `abyss-depth-foothills.webp`, `abyss-depth-tundra.webp`, `abyss-depth-caves.webp`, `abyss-depth-crystals.webp`, `abyss-depth-ashlands.webp`, `abyss-depth-lava.webp`, and `abyss-depth-boss.webp` for their matching biomes. Crop the top 35% from each approved concept before runtime use; the resulting 768×624 plate is a background image with no above-ground sky, baked-in ledge, or visible bottom.
+- Leave the regular biome background untouched, including its moon where present. The moon belongs above the Reaper and must never appear inside the ravine.
+- Clip the paintings to the stable, terrain-seeded ravine shape. Begin each art mask about one Reaper head-height below the rim. Place its left and right top endpoints at the corresponding real terrain endpoint plus that inset, and rotate the artwork to follow their slope. Never anchor both sides to an averaged lip height.
+- Give the inset top edge a small stable irregularity so the shadow-to-painting transition does not read as a straight stripe. Keep the walls narrowing into dark distance.
 - Extend the same artwork and mask at least 36px or 18% of gap width beneath both land edges. Real terrain and its painted ground material render above this overlap, hiding the seam. Do not add a separate filler band or procedural cliff-face texture.
-- Crossfade neighboring abyss paintings with the same biome weights used by the ground and backgrounds. Keep the art world-anchored, full-bleed, and wide enough to cover both sides without blank margins.
+- Crossfade neighboring abyss paintings with the same biome weights used by the ground and backgrounds. Preserve each painting's proportions while zooming it into the actual opening. Keep the art world-anchored, full-bleed, and wide enough to cover both sides without blank margins.
 - The terrain top, platform profiles, collisions, fall rules, controls, hazards, and route progression remain unchanged. Visible cliff edges are formed by the opening mask over the biome painting, not by a second foreground wall.
 
 ## Validation and deployment

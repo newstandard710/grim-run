@@ -5,12 +5,12 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.4-biome-ravines"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.5-ravine-reframe"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.4-biome-ravines"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.13.5-ravine-reframe"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('ABYSS_BACKDROP_FILES')&&
- html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp')"),
+ html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.5-ravine-reframe')"),
  'Biome-specific abyss paintings load in the production scene');
 assert.ok(html.includes('this.add.image(0,0,textureKey)')&&
  html.includes('this.abyssBackdropView(section,shape,')&&
@@ -33,9 +33,15 @@ for(const asset of ['abyss-canyon-gap-01.webp','abyss-canyon-gap-02.webp',
  assert.ok(!fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain',asset)),
    `${asset} is removed from the old shared-art attempt`);
 assert.ok(html.includes('const ABYSS_BACKDROP_BLEED_MIN=36')&&
- html.includes('const displayWidth=shape.width+bleed*2')&&
+ html.includes('const displayWidth=displayHeight*aspect')&&
+ html.includes('const ABYSS_ART_TOP_INSET_PX=34')&&
+ html.includes('const ABYSS_ART_TOP_JITTER_PX=14')&&
+ html.includes('Math.ceil(width/14)')&&
+ html.includes('setOrigin(.5,0)')&&html.includes('setRotation(rotation)')&&
+ html.includes('abyssBackdropTopEdge(section,ABYSS_ART_TOP_INSET_PX)')&&
+ html.includes('shape.right.slice().reverse()')&&
  html.includes('x:point.x-bleed')&&html.includes('x:point.x+bleed'),
- 'Portrait abyss plates and masks overlap beneath both ground edges to prevent seams');
+ 'Cropped abyss plates retain proportions, align to both lips, trace a valid mask, and overlap beneath both edges');
 assert.ok(html.includes('const ABYSS_OPENING_LIP_MAX=13')&&
  html.includes('ABYSS_BACKDROP_BLEED_RATIO=.18')&&
  !html.includes('abyssCliffEdgeView(')&&!html.includes('abyssCliffStyle('),
