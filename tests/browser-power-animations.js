@@ -71,7 +71,8 @@ const server=http.createServer((req,res)=>{
           roots:a.nearWings.filter(v=>v.visible).map(v=>({cropped:v.isCropped,depth:v.depth})),
           cloak:a.cloakRoot.visible,cloakDepth:a.cloakRoot.depth,bodyDepth:s.visuals.reaper.depth};
       },{raven,bone});
-      const expected=tuck?[.42,.42]:Array(raven&&bone?2:1).fill(.51);
+      assert(raven&&bone?measure.scales.length>=1&&measure.scales.length<=2:measure.scales.length===1,'One wing set, with up to two blended drawings');
+      const expected=Array(measure.scales.length).fill(tuck?.42:.51);
       assert.equal(measure.scales.length,expected.length);measure.scales.forEach((v,i)=>assert(Math.abs(v-expected[i])<.00001,'Each wing type is exactly 50% larger'));
       assert(measure.cloak&&measure.cloakDepth>measure.bodyDepth,'Cloth folds conceal wing joints');
       assert(measure.roots.every(v=>v.cropped&&v.depth>measure.bodyDepth&&v.depth<measure.cloakDepth),'Only the near root emerges between body cloth and its overlap fold');

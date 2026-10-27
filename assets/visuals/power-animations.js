@@ -263,7 +263,7 @@
         }
         if(b.id==='gravewingAscension'&&this.ready['gravewing-wings']){
           const sprite=this.pool[used++],t=b.age/b.duration;
-          sprite?.setTexture('gravewing-wings',Math.floor(t*8)%8).setOrigin(.5,260/384)
+          sprite?.setTexture('gravewing-wings',Math.floor(t*8)%8).setDepth(11.5).setOrigin(.5,260/384)
             .setPosition(s.player.x-15,s.feetY-70).setScale(.51*(.85+.15*Math.sin(Math.min(1,t*2)*Math.PI/2)))
             .setAlpha(Math.min(1,t*8,(1-t)*5)).setVisible(true);
           this.motes(s.player.x-15,s.feetY-70,'ravenWings',4,70,t,.75);
@@ -275,7 +275,7 @@
         const x=purchase?p.x:b.x,y=purchase?s.feetY-60-t*20:b.y;
         const size=purchase?42:blast?115:b.id==='brittleBones'?82:30;
         const sprite=this.pool[used++];
-        if(sprite)sprite.setTexture('power-effects',b.index).setOrigin(.5).setPosition(x,y).setDisplaySize(size*(.75+t*.5),size*(.75+t*.5))
+        if(sprite)sprite.setTexture('power-effects',b.index).setDepth(14.7).setOrigin(.5).setPosition(x,y).setDisplaySize(size*(.75+t*.5),size*(.75+t*.5))
           .setRotation((b.id==='deathsReversal'?-1:1)*t*.6).setAlpha(a).setVisible(true);
         this.motes(x,y,b.id,Math.min(10,3+b.level+(purchase?2:0)),(purchase?45:24)+t*23,b.seed+t*3,a);
         if(blast){g.lineStyle(2,COLORS[b.index],(1-t)*.28);g.strokeEllipse(x,y,70+t*270,35+t*130);}

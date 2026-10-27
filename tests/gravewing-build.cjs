@@ -86,4 +86,17 @@ for(const [group,sub]of [['sources','source/'],['runtime','']])for(const [name,m
  const b=fs.readFileSync(path.join(root,'assets/encounters/v0190',sub+name));assert.equal(b.length,m.bytes);assert.equal(crypto.createHash('sha256').update(b).digest('hex'),m.sha256);assert.equal(b[25],6);
 }
 assert.deepEqual(manifest.registration.bat.corrections,{'6':[-34,-23],'8':[-33,-18]});assert.equal(manifest.registration.plant.frames,16);assert.equal(manifest.registration.gravewing.frames,12);
+// Flight/dive/recovery keep one registered position and total opacity through every handoff.
+vm.runInContext(read('assets/combat/v0170/animation-data.js'),art);vm.runInContext(read('assets/visuals/combat-animations.js'),art);
+art.GRIM_VISUALS={V2_BAT:{dive:{key:'legacy-dive',anchor:[1600,650],scale:.08}}};
+function image(){const o={alpha:1,visible:false};return new Proxy(o,{get:(x,k)=>k in x?x[k]:(...v)=>{if(k==='setAlpha')x.alpha=v[0];if(k==='setVisible')x.visible=v[0];if(k==='setPosition'){x.x=v[0];x.y=v[1];}if(k==='setOrigin')x.origin=v;if(k==='setTexture')x.key=v[0];return o.proxy;}});}
+const flightScene={state:'paused',elapsed:0,width:950,cameraX:0,enemies:[],visuals:{reviewV2:true,batReady:true,batPool:[]},
+ textures:{exists:()=>true,get:()=>({has:()=>true})},add:{image:()=>{const v=image();v.proxy=v;return v;}},events:{once(){}}};
+const flight=new art.GRIM_COMBAT_ART.CombatAnimations(flightScene);
+for(const mode of ['glide','dive','recover'])for(const t of [0,.03,.06,.09,.119,.12,.18])for(const elapsed of [0,.48,.90,.95]){
+ flightScene.enemies=[{kind:'bat',x:480,y:160,phase:0,mode,timer:t}];flightScene.elapsed=elapsed;flight.renderBats();
+ const views=flight.bats[0].filter(v=>v.visible);assert(Math.abs(views.reduce((n,v)=>n+v.alpha,0)-1)<1e-9);
+ assert(views.every(v=>v.x===480&&v.y===160));
+ for(const v of views)assert.equal(JSON.stringify(v.origin),JSON.stringify(v.key==='legacy-dive'?[1600/2304,650/1280]:[330/512,292/512]));
+}
 console.log('PASS v0.19: four real time scales + complete freeze/resume, ten-second/center-trigger vendors, proximity bite/hit windows/cutting/rewind, both wing orders, '+gaps+' reachable gaps, large slow four-edge bones and asset hashes.');

@@ -48,6 +48,12 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   }
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.grounded=true;s.player.airTuck=false;s.player.hovering=false;s.player.y=s.terrain.anchorAt(s.player.x);s.powerArt.reset();s.powerManager.levels.brittleBones=4;s.powerArt.trigger('brittleBones',s.player.x,s.feetY-45,'blast',4);s.powerArt.tick(350);s.drawScene();});await shot('bones');
   const bones=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return s.powerArt.bonePool.filter(v=>v.visible).map(v=>v.displayWidth);});assert.equal(bones.length,44);assert(bones.every(v=>v>=45&&v<=105));
+  // Corrected flight frames and dive/recovery share the exact same world anchor.
+  await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.powerArt.reset();s.enemies=[{kind:'bat',x:s.player.x+210,y:s.feetY-135,hp:1,dead:false,mode:'glide',timer:0,phase:0}];});
+  for(const [mode,timer,elapsed]of [['glide',0,.36],['glide',0,.48],['dive',.06,.95],['recover',.06,.95]]){
+   const view=await page.evaluate(({mode,timer,elapsed})=>{const s=window.grimRun.scene.scenes[0],e=s.enemies[0];Object.assign(e,{mode,timer});s.elapsed=elapsed;s.drawScene();const views=s.combatArt.bats[0].filter(v=>v.visible);return {opacity:views.reduce((n,v)=>n+v.alpha,0),anchored:views.every(v=>v.x===e.x&&v.y===e.y)};},{mode,timer,elapsed});assert(Math.abs(view.opacity-1)<1e-8&&view.anchored);await shot('bat-'+mode+'-'+elapsed);
+  }
+  await page.evaluate(()=>{window.grimRun.scene.scenes[0].enemies=[];});
   // Actual upgraded projectiles use the 3x render path at their real muzzle.
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.powerArt.reset();s.gunUnlocked=true;s.gunCooldownMs=0;s.player.visualFireMs=0;s.state='playing';s.powerManager.levels.rapidFire=3;s.powerManager.levels.powerShot=3;s.fireCrossbow();s.updateCombat(60,.06);s.state='paused';s.drawScene();});await shot('crossbow-projectile');
   assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);console.log('PASS Chromium v0.19: loaded authored art, four touch time states/freeze, full-screen vendor skip, repeat merchant timing, sixteen fixed-root bite poses/blends, named acquisition, integrated hover/tuck wings, large bones and crossbow capture.');

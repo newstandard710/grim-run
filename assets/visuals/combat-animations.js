@@ -39,7 +39,7 @@
       const pair=(depth)=>[0,1].map(()=>s.add.image(0,0,'combat-reaper-slide-cut',0).setDepth(depth).setVisible(false));
       if(this.ready['reaper-slide-cut']){
         this.reaper=pair(12.05);
-        for(let i=0;i<12;i++)this.bats.push(pair(9.2));
+        for(let i=0;i<12;i++)this.bats.push([...pair(9.2),s.add.image(0,0,'combat-reaper-slide-cut',0).setDepth(9.2).setVisible(false)]);
         for(let i=0;i<16;i++)this.responses.push(pair(9.4));
         for(let i=0;i<20;i++)this.effects.push(pair(14.8));
         for(let i=0;i<4;i++)this.echoes.push(pair(11.8));
@@ -119,24 +119,23 @@
       for(const e of s.enemies||[]){
         if(e.kind!=='bat'||e.dead||e.x<s.cameraX-130||e.x>s.cameraX+s.width+130||n>=this.bats.length)continue;
         const pair=this.bats[n++];for(const v of pair)v.setVisible(false).setRotation(0).setFlipX(false).clearTint();if(e.visualHitMs>0&&this.ready['bat-response'])continue;
-        if(e.mode==='dive'){
-          const m=scope.GRIM_VISUALS.V2_BAT.dive,v=pair[0];
-          const enter=clamp((e.timer||0)/.12),flight=batMotion(s.elapsed||0,e.phase||0);
-          v.setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
-            .setPosition(e.x,e.y).setAlpha(enter).setRotation(.1*enter).setVisible(true);
-          if(enter<1)pair[1].setTexture('combat-bat-flight',flight.a).setOrigin(330/512,292/512).setScale(.32)
-            .setPosition(e.x,e.y).setAlpha(1-enter).setRotation(0).setVisible(true);
-        }else{
-          const f=batMotion(s.elapsed||0,e.phase||0);
-          this.blend(pair,'bat-flight',f.a+f.mix,e.x,e.y,.32);
-          // Close the loop by blending the final drawing into the first.
-          if(f.a===15&&f.mix>0){pair[1].setTexture('combat-bat-flight',0).setOrigin(330/512,292/512).setScale(.32).setPosition(e.x,e.y).setRotation(0).setAlpha(f.mix).setVisible(true);pair[0].setAlpha(1-f.mix);}
-          if(e.mode==='recover'&&(e.timer||0)<.12){
-            const recovery=clamp((e.timer||0)/.12),m=scope.GRIM_VISUALS.V2_BAT.dive;
-            pair[0].setAlpha(recovery*(1-f.mix));
-            pair[1].setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
-              .setPosition(e.x,e.y).setRotation(.1*(1-recovery)).setAlpha(1-recovery).setVisible(true);
-          }
+        const f=batMotion(s.elapsed||0,e.phase||0);
+        this.blend(pair,'bat-flight',f.a+f.mix,e.x,e.y,.32);
+        if(f.a===15&&f.mix>0){
+          pair[1].setTexture('combat-bat-flight',0).setOrigin(330/512,292/512).setScale(.32)
+            .setPosition(e.x,e.y).setRotation(0).setAlpha(f.mix).setVisible(true);
+          pair[0].setAlpha(1-f.mix);
+        }
+        // Keep both flight drawings alive during the dive transition. A third
+        // pooled view avoids replacing a blended drawing with a differently
+        // registered texture, so neither the anchor nor opacity can jump.
+        const weight=e.mode==='dive'?clamp((e.timer||0)/.12):
+          e.mode==='recover'?1-clamp((e.timer||0)/.12):0;
+        for(let i=0;i<2;i++)pair[i].setAlpha(pair[i].alpha*(1-weight)).setVisible(pair[i].alpha>.001);
+        if(weight>0){
+          const m=scope.GRIM_VISUALS.V2_BAT.dive;
+          pair[2].setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
+            .setPosition(e.x,e.y).setAlpha(weight).setRotation(.1*weight).setVisible(true);
         }
       }
     }
