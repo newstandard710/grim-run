@@ -298,6 +298,10 @@ assert.equal(staticRenderer.illustratedReaperPose(),'run');
 staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPose(),'slide');
 staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
 assert.equal(staticRenderer.illustratedReaperPose(),'fall');
+staticScene.combatArt={ready:{'bat-flight':true}};
+staticScene.enemies=[{kind:'bat',x:450,y:120,mode:'glide',hp:2,phase:0,dead:false}];
+staticRenderer.renderIllustrated();
+assert.equal(staticRenderer.batPool[0].visible,true,'The explicit illustrated fallback keeps its bats when the default combat atlas is loaded');
 staticRenderer.shutdown();
 
 const skeletalEnemy={kind:'skeletalBat',x:450,y:120,mode:'glide',hp:2,phase:0,dead:false};
