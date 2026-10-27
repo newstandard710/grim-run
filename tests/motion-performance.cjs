@@ -14,12 +14,16 @@ for(const speed of [140,282,465,600])for(const hz of [30,60,120]){
  let distance=0;for(let i=0;i<hz;i++)distance+=speed/hz;
  assert(Math.abs(A.runFrame(distance)-A.runFrame(speed))<1e-9);
 }
+assert.equal(A.STRIDE_PX,752);assert.equal(A.PIXELS_PER_GAIT,188);assert.equal(A.GAITS_PER_SHEET,4);
+assert.equal(A.runFrame(188),6,'188px advances one gait beat, not the entire sheet');
+for(const speed of [197.4,261.45,325.5])assert(Math.abs(A.runFrame(speed)/(speed/188*24)-.25)<1e-9,'Cadence is 75% slower at every movement speed');
+assert.equal(A.WEAPON_SCALE,D.weapon.scale*.60);
 assert.equal(A.runFrame(A.STRIDE_PX),0);assert(A.runFrame(-1)>=0);
 assert.equal(A.jumpFrame({grounded:true,visualLandingMs:A.LAND_MS}),18);
 assert.equal(A.jumpFrame({grounded:true,visualLandingMs:0}),23);
 assert.equal(A.jumpFrame({hovering:true}),10.5);
 const frameSet=new Set();for(let t=0;t<=1;t+=.001)frameSet.add(Math.round(A.cutFrame(t)));assert.equal(frameSet.size,24);
-// The same rigid tip/socket pair is used for artwork, trail and collision.
+// The physical weapon is rigid and carry-sized; a separate spectral arc owns the unchanged damage reach.
 // Its pointed end must stay ahead of its socket along the entire active stroke.
 let bladeLength;
 for(let t=.201;t<.789;t+=.001){
@@ -35,8 +39,12 @@ const broad=w.GRIM_CORE.attackBox(p.x,feet,0,false);
 for(let t=.21;t<.79;t+=.03){
  p.attackMs=260*(1-t);const boxes=A.sweepBoxes(s,p.attackMs+34);assert(boxes.length>0);
  for(const b of boxes){assert(b.x>=broad.x&&b.y>=broad.y);assert(b.x+b.width<=broad.x+broad.width+1e-8);assert(b.y+b.height<=broad.y+broad.height+1e-8);}
- const tip=A.weaponPoint(A.cutRig(t),D.weapon.tip),target={x:p.x+tip.x-2,y:feet+tip.y-2,width:4,height:4};
+ const tip=A.sweepPoint(A.cutRig(t),D.weapon.tip),target={x:p.x+tip.x-2,y:feet+tip.y-2,width:4,height:4};
  if(w.GRIM_CORE.overlaps(broad,target))assert(boxes.some(b=>w.GRIM_CORE.overlaps(b,target)),'Visible edge can hit at '+t);
+}
+for(let t=.20;t<=.79;t+=.005){
+ const rig=A.cutRig(t),physical=A.weaponPoint(rig,D.weapon.tip),arc=A.sweepPoint(rig,D.weapon.tip);
+ assert(Math.abs(Math.hypot(physical.x-rig.x,physical.y-rig.y)/Math.hypot(arc.x-rig.x,arc.y-rig.y)-.60)<1e-9);
 }
 // At the same pose, targets beyond the visible edge cannot be hit simply
 // because they are inside the old full rectangular reach envelope.
