@@ -13,7 +13,7 @@
     s.load.spritesheet('vendor-reaper-approach','assets/vendors/v0152/reaper-approach.png?v=0.15.2',
       {frameWidth:512,frameHeight:512,endFrame:11});
     s.load.spritesheet('relic-grip-overlay','assets/vendors/v0152/relic-grip-overlay.png?v=0.15.2',
-      {frameWidth:512,frameHeight:512,endFrame:23});
+      {frameWidth:128,frameHeight:96,endFrame:23});
   }
   function approachAt(t){
     const travel=clamp((t-.12)/1.48,0,1);

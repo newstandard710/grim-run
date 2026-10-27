@@ -88,7 +88,7 @@
         this.ready['power-relic-motion']?0:12)?.setScrollFactor(0)
         .setOrigin(this.ready['power-relic-motion']?.5:288/512,this.ready['power-relic-motion']?456/512:400/512);
       this.cinemaBow=image('power-bone-crossbow',25)?.setScrollFactor(0);
-      this.cinemaHands=image('relic-grip-overlay',25.2,0)?.setScrollFactor(0).setOrigin(.5,456/512);
+      this.cinemaHands=image('relic-grip-overlay',25.2,0)?.setScrollFactor(0).setOrigin(0,0);
       this.cinemaFX=scene.add.graphics().setScrollFactor(0).setDepth(25.5);
       this.weapon=image('power-bone-crossbow',14.3);
       this.enabled=true;
@@ -330,7 +330,11 @@
       if(this.cinemaBow&&t>.6){
         this.cinemaBow.setOrigin(128/512,235/512).setPosition(bx,by).setDisplaySize(h*.17,h*.17)
           .setRotation(angle).setAlpha(bowAlpha).setVisible(true);
-        if(smooth&&t>=1.2)this.cinemaHands?.setFrame(motion.frame).setPosition(w*.37,ground).setScale(cinemaScale).setVisible(true);
+        if(smooth&&t>=1.2&&scope.GRIM_VENDOR_DATA?.relicGripOffsets){
+          const [ox,oy]=scope.GRIM_VENDOR_DATA.relicGripOffsets[motion.frame];
+          this.cinemaHands?.setFrame(motion.frame).setPosition(w*.37+(ox-256)*cinemaScale,ground+(oy-456)*cinemaScale)
+            .setScale(cinemaScale).setVisible(true);
+        }
       }
       const g=this.cinemaFX;
       if(reveal>0){

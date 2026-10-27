@@ -68,11 +68,11 @@
       ]
     },
     "assets/vendors/v0152/relic-grip-overlay.png": {
-      "bytes": 79698,
-      "sha256": "174acf0459b50e0ded613b3227681fe580b3305bb2c208a4fb464db16fe6edcc",
+      "bytes": 51047,
+      "sha256": "3a137d3488e4e7c006061f867a5e9fd2c687eb068e922ebc504286c3bef82bed",
       "size": [
-        2048,
-        3072
+        512,
+        576
       ]
     }
   }

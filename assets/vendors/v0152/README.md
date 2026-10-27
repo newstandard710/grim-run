@@ -9,7 +9,7 @@ Built-in Imagegen produced the three original sheets under `../source/v0152/`. E
 | angel-architecture.png | Two complete worn marble columns in 384x768 cells. |
 | devil-architecture.png | Two paired horned stone sentinel statues in 384x768 cells. |
 | reaper-approach.png | Twelve registered 512px poses: eight approach and four settle/look-up poses. |
-| relic-grip-overlay.png | Palm regions extracted from the existing 24 shrine poses, layered over the crossbow stock. |
+| relic-grip-overlay.png | Palm regions from the existing 24 shrine poses in compact 128x96 cells, layered over the crossbow stock using per-frame offsets. |
 
 `scripts/prepare-vendor-art.py` selects connected silhouettes, registers the approach eye/foot anchors, extracts architectural components and makes the palm overlay. It writes `registration.json` and `assets/visuals/vendor-art-data.js`. The existing vendor characters, accepted Reaper identity, and shrine art are retained.
 

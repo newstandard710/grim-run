@@ -67,11 +67,12 @@ const server=http.createServer((req,res)=>{
   for(const t of [2.3,2.65,2.9,3.2,3.5]){
    const sample=await page.evaluate(t=>{
     const s=window.grimRun.scene.scenes[0];s.chestMs=6000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
-    const a=s.powerArt,b=a.cinemaBow,hand=window.GRIM_VENDOR_DATA.relicGrips[15][0],scale=s.height/760;
+    const a=s.powerArt,b=a.cinemaBow,hand=window.GRIM_VENDOR_DATA.relicGrips[15][0],offset=window.GRIM_VENDOR_DATA.relicGripOffsets[15],scale=s.height/760;
     return {frame:a.cinemaReaper.frame.name,x:b.x,y:b.y,rotation:b.rotation,width:b.displayWidth,origin:[b.originX,b.originY],hands:a.cinemaHands.visible,
+      overlayError:Math.hypot(a.cinemaHands.x-(s.width*.37+(offset[0]-256)*scale),a.cinemaHands.y-(s.height*.82+(offset[1]-456)*scale)),
       gripError:Math.hypot(b.x-(s.width*.37+(hand[0]-256)*scale),b.y-(s.height*.82+(hand[1]-456)*scale)),glow:window.GRIM_POWER_ART.relicMotionAt(t).glow};
    },t);
-   assert.equal(Number(sample.frame),15);assert.equal(sample.width,430*.17);assert(sample.hands);assert(sample.gripError<.001);assert(sample.glow>0);
+   assert.equal(Number(sample.frame),15);assert.equal(sample.width,430*.17);assert(sample.hands);assert(sample.gripError<.001&&sample.overlayError<.001);assert(sample.glow>0);
    assert.deepEqual(sample.origin,[128/512,235/512]);holds.push(sample);
    if(t===2.9)await page.screenshot({path:path.join(dir,'vendor-shrine-grip-hold.png')});
    await page.waitForTimeout(180);
