@@ -604,6 +604,7 @@
       const s=this.scene,p=s.player;
       if(!p)return 'idle';
       if(s.state==='dead'||s.state==='revive')return 'death';
+      if(s.state==='respawning')return 'idle';
       if(s.state==='won')return 'idle';
       if(p.sliding||p.airTuck)return 'slide';
       if(p.attackMs>0)return 'scythe_attack';

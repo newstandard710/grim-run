@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.15.2</title>
+  <title>GRIM RUN — v0.15.3</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -245,7 +245,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.15.2 · MERCHANT SANCTUARIES</div>
+      <div class="mini">v0.15.3 · SOULS &amp; SHADOWS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -353,7 +353,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.15.2',
+  version: '0.15.3',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -880,7 +880,7 @@ window.GRIM_CONFIG = Object.freeze({
     function random(){rngState=(Math.imul(1664525,rngState)+1013904223)>>>0;return rngState/4294967296;}
     // Position-based seeded variation, so run layout does not depend on camera calls.
     const phase1=random()*Math.PI*2,phase2=random()*Math.PI*2,phase3=random()*Math.PI*2;
-    const segments=[],sequences=[];
+    const segments=[],sequences=[],segmentIndices=new WeakMap();
     const portalX=startX+5000*pxPerMeter;
     const finishX=startX+9999*pxPerMeter;
     const worldEndMeters=scope.GRIM_CONFIG?.worldArtEndMeters||20000;
@@ -906,7 +906,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     function add(end,yEnd,kind='ground',group=-1){
       if(end<=cursor)throw Error('Terrain segment must advance');
-      segments.push({start:cursor,end,y0:elevation,y1:yEnd,kind,group});
+      const section={start:cursor,end,y0:elevation,y1:yEnd,kind,group};
+      segmentIndices.set(section,segments.length);segments.push(section);
       cursor=end;elevation=yEnd;
     }
     function plan(group,m){
@@ -1075,7 +1076,33 @@ window.GRIM_CONFIG = Object.freeze({
       while(lo<=hi){const mid=(lo+hi)>>1,s=segments[mid];if(x<s.start)hi=mid-1;else if(x>=s.end)lo=mid+1;else return s;}
       return null;
     }
-    function groundAt(x){const s=findSection(x);if(!s||s.kind==='gap')return null;return lerp(s.y0,s.y1,(x-s.start)/(s.end-s.start));}
+    // Monotone Hermite hills round the old angular crests without overshoot.
+    // Flat sanctuaries, gap lips, launch strips and one-way ledges stay exact.
+    // The renderer, placements and physics all sample this single profile.
+    function surfaceSlopes(s){
+      const d=(s.y1-s.y0)/(s.end-s.start);
+      if(s.kind!=='ground'||d===0)return [d,d];
+      const i=segmentIndices.get(s);
+      const blend=(other,before)=>{
+        if(!other||other.kind!=='ground'||Math.abs((before?other.y1:other.y0)-(before?s.y0:s.y1))>.001)return d;
+        const n=(other.y1-other.y0)/(other.end-other.start);
+        if(n*d<=0)return 0;
+        return 2*n*d/(n+d);
+      };
+      return [blend(segments[i-1],true),blend(segments[i+1],false)];
+    }
+    function surfaceAt(s,x){
+      const width=s.end-s.start,t=clamp((x-s.start)/width,0,1);
+      if(s.kind!=='ground')return lerp(s.y0,s.y1,t);
+      const [a,b]=surfaceSlopes(s),t2=t*t,t3=t2*t;
+      return (2*t3-3*t2+1)*s.y0+(t3-2*t2+t)*width*a+
+        (-2*t3+3*t2)*s.y1+(t3-t2)*width*b;
+    }
+    function surfacePoints(s,from=s.start,to=s.end,step=4){
+      const count=Math.max(16,Math.ceil((to-from)/step));
+      return Array.from({length:count+1},(_,i)=>{const x=lerp(from,to,i/count);return {x,y:surfaceAt(s,x)};});
+    }
+    function groundAt(x){const s=findSection(x);return !s||s.kind==='gap'?null:surfaceAt(s,x);}
     function fillGaps(from,to){
       // Genuine, permanent rubble bridges. Only gaps entirely within the blast get filled.
       // Endpoints connect to adjacent platforms; gaps elsewhere remain hazardous.
@@ -1107,7 +1134,7 @@ window.GRIM_CONFIG = Object.freeze({
     // Keep the normal course pre-generated. God Mode continues in fixed chunks
     // only when its requested range approaches the generated edge.
     advance(finishX+1000);
-    return {segments,sequences,groundAt,fillGaps,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
+    return {segments,sequences,groundAt,surfaceAt,surfaceSlopes,surfacePoints,fillGaps,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
       get firstGapX(){return startX+766*pxPerMeter;},get portalX(){return portalX;},get portalExitX(){return portalX+310;},
       get finishX(){return finishX;},get worldEndX(){return worldEndX;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
   }
@@ -1217,7 +1244,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
       show('controls',mode==='playing');
-      show('hud', mode==='playing'||mode==='paused'||mode==='upgrade'||mode==='countdown'||mode==='portal'||mode==='rewinding');
+      show('hud', mode==='playing'||mode==='paused'||mode==='upgrade'||mode==='countdown'||mode==='portal'||mode==='rewinding'||mode==='respawning');
       this.releaseAll();
     }
     updateCountdown(seconds) {
@@ -1443,12 +1470,14 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/visuals/obstacle-catalog.js?v=0.14.7-slide-support"></script>
+  <script src="assets/visuals/visual-system.js?v=0.15.3"></script>
+  <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/visuals/power-animations.js?v=0.15.2"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
   <script src="assets/visuals/vendor-sanctuaries.js?v=0.15.2"></script>
+  <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
+  <script src="assets/visuals/world-polish.js?v=0.15.3"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1519,6 +1548,7 @@ window.GRIM_CONFIG = Object.freeze({
     preload(){
       scope.GRIM_POWER_ART?.preload(this);
       scope.GRIM_VENDOR_ART?.preload(this);
+      scope.GRIM_WORLD_POLISH?.preload(this);
       this.biomeBackdropGroup='surface';
       this.biomeBackdropPendingGroup=null;
       this.biomeBackdropFailedGroups=new Set();
@@ -1547,7 +1577,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.groundY = Math.round(this.height * C.groundRatio);
       this.cameraX = 0;
       this.cameraY = 0;
-      this.fallFeedbackMs=0;
+      this.fallFeedbackMs=0;this.respawnMs=0;this.respawnCamera=null;
       this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
       this.hasTeleported=false;this.portalMs=0;this.chestMs=0;this.shrineClaimed=false;
       // Phaser calls preload before create. Keep art loading optional for
@@ -1699,6 +1729,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.powerArt=scope.GRIM_POWER_ART?new scope.GRIM_POWER_ART.PowerAnimations(this):null;
       this.vendorArt=scope.GRIM_VENDOR_ART?new scope.GRIM_VENDOR_ART.VendorSanctuaries(this):null;
+      this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.drawScene();
     }
     openReliquary(){
@@ -1829,7 +1860,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.hasTeleported=d>=5000;
       this.gunUnlocked=this.hasTeleported;
       this.shrineClaimed=this.gunUnlocked;
-      this.powerArt?.reset();
+      this.powerArt?.reset();this.worldPolish?.reset();
       this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.ui.showGun(this.gunUnlocked);this.ui.showGunCooldown(0);
       this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
@@ -1874,6 +1905,10 @@ window.GRIM_CONFIG = Object.freeze({
       for(const arc of this.chainArcs){arc.y1+=dy;arc.y2+=dy;}
       this.player.y+=dy;
       this.cameraY+=dy;
+      if(this.respawnCamera){
+        this.respawnCamera.fromY+=dy;this.respawnCamera.toY=this.player.y-this.groundY;
+        this.respawnCamera.toX=this.player.x-this.width*C.reaperXRatio;
+      }
       for(const ob of this.obstacles){
         if(ob.type==='tuckGate'||ob.type==='airBramble'||ob.type==='snappingBramble'){ob.y+=dy;continue;}
         const next=Core.obstacle(ob.type,ob.x,this.terrain.anchorAt(ob.x),ob.variant,C.slideClearancePx,this.height);
@@ -2068,7 +2103,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastUpdateHeartbeatAt=Date.now();
       if(typeof window.setInterval==='function'){
         this.loopWatchdogId=window.setInterval(()=>{
-          if(document.hidden||!['playing','countdown','portal','chest','rewinding','upgrade'].includes(this.state))return;
+          if(document.hidden||!['playing','countdown','portal','chest','vendorIntro','respawning','rewinding','upgrade'].includes(this.state))return;
           if(Date.now()-this.lastUpdateHeartbeatAt<2500)return;
           // A renderer callback can stop being scheduled while leaving Phaser's
           // running flag set. Restart the timestep when an active scene has had
@@ -2107,7 +2142,7 @@ window.GRIM_CONFIG = Object.freeze({
         lastIndex:-1};
       this.rewindPlayback.target=saved;
       this.state='rewinding';
-      this.powerArt?.reset();
+      this.powerArt?.reset();this.worldPolish?.reset();
       this.ui.setMode('rewinding');
       this.ui.showRewindPlayback(true);
       this.ui.rewindFlash(false);
@@ -2122,9 +2157,9 @@ window.GRIM_CONFIG = Object.freeze({
       const startingHP=C.startingHP+Meta.healthBonus(this.meta);
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
-      this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
+      this.cameraY=0;this.fallFeedbackMs=0;this.respawnMs=0;this.respawnCamera=null;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;this.shrineClaimed=false;
-      this.powerArt?.reset();
+      this.powerArt?.reset();this.worldPolish?.reset();
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
       this.rewindFrames=[];this.rewindTerrainBase=new Map();
       this.rewindClockMs=0;this.rewindSampleMs=0;
@@ -2186,7 +2221,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     goToMenu() {
-      this.powerArt?.reset();
+      this.powerArt?.reset();this.worldPolish?.reset();
       this.wakeGameLoop();
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
@@ -2435,15 +2470,21 @@ window.GRIM_CONFIG = Object.freeze({
       for(const tip of this.tips)if(tip.atX+80>=beginX&&tip.atX<=endX)tip.label.destroy();
       this.tips=this.tips.filter(t=>t.atX+80<beginX||t.atX>endX);
     }
+    destroyObstacle(ob){
+      if(ob.destroyed)return false;
+      ob.destroyed=true;
+      if(Combat.cuttable(ob))this.worldPolish?.destroyObstacle(ob);
+      return true;
+    }
     cutNearby() {
       const bonus=126*this.powerManager.attackBonus();
       const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
       for (const ob of this.obstacles) {
         if (!Combat.cuttable(ob) || ob.destroyed || !Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob)) continue;
-        ob.destroyed=true;
+        this.destroyObstacle(ob);
         // Cutting removes the obstruction; only placed gold pickups grant currency.
-        this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12);
-        this.puff(ob.x+ob.width/2,ob.y+ob.height-45,0x9bc3a2,13);
+        this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12,Boolean(this.worldPolish?.ready['polish-fragments']));
+        this.puff(ob.x+ob.width/2,ob.y+ob.height-45,0x9bc3a2,13,Boolean(this.worldPolish?.ready['polish-fragments']));
       }
       // The same scythe cuts attacking enemies and deflects approaching fireballs.
       for(const e of this.enemies){
@@ -2700,6 +2741,17 @@ window.GRIM_CONFIG = Object.freeze({
         if(!document.hidden)this.chestMs=Math.max(0,this.chestMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.chestMs===0)this.finishChest();
       }
+      else if(this.state==='respawning'){
+        if(!document.hidden)this.respawnMs=Math.max(0,this.respawnMs-Math.min(250,Math.max(0,deltaMs)));
+        const t=clamp((1500-this.respawnMs)/240,0,1),e=t*t*(3-2*t),camera=this.respawnCamera;
+        if(camera){
+          this.cameraX=camera.fromX+(camera.toX-camera.fromX)*e;
+          this.cameraY=camera.fromY+(camera.toY-camera.fromY)*e;
+        }
+        if(this.respawnMs===0)this.finishAbyssRespawn();
+        // Do not tick physics, enemies, projectiles, timers, FX or the run clock.
+        this.cameras.main.setScroll(this.cameraX,this.cameraY);this.drawScene();return;
+      }
       else if(this.state==='countdown'){
         // World, obstacles, player and ability timers remain completely frozen.
         this.countdownMs=Math.max(0,this.countdownMs-Math.min(250,Math.max(0,deltaMs)));
@@ -2844,7 +2896,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
-        this.powerArt?.tick(frameMs);
+        this.powerArt?.tick(frameMs);this.worldPolish?.tick(frameMs);
         this.tickRewind(frameMs);
       }
       if(this.state==='playing'&&this.player.visualFireMs>0)
@@ -2902,7 +2954,7 @@ window.GRIM_CONFIG = Object.freeze({
       const bats=this.enemies.filter(e=>Combat.flightVisible(e,this.player.x,this.width));
       if(!targets.length&&!bats.length)return false;
       for(const ob of targets){
-        ob.destroyed=true;this.puff(ob.x+ob.width/2,Math.max(ob.y,ob.y+ob.height-30),0xffd38e,5);
+        this.destroyObstacle(ob);this.puff(ob.x+ob.width/2,Math.max(ob.y,ob.y+ob.height-30),0xffd38e,5,Combat.cuttable(ob)&&Boolean(this.worldPolish?.ready['polish-fragments']));
       }
       for(const bat of bats)this.hitEnemy(bat,2,true);
       this.puff(this.player.x+80,this.feetY-90,0xffbd77,24);
@@ -3031,7 +3083,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(distance<=Math.max(21,step)){
           b.x=tx;b.y=ty;b.dead=true;
           if(b.kind==='enemy'){this.hitEnemy(b.ref,b.damage,true);this.chainOnHit(b.ref,b.damage);}
-          else {b.ref.destroyed=true;this.puff(tx,ty,0xffd79e,12);}
+          else {this.destroyObstacle(b.ref);this.puff(tx,ty,0xffd79e,12,Combat.cuttable(b.ref)&&Boolean(this.worldPolish?.ready['polish-fragments']));}
         }else {b.x+=dx/distance*step;b.y+=dy/distance*step;}
       }
       for(const ball of this.fireballs){
@@ -3122,8 +3174,8 @@ window.GRIM_CONFIG = Object.freeze({
       for(const ob of this.obstacles){
         if(ob.destroyed||ob.x+ob.width<from||ob.x>to)continue;
         if(ob.type==='rock')knocked++;
-        ob.destroyed=true;
-        this.puff(ob.x+ob.width*.5,ob.y+Math.min(40,ob.height*.5),0xcad8e7,7);
+        this.destroyObstacle(ob);
+        this.puff(ob.x+ob.width*.5,ob.y+Math.min(40,ob.height*.5),0xcad8e7,7,Combat.cuttable(ob)&&Boolean(this.worldPolish?.ready['polish-fragments']));
       }
       // Bone shards sweep across the new rubble bridges in the blast corridor.
       for(let k=0;k<Math.min(40,14+knocked*4);k++){
@@ -3180,7 +3232,9 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     rescueFromAbyss(){
+      if(this.state!=='playing')return false;
       const p=this.player;
+      const fromCamera={x:this.cameraX,y:this.cameraY};
       const group=this.terrain.groupNear(p.x) || [...this.terrain.sequences].reverse().find(s=>s.startX<p.x);
       if(!group){p.y=this.terrain.anchorAt(p.x);p.grounded=true;return;}
       const hell=this.distance>=8000;
@@ -3200,10 +3254,30 @@ window.GRIM_CONFIG = Object.freeze({
       this.fireballs=this.fireballs.filter(b=>b.x<p.x-230||b.x>p.x+450);
       for(const tip of this.tips){if(tip.atX>p.x-200&&tip.atX<p.x+270)tip.label.destroy();}
       this.tips=this.tips.filter(t=>t.atX<=p.x-200||t.atX>=p.x+270);
-      this.cameraY=p.y-this.groundY;
+      this.distance=(p.x-this.startX)/C.pxPerMeter;
       this.fallFeedbackMs=1550;this.ui.showFallNotice(true);
-      this.puff(p.x,p.y-40,0xe57b9a,20);
-      // takeDamage() already handled lethal damage and Brittle Bones.
+      // Retain the old visual RNG advancement without its instant teleport puff.
+      this.puff(p.x,p.y-40,0xe57b9a,20,true);
+      // Lethal falls keep the existing death / paid-revive flow.
+      if(this.state!=='playing'){
+        this.cameraX=p.x-this.width*C.reaperXRatio;this.cameraY=p.y-this.groundY;
+        return false;
+      }
+      p.slideConsumed=false;p.jumpAgeMs=0;p.visualLandingMs=0;p.visualFireMs=0;
+      this.state='respawning';this.respawnMs=1500;
+      this.respawnCamera={fromX:fromCamera.x,fromY:fromCamera.y,
+        toX:p.x-this.width*C.reaperXRatio,toY:p.y-this.groundY};
+      this.worldPolish?.reset();this.powerArt?.reset();this.resetRewindHistory();
+      this.ui.setMode('respawning');this.refreshHud();
+      return true;
+    }
+    finishAbyssRespawn(){
+      if(this.state!=='respawning')return false;
+      this.state='playing';this.respawnMs=0;this.respawnCamera=null;
+      this.damageFlashMs=0;this.bonesBlastMs=0;this.blastFlashMs=0;
+      this.ui.setMode('playing');this.refreshHud();
+      this.resetRewindHistory();this.captureRewind();
+      return true;
     }
     startChest(){
       if(this.state!=='playing'||this.shrineClaimed||this.hasTeleported)return false;
@@ -3217,7 +3291,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.visualTuckMs=0;p.visualTuckReleaseMs=0;p.visualWasAirborne=false;p.visualFireMs=0;
       this.distance=4900;this.cameraX=p.x-this.width*C.reaperXRatio;
       this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
-      this.powerArt?.reset();
+      this.powerArt?.reset();this.worldPolish?.reset();
       this.ui.showPortal(false);
       this.state='chest';this.chestMs=6000;this.resetRewindHistory();
       this.ui.setMode('chest');
@@ -3350,12 +3424,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.gameOver(this.distance,this.soulCount,
         `${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),false);
     }
-    puff(x,y,color,count) {
+    puff(x,y,color,count,hidden=false) {
       for (let i=0;i<count;i++) {
         const theta=(i/count)*Math.PI*2 + this.rng.next()*.5;
         const velocity=40+this.rng.next()*125;
         const life=.30+this.rng.next()*.50;
-        this.particles.push({x,y,vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity-35,life,maxLife:life,color,radius:2+this.rng.next()*3});
+        const radius=2+this.rng.next()*3;
+        if(!hidden)this.particles.push({x,y,vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity-35,life,maxLife:life,color,radius});
       }
     }
     createBiomeBackdropSet(group){
@@ -3488,6 +3563,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ensureBiomeBackdropGroup(this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
       this.updateBackdropGroundVeil();
+      this.worldPolish?.beginFrame();
       this.drawGround();
       this.vendorArt?.renderWorld();
       this.drawGroundFog();
@@ -3505,6 +3581,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.visuals)this.visuals.render();
       this.powerArt?.render();
       this.vendorArt?.renderCinema();
+      this.worldPolish?.endFrame();
     }
     groundFogHash(index,salt){
       let h=Math.imul(index^salt,0x45d9f3b);
@@ -3553,7 +3630,8 @@ window.GRIM_CONFIG = Object.freeze({
         const y0=Number.isFinite(section.y0)?section.y0:section.y;
         const y1=Number.isFinite(section.y1)?section.y1:y0;
         if(!Number.isFinite(y0)||!Number.isFinite(y1))continue;
-        const surface=x=>y0+(y1-y0)*(x-section.start)/(section.end-section.start);
+        const surface=x=>section.kind==='gap'
+          ?y0+(y1-y0)*(x-section.start)/(section.end-section.start):this.terrainSurfaceY(section,x);
         const samples=[from];
         for(let x=Math.ceil(from/24)*24;x<to;x+=24)if(x>from)samples.push(x);
         samples.push(to);
@@ -3762,7 +3840,8 @@ window.GRIM_CONFIG = Object.freeze({
       if(!Number.isFinite(y0)||!Number.isFinite(y1)||to<=from)return null;
       const key=[section.kind,from,to].join(':');
       const capDepth=section.kind==='soul-platform'?11:14;
-      const geometrySignature=[y0.toFixed(2),y1.toFixed(2),edge,sheen,detail,biome,capDepth].join(':');
+      const slopes=this.terrain.surfaceSlopes?.(section)||[];
+      const geometrySignature=[y0.toFixed(2),y1.toFixed(2),...slopes,edge,sheen,detail,biome,capDepth].join(':');
       let view=this.terrainSurfaceViews.get(key);
       if(view?.geometrySignature===geometrySignature){
         activeKeys.add(key);
@@ -3788,10 +3867,10 @@ window.GRIM_CONFIG = Object.freeze({
         const value=Math.sin((from+cell*17.37)*.113+salt*13.17)*43758.5453;
         return value-Math.floor(value);
       };
-      const surfaceY=x=>leftY+(rightY-leftY)*(x/Math.max(1,width));
+      const surfaceY=x=>this.terrainSurfaceY(section,Math.min(to,from+x))-top;
       const contour=(offset,roughness=0,salt=0)=>{
         const points=[];
-        const step=7;
+        const step=Math.min(4,width/16);
         for(let x=0;x<width;x+=step){
           const cell=Math.floor(x/step),y=surfaceY(x);
           points.push({x,y:y+offset+(noise(cell,salt)-.5)*roughness});
@@ -3873,7 +3952,7 @@ window.GRIM_CONFIG = Object.freeze({
       const sprite=this.add.image(from,top,textureKey).setOrigin(0,0)
         .setDepth(1.5).setVisible(true);
       view={sprite,textureKey,geometrySignature,
-        surfaceGeometry:{from,to,y0,y1,capDepth,biome}};
+        surfaceGeometry:{from,to,y0,y1,slopes,capDepth,biome}};
       this.terrainSurfaceViews.set(key,view);
       activeKeys.add(key);
       return view;
@@ -3884,10 +3963,10 @@ window.GRIM_CONFIG = Object.freeze({
       const y0=Number.isFinite(section.y0)?section.y0:section.y;
       const y1=Number.isFinite(section.y1)?section.y1:section.y;
       if(!Number.isFinite(y0)||!Number.isFinite(y1)||to<=from)return;
-      const lower=14,steps=Math.max(1,Math.ceil((to-from)/36));
+      const lower=14,steps=Math.max(16,Math.ceil((to-from)/4));
       for(let i=0;i<steps;i++){
         const x0=from+(to-from)*i/steps,x1=from+(to-from)*(i+1)/steps;
-        const yAt=x=>y0+(y1-y0)*(x-from)/(to-from);
+        const yAt=x=>this.terrainSurfaceY(section,x);
         const wobble=(Math.sin(Math.floor(x0/19)*8.17)+1)*.5;
         this.world.fillStyle(edge,.38);
         this.world.fillPoints([{x:x0,y:yAt(x0)},{x:x1,y:yAt(x1)},
@@ -3945,7 +4024,7 @@ window.GRIM_CONFIG = Object.freeze({
       context.save();
       context.beginPath();
       context.moveTo(0,y0-top);
-      context.lineTo(x1-x0,y1-top);
+      for(const point of this.terrainContour(section,x0,x1))context.lineTo(point.x-x0,point.y-top);
       context.lineTo(x1-x0,bottom-top);
       context.lineTo(0,bottom-top);
       context.closePath();
@@ -3981,7 +4060,8 @@ window.GRIM_CONFIG = Object.freeze({
       const renderBottom=section.kind==='platform'||section.kind==='soul-platform'
         ?underside:Math.max(sectionY0,sectionY1,h0,h1)+this.height+1500;
       const sectionBottom=Math.max(sectionTop+1,renderBottom);
-      const geometrySignature=[section.kind,sectionFrom,sectionTo,sectionY0,sectionY1,sectionBottom].join(':');
+      const geometrySignature=[section.kind,sectionFrom,sectionTo,sectionY0,sectionY1,
+        ...(this.terrain.surfaceSlopes?.(section)||[]),sectionBottom].join(':');
       const weights=this.terrainBiomeWeights(meters);
       const active=Object.entries(weights).filter(([,weight])=>weight>.003)
         .sort((a,b)=>TERRAIN_BIOME_ORDER.indexOf(a[0])-TERRAIN_BIOME_ORDER.indexOf(b[0]));
@@ -4054,9 +4134,17 @@ window.GRIM_CONFIG = Object.freeze({
         this.removeTerrainTextureView(key,view);
       this.terrainTextureViews.clear();
     }
+    terrainSurfaceY(section,x){
+      if(this.terrain.surfaceAt)return this.terrain.surfaceAt(section,x);
+      return section.y0+(section.y1-section.y0)*(x-section.start)/(section.end-section.start);
+    }
+    terrainContour(section,from=section.start,to=section.end){
+      if(this.terrain.surfacePoints)return this.terrain.surfacePoints(section,from,to);
+      return [{x:from,y:this.terrainSurfaceY(section,from)},{x:to,y:this.terrainSurfaceY(section,to)}];
+    }
     terrainBodyPoints(section,from,to,y0,y1,bottom){
       if(section.kind!=='platform'&&section.kind!=='soul-platform')
-        return [{x:from,y:y0},{x:to,y:y1},{x:to,y:bottom},{x:from,y:bottom}];
+        return [...this.terrainContour(section,from,to),{x:to,y:bottom},{x:from,y:bottom}];
       const seed=section.start*.017+section.end*.003;
       const noise=(n)=>{
         const value=Math.sin(seed+n*19.19)*43758.5453;
@@ -4376,13 +4464,8 @@ window.GRIM_CONFIG = Object.freeze({
         const meters=(section.start+section.end-2*startX)/(2*C.pxPerMeter);
         const weights=this.terrainBiomeWeights(meters);
         const shape=this.abyssGapPolygon(section);
-        const bleed=Math.max(ABYSS_BACKDROP_BLEED_MIN,
-          Math.ceil(shape.width*ABYSS_BACKDROP_BLEED_RATIO));
-        const backgroundPoints=this.abyssBackdropPolygon(section,shape,bleed);
-        // The biome painting fills the opening and its widened hidden overlap.
-        // Real terrain draws above it and seals the actual ground edge.
-        abyssFallback.fillStyle(0x0b0d16,.98);
-        abyssFallback.fillPoints(backgroundPoints,true);
+        // No legacy dark backing at the terrain lip. The space above the
+        // inset canyon painting shows the existing biome atmosphere and mist.
         // Draw adjacent biome plates as a real crossfade. The first is opaque;
         // each later plate is alpha-weighted against the accumulated image.
         let accumulatedWeight=0;
@@ -4437,9 +4520,7 @@ window.GRIM_CONFIG = Object.freeze({
           :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
         const underside=depth;
         base.fillStyle(body);
-        const bodyPoints=section.kind==='platform'
-          ?this.terrainBodyPoints(section,section.start,section.end,surfaceY0,surfaceY1,underside)
-          :[{x:from,y:h0},{x:to,y:h1},{x:to,y:underside},{x:from,y:underside}];
+        const bodyPoints=this.terrainBodyPoints(section,section.start,section.end,surfaceY0,surfaceY1,underside);
         base.fillPoints(bodyPoints,true);
         this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews);
         if(section.kind==='rubble'&&!tundraBiomeWorldArt){
@@ -4478,23 +4559,12 @@ window.GRIM_CONFIG = Object.freeze({
       // Lightweight one-way ledges; only top surfaces catch a falling player.
       for(const plat of this.soulPlatform||[]){
         if(plat.x+plat.width<left||plat.x>right)continue;
-        const platformSection={kind:'soul-platform',start:plat.x,end:plat.x+plat.width,
-          y0:plat.y,y1:plat.y};
-        const platformMeters=(plat.x+plat.width/2-this.startX)/C.pxPerMeter;
-        const floor=this.terrain.groundAt(plat.x+plat.width/2)??plat.y;
-        const platformDepth=Math.max(plat.y,floor)+this.height+500;
-        const platformPalette=this.biomeBackdropReady&&scope.GRIM_WORLD_ART?.worldGroundPalette
-          ?scope.GRIM_WORLD_ART.worldGroundPalette(platformMeters)
-          :plat.biome==='hell'?[0x211216,0x8e3b2b,0xff9251,0x5d2924]
-          :scope.GRIM_WORLD_ART?.tundraGroundPalette?.(platformMeters)||[0x202a28,0x52675a,0x87947a,0x39433d];
-        base.fillStyle(platformPalette[0],.96);
-        base.fillPoints(this.terrainBodyPoints(platformSection,plat.x,plat.x+plat.width,
-          plat.y,plat.y,platformDepth),true);
-        this.drawTerrainTexture(platformSection,plat.x,plat.x+plat.width,plat.y,plat.y,
-          platformDepth,platformDepth,platformMeters,activeTerrainViews);
-        const [,,platformSheen,platformDetail]=platformPalette,platformEdge=platformPalette[1];
-        if(!this.terrainSurfaceView(platformSection,platformEdge,platformSheen,platformDetail,activeSurfaceViews))
-          this.drawTerrainSurfaceFallback(platformSection,platformEdge,platformSheen,platformDetail);
+        if(!this.worldPolish?.drawPlatform(plat)){
+          // Optional-art fallback is still a finite floating one-way ledge.
+          base.fillStyle(plat.biome==='hell'?0x592b28:0x627585,.98);
+          base.fillRoundedRect(plat.x,plat.y,plat.width,24,5);
+          base.lineStyle(2,0xa2bdca,.7).lineBetween(plat.x+3,plat.y+1,plat.x+plat.width-3,plat.y+1);
+        }
       }
       for(const section of sections){
         if(section.kind!=='platform')continue;
@@ -4508,6 +4578,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.releaseInactiveTerrainMaterials(keepTerrainMaterials);
     }
     drawCoin(c) {
+      if(this.worldPolish?.drawPickup(c,'coin'))return;
       const g=this.world;
       const y=c.baseY+c.offset;
       const pulse=1+Math.sin(this.frame*.11+c.x*.014)*.08;
@@ -4518,6 +4589,7 @@ window.GRIM_CONFIG = Object.freeze({
       g.fillStyle(0xfff3ca,.93);g.fillCircle(c.x-2,y-3,2);
     }
     drawSoul(s) {
+      if(this.worldPolish?.drawPickup(s,'soul'))return;
       const g=this.world;
       const y=s.baseY+s.offset;
       const pulse=1+Math.sin(this.frame*.065+s.x*.03)*.10;
@@ -4592,7 +4664,8 @@ window.GRIM_CONFIG = Object.freeze({
           (skin.id==='forest_cut_thorny-young-pine'||skin.id==='forest_cut_dead-oak-sapling')
           ?Math.min(165,o.width*2.7):
         skin?.category==='cut'?Math.min(105,o.width*1.5):o.width*1.05;
-      const ground=o.type==='snappingBramble'?this.terrain.anchorAt(o.x):o.y+o.height;
+      const ground=o.type==='snappingBramble'?this.terrain.anchorAt(o.x):o.type==='bramble'
+        ?this.terrain.groundAt(o.x+o.width/2)??o.y+o.height:o.y+o.height;
       g.fillStyle(0x0b1118,.27);
       g.fillEllipse(o.x+o.width/2,ground+3,width,11);
     }
@@ -4700,7 +4773,9 @@ window.GRIM_CONFIG = Object.freeze({
       }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
         width=o.width*scale.x;height=o.height*scale.y;
-        x=o.x+o.width/2;y=o.y+o.height+this.obstacleVisualInset(o,skin);
+        x=o.x+o.width/2;
+        const baseline=o.type==='bramble'?(this.terrain.groundAt(x)??o.y+o.height):o.y+o.height;
+        y=baseline+this.obstacleVisualInset(o,skin);
         originY=skin.groundAnchorY??1;
       }else{
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
@@ -4709,6 +4784,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       image.setOrigin(.5,originY).setPosition(x,y).setDisplaySize(width,height)
         .setRotation(rotation).setVisible(true);
+      this.worldPolish?.maskRoots(image,o,skin);
       if(o.type==='fire')image.setAlpha(.96+.04*Math.sin(this.elapsed*11+o.x*.017));
       else image.setAlpha(1);
       return true;
@@ -5145,6 +5221,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawForeground() {
       const g=this.foreground;g.clear();
+      const impactFade=this.state==='respawning'?clamp(1-(1500-this.respawnMs)/240,0,1):1;
       // Edge fog gives atmosphere without obscuring central hazards.
       g.fillStyle(0x6f9e9c,.025);g.fillRect(0,this.groundY-20,this.width,55);
       g.fillStyle(0x030716,.22);g.fillRect(0,this.height-9,this.width,9);
@@ -5152,7 +5229,7 @@ window.GRIM_CONFIG = Object.freeze({
         g.fillStyle(0x75dfff,.055);g.fillRect(0,0,this.width,this.height);
       }
       if(this.fallFeedbackMs>0){
-        g.fillStyle(0xef4969,.085*(this.fallFeedbackMs/1550));g.fillRect(0,0,this.width,this.height);
+        g.fillStyle(0xef4969,.085*(this.fallFeedbackMs/1550)*impactFade);g.fillRect(0,0,this.width,this.height);
       }
       if(this.state==='playing' && this.player.hp<=2){
         const low=this.player.hp===1?.30:.12;
@@ -5171,11 +5248,11 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
       if(this.blastFlashMs>0){
-        g.fillStyle(0xf6d78b,.19*(this.blastFlashMs/420));
+        g.fillStyle(0xf6d78b,.19*(this.blastFlashMs/420)*impactFade);
         g.fillRect(0,0,this.width,this.height);
       }
       if(this.damageFlashMs>0){
-        const a=.27*Math.pow(this.damageFlashMs/420,1.8);
+        const a=.27*Math.pow(this.damageFlashMs/420,1.8)*impactFade;
         g.fillStyle(0xff202c,a);g.fillRect(0,0,this.width,this.height);
       }
       if(this.state==='playing' && this.player.invulMs>0) {

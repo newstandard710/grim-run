@@ -609,8 +609,7 @@ const server=http.createServer((req,res)=>{
       if(surfaceView){
         const profile=surfaceView.surfaceGeometry,mid=(profile.from+profile.to)/2;
         const expected=scene.terrain.groundAt(mid);
-        const rendered=surfaceView.sprite.y+(profile.y0-Math.min(profile.y0,profile.y1))+
-          (profile.y1-profile.y0)*((mid-profile.from)/(profile.to-profile.from));
+        const rendered=scene.terrainSurfaceY(walkable.section,mid);
         const source=scene.textures.get(surfaceView.textureKey).getSourceImage();
         const context=source.getContext('2d',{willReadFrequently:true});
         const localX=Math.min(source.width-1,Math.max(0,Math.floor(mid-profile.from)));

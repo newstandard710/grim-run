@@ -67,7 +67,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,96,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.15.2 · MERCHANT SANCTUARIES','visible version badge matches the current art release');
+    assert.equal(loaded.badge,'v0.15.3 · SOULS & SHADOWS','visible version badge matches the current art release');
     assert.deepEqual(loaded.missing,[],'all 96 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,152,'all 24 upper paintings and 32 unique supports load');
@@ -113,12 +113,13 @@ const server=http.createServer((req,res)=>{
           renderMisses++;renderFailures.push({id:skin.id,expected,actual:image&&
             {width:image.displayWidth,height:image.displayHeight}});
         }
+        const visualGround=type==='bramble'?(s.terrain.groundAt(o.x+o.width/2)??o.y+o.height):o.y+o.height;
         if((skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&type==='bramble'))&&
           (!image||image.originY!==(skin.groundAnchorY??1)||
-            image.y!==o.y+o.height+s.obstacleVisualInset(o,skin))){
+            image.y!==visualGround+s.obstacleVisualInset(o,skin))){
           renderMisses++;renderFailures.push({id:skin.id,anchor:{originY:image?.originY,y:image?.y},
             expectedAnchor:{originY:skin.groundAnchorY??1,
-              y:o.y+o.height+s.obstacleVisualInset(o,skin)}});
+              y:visualGround+s.obstacleVisualInset(o,skin)}});
         }
         if(placement&&(!image||image.originY!==placement.originY||image.y!==placement.y)){
           renderMisses++;renderFailures.push({id:skin.id,placement:{originY:image?.originY,y:image?.y},

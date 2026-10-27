@@ -214,3 +214,14 @@ Only normal Cavern Bats are replaced in this phase. Skeletal Bats, Crawlers, Imp
 - Enlarge vendor sprites and the whole aura by 75%, preserving grounded feet. Vendor introductions should feel imposing through relative scale, restrained breathing/light and the Reaper looking up. Keep the ordinary biome background visible through the cinematic shade.
 - Use twelve registered approach/settle poses for the three-second introduction. Keep the final look-up pose grounded and the world paused. Display reward selection only after the introduction completes or is skipped.
 - Crossbow grip uses actual palms and the weapon stock, with small palm overlays in front. Held width is 70.8% of the previous cinematic size. The overhead pose and weapon remain still for 1.4 seconds, with one soft cyan/ivory glow; avoid persistent wobble or light that washes out the hands.
+
+
+## Souls & Shadows — v0.15.3
+
+- Coin and Soul silhouettes grow 1.75× in each dimension while their collectible positions and ranges stay fixed. Coins turn in place with antique gold, copper thickness and an ivory highlight. Pickups render above the foreground mist so their bodies remain legible. Souls have pearl/ivory cores, muted cyan wisps and a slow, soft holy-light pulse. Keep the two shapes distinguishable without relying on hue.
+- Soul encounter ledges alone are floating: root-bound wood, weathered stone/timber, frosted slate/icicles, cavern rock/bone, crystal-veined rock, charred timber/stone, ember-seamed hellstone brick and gothic stone/bone. Complete finite undersides and registered level top edges are mandatory. Keep all nine existing one-way ledge surfaces unchanged.
+- Round terrain peaks using the same bounded profile for collision and painting; preserve exact gap endpoints, takeoff strips, vendor pads and ledge tops. Surface caps, all ground masks and atmospheric placement sample that curve.
+- The opaque legacy abyss backing at the terrain lip is removed by explicit user direction. Do not reintroduce it. The 34px inset painting, approved crops, deep fog and foreground mist remain.
+- Cut destruction is quiet and material-specific: a short crown lean/fade with small painted splinters, fossil chips, crystal shards or ash/embers. Collider removal happens at the original impact time; transient sprites are bounded and do not consume gameplay randomness.
+- Abyss recovery uses twelve painted smoke/formation poses, foot/eye registration, interpolated transitions and a final blend into the accepted Reaper. Cool navy smoke, restrained cyan glints, magenta lining and bronze/ivory scythe preserve the character. Total pause is 1.5 seconds; no bright full-screen burst.
+- Source bytes stay intact under `assets/world-polish/source/v0153/`; prompts, hashes, registration and per-skin root audit are in `assets/world-polish/v0153/`.

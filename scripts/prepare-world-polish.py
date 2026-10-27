@@ -1,0 +1,96 @@
+"""Register v0.15.3 source drawings; preserve source bytes/alpha and publish hashes."""
+from pathlib import Path
+from PIL import Image
+from scipy import ndimage
+import numpy as np
+import json, hashlib
+ROOT=Path(__file__).resolve().parents[1]
+SRC=ROOT/'assets/world-polish/source/v0153';OUT=ROOT/'assets/world-polish/v0153';OUT.mkdir(exist_ok=True)
+
+def tiles(name,cols,rows):
+    im=Image.open(SRC/(name+'.png')).convert('RGBA')
+    result=[]
+    for j in range(rows):
+        for i in range(cols):
+            box=(round(i*im.width/cols),round(j*im.height/rows),round((i+1)*im.width/cols),round((j+1)*im.height/rows))
+            tile=im.crop(box);a=np.array(tile)
+            mask=a[:,:,3]>45;labels,_=ndimage.label(mask);sizes=np.bincount(labels.ravel());sizes[0]=0
+            main=labels==np.argmax(sizes)
+            # Include nearby translucent paint and wisps, exclude tiny remote specks.
+            connected=ndimage.binary_dilation(main,iterations=8)
+            a[:,:,3]=np.where(connected,a[:,:,3],0)
+            tile=Image.fromarray(a);bounds=tile.getbbox()
+            if not bounds:raise ValueError((name,i,j,'Empty frame'))
+            result.append(tile.crop(bounds))
+    return result
+
+registration={'version':'0.15.3','platforms':{},'respawn':[]}
+coin=Image.new('RGBA',(512,384));registration['coinWidths']=[]
+for i,im in enumerate(tiles('coin',4,3)):
+    # Fixed HEIGHT preserves authored face/edge widths through the turn.
+    scale=108/im.height;im=im.resize((round(im.width*scale),108),Image.Resampling.LANCZOS)
+    coin.alpha_composite(im,((i%4)*128+(128-im.width)//2,(i//4)*128+10))
+    registration['coinWidths'].append(im.width)
+coin.save(OUT/'coin-spin.png',optimize=True)
+# Runtime projects a continuous turn using each drawing's registered width.
+soul=Image.new('RGBA',(768,384))
+for i,im in enumerate(tiles('soul',4,2)):
+    im.thumbnail((160,168),Image.Resampling.LANCZOS)
+    soul.alpha_composite(im,((i%4)*192+(192-im.width)//2,(i//4)*192+(192-im.height)//2))
+soul.save(OUT/'soul-light.png',optimize=True)
+debris=Image.new('RGBA',(384,384))
+for i,im in enumerate(tiles('debris',4,4)):
+    im.thumbnail((76,76),Image.Resampling.LANCZOS)
+    debris.alpha_composite(im,((i%4)*96+(96-im.width)//2,(i//4)*96+(96-im.height)//2))
+debris.save(OUT/'cut-fragments.png',optimize=True)
+poses=tiles('respawn',4,3)
+# Register the emerging skull and the boots. Earlier smoke shares the last
+# character's physical scale and grows around the same fixed landing point.
+registrations=[]
+for i,im in enumerate(poses):
+    a=np.array(im);solid=a[:,:,3]>160
+    cyan=solid&(a[:,:,1]>125)&(a[:,:,2]>135)&(a[:,:,0]<a[:,:,1]*.67)
+    labels,_=ndimage.label(cyan);sizes=np.bincount(labels.ravel());sizes[0]=0
+    # Restrict eyes to right-facing face: upper/middle right of silhouette.
+    yy,xx=np.indices(solid.shape)
+    eyes=cyan&(xx>im.width*.51)&(yy>im.height*.17)&(yy<im.height*.49)
+    y,x=np.where(eyes)
+    foot=float(np.where(solid.any(axis=1))[0][-1])
+    eye=(float(np.median(x)),float(np.median(y))) if i>=3 and len(x)>0 else None
+    registrations.append((eye,foot))
+last_eye,last_foot=registrations[-1];last_scale=254/(last_foot-last_eye[1])
+atlas=Image.new('RGBA',(1536,1152))
+for i,im in enumerate(poses):
+    eye,foot=registrations[i]
+    scale=254/(foot-eye[1]) if eye else last_scale
+    px=224-eye[0]*scale if eye else 190-im.width*scale*.5
+    py=360-foot*scale
+    tile=Image.new('RGBA',(384,384));resized=im.resize((round(im.width*scale),round(im.height*scale)),Image.Resampling.LANCZOS)
+    tile.alpha_composite(resized,(round(px),round(py)));atlas.alpha_composite(tile,((i%4)*384,(i//4)*384))
+    registration['respawn'].append({'eye':eye,'foot':foot,'scale':scale,'offset':[px,py]})
+atlas.save(OUT/'reaper-respawn.png',optimize=True)
+for biome in ['forest','foothills','tundra','caves','crystals','ashlands','lava','boss']:
+    im=Image.open(SRC/('platform-'+biome+'.png')).convert('RGBA');a=np.array(im)
+    y,x=np.where(a[:,:,3]>120);box=(int(x.min()),int(y.min()),int(x.max())+1,int(y.max())+1)
+    im=im.crop(box);im=im.resize((768,round(im.height*768/im.width)),Image.Resampling.LANCZOS)
+    # Sample the top ridge across the central 90% to register the walkable line.
+    alpha=np.array(im)[:,:,3]>150
+    tops=[int(np.where(alpha[:,x])[0][0]) for x in range(38,730) if alpha[:,x].any()]
+    top=float(np.median(tops));canvas=Image.new('RGBA',(768,192))
+    # Keep the complete finite underside; no arbitrary rescaling of body height.
+    canvas.alpha_composite(im,(0,round(12-top)));canvas.save(OUT/('soul-platform-'+biome+'.png'),optimize=True)
+    registration['platforms'][biome]={'top':12,'width':768,'height':192,'sourceBounds':box,'authoredTopMedian':top}
+# Match the accepted idle eye/foot span, not the entire scythe silhouette.
+idle_scale=120/1111
+registration['acceptedIdleReference']={'file':'assets/characters/illustrated-v2/reaper/reaper_idle_v1.png','eye':[1282,666],'anchor':[1250,1420],'scale':idle_scale}
+runtime_data={'coinWidths':registration['coinWidths'],
+              'respawnWorldScale':(1420-666)*idle_scale/254,
+              'respawnWorldEyeX':(1282-1250)*idle_scale}
+(OUT/'registration.json').write_text(json.dumps(registration,indent=2)+'\n')
+(ROOT/'assets/visuals/world-polish-data.js').write_text('/* Generated by scripts/prepare-world-polish.py */\n(function(s){s.GRIM_POLISH_DATA='+json.dumps(runtime_data,separators=(',',':'))+';})(typeof window!=="undefined"?window:globalThis);\n')
+manifest={'version':'0.15.3','sources':{},'runtime':{}}
+for kind,directory in [('sources',SRC),('runtime',OUT)]:
+    for p in sorted(directory.glob('*.png')):
+        manifest[kind][str(p.relative_to(ROOT))]={'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'size':list(Image.open(p).size)}
+(OUT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+print('Registered 12 coin, 8 Soul, 16 fragment, 12 respawn frames and 8 biome ledges.')

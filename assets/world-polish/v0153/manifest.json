@@ -1,0 +1,199 @@
+{
+  "version": "0.15.3",
+  "sources": {
+    "assets/world-polish/source/v0153/coin.png": {
+      "bytes": 1498989,
+      "sha256": "60f91a832870d09529066a40de0c0da7372072637017b8b13ff5b2008fa028a1",
+      "size": [
+        1448,
+        1086
+      ]
+    },
+    "assets/world-polish/source/v0153/debris.png": {
+      "bytes": 990638,
+      "sha256": "e397b60b0c972c3dda1e9267b998c2e286bf2cb14d074d7eaa681ec6bd192459",
+      "size": [
+        1335,
+        1178
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-ashlands.png": {
+      "bytes": 928276,
+      "sha256": "8969161a1b94c1ab4b87a49b2b566fe4c39f4025a46c9df58994c6374fb2ed35",
+      "size": [
+        2172,
+        724
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-boss.png": {
+      "bytes": 868578,
+      "sha256": "4a704a7cb32857be5b4581c5b77dd41063e8e33be0449c68e9cfaad14393819b",
+      "size": [
+        2172,
+        724
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-caves.png": {
+      "bytes": 935607,
+      "sha256": "476c69265f4e20873916dd77d378ecb14a64bee100311803c0defe7eb433cf75",
+      "size": [
+        2172,
+        724
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-crystals.png": {
+      "bytes": 756728,
+      "sha256": "a44897e58f4eae855ea2ea3d1903e8b305b50378c56929213a3bf6ccbc210f89",
+      "size": [
+        1774,
+        887
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-foothills.png": {
+      "bytes": 1077540,
+      "sha256": "b5ae7c2a737911922115a64283f62e285006dcc5a853aaeb56990c0fb0963285",
+      "size": [
+        2078,
+        757
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-forest.png": {
+      "bytes": 845463,
+      "sha256": "26cec5fa6a621ebea4100299699b52a75d2ec0d6e09a2608c3005bb971a6191e",
+      "size": [
+        2172,
+        724
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-lava.png": {
+      "bytes": 770975,
+      "sha256": "65c12d9386f000e15da7733b0a930c8674fe3b6b6b2ef82800337d3ee125fd77",
+      "size": [
+        1942,
+        809
+      ]
+    },
+    "assets/world-polish/source/v0153/platform-tundra.png": {
+      "bytes": 927003,
+      "sha256": "ca0fa0f7b644ce141db73225687e96a28cb6f2d6d2e9c83f1669607e910a4e4e",
+      "size": [
+        2172,
+        724
+      ]
+    },
+    "assets/world-polish/source/v0153/respawn.png": {
+      "bytes": 2284952,
+      "sha256": "387a54b3b80aa629db1d025e248ccae40442ab6eff079dcd0ffc26114114af7a",
+      "size": [
+        1448,
+        1086
+      ]
+    },
+    "assets/world-polish/source/v0153/soul.png": {
+      "bytes": 1455204,
+      "sha256": "0dd7ea953f5c38ce7e4428f58be5a9feaf6a28118113aa02f39bb88d57381633",
+      "size": [
+        1619,
+        971
+      ]
+    }
+  },
+  "runtime": {
+    "assets/world-polish/v0153/coin-spin.png": {
+      "bytes": 242294,
+      "sha256": "591a9fd05df214ae022e4f021de66b429d06867b9ecf36935fa6a3cf3584d0d4",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/world-polish/v0153/cut-fragments.png": {
+      "bytes": 141719,
+      "sha256": "fa19b5dd07991807fc3a8e3bbe9763e83bb60093f0d584e4e992d4ee32e01c8b",
+      "size": [
+        384,
+        384
+      ]
+    },
+    "assets/world-polish/v0153/reaper-respawn.png": {
+      "bytes": 2112728,
+      "sha256": "66d8dea0f7753fc5093d0fe21fc34ffcaaa24f71edc15fe0def41c6e11b2d424",
+      "size": [
+        1536,
+        1152
+      ]
+    },
+    "assets/world-polish/v0153/soul-light.png": {
+      "bytes": 230017,
+      "sha256": "50317c422095a22d8a0575cecab95e5a517694bb645f3bc2a4be42dc46f6c0ce",
+      "size": [
+        768,
+        384
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-ashlands.png": {
+      "bytes": 140559,
+      "sha256": "216206536b9ad3358e0fa264724de67cfa6618c6b165a9fb03bcb24b55da75b1",
+      "size": [
+        768,
+        192
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-boss.png": {
+      "bytes": 133246,
+      "sha256": "f82d0e8c360836172d41df308c7b9a0a9093660b9538f5cc350583b0bcdd1eb7",
+      "size": [
+        768,
+        192
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-caves.png": {
+      "bytes": 145213,
+      "sha256": "6c47ee3b63f26909c30dcd9b2e4d3b6390430211a59843492954423119f12b94",
+      "size": [
+        768,
+        192
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-crystals.png": {
+      "bytes": 163215,
+      "sha256": "17d9a57201f1809080d65083ca23ab385ad99397e972ef36673871ae0a1d8362",
+      "size": [
+        768,
+        192
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-foothills.png": {
+      "bytes": 168434,
+      "sha256": "43a952b878dbc4f8003fd838397ce8d311c2548c75ae288c1dcde1114c774043",
+      "size": [
+        768,
+        192
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-forest.png": {
+      "bytes": 133074,
+      "sha256": "ad6ef3b4935284b2e5c9ac1a466123baba6ed067861333490fbd3ad3a7e9aea9",
+      "size": [
+        768,
+        192
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-lava.png": {
+      "bytes": 144367,
+      "sha256": "78b59cacdb8da00043a2858d5f5027c4ad714fa1b3e008acfd03ac56f423bc31",
+      "size": [
+        768,
+        192
+      ]
+    },
+    "assets/world-polish/v0153/soul-platform-tundra.png": {
+      "bytes": 149650,
+      "sha256": "443ac39a37d1a416375e07ffb8c85b9b0f95d3b6d50629b53ce405f9293c5cae",
+      "size": [
+        768,
+        192
+      ]
+    }
+  }
+}
