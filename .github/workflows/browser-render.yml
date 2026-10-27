@@ -27,6 +27,9 @@ jobs:
       - name: Verify proximity plants, named wings, touch time controls and vendor timing
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-gravewing-build.js
+      - name: Verify fluid bat poses, stable opacity and shared home/game playback
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
+        run: node tests/browser-bat-flight.js
       - name: Verify combat animation, persistent vendors and enlarged pickups
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-combat-polish.js
@@ -66,6 +69,7 @@ jobs:
             test-results/*.png
             test-results/gravewing-animation-preview.webm
             test-results/motion-performance.json
+            test-results/bat-flight-quality.json
             test-results/motion-animation-preview.webm
             test-results/power-animation-preview.webm
             test-results/combat-animation-preview.webm

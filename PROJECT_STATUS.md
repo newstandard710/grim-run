@@ -1,6 +1,17 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.1 — *Scythe & Stride*.
+**Current build:** v0.19.2 — *Fluid Bat Flight*.
+
+## v0.19.2 — Coherent bat poses and slower flight
+
+- Root cause: the 16-pose source loop changed body angle/proportions and wing shape between paintings; its uneven wing progression remained visible after eye-registration fixes. Full-body crossfades also reduced opaque overlapping coverage to 75% at blend midpoints.
+- The accepted first bat painting is now rigged into rear wing, leading wing and stable body layers. A Canvas triangle mesh provides continuous shoulder rotation, delayed wrist flex and slight return-stroke folding. The unchanged face/torso/feet use one eye pivot with subtle pitch/bob. No newly generated character painting is introduced.
+- Ninety-six pre-baked 256px poses cover one 1.6-second flap, 40% slower than 0.96s. Pose and velocity join continuously at the loop seam. A single solid atlas frame replaces overlapping flight sprites in Phaser and the actual home canvas. Displayed body scale is retained.
+- The home layout keeps the complete loop silhouette inside its edges, with a portrait size cap and a phase-independent placement margin.
+- Home/gameplay share the same sampler; gameplay continues to follow simulation elapsed time for slow/pause/rewind. Existing dive/recovery timings, collision, movement, spawn and response mechanics remain unchanged. The old sheet remains as a fallback and provenance source.
+- Reproducible build: `scripts/prepare-bat-flight.cjs`; rig: `assets/visuals/bat-flight.js`; complete bounds/hashes: `assets/bat/v0192/manifest.json`; shared size review: `assets/bat/v0192/review.html`. Mesh rendering occurs only during offline preparation.
+- Validation: new periodic-pose/velocity, wing-travel, cadence and asset-hash regression; real Chromium checks all 96 decoded poses, head opacity and eye stability, seam continuity, actual home at landscape/desktop/portrait sizes, one solid gameplay sprite, and the review page. Existing flight/dive/recovery, gameplay and browser suites remain required.
+- Rollback base: `6fb1afe5320d12776ab20a978bef93e6209981a7` (v0.19.1).
 
 ## v0.19.1 — Carry-sized basic scythe and slower gait
 

@@ -47,8 +47,8 @@ for(const [group,folder]of [['sources','source/'],['runtime','']])for(const [nam
  assert(ended&&p===b.length,name+' has complete IEND');assert.equal(b[25],6,name+' has true RGBA');assert(zlib.inflateSync(Buffer.concat(idat)).length>1000);
 }
 assert.equal(m.registration['bat-flight'].frames,16);assert(m.registration['reaper-slide-cut'].frames>=8);assert.equal(m.registration['reaper-crossbow'].frames,16);
-const art={};art.window=art;vm.createContext(art);vm.runInContext(read('assets/combat/v0170/animation-data.js'),art);vm.runInContext(read('assets/visuals/combat-animations.js'),art);
-const A=art.GRIM_COMBAT_ART,frames=new Set();for(let i=0;i<160;i++)frames.add(A.batMotion(i/160*A.BAT_CYCLE_SECONDS).a);assert.equal(frames.size,16);assert.equal(A.batMotion(A.BAT_CYCLE_SECONDS).a,0);
+const art={};art.window=art;vm.createContext(art);vm.runInContext(read('assets/combat/v0170/animation-data.js'),art);vm.runInContext(read('assets/visuals/bat-flight.js'),art);vm.runInContext(read('assets/visuals/combat-animations.js'),art);
+const A=art.GRIM_COMBAT_ART,frames=new Set();for(let i=0;i<160;i++)frames.add(A.batMotion(i/160*A.BAT_CYCLE_SECONDS).a);assert.equal(frames.size,96);assert.equal(A.batMotion(A.BAT_CYCLE_SECONDS).a,0);
 for(const count of [10,12]){assert.equal(A.attackFrame(.20,count),3);assert.equal(A.attackFrame(.79,count),count-4);assert.equal(A.attackFrame(1,count),count-1);}
 const abyss=game();abyss.combatArt={ready:{'reaper-hurt-death':true},reset(){},tick(){},snapshot(){return [];}};
 let scroll;abyss.cameras.main.setScroll=(x,y)=>{scroll=[x,y];};abyss.player.hp=1;abyss.player.x=abyss.terrain.sequences[0].startX+30;abyss.rescueFromAbyss();
@@ -56,4 +56,4 @@ assert.equal(abyss.state,'dying');assert.deepEqual(scroll,[abyss.cameraX,abyss.c
 const fake={player:{visualHurtMs:340},enemies:[],add:{},terrain:{groundAt(){return 300;},anchorAt(){return 300;}}};
 const v=new A.CombatAnimations(fake);const imp={kind:'imp',x:100,y:280};v.enemyHit(imp,false);assert.equal(imp.visualHitMs,240);assert.equal(v.corpses.length,0);
 for(let i=0;i<20;i++)v.enemyHit({...imp,x:i*10},true);assert.equal(v.corpses.length,12);const saved=v.snapshot();v.tick(100);assert.equal(fake.player.visualHurtMs,240);assert(v.corpses.every(c=>c.age===100));v.restore(saved);assert(v.corpses.every(c=>c.age===0));v.tick(800);assert.equal(v.corpses.length,0);
-console.log('PASS v0.17: floor-contact/airborne entry, persistent Angel/Devil cards and healing, 880ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 16-pose bat loop, detached bounded defeat views and rewind restore.');
+console.log('PASS v0.17: floor-contact/airborne entry, persistent Angel/Devil cards and healing, 880ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 96-pose bat loop, detached bounded defeat views and rewind restore.');

@@ -6,7 +6,7 @@
   const files={reaper:'characters/illustrated-v2/reaper/reaper_idle_v1.png',
     crawler:'enemies/illustrated-v2/bone-crawler/crawler_crawl_01_v1.png',
     imp:'enemies/illustrated-v2/ember-imp/ember_imp_atlas_v1.png',
-    batFlight:'encounters/v0190/bat-flight.png?v=0.19.0'};
+    batFlight:(scope.GRIM_BAT_FLIGHT?.FILE||'assets/encounters/v0190/bat-flight.png?v=0.19.0').replace(/^assets\//,'')};
   const bats=['bat_wings_raised_v1.png','bat_flap_mid_up_v1.png','bat_neutral_v1.png','bat_flap_mid_down_v1.png','bat_wings_lowered_v1.png','bat_flap_mid_down_v1.png','bat_neutral_v1.png','bat_flap_mid_up_v1.png'];
   for(const file of new Set(bats))files[file]='enemies/illustrated-v2/bat/'+file;
   const images={},bounds={};let mode='home',frame=0,last=0,clock=0,loaded=false;
@@ -36,13 +36,10 @@
     ctx.save();ctx.translate(x,feet);ctx.scale(1,.2);const shadow=ctx.createRadialGradient(0,0,0,0,0,rh*.4);shadow.addColorStop(0,'#020409cc');shadow.addColorStop(1,'#02040900');ctx.fillStyle=shadow;ctx.fillRect(-rh*.4,-rh*.4,rh*.8,rh*.8);ctx.restore();
     actor('reaper',x,feet,rh*(1+Math.sin(clock*1.8)*.0025));
     const batHeight=h*(portrait?.14:.24),batY=h*(portrait?.67:.36)+Math.sin(clock*1.3)*h*.025;
-    if(images.batFlight&&scope.GRIM_COMBAT_ART){
-      const motion=scope.GRIM_COMBAT_ART.batMotion(clock),scale=.32*batHeight/52;
-      ctx.save();ctx.translate(w*.84,batY-batHeight*.22);ctx.scale(-1,1);
-      for(const [frame,weight]of [[motion.a,1-motion.mix],[motion.b,motion.mix]]){
-        if(weight<=0)continue;ctx.globalAlpha=.9*weight;
-        ctx.drawImage(images.batFlight,(frame%4)*512,Math.floor(frame/4)*512,512,512,-330*scale,-292*scale,512*scale,512*scale);
-      }
+    if(images.batFlight&&scope.GRIM_BAT_FLIGHT){
+      const art=scope.GRIM_BAT_FLIGHT,placement=art.homePlacement(w,h,clock);
+      ctx.save();ctx.translate(placement.x,placement.y);ctx.scale(-1,1);
+      ctx.globalAlpha=.9;art.drawFrame(ctx,images.batFlight,clock,0,0,placement.scale);
       ctx.restore();
     }else {const bat=bats[Math.floor(clock*8/.96)%bats.length];actor(bat,w*.84,batY,batHeight,true,.9);}
     actor('crawler',w*.86,h*.91,h*(portrait?.17:.28),true,.9);

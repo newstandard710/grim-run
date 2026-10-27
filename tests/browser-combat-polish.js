@@ -15,7 +15,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   await shot('home-bat');await page.waitForTimeout(650);await shot('home-bat-next');
   const coverage=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],out={};
-   for(const [name,m]of Object.entries(window.GRIM_COMBAT_DATA.sheets)){
+   for(const [name,m]of Object.entries({...window.GRIM_COMBAT_DATA.sheets,'bat-flight':window.GRIM_BAT_FLIGHT.SPEC})){
     if(!s.combatArt.ready[name])throw Error('Missing atlas '+name);
     const c=document.createElement('canvas');c.width=m.cell[0];c.height=m.cell[1];const g=c.getContext('2d');out[name]=[];
     for(let i=0;i<m.frames;i++){g.clearRect(0,0,c.width,c.height);const f=s.textures.getFrame('combat-'+name,i);g.drawImage(f.source.image,f.cutX,f.cutY,f.cutWidth,f.cutHeight,0,0,c.width,c.height);const d=g.getImageData(0,0,c.width,c.height).data;let opaque=0;for(let p=3;p<d.length;p+=4)if(d[p]>90)opaque++;out[name].push(opaque);}

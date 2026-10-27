@@ -7,7 +7,7 @@ const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
 assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.19.1"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.19.2"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('ABYSS_BACKDROP_FILES')&&
  html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog')"),
