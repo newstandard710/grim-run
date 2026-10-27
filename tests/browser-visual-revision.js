@@ -36,7 +36,7 @@ const server=http.createServer((req,res)=>{
     const image=s.obstacleSpriteObjects.get(o);return {key:image.texture.key,frame:image.frame.name,y:image.y,origin:image.originY,width:image.displayWidth,height:image.displayHeight,box:s.snappingBox(o)};
    },{i,variant:plant.variant});
    assert.equal(sample.key,'revision-plant');frames.add(Number(sample.frame));roots.push(sample.y);
-   assert.equal(sample.origin,300/320);assert(Math.abs(sample.width-256*.32)<.0001);assert(Math.abs(sample.height-320*.32)<.0001);
+   assert.equal(sample.origin,300/320);assert(Math.abs(sample.width-256*.32*3)<.0001);assert(Math.abs(sample.height-320*.32*3)<.0001);
    if(i===0||i===3)await page.locator('#game canvas').screenshot({path:path.join(dir,'revision-plant-'+i+'.png')});
    await page.waitForTimeout(i<8?154:308);
   }

@@ -72,3 +72,8 @@ p{font-size:clamp(13px,2.9vh,17px);color:#d3d0c6;line-height:1.35;margin:7px aut
 .god-mode-setting{border-radius:2px;border-color:#97805b;background:linear-gradient(140deg,#222c32db,#121b23ee),var(--stone) center/cover;padding:12.65px 21.85px;gap:9.2px}
 .god-mode-setting input{width:23px;height:23px;accent-color:#c0a576}
 #god-teleport-range{accent-color:#c0a576}
+/* v0.17: persistent merchandise, crossed out in place after the visit's choice. */
+.reward-cross{display:none;position:absolute;inset:0;align-items:center;justify-content:center;font:300 clamp(120px,35vh,210px)/1 var(--body);color:#dbcbab88;pointer-events:none;text-shadow:0 1px 3px #0008}
+.reward-spent .reward-cross{display:flex}.reward-card.reward-spent:disabled{opacity:.62;filter:saturate(.35)}
+.reward-card.reward-acquired:disabled{opacity:.82;border-color:#e6d6ad}.reward-acquired .reward-cross{color:#e7d5ad66}
+.reward-state{position:absolute;bottom:5px;left:4px;right:4px;font-size:10px;letter-spacing:.1em;color:#ead9b6;line-height:1.1}

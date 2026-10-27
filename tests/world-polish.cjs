@@ -55,7 +55,7 @@ ob=makeOb();cut.obstacles=[ob];cut.blastSoulcaster();assert(ob.destroyed);assert
 cut.powerManager.apply('brittleBones',cut.player,()=>{},1);ob=makeOb();cut.obstacles=[ob];cut.triggerBrittleBones();assert(ob.destroyed);assert.equal(effects,4);
 // Validate production alpha atlases and pure motion math independently of Phaser.
 vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals/world-polish-data.js'),'utf8'),w);vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals/world-polish.js'),'utf8'),w);
-const A=w.GRIM_WORLD_POLISH;assert(Math.abs(w.GRIM_POLISH_DATA.respawnWorldScale*254-(1420-666)*120/1111)<.001);assert.equal(A.COIN_HEIGHT,19*1.75);assert.equal(A.SOUL_HEIGHT,23*1.75);
+const A=w.GRIM_WORLD_POLISH;assert(Math.abs(w.GRIM_POLISH_DATA.respawnWorldScale*254-(1420-666)*120/1111)<.001);assert.equal(A.COIN_HEIGHT,19*1.75);assert.equal(A.SOUL_HEIGHT,23*1.75*2);
 let min=100,max=0;const frames=new Set();for(let i=0;i<160;i++){const m=A.coinMotion(i/100,400);min=Math.min(min,m.width);max=Math.max(max,m.width);frames.add(m.frame);assert.equal(m.height,33.25);}assert(max/min>6);assert.equal(frames.size,12);
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/world-polish/v0153/manifest.json')));assert.equal(Object.keys(manifest.sources).length,12);assert.equal(Object.keys(manifest.runtime).length,12);
 for(const group of [manifest.sources,manifest.runtime])for(const [file,meta]of Object.entries(group)){const bytes=fs.readFileSync(path.join(root,file));assert.equal(bytes.length,meta.bytes);assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),meta.sha256);assert.equal(bytes[25],6);assert.deepEqual([bytes.readUInt32BE(16),bytes.readUInt32BE(20)],meta.size);}

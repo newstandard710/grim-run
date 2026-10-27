@@ -31,7 +31,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   let min=100,max=0;const faces=new Set(),soulFrames=new Set();let fixed;
   for(let i=0;i<64;i++){
    const sample=await page.evaluate(i=>{const s=window.grimRun.scene.scenes[0];s.elapsed=i/40;s.drawScene();const c=s.worldPolish.pickups.get(s.coins[0]),a=s.worldPolish.pickups.get(s.souls[0]),m=window.GRIM_WORLD_POLISH.coinMotion(s.elapsed,s.coins[0].x);return {depth:c.depth,x:c.x,y:c.y,h:m.height,w:m.width,frame:Number(c.frame.name),soulFrame:Number(a.frame.name),soulHeight:a.displayHeight};},i);
-   assert(sample.depth>15,'Collectible bodies remain legible above the foreground fog');if(!fixed)fixed=[sample.x,sample.y];assert.deepEqual([sample.x,sample.y],fixed);assert.equal(sample.h,33.25);min=Math.min(min,sample.w);max=Math.max(max,sample.w);faces.add(sample.frame);soulFrames.add(sample.soulFrame);assert(sample.soulHeight>44&&sample.soulHeight<48);
+   assert(sample.depth>15,'Collectible bodies remain legible above the foreground fog');if(!fixed)fixed=[sample.x,sample.y];assert.deepEqual([sample.x,sample.y],fixed);assert.equal(sample.h,33.25);min=Math.min(min,sample.w);max=Math.max(max,sample.w);faces.add(sample.frame);soulFrames.add(sample.soulFrame);assert(sample.soulHeight>88&&sample.soulHeight<96);
    if([0,16,32,48].includes(i))await shot('pickup-'+i);await page.waitForTimeout(16);
   }
   assert(max/min>6);assert.equal(faces.size,12);assert.equal(soulFrames.size,8);

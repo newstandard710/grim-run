@@ -1,3 +1,11 @@
+## v0.17.0 — Bone & Shadow
+
+Painted combat now includes full low slide strikes, Soul Cleave, standing/sliding/airborne crossbow cycles, distinct crossbow-upgrade FX, all four enemies’ hit/defeat sequences and Reaper hurt/defeat. The Cavern Bat has a new shared sixteen-pose flight loop on the opening screen and in gameplay. Defeat views continue after combat collision ends; Reaper defeat freezes the world briefly before the established resurrection/results flow.
+
+Vendor encounters begin on grounded shrine-floor contact. Both merchants keep the original three cards visible and crossed out after purchase, with healing and Continue in the same panel. Carnivorous plants are 3× their prior painted dimensions, Souls 2×, and Brittle Bones radiates beyond all screen edges. Existing physics, pickup ranges and plant hitboxes are preserved.
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.17.0). [Artwork, prompts and registration](assets/combat/v0170/README.md). Other basic movement/idle polish remains deferred.
+
 ## v0.16.0 — Beyond Death
 
 A painted forest entrance now welcomes the Reaper and accepted enemy cast, with **Tap to Cross the Veil** leading into the main menu. All menus share locally hosted gothic headings, readable body lettering, painted stone and aged bronze frames. Main action controls are 15% larger with 15% wider gaps: Jump and Slide on the left, Shoot and Cut on the right.

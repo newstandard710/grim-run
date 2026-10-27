@@ -677,7 +677,7 @@
           else frame=V2_SKELETAL_BAT_FLAP[
             Math.floor(now*V2_SKELETAL_BAT_FLAP_FPS+(e.phase||0))%V2_SKELETAL_BAT_FLAP.length
           ];
-          const sprite=this.skeletalBatPool[used++],meta=V2_SKELETAL_BAT_ATLAS;
+          const sprite=this.skeletalBatPool[used++],meta=V2_SKELETAL_BAT_ATLAS;sprite.__grimEntity=e;
           sprite.setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
             .setPosition(e.x,e.y).setFrame(frame).setVisible(true)
             .setAlpha(1)
@@ -695,7 +695,7 @@
         for(const e of s.enemies||[]){
           if(e.kind!=='crawler'||e.dead||e.x<left||e.x>right||used>=this.boneCrawlerPool.length)continue;
           const index=Math.floor(now*V2_BONE_CRAWLER_FPS+(e.phase||0))%frames.length;
-          const meta=frames[index],sprite=this.boneCrawlerPool[used++];
+          const meta=frames[index],sprite=this.boneCrawlerPool[used++];sprite.__grimEntity=e;
           sprite.setTexture(meta.key).setOrigin(meta.origin[0],meta.origin[1])
             .setScale(meta.scale).setPosition(e.x,e.y).setFlipX(true).setVisible(true)
             .setAlpha(1).setRotation(0);
@@ -714,7 +714,7 @@
           const launched=(s.fireballs||[]).some(ball=>ball.owner===e&&!ball.dead&&ball.ageMs<=260);
           const frame=e.warningMs>0?'warning':launched?'release':
             V2_EMBER_IMP_RUN[Math.floor(now*V2_EMBER_IMP_FPS+(e.phase||0))%V2_EMBER_IMP_RUN.length];
-          const sprite=this.emberImpPool[used++];
+          const sprite=this.emberImpPool[used++];sprite.__grimEntity=e;
           // The atlas is anchored to the existing 38x42 imp collision footprint.
           sprite.setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
             .setPosition(e.x,e.y+22).setFrame(frame).setVisible(true)

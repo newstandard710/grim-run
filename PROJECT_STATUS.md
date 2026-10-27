@@ -1,6 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.16.0 — *Beyond Death*.
+**Current build:** v0.17.0 — *Bone & Shadow*.
+
+
+## v0.17.0 — Combat animation and persistent sanctuaries
+
+- User-confirmed scope: the original seven-item list plus enemy hit/defeat sequences and Reaper hurt/death. Plants become **3× their v0.16.0 painted width/height**; Souls become **2×**. Other enemy locomotion, regular movement transitions and non-bat home idles are deferred to a later build.
+- Ten complete low slide-strike drawings, twelve full-body Soul Cleave drawings, eight standing/eight sliding/six airborne crossbow drawings, four Reaper hurt/eight defeat drawings and twenty-four action FX drawings. Strike pose mapping follows the existing 20%–79% damage window. Rapid Fire, Power Shot and Chain Shot have distinct live-action painted FX; Infernal Boots has a painted block burst. Existing wing animation is retained; time abilities use character echoes and healing uses authored holy flame.
+- Cavern Bat flight is rebuilt with sixteen distinct registered drawings, continuous frame blending, fixed eye/body scale and short dive/recovery transitions. Gameplay and opening share the same motion mapping and atlas. The opening no longer normalizes the bat to each pose's changing wing outline.
+- All four enemy types have hit and defeat views. Hurt timers live on the enemy snapshot; corpses are detached from combat immediately, last 760ms and are bounded at twelve. Snapshots preserve them through rewind without future artifacts or gameplay RNG consumption. Reaper defeat freezes gameplay for 880ms, then uses the original free-life/paid-life/results flow, including smoke, costs and countdown. Its lethal-abyss camera is explicitly registered. Missing new art retains old rendering and death-flow fallbacks.
+- Both vendor types trigger on grounded foot contact with the actual existing sanctuary floor, including airborne entry followed by landing. First Angel/first Devil intros remain once per run. A leap over the entire sanctuary does not force an airborne snap-down.
+- Both vendor panels keep their original cards and DOM nodes after purchase. All offers are crossed out and disabled, the acquired one is identified, rerolls are disabled, and healing/Continue stay in place. Offers are retained for display and cannot be purchased twice. Healing is 8 Gold per HP in the same panel for either merchant; the Devil's separate decline-to-infirmary menu is removed. Reward costs, rarity and rank logic remain intact.
+- Brittle Bones' 32–44 painted bone fragments radiate far enough to cross every viewport edge, with viewport-relative travel, rotation and quick fade. Its range/bridges/hazard rules and bounded pool remain unchanged.
+- Carnivorous plants retain root registration and jaw poses at 3× painted dimensions; their collision footprint is unchanged. Visual overhang protection is enlarged around vendors. Souls preserve their pulse, location, value and collection ranges at 2× current painted dimensions. Coin dimensions are unchanged.
+- Source assets, exact prompts, runtime atlases, registration and hashes: `assets/combat/v0170/`. Builder: `scripts/prepare-combat-art.py`; renderer: `assets/visuals/combat-animations.js`. Overlapping source drawings are excluded, originals remain intact, and export uses atomic saves plus decoding and checksum verification.
+- Validation: all local gameplay/asset suites, `tests/combat-polish.cjs`, actual Chromium `tests/browser-combat-polish.js`, updated four-viewport/interface checks, and the established full-route browser suites. Browser workflows retain `combat-*.png` and `combat-animation-preview.webm` along with prior review captures.
+- Rollback base: `ff3e1988829a739d49e853d907695e750e049b6e` (v0.16.0). Review: PR #67.
 
 ## v0.16.0 — Opening, interface and permanent powers
 

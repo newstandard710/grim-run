@@ -233,3 +233,14 @@ Only normal Cavern Bats are replaced in this phase. Skeletal Bats, Crawlers, Imp
 - All menus share dark painted stone, aged bronze edging, understated corner inlays, ivory headings and readable Source Sans 3 explanations. Angel accents are ivory/gold; Devil accents are dark ember/red. Prices, limits, states and icon silhouettes must remain distinguishable without relying only on hue.
 - Main controls are engraved-style monochrome pictograms in stone/bronze buttons, with a clear pressed state and visible cooldowns. Jump/Slide live on the left; Shoot/Cut live on the right. Preserve 1.15× dimensions/gaps and safe-area clearance when refining their appearance.
 - Home art and material originals, exact prompts, and font licenses live under `assets/ui/v0160/`. Preserve all prior approved terrain, fog, abyss, merchant, pickup and character art; the removed opaque abyss backing must remain absent.
+
+
+## Bone & Shadow combat — v0.17.0
+
+- New combat/response drawings preserve the accepted charcoal/burgundy Reaper, ivory skull, cyan eye and bone/bronze weapons, and each enemy's accepted identity. Runtime registration uses feet or eyes, never changing weapon/wing bounds. Original source PNGs and exact prompts remain under `assets/combat/v0170/`.
+- Keep ground slide strikes and sliding crossbow silhouettes inside the existing low posture. The weapon may sweep above the hood during anticipation; the head/torso and collision posture stay low. Soul Cleave adds a full-body painted sequence and an ivory/cyan spectral sweep. Crossbow effects distinguish rapid cycling, heavy amber power and violet branching hits with shape and motion.
+- The sixteen-pose Cavern Bat loop shares one fixed body/eye scale in gameplay and on the opening screen. Use close frame blends and short dive/recovery transitions; do not independently fit poses to wing outlines. Other accepted enemy locomotion is deferred.
+- Hit views are brief; defeats retain the painted body, bone collapse or ember dissolve after colliders are removed. Never delay damage or retain an active enemy for its defeat art. Reaper hurt/death is restrained, grounded and recognizable. The 880ms defeat is separate from the accepted smoke resurrection scene.
+- Brittle Bones is an all-direction, viewport-spanning explosion of recognizable rotating bones. Keep its fade quick and its pool bounded; do not replace the pieces with a generic expanding icon.
+- Vendor purchase keeps all original card positions and descriptions, with large understated ivory crosses and an acquired label. Angel ivory/gold and Devil ember accents remain. Healing, currency and Continue remain in the same panel.
+- Plant and Soul scale multipliers apply to v0.16.0's current dimensions: 3× plants and 2× Souls. Preserve roots, Soul holy light, the approved terrain/fog hierarchy and all existing collection/collision geometry.

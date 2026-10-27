@@ -5,7 +5,8 @@
   const ctx=canvas.getContext('2d'),root='assets/';
   const files={reaper:'characters/illustrated-v2/reaper/reaper_idle_v1.png',
     crawler:'enemies/illustrated-v2/bone-crawler/crawler_crawl_01_v1.png',
-    imp:'enemies/illustrated-v2/ember-imp/ember_imp_atlas_v1.png'};
+    imp:'enemies/illustrated-v2/ember-imp/ember_imp_atlas_v1.png',
+    batFlight:'combat/v0170/bat-flight.png?v=0.17.0'};
   const bats=['bat_wings_raised_v1.png','bat_flap_mid_up_v1.png','bat_neutral_v1.png','bat_flap_mid_down_v1.png','bat_wings_lowered_v1.png','bat_flap_mid_down_v1.png','bat_neutral_v1.png','bat_flap_mid_up_v1.png'];
   for(const file of new Set(bats))files[file]='enemies/illustrated-v2/bat/'+file;
   const images={},bounds={};let mode='home',frame=0,last=0,clock=0,loaded=false;
@@ -17,7 +18,7 @@
     return {x:sx+left,y:sy+top,w:right-left+1,h:bottom-top+1};
   }
   const loadedImages=Object.entries(files).map(([id,path])=>new Promise(resolve=>{
-    const im=new Image();im.onload=()=>{images[id]=im;bounds[id]=id==='imp'?alphaBounds(im,0,0,256,256):alphaBounds(im);resolve();};im.onerror=resolve;im.src=root+path;
+    const im=new Image();im.onload=()=>{images[id]=im;bounds[id]=id==='batFlight'?null:id==='imp'?alphaBounds(im,0,0,256,256):alphaBounds(im);resolve();};im.onerror=resolve;im.src=root+path;
   }));
   function actor(id,x,feet,height,flip=false,alpha=1){
     const im=images[id],b=bounds[id];if(!im||!b||!b.h)return;
@@ -34,7 +35,16 @@
     const x=portrait?w*.23:w*.21,feet=portrait?h*.91:h*.92,rh=portrait?h*.43:h*.77;
     ctx.save();ctx.translate(x,feet);ctx.scale(1,.2);const shadow=ctx.createRadialGradient(0,0,0,0,0,rh*.4);shadow.addColorStop(0,'#020409cc');shadow.addColorStop(1,'#02040900');ctx.fillStyle=shadow;ctx.fillRect(-rh*.4,-rh*.4,rh*.8,rh*.8);ctx.restore();
     actor('reaper',x,feet,rh*(1+Math.sin(clock*1.8)*.0025));
-    const bat=bats[Math.floor(clock*9)%bats.length];actor(bat,w*.84,h*(portrait?.67:.36)+Math.sin(clock*1.3)*h*.025,h*(portrait?.14:.24),true,.9);
+    const batHeight=h*(portrait?.14:.24),batY=h*(portrait?.67:.36)+Math.sin(clock*1.3)*h*.025;
+    if(images.batFlight&&scope.GRIM_COMBAT_ART){
+      const motion=scope.GRIM_COMBAT_ART.batMotion(clock),scale=.32*batHeight/52;
+      ctx.save();ctx.translate(w*.84,batY-batHeight*.22);ctx.scale(-1,1);
+      for(const [frame,weight]of [[motion.a,1-motion.mix],[motion.b,motion.mix]]){
+        if(weight<=0)continue;ctx.globalAlpha=.9*weight;
+        ctx.drawImage(images.batFlight,(frame%4)*512,Math.floor(frame/4)*512,512,512,-330*scale,-292*scale,512*scale,512*scale);
+      }
+      ctx.restore();
+    }else {const bat=bats[Math.floor(clock*9)%bats.length];actor(bat,w*.84,batY,batHeight,true,.9);}
     actor('crawler',w*.86,h*.91,h*(portrait?.17:.28),true,.9);
     actor('imp',w*.69,h*.91+Math.sin(clock*2)*.8,h*(portrait?.12:.2),true,.88);
     // Dim moving motes sit below typography, independently of the run RNG.
