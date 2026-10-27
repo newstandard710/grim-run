@@ -1,6 +1,21 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.15.3 — *Souls & Shadows*.
+**Current build:** v0.16.0 — *Beyond Death*.
+
+## v0.16.0 — Opening, interface and permanent powers
+
+- The user approved 5,000m (the distance counter / Underworld transition) as the acceleration cutoff through acceptance of the preflight. Speed starts at 282 and reaches 465 at 5,000m, remaining constant afterward. `GRIM_CORE.runSpeed` is used for movement, teleport, obstacle-clearance checks and resurrection. The gain is 0.0366 per meter.
+- Angel healing is a separate repeated 1 HP / 8 Gold transaction, using the Devil heal price. The player can heal, buy at most one reward, do both in either order, or leave with neither. A reward purchase keeps the Angel menu open for healing; healing does not consume the reward or rerolls. Full health and insufficient funds are guarded. Devil purchase/decline/healing rules remain intact.
+- Fate’s Bargain: 0/1/2/3 rerolls per run, standard costs 5/10/25 Souls. One pool spans both merchant types. Refreshes use the normal rarity and pricing logic, prefer new eligible offers, and retain a guaranteed eligible crossbow option at Devils. A spent reward disables rerolls. No alternative means no consumed use. Rewind and resurrection cannot restore the quota.
+- Grave Wealth already existed with 0/2/4/6 starting Gold. Preserve its exact save ID and ranks; do not add a duplicate. Starting currency remains excluded from collected-gold scoring.
+- Death Denied: one rank at 15 Souls. Automatically consumes the free life on first lethal damage. Paid resurrection remains independently available once for 3 Souls. Both share the existing paid resurrection rules (3 HP and 3 maximum HP, retained powers, safe-ground recovery and 2,300ms invulnerability), the existing 1,500ms frozen smoke formation, then the existing 3-second countdown. Surviving abyss recovery still resumes immediately after smoke. Lethal abyss damage cannot overwrite free resurrection’s timers or state.
+- Save key and version remain compatible. Missing new ranks normalize to zero; each definition now owns its level cap and optional prices. Refund totals include Death Denied’s true 15-Soul price. No existing Soul balances or purchased ranks are reset.
+- Opening: new painted environment, accepted Reaper idle and animated Cavern Bat, accepted Crawler and Imp, restrained mist and motes. Central entry consumes its tap before exposing the main menu. Enter/Space are supported. Presentation animation stops outside the opening/main menu and when hidden; reduced-motion preference is honored.
+- Shared visual redesign covers main menu, Reliquary, Angel/Devil merchandise, pause/practice controls, refund/teleport/abandon confirmations, paid resurrection and results. Local Cinzel / Source Sans 3 fonts retain SIL licenses. Painted stone, ivory lettering, antique bronze and vendor-specific accents follow the approved palette. Costs, limits and descriptions are concise; crossbow naming is consistent, and rare/legendary offers describe the actual final awarded rank.
+- Touch controls use 1.15× prior dimensions and 1.15× gaps. Jump is above Slide on the left; Shoot is above Cut on the right. Rewind is an adjacent lower-left auxiliary control; practice slow motion remains centered. Six distinct relief-style control pictograms replace generic symbols. UI safe areas and held-pointer release behavior are preserved.
+- New source art, exact generation prompts and licenses: `assets/ui/v0160/`. Runtime UI: `interface.css` and `frontispiece.js`. Original character/environment artwork remains unchanged.
+- Validation: all existing local gameplay/asset suites plus `tests/beyond-death.cjs` pass. Chromium CI additionally exercises four viewport sizes (950×430, 812×375, 667×375, 390×844), real two-pointer input, save migration and purchases, vendor transaction order, rerolls and both resurrection scenes. Final rendering results are recorded before release.
+- Rollback: `backup/v0.15.3-before-ui`, commit `3d77f441759c84bfdaec39ce5414d6aa01df383e`.
 
 ## v0.15.3 — Souls, floating ledges and smooth recovery
 

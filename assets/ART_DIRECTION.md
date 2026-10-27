@@ -225,3 +225,11 @@ Only normal Cavern Bats are replaced in this phase. Skeletal Bats, Crawlers, Imp
 - Cut destruction is quiet and material-specific: a short crown lean/fade with small painted splinters, fossil chips, crystal shards or ash/embers. Collider removal happens at the original impact time; transient sprites are bounded and do not consume gameplay randomness.
 - Abyss recovery uses twelve painted smoke/formation poses, foot/eye registration, interpolated transitions and a final blend into the accepted Reaper. Cool navy smoke, restrained cyan glints, magenta lining and bronze/ivory scythe preserve the character. Total pause is 1.5 seconds; no bright full-screen burst.
 - Source bytes stay intact under `assets/world-polish/source/v0153/`; prompts, hashes, registration and per-skin root audit are in `assets/world-polish/v0153/`.
+
+
+## Beyond Death interface and opening — v0.16.0
+
+- Use the accepted Reaper, Bat, Crawler and Imp artwork in the opening tableau. The new forest threshold follows the forest painting’s navy, moss, burgundy and restrained cyan palette. No regenerated character identities. Central ivory/Cinzel lettering and a quiet entry prompt must remain readable at phone scale.
+- All menus share dark painted stone, aged bronze edging, understated corner inlays, ivory headings and readable Source Sans 3 explanations. Angel accents are ivory/gold; Devil accents are dark ember/red. Prices, limits, states and icon silhouettes must remain distinguishable without relying only on hue.
+- Main controls are engraved-style monochrome pictograms in stone/bronze buttons, with a clear pressed state and visible cooldowns. Jump/Slide live on the left; Shoot/Cut live on the right. Preserve 1.15× dimensions/gaps and safe-area clearance when refining their appearance.
+- Home art and material originals, exact prompts, and font licenses live under `assets/ui/v0160/`. Preserve all prior approved terrain, fog, abyss, merchant, pickup and character art; the removed opaque abyss backing must remain absent.

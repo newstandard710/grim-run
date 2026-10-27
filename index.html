@@ -286,7 +286,7 @@ button {cursor:pointer;}
       <div class="reward-subtitle"><span id="reward-distance">666</span> METERS · <span id="vendor-stats">♥ 3/3 · GOLD 0</span></div>
       <div id="reward-cards" class="reward-cards" aria-label="Vendor merchandise"></div>
       <div id="vendor-actions" class="vendor-actions"></div>
-      <div class="reward-foot">CHOOSE UP TO ONE GIFT · HEALING IS SEPARATE · LEAVE ANY TIME</div>
+      <div id="vendor-foot" class="reward-foot">CHOOSE UP TO ONE GIFT · HEALING IS SEPARATE · LEAVE ANY TIME</div>
     </div>
   </div>
   <div id="countdown-overlay" class="countdown-overlay hidden" aria-live="off" aria-label="Resume countdown">
@@ -1335,12 +1335,14 @@ window.GRIM_CONFIG = Object.freeze({
     showRewindPlayback(on){show('rewind-playback',on);}
     offerVendor(offers,type,phase,meters,hp,maxHp,gold,status={}) {
       this.selecting=false;
-      const devil=type==='devil', healing=phase==='heal';
+      const devil=type==='devil', healing=phase==='heal',healPrice=scope.GRIM_CONFIG.devilHealPrice;
       el('upgrade-screen').classList.toggle('devil',devil);
       el('vendor-eyebrow').textContent=devil?'THE DEVIL OFFERS A BARGAIN':'A HEAVENLY MERCHANT';
       el('reward-title').textContent=devil?(healing?'THE INFIRMARY':'THE DEVIL’S BARGAIN'):'THE ANGEL’S GIFTS';
       el('reward-distance').textContent=Math.floor(meters).toLocaleString();
       el('vendor-stats').textContent=`♥ ${hp}/${maxHp}  ·  GOLD ${gold}`;
+      el('vendor-foot').textContent=devil?(healing?'HEAL 1 HP PER PURCHASE · LEAVE ANY TIME':
+        'PAY HP FOR ONE POWER · OR DECLINE THE DEAL'):'CHOOSE UP TO ONE GIFT · HEALING IS SEPARATE · LEAVE ANY TIME';
       const holder=el('reward-cards'),buttons=el('vendor-actions');
       holder.replaceChildren();buttons.replaceChildren();
       holder.style.gridTemplateColumns=offers.length===1?'minmax(0,min(320px,100%))':'';
@@ -1375,14 +1377,13 @@ window.GRIM_CONFIG = Object.freeze({
         empty.textContent='Gift acquired. Heal, or continue your journey.';holder.appendChild(empty);
       }else{
         const empty=document.createElement('div');empty.className='vendor-empty';
-        empty.textContent=gold<8?'Insufficient gold for healing (requires 8).':hp>=maxHp?'You already have full health.':'RESTORE 1 HP FOR 8 GOLD';
+        empty.textContent=hp>=maxHp?'Your health is full.':gold<healPrice?`You need ${healPrice} Gold to heal 1 HP.`:`RESTORE 1 HP FOR ${healPrice} GOLD`;
         holder.appendChild(empty);
       }
       const action=(label,callback,primary=false,disabled=false)=>{
         const btn=document.createElement('button');btn.type='button';btn.className=primary?'primary':'secondary';
         btn.textContent=label;btn.disabled=disabled;btn.addEventListener('click',callback);buttons.appendChild(btn);
       };
-      const healPrice=scope.GRIM_CONFIG.devilHealPrice;
       if(!healing&&!status.purchased){
         action(`REROLL · ${status.rerolls||0} LEFT`,()=>this.actions.reroll(),false,!status.canReroll);
       }
@@ -1429,8 +1430,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('reliquary-notice').textContent=notice;
     }
     showRefundConfirm(invested,balance){
-      el('reset-description').textContent='You have '+balance+' unspent Souls and '+invested+
-        ' Souls invested. Refund '+invested+' Souls and pay a 1-Soul fee? New balance: '+(balance+invested-1)+'.';
+      el('reset-description').textContent='Refund '+invested+' Souls. Fee: 1 Soul. New balance: '+(balance+invested-1)+'.';
       this.setMode('refundConfirm');
     }
     update(hp,maxHp,distance,souls,coins,score,powerSummary=[]) {

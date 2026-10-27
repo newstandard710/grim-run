@@ -64,3 +64,10 @@ p{font-size:clamp(13px,2.9vh,17px);color:#d3d0c6;line-height:1.35;margin:7px aut
 @media(max-height:390px){.modal{padding:13px 20px}.meta-modal{padding:10px 16px}.meta-card{min-height:138px;padding:8px}.meta-desc{font-size:11px;min-height:26px}.meta-grid{gap:8px}.meta-intro{margin:2px auto 5px}.meta-buy{min-height:32px;padding:7px}.meta-notice{margin:3px 0;min-height:12px}.meta-modal>.primary,.meta-modal>.secondary{min-height:39px;padding:9px 14px}.reward-card{min-height:151px;gap:5px}.reward-subtitle{margin-bottom:9px}.vendor-actions{margin-top:11px}.home-tagline{margin-bottom:12px}.home-rule{margin-top:8px}#menu .instructions{margin-top:8px}#menu .mini{margin-top:5px}.primary,.secondary{min-height:47.15px}}
 @media(orientation:portrait){.home-copy{left:0;width:92vw;align-self:flex-start;margin-top:13vh}.game-wordmark{font-size:clamp(65px,12vh,110px)}.home-screen{background:linear-gradient(#060a1333,#060a1333)}#menu>.modal{margin-left:0;width:92vw}.meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.meta-card{min-height:170px}.reward-cards{grid-template-columns:1fr}.reward-card{min-height:160px}.reward-modal{max-height:94vh}.home-edition{bottom:20px}}
 @media(prefers-reduced-motion:reduce){.veil-enter,.title-mist,.home-copy{animation:none}.action,.primary,.secondary{transition:none}}
+
+/* Keep unavailable prices readable and practice settings in the same materials. */
+.meta-buy:disabled{opacity:1;color:#bdb7a9;border-color:#6d6659;background:linear-gradient(135deg,#222831da,#151c24ef),var(--stone) center/cover}
+.reward-card:disabled{opacity:.7}
+.god-mode-setting{border-radius:2px;border-color:#97805b;background:linear-gradient(140deg,#222c32db,#121b23ee),var(--stone) center/cover;padding:12.65px 21.85px;gap:9.2px}
+.god-mode-setting input{width:23px;height:23px;accent-color:#c0a576}
+#god-teleport-range{accent-color:#c0a576}

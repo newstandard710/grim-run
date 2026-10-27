@@ -1,3 +1,11 @@
+## v0.16.0 — Beyond Death
+
+A painted forest entrance now welcomes the Reaper and accepted enemy cast, with **Tap to Cross the Veil** leading into the main menu. All menus share locally hosted gothic headings, readable body lettering, painted stone and aged bronze frames. Main action controls are 15% larger with 15% wider gaps: Jump and Slide on the left, Shoot and Cut on the right.
+
+Angel vendors offer separate **1 HP / 8 Gold** healing before or after their one reward purchase. **Fate’s Bargain** grants 1/2/3 vendor rerolls per run (5/10/25 Souls); **Grave Wealth** retains its existing 2/4/6 starting Gold and saved ranks; **Death Denied** costs 15 Souls once and grants one free resurrection per run. The paid 3-Soul resurrection remains available separately. Both death resurrections play the approved paused smoke formation, then the existing countdown.
+
+Speed rises from 282 to 465 through 5,000m and holds there for the remaining route. New-game, teleport, obstacle fairness and resurrection use the same distance calculation. [Artwork, exact prompts and font licenses](assets/ui/v0160/README.md). [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.16.0).
+
 ## v0.15.3 — Souls & Shadows
 
 Spinning illustrated coins and softly breathing Souls are 75% larger. Soul-encounter ledges now float, with eight biome material sets. Rounded hills share one profile across art and collision. Long-rooted cut obstacles sit deeper, the legacy dark abyss backing is removed, and four material families animate when cut. Surviving abyss falls receive a smooth, paused 1.5-second smoke reformation before immediate play resumes.
@@ -32,7 +40,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.15.3 — Merchant Sanctuaries**
+**Current build: v0.16.0 — Beyond Death**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 
