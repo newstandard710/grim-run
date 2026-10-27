@@ -31,7 +31,7 @@ for(const [,attributes,source] of scripts){
 }
 const C=sandbox.GRIM_CONFIG,Core=sandbox.GRIM_CORE,Terrain=sandbox.GRIM_TERRAIN;
 const Powers=sandbox.GRIM_POWERS,Combat=sandbox.GRIM_COMBAT,GameScene=sandbox.GrimGameScene;
-assert.equal(C.version,'0.13.6');
+assert.equal(C.version,'0.15.0');
 
 for(let k=1;k<=14;k++){
   const x=200+k*666*C.pxPerMeter;
@@ -118,9 +118,8 @@ for(const seed of [1,7,42,99,314]){
   world.enterUnderworld();
   world.godMode=true;world.nextVendorNumber=8;world.lastVendorNumber=7;
   for(let n=0;n<6;n++)world.update(0,250);
-  assert.equal(world.state,'chest','Portal now transitions to chest acquisition');
-  world.finishChest();
-  assert.equal(world.state,'playing','Chest can be skipped');
+  assert.equal(world.state,'playing','Direct portal test entry resumes without a second acquisition');
+  assert.equal(world.gunUnlocked,true);
   const appeared=new Map(),margins=[];
   const createEnemy=world.trySpawnCombat.bind(world);
   world.trySpawnCombat=(x,kind)=>{

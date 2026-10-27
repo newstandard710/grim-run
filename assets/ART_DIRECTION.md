@@ -186,3 +186,13 @@ Only normal Cavern Bats are replaced in this phase. Skeletal Bats, Crawlers, Imp
 5. God Mode Rewind displays poses from recorded states, not separately ticking animation.
 6. Mobile visual performance feels responsive and all original regression suites pass.
 7. Missing assets cannot block the start menu or cause an invisible character.
+
+
+## Power and aerial animation — v0.15.0
+
+- Preserve the approved Reaper identity, painted bone/bronze scythe, charcoal hood, crimson robe lining and cyan eye. New poses are registered to a common virtual foot/collision anchor and eye line.
+- Runtime artwork: `assets/powers/reaper-actions.png` (15 frames, 512px square cells), `wings.png` (12 frames, 512x384 cells), and `power-effects.png` (12 effect elements, 256px square cells). Raw generated sheets remain unchanged in `assets/powers/source/`; SHA-256 is recorded in `manifest.json`.
+- Standalone skeletal wings use frames 4–7. With Raven Wings, use alternate lower-swept skeletal frames 8–11, below the raven pair (frames 0–3). Both sets deploy for aerial actions and fold away on landing. Bone wings have open negative space and no feather/membrane fill.
+- Use the established power colors and reinforce them with shape and motion. Keep persistent effects scarce; stronger levels add restrained accents during their relevant action. No full-screen ability haze or continuous multicolor cloud.
+- Snowy summit shrine has matching closed/open states. Use the same original Reaper in the acquisition poses, a separately animated Bone Crossbow and restrained cyan/ivory light. Keep the mountain backdrop visible. This is a gothic treasure-acquisition scene.
+- The old chest overlay's SVG figures are removed. The scene uses the same real Phaser-rendered painted assets as gameplay. Skip and full playback have identical rewards.
