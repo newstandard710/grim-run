@@ -33,9 +33,10 @@ const server=http.createServer((req,res)=>{
         for(let p=3;p<bytes.length;p+=4)if(bytes[p]>90)n++;
         coverage.push(n);
       }
-      return {ready:a.ready,coverage};
+      return {ready:a.ready,coverage,wingDepths:a.wingSprites.map(v=>v.depth),reaperDepth:s.visuals.reaper.depth};
     });
     assert(Object.values(ready.ready).every(Boolean),'All power atlases have decoded Phaser frames');
+    assert(ready.wingDepths.every(d=>d<ready.reaperDepth),'Wing attachments must stay behind the Reaper body and face');
     assert(ready.coverage.every(n=>n>3000&&n<512*512*.7),'Every action is nonblank and transparent');
     const setup=async(mode,elapsed=1)=>page.evaluate(({mode,elapsed})=>{
       const s=window.grimRun.scene.scenes[0],p=s.player;s.powerArt.reset();s.state='paused';s.elapsed=elapsed;
@@ -49,6 +50,7 @@ const server=http.createServer((req,res)=>{
       if(mode==='attack'){p.attackMs=150;p.hovering=false;}
       if(mode==='tuck-attack'){p.airTuck=true;p.attackMs=150;p.hovering=false;}
       s.drawScene();window.grimRun.step(performance.now(),0);
+      s.ui.update(p.hp,p.maxHp,s.distance,s.soulCount,s.coinCount,s.points,s.powerManager.summary());
       return {frame:s.powerArt.action?.frame.name,visible:s.powerArt.action?.visible,
         wings:s.powerArt.wingSprites.filter(v=>v.visible).map(v=>Number(v.frame.name)),x:p.x,y:p.y};
     },{mode,elapsed});

@@ -46,9 +46,9 @@
       }
       const image=(key,depth,frame)=>scene.textures.exists(key)?
         scene.add.image(0,0,key,frame).setDepth(depth).setVisible(false):null;
-      if(this.ready['power-reaper'])this.action=image('power-reaper',14,0)?.setOrigin(288/512,400/512).setScale(.375);
+      if(this.ready['power-reaper'])this.action=image('power-reaper',12,0)?.setOrigin(288/512,400/512).setScale(.375);
       if(this.ready['power-wings']){
-        for(let i=0;i<2;i++)this.wingSprites.push(image('power-wings',13.5,0)?.setOrigin(.5,260/384));
+        for(let i=0;i<2;i++)this.wingSprites.push(image('power-wings',11.5,0)?.setOrigin(.5,260/384));
       }
       if(this.ready['power-effects']){
         for(let i=0;i<MAX_BURSTS;i++)this.pool.push(image('power-effects',14.7,0));
