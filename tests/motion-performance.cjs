@@ -6,7 +6,7 @@ function node(id=''){let n;n=new Proxy({textContent:'',disabled:false,style:{set
 const el=id=>{if(!elements.has(id))elements.set(id,node(id));return elements.get(id);};
 const w={document:{getElementById:el,createElement:node,write(){},addEventListener(){}},localStorage:{getItem(){return null},setItem(){}},Phaser:{Scene:class{},Game:class{},AUTO:1,Scale:{RESIZE:1,CENTER_BOTH:1}},location:{search:'?seed=33'},URLSearchParams,addEventListener(){},innerWidth:950,innerHeight:430};w.window=w;vm.createContext(w);
 for(const [,attrs,body]of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w);
-for(const file of ['assets/motion/v0180/animation-data.js','assets/visuals/motion-animations.js','assets/visuals/world-polish.js'])vm.runInContext(read(file),w);
+for(const file of ['assets/motion/v0193/animation-data.js','assets/motion/v0180/animation-data.js','assets/visuals/motion-animations.js','assets/visuals/world-polish.js'])vm.runInContext(read(file),w);
 const A=w.GRIM_MOTION_ART,D=w.GRIM_MOTION_DATA;
 // Cadence is a function of distance, with no hardcoded dependency on the current
 // move-speed config or the display refresh rate.
@@ -16,9 +16,37 @@ for(const speed of [140,282,465,600])for(const hz of [30,60,120]){
 }
 assert.equal(A.STRIDE_PX,752);assert.equal(A.PIXELS_PER_GAIT,188);assert.equal(A.GAITS_PER_SHEET,4);
 assert.equal(A.runFrame(188),6,'188px advances one gait beat, not the entire sheet');
-for(const speed of [197.4,261.45,325.5])assert(Math.abs(A.runFrame(speed)/(speed/188*24)-.25)<1e-9,'Cadence is 75% slower at every movement speed');
+for(const speed of [300,362.5,425])assert(Math.abs(A.runFrame(speed)-speed/A.STRIDE_PX*24)<1e-9,'Cadence follows actual distance at every movement speed');
 assert.equal(A.WEAPON_SCALE,D.weapon.scale*.60);
 assert.equal(A.runFrame(A.STRIDE_PX),0);assert(A.runFrame(-1)>=0);
+// Sample the actual renderer across every baked pose, including half-way
+// transitions that used to expose the background through the Reaper.
+function imageSpy(){return {visible:false,alpha:1,setVisible(v){this.visible=v;return this;},
+ setTexture(key,frame){this.key=key;this.frame=frame;return this;},
+ setOrigin(x,y){this.origin=[x,y];return this;},setPosition(x,y){this.position=[x,y];return this;},
+ setScale(v){this.scale=v;return this;},setAlpha(v){this.alpha=v;return this;},setTint(){return this;}};}
+const runScene={state:'playing',startX:200,feetY:340,elapsed:0,visuals:{reviewV2:true},
+ player:{x:200,grounded:true,attackMs:0,invulMs:0},powerManager:{level:()=>0}};
+const render=Object.assign(Object.create(A.MotionAnimations.prototype),{scene:runScene,ready:true,runReady:true,
+ body:[imageSpy(),imageSpy()],weapon:imageSpy(),trail:{clear(){}}});
+for(let i=0;i<w.GRIM_RUN_DATA.frames;i++){
+ runScene.player.x=200+A.STRIDE_PX*(i+.1)/w.GRIM_RUN_DATA.frames;render.render();
+ const active=render.body.filter(v=>v.visible);assert.equal(active.length,1);assert.equal(active[0].alpha,1);
+ assert.equal(active[0].key,'motion-reaper-run-solid');assert.equal(active[0].frame,i);
+ assert.equal(active[0].scale,w.GRIM_RUN_DATA.scale);assert.equal(active[0].position[1],340);
+}
+const phase=render.state.phase;runScene.state='paused';render.render();assert.equal(render.state.phase,phase);
+runScene.player.grounded=false;runScene.player.velocityY=-300;render.render();
+assert.equal(render.state.name,'reaper-jump');assert.equal(render.body.filter(v=>v.visible).length,1);
+assert.equal(render.body[0].alpha,1);assert.equal(render.body[0].scale,.52);
+runScene.player.grounded=true;runScene.player.sliding=true;render.render();assert(render.body.every(v=>!v.visible));
+for(const speed of [300,362.5,425])for(const hz of [30,60,120]){
+ for(const timeScale of [1,.5,.25,0]){
+  let distance=0;for(let i=0;i<hz;i++)distance+=speed/hz*timeScale;
+  assert.equal(A.runAtlasFrame(distance+.00001),A.runAtlasFrame(speed*timeScale+.00001));
+ }
+}
+assert.equal(A.runAtlasFrame(A.STRIDE_PX),0);assert.equal(A.runAtlasFrame(-A.STRIDE_PX/192),191);
 assert.equal(A.jumpFrame({grounded:true,visualLandingMs:A.LAND_MS}),18);
 assert.equal(A.jumpFrame({grounded:true,visualLandingMs:0}),23);
 assert.equal(A.jumpFrame({hovering:true}),10.5);
@@ -75,4 +103,13 @@ for(const [group,folder]of [['sources','source/'],['runtime','']])for(const [nam
  assert(ended&&p===b.length,name+' complete IEND');assert.equal(b[25],6);assert(zlib.inflateSync(Buffer.concat(idat)).length>1000);
 }
 assert.equal(D.frames,24);assert.equal(Object.keys(D.sheets).length,3);
+const runManifest=JSON.parse(read('assets/motion/v0193/manifest.json'));
+const solidBytes=fs.readFileSync(path.join(root,'assets/motion/v0193/reaper-run.png'));
+assert.equal(solidBytes.length,runManifest.runtime['reaper-run.png'].bytes);
+assert.equal(crypto.createHash('sha256').update(solidBytes).digest('hex'),runManifest.runtime['reaper-run.png'].sha256);
+assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,runManifest.source.path))).digest('hex'),runManifest.source.sha256);
+assert.equal(solidBytes.readUInt32BE(16),3072);assert.equal(solidBytes.readUInt32BE(20),2304);
+assert.equal(runManifest.runtime['reaper-run.png'].bounds.length,192);
+assert(runManifest.runtime['reaper-run.png'].bounds.every(([l,t,r,b])=>l>=0&&t>=0&&r<192&&b<192&&r-l>50&&b-t>70));
+assert(!runManifest.keys.some(k=>k.from===13||k.to===13),'Mismatched contact drawing is replaced by registered neighbouring motion');
 console.log('PASS v0.18: distance-linked gait at four speeds/three refresh rates, jump/landing phases, 24 cutting poses, rigid point-leading blade through every active sample, swept collision envelope, dirty-only HUD, refresh-independent camera, skipped idle root masks, full PNG CRC/SHA integrity.');

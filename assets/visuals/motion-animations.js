@@ -1,10 +1,11 @@
-/* v0.19.1 — distance-driven gait, physical jump phases and one rigid cutting edge. */
+/* v0.19.3 — solid distance-driven gait, physical jumps and a rigid cutting edge. */
 (function(scope){
   'use strict';
-  const DATA=scope.GRIM_MOTION_DATA,ROOT='assets/motion/v0180/';
+  const DATA=scope.GRIM_MOTION_DATA,RUN=scope.GRIM_RUN_DATA,ROOT='assets/motion/v0180/';
   // The sheet contains four two-step gait beats. Advance each natural stride
   // over 188 world pixels instead of playing all four at that distance.
-  const GAITS_PER_SHEET=4,PIXELS_PER_GAIT=188,STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
+  const GAITS_PER_SHEET=RUN?.gaitsPerSheet||4,PIXELS_PER_GAIT=RUN?.pixelsPerGait||188,
+    STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
   // The old 0.14-source scale was sized for the damage reach, making the
   // cutting weapon larger than the carried one. One carry-matched scale is
   // immutable throughout windup, swing and recovery; reach belongs to the arc.
@@ -17,6 +18,10 @@
     const a=Math.floor(t);return {a,b:loop?(a+1)%COUNT:Math.min(COUNT-1,a+1),mix:t-a};
   }
   function runFrame(distance){return ((distance/STRIDE_PX*COUNT)%COUNT+COUNT)%COUNT;}
+  function runAtlasFrame(distance){
+    const count=RUN?.frames||COUNT;
+    return Math.floor(((distance/STRIDE_PX*count)%count+count)%count);
+  }
   function jumpFrame(p){
     if(p.grounded)return 18+clamp(1-(p.visualLandingMs||0)/LAND_MS)*5;
     if(p.hovering)return 10.5;
@@ -96,6 +101,8 @@
     for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,ROOT+name+'.png?v=0.18.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
     s.load.image('motion-scythe',ROOT+'scythe.png?v=0.18.0');
+    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0193/reaper-run.png?v=0.19.3',
+      {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
   class MotionAnimations{
     constructor(s){
@@ -120,6 +127,8 @@
         }catch(e){this.ready=false;s.visuals?.failedAssets?.push(String(e));}
       }
       if(!this.ready)return;
+      this.runReady=!!RUN&&s.textures.exists('motion-reaper-run-solid')&&
+        Array.from({length:RUN.frames},(_,i)=>s.textures.get('motion-reaper-run-solid').has(i)).every(Boolean);
       this.body=[0,1].map(()=>s.add.image(0,0,'motion-reaper-run',0).setDepth(12.09)
         .setOrigin(DATA.anchor[0]/DATA.cell[0],DATA.anchor[1]/DATA.cell[1]).setVisible(false));
       this.weapon=s.add.image(0,0,'motion-scythe').setOrigin(DATA.weapon.pivot[0]/384,DATA.weapon.pivot[1]/384)
@@ -144,21 +153,28 @@
       s.powerArt?.hideBase();s.powerArt?.action?.setVisible(false);
       for(const v of s.combatArt?.reaper||[])v.setVisible(false);
       const rig=name==='reaper-cut-body'?cutRig(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs):null;
-      const f=sample(t,loop),alpha=p.invulMs>0&&Math.floor((s.elapsed||0)/.083333)%2===0?.58:1;
-      for(let i=0;i<2;i++){
-        const weight=i?f.mix:1-f.mix,v=this.body[i];
-        v.setTexture('motion-'+name,i?f.b:f.a).setPosition(p.x+(rig?.bodyX||0),s.feetY).setScale(scale)
-          .setAlpha(alpha*weight).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(weight>.001);
-      }
+      const alpha=p.invulMs>0&&Math.floor((s.elapsed||0)/.083333)%2===0?.58:1;
+      const solidRun=name==='reaper-run'&&this.runReady;
+      const atlasFrame=solidRun?runAtlasFrame(p.x-(s.startX||0)):
+        (loop?Math.round(t)%COUNT:Math.round(t));
+      const anchor=solidRun?RUN.anchor:DATA.anchor,cell=solidRun?RUN.cell:DATA.cell[0];
+      // One complete painted silhouette. Crossfading two source-over sprites
+      // made common opaque regions 75% opaque and doubled moving limbs.
+      // The run's correspondence-aware in-betweens are baked, not calculated
+      // on the phone. Brief action poses are sampled without opacity blending.
+      this.body[0].setTexture(solidRun?'motion-reaper-run-solid':'motion-'+name,atlasFrame)
+        .setOrigin(anchor[0]/cell,anchor[1]/cell)
+        .setPosition(p.x+(rig?.bodyX||0),s.feetY).setScale(solidRun?RUN.scale:scale)
+        .setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
       if(name==='reaper-cut-body'){
         const progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;
         this.weapon.setPosition(p.x+rig.x,s.feetY+rig.y).setRotation(rig.angle)
           .setScale(-WEAPON_SCALE,WEAPON_SCALE).setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
         drawSwingArc(this.trail,s,progress,alpha);
       }
-      this.state={name,frame:t,phase:loop?t/COUNT:null};
+      this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null};
     }
     destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();}
   }
-  scope.GRIM_MOTION_ART={MotionAnimations,preload,runFrame,jumpFrame,cutFrame,cutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
+  scope.GRIM_MOTION_ART={MotionAnimations,preload,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
 })(typeof window!=='undefined'?window:globalThis);

@@ -1,4 +1,6 @@
-# v0.18.0 artwork — current v0.19.1 runtime tuning
+Current run playback is documented in [v0.19.3](../v0193/README.md). Original source and runtime bytes below remain retained for provenance and fallback; the review uses the current solid run atlas.
+
+# v0.18.0 artwork — retained originals
 
 The accepted drawings remain unchanged. Current playback advances the full sheet over 752 world pixels, reducing cadence by 75% relative to v0.18/v0.19.0. The basic cutting scythe uses a fixed 60% of its former scale to match the carried weapon; a separate spectral arc retains the prior damage reach. The review page follows the current runtime constants.
 

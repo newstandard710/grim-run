@@ -1,6 +1,15 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.2 — *Fluid Bat Flight*.
+**Current build:** v0.19.3 — *The Steady Stride*.
+
+## v0.19.3 — Solid, distance-synchronized Reaper running
+
+- Speed is 300–425 px/s, reaching the maximum at the existing 5,000m endpoint. Shared speed helpers, restart, teleport and terrain fairness follow this curve.
+- Inspected the current in-game renderer and source history: full-body crossfades made common opaque regions 75% opaque; the v0.19.1 fourfold duration stretch exposed those fades for longer. Source pose 13 also changed body and weapon proportions.
+- Retain the accepted painted source bytes. Offline bidirectional motion compensation adds registered in-betweens, bridges the mismatched pose and interpolates moving silhouette boundaries. The 192-pose atlas draws as one solid sprite at constant scale. No optical-flow calculation or new Canvas readback occurs during gameplay.
+- A 188px gait beat gives about 1.60–2.26 beats/s across 300–425; full-sheet distance remains 752px. Phase uses actual traveled position, retaining speed/slow/pause/rewind synchronization. Jump/landing and basic-cut drawings also display as one solid sample; existing durations, weapon scale and collision windows are retained.
+- Updated the shared movement review and regression coverage for all 192 opacity states, decoded hood pixels, acceleration endpoints, display rates, practice time scales and action transitions. Original gameplay, artwork and Chromium suites remain release requirements.
+- Source: `scripts/prepare-reaper-run.py`, `assets/motion/v0193/`. Rollback base: `0e93e56ec94ec744d6e58235e406c87ba45f724a` (v0.19.2).
 
 ## v0.19.2 — Coherent bat poses and slower flight
 

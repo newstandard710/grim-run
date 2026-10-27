@@ -27,6 +27,21 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   assert(pixels['reaper-jump'].slice(18).every(v=>Math.abs(v.bottom-279)<=1),'All grounded landing drawings register to the same foot line');
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');s.player.invulMs=0;s.player.visualHurtMs=0;s.obstacles=[];s.enemies=[];s.powerManager.levels.soulCleave=0;});
+  // Exercise the solid run path at every subpose, not just authored keyframes.
+  const solid=await page.evaluate(()=>{
+   const s=window.grimRun.scene.scenes[0],R=window.GRIM_RUN_DATA,A=window.GRIM_MOTION_ART;
+   const c=document.createElement('canvas');c.width=c.height=R.cell;const g=c.getContext('2d');
+   const source=s.textures.get('motion-reaper-run-solid').getSourceImage();let minHead=255,seen=new Set();
+   for(let i=0;i<R.frames;i++){
+    s.player.x=s.startX+A.STRIDE_PX*(i+.1)/R.frames;s.player.grounded=true;s.player.visualLandingMs=0;
+    s.drawScene();const visible=s.motionArt.body.filter(v=>v.visible);
+    if(visible.length!==1||visible[0].alpha!==1||visible[0].texture.key!=='motion-reaper-run-solid')throw Error('Faded or doubled Reaper '+i);
+    seen.add(s.motionArt.state.atlasFrame);
+    g.clearRect(0,0,R.cell,R.cell);g.drawImage(source,i%R.columns*R.cell,Math.floor(i/R.columns)*R.cell,R.cell,R.cell,0,0,R.cell,R.cell);
+    const bytes=g.getImageData(110,80,20,28).data,alpha=[];for(let j=3;j<bytes.length;j+=4)alpha.push(bytes[j]);alpha.sort((a,b)=>a-b);minHead=Math.min(minHead,alpha[Math.floor(alpha.length/2)]);
+   }
+   return {ready:s.motionArt.runReady,frames:seen.size,minHead};
+  });assert(solid.ready);assert.equal(solid.frames,192);assert(solid.minHead>=250,'The hood remains opaque between paintings');
   const frames=new Set();
   for(let i=0;i<24;i++){
    const pose=await page.evaluate(i=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.x=s.startX+window.GRIM_MOTION_ART.STRIDE_PX*i/24;p.y=s.terrain.groundAt(p.x);p.grounded=true;p.visualLandingMs=0;s.cameraX=p.x-s.width*.32;s.cameras.main.setScroll(s.cameraX,s.cameraY);s.drawScene();return {frame:s.motionArt.state.frame,name:s.motionArt.state.name,old:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible),visible:s.motionArt.body.some(v=>v.visible)};},i);
@@ -41,7 +56,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const value=await page.evaluate(progress=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=true;p.y=s.terrain.groundAt(p.x);p.visualLandingMs=0;p.attackMs=260*(1-progress);s.drawScene();const a=s.motionArt;return {name:a.state?.name,weapon:a.weapon.visible,angle:a.weapon.rotation,scale:[a.weapon.scaleX,a.weapon.scaleY],feet:s.feetY,body:a.body.filter(v=>v.visible).map(v=>v.y)};},progress);
    assert.equal(value.name,'reaper-cut-body');assert(value.weapon&&value.scale[0]<0&&value.scale[1]>0);assert(value.body.every(y=>y===value.feet));weaponScale??=value.scale;assert.deepEqual(value.scale,weaponScale,'The scythe scale stays identical through every phase');assert(Math.abs(value.scale[1]-windowScale)<1e-9);await shot('cut-'+Math.round(progress*100));
   }
-  const cadence=await page.evaluate(()=>{const a=window.GRIM_MOTION_ART;return [197.4,261.45,325.5].map(speed=>({speed,frame:a.runFrame(speed),expected:speed/a.STRIDE_PX*24}));});
+  const cadence=await page.evaluate(()=>{const a=window.GRIM_MOTION_ART;return [300,362.5,425].map(speed=>({speed,frame:a.runFrame(speed),expected:speed/a.STRIDE_PX*24}));});
   for(const sample of cadence)assert(Math.abs(sample.frame-sample.expected)<1e-8);
   const arc=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.attackMs=130;s.drawScene();const r=window.GRIM_MOTION_ART.cutRig(.5),D=window.GRIM_MOTION_DATA,A=window.GRIM_MOTION_ART;const tip=A.weaponPoint(r,D.weapon.tip),edge=A.sweepPoint(r,D.weapon.tip);return {drawn:s.motionArt.trail.commandBuffer.length>0,reach:Math.hypot(edge.x-r.x,edge.y-r.y)/Math.hypot(tip.x-r.x,tip.y-r.y)};});assert(arc.drawn&&Math.abs(arc.reach-1/.6)<1e-8);
   const timers=await page.evaluate(()=>{
