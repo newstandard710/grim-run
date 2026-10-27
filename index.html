@@ -1445,8 +1445,10 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.14.7-slide-support"></script>
-  <script src="assets/visuals/power-animations.js?v=0.15.1"></script>
+  <script src="assets/visuals/power-animations.js?v=0.15.2"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
+  <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=0.15.2"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -2427,7 +2429,7 @@ window.GRIM_CONFIG = Object.freeze({
     clearUpgradeCorridor(vendorX){
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
       const beginX=vendorX-C.vendorSanctuaryHalfMeters*C.pxPerMeter;
-      this.obstacles=this.obstacles.filter(ob=>ob.x>endX||ob.x+ob.width<beginX);
+      this.obstacles=this.obstacles.filter(ob=>{const b=this.vendorObstacleBounds(ob.type,ob.x,ob.width);return b.x>endX||b.x+b.width<beginX;});
       this.enemies=this.enemies.filter(e=>e.x+25<beginX||e.x-25>endX);
       this.fireballs=this.fireballs.filter(b=>b.x+9<beginX||b.x-9>endX);
       for(const tip of this.tips)if(tip.atX+80>=beginX&&tip.atX<=endX)tip.label.destroy();
@@ -2474,7 +2476,21 @@ window.GRIM_CONFIG = Object.freeze({
       const surface=this.terrain.groundAt(x);
       if(surface===null)return;
       const ob=Core.obstacle(type,x,surface,this.rng.integer(0,5),C.slideClearancePx,this.height);
+      if(this.vendorObstacleBlocked(type,x,ob.width))return;
       this.obstacles.push(ob);this.makeTip(type,ob);
+    }
+    vendorObstacleBounds(type,x,width){
+      // Include the painted foreground, ceiling backing and terrain tether,
+      // rather than allowing overhang from a spawn point outside the pad.
+      if(type==='airBramble')return {x:x-245,width:415};
+      const paintedWidth=type==='branch'?560:type==='tuckGate'?235:
+        type==='bramble'?width*3:type==='rock'?width*2.5:
+        type==='fire'?width*2:type==='snappingBramble'?256*.32:width;
+      return {x:x+width/2-paintedWidth/2,width:paintedWidth};
+    }
+    vendorObstacleBlocked(type,x,width){
+      const b=this.vendorObstacleBounds(type,x,width);
+      return Core.intersectsVendorCorridor(b.x,b.width,this.startX,C.vendorEveryMeters,C.pxPerMeter);
     }
     populateComboObstacles(){
       // Explicit encounter allocation. Old alternating gap logic sometimes
@@ -2485,12 +2501,12 @@ window.GRIM_CONFIG = Object.freeze({
         const meters=(section.start-this.startX)/C.pxPerMeter;
         if(meters<1700||meters>9300)continue;
         const x=section.start+Math.min(90,(section.end-section.start)*.42);
-        if(Core.intersectsVendorCorridor(x,80,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
+        if(this.vendorObstacleBlocked('airBramble',x,80)&&this.vendorObstacleBlocked('tuckGate',x,80))continue;
         if(Core.overlapsSoulPlatform(x,80,this.soulPlatform,30))continue;
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<80))continue;
         eligible.push({section,meters,x});
       }
-      const tucks=eligible.filter(c=>c.meters>=7000&&c.meters<=9250);
+      const tucks=eligible.filter(c=>c.meters>=7000&&c.meters<=9250&&!this.vendorObstacleBlocked('tuckGate',c.x,80));
       const target=2+((this.seed>>>0)%2);
       const selected=[];
       // Spread required tuck obstacles across later Underworld terrain.
@@ -2516,6 +2532,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Retain jump-and-attack variations without consuming required tuck slots.
       let lastAttack=-100000;
       for(const c of eligible){
+        if(this.vendorObstacleBlocked('airBramble',c.x,80))continue;
         if(chosen.has(c.section)||c.meters-lastAttack<310)continue;
         if(selected.some(s=>Math.abs(s.meters-c.meters)<125))continue;
         if(c.meters<7000 || (this.rng.next()<.36)){
@@ -2620,7 +2637,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(m<3000||m>4630)continue; // Preserve the mountain Soul approach.
         const nearGround=this.terrain.groundAt(x),farGround=this.terrain.groundAt(x+62);
         if(nearGround===null||farGround===null||Math.abs(nearGround-farGround)>105)continue;
-        if(Core.intersectsVendorCorridor(x,62,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
+        if(this.vendorObstacleBlocked('snappingBramble',x,62))continue;
         if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<220))continue;
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
         const ground=this.terrain.groundAt(x),height=62;
@@ -2646,7 +2663,7 @@ window.GRIM_CONFIG = Object.freeze({
              {type,x,width,y:(this.terrain.groundAt(x)??0)-(type==='rock'?48:41)},
              Math.min(C.maxSpeed,C.initialSpeed+((x-this.startX)/C.pxPerMeter)*C.speedGainPerMeter),
              C.jumpVelocity,C.gravity) &&
-           !Core.intersectsVendorCorridor(x,width,this.startX,C.vendorEveryMeters,C.pxPerMeter) &&
+           !this.vendorObstacleBlocked(type,x,width) &&
            !Core.overlapsSoulPlatform(x,width,this.soulPlatform,30) &&
            Math.abs(x-this.terrain.portalX)>95 &&
            x+width<this.terrain.worldEndX-80 &&

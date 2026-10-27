@@ -21,6 +21,11 @@ for(let seed=1;seed<=40;seed++){
 }
 function game(){const g=new w.GrimGameScene();g.scale={width:950,height:430,on(){},off(){}};g.events={once(){}};g.add={graphics:node,text:node};g.cameras={main:{setScroll(){}}};g.create();g.drawScene=()=>{};g.startRun();return g;}
 const g=game();g.player.attackCooldownMs=700;g.coinCount=16;g.player.hp=2;
+for(let k=1;k<=14;k++){
+ const begin=g.startX+(k*666-25)*12;
+ assert(!Core.intersectsVendorCorridor(begin-110,74,g.startX),'Fixture collision is outside sanctuary');
+ assert(g.vendorObstacleBlocked('branch',begin-110,74),'Painted hanging obstacle may not overhang sanctuary');
+}
 g.triggerVendor(1);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,3000);
 const before=JSON.stringify({x:g.player.x,hp:g.player.hp,coins:g.coinCount,elapsed:g.elapsed,offers:g.pendingOffers,cooldown:g.player.attackCooldownMs,rng:g.rng.state});
 w.document.hidden=true;for(let i=0;i<8;i++)g.update(0,250);assert.equal(g.vendorIntroMs,3000);w.document.hidden=false;
@@ -38,7 +43,9 @@ g.enemies=[{kind:'bat',x:g.player.x,y:g.player.y-40,dead:false}];
 g.fireballs=[{x:g.player.x,y:g.player.y-40,ageMs:0,vx:0,vy:0,dead:false}];
 g.updateCombat(34,.034);assert.equal(g.enemies.length,0);assert.equal(g.fireballs.length,0);assert.equal(g.player.hp,3,'Moving threats are removed before contact damage');
 const visual={};visual.window=visual;vm.createContext(visual);
-for(const name of ['vendor-art-data.js','vendor-sanctuaries.js','power-animations.js'])vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals',name),'utf8'),visual);
+for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art-data|vendor-sanctuaries|power-animations)\.js/.test(src))
+ vm.runInContext(fs.readFileSync(path.join(root,src.split('?')[0]),'utf8'),visual);
+assert(visual.GRIM_VENDOR_ART&&visual.GRIM_VENDOR_DATA,'Game HTML loads sanctuary renderer and registration data');
 const A=visual.GRIM_POWER_ART,frames=new Set();
 for(let ms=0;ms<3000;ms+=10)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
 assert.equal(frames.size,12);assert.equal(visual.GRIM_VENDOR_ART.approachAt(2.8).frame,11);
