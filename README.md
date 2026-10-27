@@ -1,3 +1,9 @@
+## v0.15.3 — Souls & Shadows
+
+Spinning illustrated coins and softly breathing Souls are 75% larger. Soul-encounter ledges now float, with eight biome material sets. Rounded hills share one profile across art and collision. Long-rooted cut obstacles sit deeper, the legacy dark abyss backing is removed, and four material families animate when cut. Surviving abyss falls receive a smooth, paused 1.5-second smoke reformation before immediate play resumes.
+
+Artwork, source prompts and reproducible preparation: `assets/world-polish/`, `scripts/prepare-world-polish.py`. All pickup collection rules, Soul encounter layouts, vendor sanctuaries and accepted character artwork are preserved.
+
 # Grim Run
 
 ## v0.15.2 — Merchant Sanctuaries
@@ -26,7 +32,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.15.2 — Merchant Sanctuaries**
+**Current build: v0.15.3 — Merchant Sanctuaries**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 

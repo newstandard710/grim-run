@@ -1,0 +1,173 @@
+{
+  "scope": "All 24 grounded cut skins inspected; airborne and animated snapping counterparts checked separately. Grounded cut art also anchors at terrain height at its center instead of the hitbox left edge on slopes. No hitbox change.",
+  "entries": [
+    {
+      "id": "forest_cut_thorny-young-pine",
+      "groundAnchorY": 0.9977,
+      "additionalInsetPx": 11,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "forest_cut_dead-oak-sapling",
+      "groundAnchorY": 1,
+      "additionalInsetPx": 10,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "forest_cut_corn-tangle",
+      "groundAnchorY": 1,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "foothills_cut_aspen-scrub",
+      "groundAnchorY": 0.6667,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "foothills_cut_dead-mountain-tree",
+      "groundAnchorY": 0.7546,
+      "additionalInsetPx": 16,
+      "decision": "Long splayed roots below the substantial trunk flare",
+      "changedInThisPass": true
+    },
+    {
+      "id": "foothills_cut_antler-thicket",
+      "groundAnchorY": 0.6644,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "tundra_cut_frozen-dead-pine",
+      "groundAnchorY": 0.6667,
+      "additionalInsetPx": 12,
+      "decision": "Narrow icy root tips below the substantial snow-covered root mass",
+      "changedInThisPass": true
+    },
+    {
+      "id": "tundra_cut_frostthorn-bush",
+      "groundAnchorY": 0.662,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "tundra_cut_winter-reeds",
+      "groundAnchorY": 0.662,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "caves_cut_root-bramble",
+      "groundAnchorY": 0.6644,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "caves_cut_mushroom-tangle",
+      "groundAnchorY": 0.6539,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "caves_cut_fossil-antlers",
+      "groundAnchorY": 0.6655,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "crystals_cut_crystal-vine",
+      "groundAnchorY": 0.6562,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "crystals_cut_blue-briar",
+      "groundAnchorY": 0.6586,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "crystals_cut_amethyst-thorn",
+      "groundAnchorY": 0.6609,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "ashlands_cut_charred-sapling",
+      "groundAnchorY": 0.6701,
+      "additionalInsetPx": 14,
+      "decision": "Long charred trunk/root points below the solid base",
+      "changedInThisPass": true
+    },
+    {
+      "id": "ashlands_cut_black-briar",
+      "groundAnchorY": 0.8044,
+      "additionalInsetPx": 8,
+      "decision": "Long trailing thorn-root points",
+      "changedInThisPass": true
+    },
+    {
+      "id": "ashlands_cut_ember-branch-shrub",
+      "groundAnchorY": 0.6632,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "lava_cut_ember-root-plant",
+      "groundAnchorY": 0.6597,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "lava_cut_lava-glass-thorn",
+      "groundAnchorY": 0.816,
+      "additionalInsetPx": 12,
+      "decision": "Thin molten root points below the root flare",
+      "changedInThisPass": true
+    },
+    {
+      "id": "lava_cut_scorched-corn",
+      "groundAnchorY": 0.6609,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "boss_cut_bone-bramble",
+      "groundAnchorY": 0.662,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "boss_cut_castle-creeper",
+      "groundAnchorY": 0.6632,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    },
+    {
+      "id": "boss_cut_spearbone-thicket",
+      "groundAnchorY": 0.6632,
+      "additionalInsetPx": 0,
+      "decision": "Retain accepted inset",
+      "changedInThisPass": false
+    }
+  ]
+}

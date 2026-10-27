@@ -1,6 +1,18 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.15.2 — *Merchant Sanctuaries*.
+**Current build:** v0.15.3 — *Souls & Shadows*.
+
+## v0.15.3 — Souls, floating ledges and smooth recovery
+
+- All 24 ground-cut skins audited. Five long-rooted trees/thickets receive individual visual insets; grounded cut art samples the terrain at its center so slopes do not leave the base floating. Collision boxes and accepted illustrations remain intact. Audit: `assets/world-polish/v0153/cut-root-audit.json`.
+- New 12-drawing gold coin spin and eight-drawing Soul flame. Coin body is 33.25px high (19 × 1.75); Soul body is 40.25px high (23 × 1.75), with a restrained 2.6-second holy-light pulse. Fixed collectible coordinates, counts, values and collection ranges. Visible pickup sprites are allocated only near the viewport.
+- All nine Soul-encounter stepping ledges now have finite, genuinely floating bodies. Eight distinct biome designs are ready; only Tundra and Lava still spawn Soul encounters. Positions, widths, level top surfaces and one-way landing behavior stay unchanged.
+- Ground hills use monotone Hermite curves, including horizontal tangents at extrema and flat plateau transitions. Physics, obstacle/pickup placement, ground texture masks, Tundra composites, surface caps and foreground fog share the same contour. End elevations, gap lips, launch strips, sanctuary pads and ledges stay exact. Render chords sample every four pixels with at least sixteen samples per section.
+- Removed the separate opaque dark abyss backing at the terrain lip. Existing canyon crops, 34px art inset, deep canyon fog and continuous foreground mist remain.
+- Cuttable wood/vine, bone/stone, crystal and charred/infernal groups share short leaning/fading crowns plus painted material fragments. Collider removal remains immediate. Scythe, crossbow, blast and Brittle Bones use the common hook; eight bursts, four crowns and sixty-four fragments are bounded. Visual randomness is independent; old puff RNG advancement is retained to avoid changing the subsequent encounter schedule.
+- Surviving abyss falls pause gameplay for exactly 1,500ms: eased camera relocation, gathering smoke, twelve registered formation drawings with continuous interpolation, then a blend into the accepted Reaper. Damage applies once; enemies, projectiles, abilities and gameplay clocks freeze; existing landing/clearance and full respawn invulnerability are retained. Resume is immediate without a countdown. Lethal falls preserve death/paid-revive behavior. New run/menu/teleport/rewind cleanup and resize registration are handled.
+- Built-in Imagegen source PNGs, exact prompts, registered atlases, manifests and builder: `assets/world-polish/` and `scripts/prepare-world-polish.py`. Runtime module: `assets/visuals/world-polish.js`.
+- Validation: existing gameplay/asset regressions, 30 extended seeded terrains, 1.3 million shared contour samples and explicit respawn damage/freeze/death boundaries. Actual Chromium captures cover every cut skin, all eight platforms, both live Soul encounters, all eight abyss layer comparisons, all four destruction materials, rounded hill contact, coin/Soul motion and the full respawn sequence. Stable base: `b379b3fece3b9d3cbbbacd12e4724fc7e4702d5d`.
 
 ## v0.15.2 — Vendor grounds, introductions and relic grip
 

@@ -222,7 +222,8 @@
     "gameH": 288,
     "groundAnchorY": 0.7546,
     "src": "assets/obstacles/cut/foothills/foothills_cut_dead-mountain-tree.png",
-    "key": "obstacle-foothills_cut_dead-mountain-tree"
+    "key": "obstacle-foothills_cut_dead-mountain-tree",
+    "visualInsetPx": 16
   },
   {
     "id": "foothills_cut_antler-thicket",
@@ -327,7 +328,8 @@
     "gameH": 288,
     "groundAnchorY": 0.6667,
     "src": "assets/obstacles/cut/tundra/tundra_cut_frozen-dead-pine.png",
-    "key": "obstacle-tundra_cut_frozen-dead-pine"
+    "key": "obstacle-tundra_cut_frozen-dead-pine",
+    "visualInsetPx": 12
   },
   {
     "id": "tundra_cut_frostthorn-bush",
@@ -678,7 +680,8 @@
     "gameH": 288,
     "groundAnchorY": 0.6701,
     "src": "assets/obstacles/cut/ashlands/ashlands_cut_charred-sapling.png",
-    "key": "obstacle-ashlands_cut_charred-sapling"
+    "key": "obstacle-ashlands_cut_charred-sapling",
+    "visualInsetPx": 14
   },
   {
     "id": "ashlands_cut_black-briar",
@@ -690,7 +693,8 @@
     "gameH": 288,
     "groundAnchorY": 0.8044,
     "src": "assets/obstacles/cut/ashlands/ashlands_cut_black-briar.png",
-    "key": "obstacle-ashlands_cut_black-briar"
+    "key": "obstacle-ashlands_cut_black-briar",
+    "visualInsetPx": 8
   },
   {
     "id": "ashlands_cut_ember-branch-shrub",
@@ -807,7 +811,8 @@
     "gameH": 288,
     "groundAnchorY": 0.816,
     "src": "assets/obstacles/cut/lava/lava_cut_lava-glass-thorn.png",
-    "key": "obstacle-lava_cut_lava-glass-thorn"
+    "key": "obstacle-lava_cut_lava-glass-thorn",
+    "visualInsetPx": 12
   },
   {
     "id": "lava_cut_scorched-corn",
