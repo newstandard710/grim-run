@@ -20,6 +20,12 @@
     return sample(seconds*24+phase*2.54648,16,true);
   }
   function muzzle(s){return {x:s.player.x+52,y:s.player.y-(s.lowProfile?36:65)};}
+  function attackFrame(progress,count){
+    const p=clamp(progress),lastStrike=count-4;
+    if(p<.20)return p/.20*3;
+    if(p<.79)return 3+(p-.20)/.59*(lastStrike-3);
+    return lastStrike+(p-.79)/.21*(count-1-lastStrike);
+  }
   class CombatAnimations{
     constructor(s){
       this.scene=s;this.ready={};this.corpses=[];this.sequence=0;this.reaperState=null;
@@ -87,9 +93,9 @@
         if(s.lowProfile){name='reaper-slide-cut';frames=[0];t=0;scale=.385;}
         else {name='reaper-hurt-death';frames=[0,1,2,3];t=(1-p.visualHurtMs/HURT_MS)*3;scale=.45;}
       }else if(p.sliding&&p.attackMs>0){
-        name='reaper-slide-cut';t=(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs)*(DATA[name].frames-1);scale=.385;
+        name='reaper-slide-cut';t=attackFrame(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs,DATA[name].frames);scale=.385;
       }else if(p.grounded&&p.attackMs>0&&s.powerManager.level('soulCleave')>0&&this.ready['reaper-soul-cleave']){
-        name='reaper-soul-cleave';t=(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs)*(DATA[name].frames-1);scale=.52;
+        name='reaper-soul-cleave';t=attackFrame(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs,DATA[name].frames);scale=.52;
       }else if(p.visualFireMs>0&&p.attackMs<=0){
         const progress=clamp(1-p.visualFireMs/FIRE_MS);
         if(s.lowProfile){name='reaper-crossbow';frames=[8,9,10,11,12,13,14,15];scale=.385;}
@@ -112,13 +118,22 @@
         const pair=this.bats[n++];if(e.visualHitMs>0&&this.ready['bat-response'])continue;
         if(e.mode==='dive'){
           const m=scope.GRIM_VISUALS.V2_BAT.dive,v=pair[0];
+          const enter=clamp((e.timer||0)/.12),flight=batMotion(s.elapsed||0,e.phase||0);
           v.setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
-            .setPosition(e.x,e.y).setAlpha(1).setRotation(.1).setVisible(true);
+            .setPosition(e.x,e.y).setAlpha(enter).setRotation(.1*enter).setVisible(true);
+          if(enter<1)pair[1].setTexture('combat-bat-flight',flight.a).setOrigin(330/512,292/512).setScale(.32)
+            .setPosition(e.x,e.y).setAlpha(1-enter).setRotation(0).setVisible(true);
         }else{
           const f=batMotion(s.elapsed||0,e.phase||0);
           this.blend(pair,'bat-flight',f.a+f.mix,e.x,e.y,.32);
           // Close the loop by blending the final drawing into the first.
           if(f.a===15&&f.mix>0){pair[1].setTexture('combat-bat-flight',0).setAlpha(f.mix).setVisible(true);pair[0].setAlpha(1-f.mix);}
+          if(e.mode==='recover'&&(e.timer||0)<.12){
+            const recovery=clamp((e.timer||0)/.12),m=scope.GRIM_VISUALS.V2_BAT.dive;
+            pair[0].setAlpha(recovery);
+            pair[1].setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
+              .setPosition(e.x,e.y).setRotation(.1*(1-recovery)).setAlpha(1-recovery).setVisible(true);
+          }
         }
       }
     }
@@ -185,5 +200,5 @@
     }
     destroy(){for(const v of this.all())v.destroy();this.corpses=[];}
   }
-  scope.GRIM_COMBAT_ART={CombatAnimations,preload,sample,batMotion,muzzle,FIRE_MS,HURT_MS,DEATH_MS,DEFEAT_MS,MAX_DEFEATS};
+  scope.GRIM_COMBAT_ART={CombatAnimations,preload,sample,batMotion,muzzle,attackFrame,FIRE_MS,HURT_MS,DEATH_MS,DEFEAT_MS,MAX_DEFEATS};
 })(typeof window!=='undefined'?window:globalThis);

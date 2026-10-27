@@ -77,6 +77,8 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');
   for(let i=0;i<8;i++){await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,100));if([1,4,7].includes(i))await shot('reaper-death-'+i);await page.waitForTimeout(65);}
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,80));assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'revive');
+  await setup();const abyss=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='playing';s.freeLifeAvailable=false;s.player.hp=1;s.player.x=s.terrain.sequences[0].startX+30;s.player.y=s.terrain.anchorAt(s.player.x)+500;s.rescueFromAbyss();s.drawScene();return {state:s.state,camera:[s.cameras.main.scrollX,s.cameras.main.scrollY],expected:[s.cameraX,s.cameraY]};});
+  assert.equal(abyss.state,'dying');assert.deepEqual(abyss.camera,abyss.expected);await shot('abyss-defeat');
   for(const [kind,k]of [['angel',1],['devil',8]]){
    await setup();await page.evaluate(k=>{
     const s=window.grimRun.scene.scenes[0],p=s.player,left=s.startX+(k*666-25)*12;s.state='playing';s.hasTeleported=k>=8;s.shrineClaimed=true;s.lastVendorNumber=k-1;s.nextVendorNumber=k;s.player.hp=4;s.player.maxHp=5;s.coinCount=24;

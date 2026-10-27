@@ -49,6 +49,10 @@ for(const [group,folder]of [['sources','source/'],['runtime','']])for(const [nam
 assert.equal(m.registration['bat-flight'].frames,16);assert(m.registration['reaper-slide-cut'].frames>=8);assert.equal(m.registration['reaper-crossbow'].frames,16);
 const art={};art.window=art;vm.createContext(art);vm.runInContext(read('assets/combat/v0170/animation-data.js'),art);vm.runInContext(read('assets/visuals/combat-animations.js'),art);
 const A=art.GRIM_COMBAT_ART,frames=new Set();for(let i=0;i<160;i++)frames.add(A.batMotion(i/240).a);assert.equal(frames.size,16);assert.equal(A.batMotion(16/24).a,0);
+for(const count of [10,12]){assert.equal(A.attackFrame(.20,count),3);assert.equal(A.attackFrame(.79,count),count-4);assert.equal(A.attackFrame(1,count),count-1);}
+const abyss=game();abyss.combatArt={ready:{'reaper-hurt-death':true},reset(){},tick(){},snapshot(){return [];}};
+let scroll;abyss.cameras.main.setScroll=(x,y)=>{scroll=[x,y];};abyss.player.hp=1;abyss.player.x=abyss.terrain.sequences[0].startX+30;abyss.rescueFromAbyss();
+assert.equal(abyss.state,'dying');assert.deepEqual(scroll,[abyss.cameraX,abyss.cameraY],'Lethal abyss defeat is visible at the safe recovery camera');
 const fake={player:{visualHurtMs:340},enemies:[],add:{},terrain:{groundAt(){return 300;},anchorAt(){return 300;}}};
 const v=new A.CombatAnimations(fake);const imp={kind:'imp',x:100,y:280};v.enemyHit(imp,false);assert.equal(imp.visualHitMs,240);assert.equal(v.corpses.length,0);
 for(let i=0;i<20;i++)v.enemyHit({...imp,x:i*10},true);assert.equal(v.corpses.length,12);const saved=v.snapshot();v.tick(100);assert.equal(fake.player.visualHurtMs,240);assert(v.corpses.every(c=>c.age===100));v.restore(saved);assert(v.corpses.every(c=>c.age===0));v.tick(800);assert.equal(v.corpses.length,0);
