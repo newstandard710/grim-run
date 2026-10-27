@@ -1,3 +1,13 @@
+# Grim Run — v0.19.3 · The Steady Stride
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.3)
+
+Running now starts at **300 px/s** and reaches **425 px/s** at 5,000m. The accepted Reaper artwork has 192 solid, registered playback frames, removing the opacity pulse and doubled silhouettes from whole-character crossfades. The mismatched contact drawing is bridged with its accepted neighbours. Cadence stays tied to actual world distance through acceleration, slow time, pause and rewind. Character scale and the rigid cutting scythe are retained.
+
+[Movement review](assets/motion/v0180/review.html) · [Reproducible preparation and asset hashes](assets/motion/v0193/README.md). Rollback base: v0.19.2 (`0e93e56ec94ec744d6e58235e406c87ba45f724a`).
+
+---
+
 # Grim Run — v0.19.2 · Fluid Bat Flight
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.2)
@@ -96,7 +106,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.19.2 — Fluid Bat Flight**
+**Current build: v0.19.3 — The Steady Stride**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 
