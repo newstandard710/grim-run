@@ -1,6 +1,17 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.15.0 — *Wings, Powers & Summit Relic*.
+**Current build:** v0.15.1 — *Cloak Wings & Living Thorns*.
+
+## v0.15.1 — Six visual refinements
+
+- All Raven, Skeletal and combined-loadout alternate Skeletal Wings are 1.5x their previous width and height, including tuck poses. Main wing silhouettes remain behind the body, narrow near-root strips emerge over the back cloth, and pose-specific painted cloak folds hide the attachment roots.
+- Brittle Bones now emits 32–44 separately rotating ivory bone fragments on its real damage trigger. Fragments use ballistic arcs, a bounded 64-sprite pool, deterministic visual variation, fade and cleanup. Buying the power still uses a short confirmation effect. Range, hazard clearing and bridge creation are unchanged.
+- The mountain snapping bramble is replaced with an eight-pose frosted carnivorous plant. Its rooted leaf base is fixed; separate jaw/neck/stem imagery follows the existing 46–78px danger cycle. Only connecting stem pixels extend; mouth and base proportions are preserved.
+- The summit acquisition uses 24 new registered poses: eight reach, eight lift and eight lower/equip drawings. Continuous weapon placement follows per-pose hand anchors. The scene keeps its 6-second duration, overhead reveal, skip behavior, single grant at 4,900m and retained weapon through the 5,000m portal.
+- Foreground mist now spans real abyss openings. Its visual surface interpolates between gap lips for both placement and clipping; the physical groundAt result remains null. Deep ravine fog is preserved. Tests compare actual fog-on/off pixels over gaps in all eight biomes.
+- All six jump-plus-attack supports have new curved, forked, tapered biome artwork in lossless transparent PNGs. Existing obstacle sizes, support depth, spawn logic and collision geometry stay intact.
+- Original revision sheets: `assets/powers/source/revision-v2/`. Runtime atlases and manifest: `assets/powers/revision-v2/`. Registration/assembly: `scripts/prepare-visual-revision.py`. Pose/hand metadata: `assets/visuals/revision-art.js`. Exact prompts: `assets/powers/revision-v2/production-prompts.json`.
+- Prior stable source: `726736d36bb2fa26c69bd0e80181814060b63e0b` (v0.15.0). Automated gameplay, asset and actual Chromium validation precedes publishing; phone playtesting remains the aesthetic acceptance step.
 
 ## v0.15.0 — Vendor power animation and summit shrine
 

@@ -1,0 +1,135 @@
+{
+  "version": "0.15.1",
+  "sources": {
+    "bones.png": {
+      "bytes": 1893262,
+      "sha256": "95c22e6fca528889ef735fd76d8130ff44988df0428920b6030fdf28b1c53bf7"
+    },
+    "cloak.png": {
+      "bytes": 1231781,
+      "sha256": "e5547157761386da729b7f93caf164eb87b22d48c77e618c2ef92b0b2e60e807"
+    },
+    "lift.png": {
+      "bytes": 2514118,
+      "sha256": "71bba3546a617aa98916d754c60965115183b3fe2527ac2965897eaf4035b3ca"
+    },
+    "lower.png": {
+      "bytes": 2656009,
+      "sha256": "36c7536b431870cb4ed95e5ea316549e7ffb4a15bf2298757dd1461216168e9d"
+    },
+    "plant.png": {
+      "bytes": 2463085,
+      "sha256": "5394089d7e77b06e32cefbfb72d1afe4b76b749c23d7653b9dbf2271947c0891"
+    },
+    "reach.png": {
+      "bytes": 2590382,
+      "sha256": "5f9d0183d2c83185489fc87db1ee4d4b5371814def394fcb7aea74b35ad02285"
+    },
+    "support-ashlands.png": {
+      "bytes": 1909663,
+      "sha256": "83fd71d7a5ef9f878b15bac87a785682cd2a039347af89278beef5ff42599a6b"
+    },
+    "support-caves.png": {
+      "bytes": 1873947,
+      "sha256": "2ab7d142ba848c3d57a4ba4b6137f4b47450a40ed5524ba4808040662e285e7c"
+    },
+    "support-crystals.png": {
+      "bytes": 2090423,
+      "sha256": "3db2dd4d10fd96f606271ba31a900f8d292a2eac9e7d6cace286d6997d36bae6"
+    },
+    "support-foothills.png": {
+      "bytes": 2007499,
+      "sha256": "784eb2b1472ba81d5ffc1fd0aef48e89a0f107dd93fe63227121f8a76fd1d123"
+    },
+    "support-lava.png": {
+      "bytes": 1808938,
+      "sha256": "aa20d5d730536c5eee9394360ac12e4f4bb3ede2ecd119cbcf157ceefb5fdf18"
+    },
+    "support-tundra.png": {
+      "bytes": 2005802,
+      "sha256": "a0554e5c611470527cf2e94b95de4a6da43c1224c44640555a7dd2887512afb5"
+    }
+  },
+  "runtime": {
+    "assets/obstacles/air-bramble-support-v2/ashlands/ashlands-curved-support.png": {
+      "bytes": 145834,
+      "sha256": "adb96216d61e6d5e571c7239e403640542b023eaf9b239b562f197ba93a15754",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/obstacles/air-bramble-support-v2/caves/caves-curved-support.png": {
+      "bytes": 137560,
+      "sha256": "2637c9adad3e7ba3f2aa03854a34a8165de8b6c0eae8a61a522f99534c13a9fe",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/obstacles/air-bramble-support-v2/crystals/crystals-curved-support.png": {
+      "bytes": 165174,
+      "sha256": "61bf831383d1e0d5ffbd8ef4d1a66ac2d940dd9fc7b258255ee2bc3297a58fb1",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/obstacles/air-bramble-support-v2/foothills/foothills-curved-support.png": {
+      "bytes": 139613,
+      "sha256": "1f930be3eb48f3ba0d1ed0c6702615f5cd1d2ce01325cd84a9cf8dc710f0df40",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/obstacles/air-bramble-support-v2/lava/lava-curved-support.png": {
+      "bytes": 136748,
+      "sha256": "cd89f681b134e718806f0c8651345f79e0a0a281fea41f18b451e4c3aa2fbebb",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/obstacles/air-bramble-support-v2/tundra/tundra-curved-support.png": {
+      "bytes": 149462,
+      "sha256": "6455ad0b3059df1ca81ee206d40b92ba1bca477202d0ed76d8efeaf8e65b0364",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/powers/revision-v2/bone-fragments.png": {
+      "bytes": 170446,
+      "sha256": "11075ad644e2156e8763e4c81eb20860f2c2878bacfbb85e50b7ff1bbd06c94c",
+      "size": [
+        512,
+        384
+      ]
+    },
+    "assets/powers/revision-v2/cloak-roots.png": {
+      "bytes": 44908,
+      "sha256": "6ad960e365cb8bf93cfbf269d593442a4192e767717bb51ec614d797801d5272",
+      "size": [
+        384,
+        128
+      ]
+    },
+    "assets/powers/revision-v2/relic-motion.png": {
+      "bytes": 2842898,
+      "sha256": "92de2dbe2ee404a3983f82ee50a544e6cba3e09a17b000cdfaec665fba61a2d9",
+      "size": [
+        2048,
+        3072
+      ]
+    },
+    "assets/powers/revision-v2/snapping-plant.png": {
+      "bytes": 359114,
+      "sha256": "6a4dc5ef8237c7e3fdad7418aad2a2bca9f23075b09a2f8e2fe49e2c37bbdd0d",
+      "size": [
+        1024,
+        640
+      ]
+    }
+  }
+}

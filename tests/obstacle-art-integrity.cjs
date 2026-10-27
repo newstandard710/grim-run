@@ -78,8 +78,14 @@ for(const [category,count] of Object.entries(counts)){
       assert.ok(!files.has(skin.supportSrc)&&!keys.has(skin.supportKey),skin.id+' support is unique');
       files.add(skin.supportSrc);keys.add(skin.supportKey);
       const support=fs.readFileSync(path.resolve(root,skin.supportSrc));
-      assert.equal(support.toString('ascii',0,4),'RIFF',skin.id+' support WebP');
-      assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
+      if(category==='air-bramble'){
+        assert.deepEqual([...support.subarray(0,8)],[137,80,78,71,13,10,26,10],skin.id+' curved support PNG');
+        assert.equal(support.readUInt32BE(16),512);assert.equal(support.readUInt32BE(20),384);
+        assert.equal(support[25],6,skin.id+' clean transparent support');
+      }else{
+        assert.equal(support.toString('ascii',0,4),'RIFF',skin.id+' support WebP');
+        assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
+      }
       assert.ok(support.length>1000,skin.id+' support painted');
     }
     assert.deepEqual([...bytes.subarray(0,8)],[137,80,78,71,13,10,26,10],skin.id+' PNG signature');

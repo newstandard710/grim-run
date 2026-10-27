@@ -21,6 +21,8 @@ jobs:
           npx playwright install chromium
       - name: Verify animated powers, combined wings and summit acquisition
         run: node tests/browser-power-animations.js
+      - name: Verify rooted carnivorous plants, curved supports and continuous fog
+        run: node tests/browser-visual-revision.js
       - name: Verify gameplay and obstacle textures in actual Chromium Phaser
         run: node tests/browser-visual-smoke.js
       - name: Verify biome obstacle sprite loading and phone-scale rendering
@@ -37,4 +39,5 @@ jobs:
           path: |
             test-results/*.png
             test-results/power-animation-preview.webm
+            test-results/visual-revision-preview.webm
           if-no-files-found: ignore

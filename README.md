@@ -1,5 +1,12 @@
 # Grim Run
 
+## v0.15.1 — Cloak Wings & Living Thorns
+
+Wings are 50% larger and emerge beneath matching cloak folds. Brittle Bones throws visible tumbling bone fragments; the moving mountain bramble is an animated toothed carnivorous plant. The summit reward has 24 registered motion poses and a hand-following crossbow path. Foreground fog crosses abyss openings, and all six airborne bramble supports use curved organic artwork.
+
+[Revision assets and exact generation prompts](assets/powers/revision-v2/README.md). [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.15.1).
+
+
 ## v0.15.0 — Wings, Powers & Summit Relic
 
 New painted action poses animate airborne tuck and scythe combinations. Raven and Skeletal Wings have articulated cycles, with a second skeletal set for the combined loadout. All vendor powers and healing purchases receive short effects, and higher levels add subtle color accents during use.

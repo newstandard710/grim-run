@@ -10,15 +10,29 @@
   const COLORS=[0xa5fbef,0xc5b5ff,0x9bdcff,0xe7efff,0xc7aaff,0xffb08e,
     0xffb65f,0xb2ecff,0xffca84,0xd9c0ff,0xffc2c9,0xe0c9ff];
   const SHEETS=[['power-reaper','reaper-actions.png',512,512,15],
-    ['power-wings','wings.png',512,384,12],['power-effects','power-effects.png',256,256,12]];
+    ['power-wings','wings.png',512,384,12],['power-effects','power-effects.png',256,256,12],
+    ['power-bones','revision-v2/bone-fragments.png',128,128,12],
+    ['power-cloak','revision-v2/cloak-roots.png',128,128,3],
+    ['power-relic-motion','revision-v2/relic-motion.png',512,512,24],
+    ['revision-plant','revision-v2/snapping-plant.png',256,320,8]];
   const SHRINE_METERS=4900,SHRINE_MS=6000,MAX_BURSTS=20;
   function preload(scene){
     if(!scene.load?.spritesheet)return;
     for(const [key,file,w,h,count] of SHEETS)
-      scene.load.spritesheet(key,'assets/powers/'+file+'?v=0.15.0',
+      scene.load.spritesheet(key,'assets/powers/'+file+'?v=0.15.1',
         {frameWidth:w,frameHeight:h,endFrame:count-1});
     for(const name of ['summit-shrine','summit-shrine-open','bone-crossbow'])
       scene.load.image('power-'+name,'assets/powers/'+name+'.png?v=0.15.0');
+  }
+  function relicMotionAt(t){
+    let pose;
+    if(t<.6)pose=0;
+    else if(t<1.3)pose=clamp((t-.6)/.7,0,1)*7;
+    else if(t<2)pose=8+clamp((t-1.3)/.7,0,1)*7;
+    else if(t<4.9)pose=15;
+    else if(t<5.6)pose=16+clamp((t-4.9)/.7,0,1)*7;
+    else pose=23;
+    return {pose,frame:Math.round(pose)};
   }
   function actionFrame(s){
     const p=s.player;
@@ -38,6 +52,7 @@
   class PowerAnimations{
     constructor(scene){
       this.scene=scene;this.bursts=[];this.sequence=0;this.pool=[];this.wingSprites=[];
+      this.nearWings=[];this.bonePool=[];
       this.ready={};this.disposed=false;
       if(!scene.add?.image||!scene.textures?.exists)return;
       for(const [key,,, ,count] of SHEETS){
@@ -49,7 +64,11 @@
       if(this.ready['power-reaper'])this.action=image('power-reaper',12,0)?.setOrigin(288/512,400/512).setScale(.375);
       if(this.ready['power-wings']){
         for(let i=0;i<2;i++)this.wingSprites.push(image('power-wings',11.5,0)?.setOrigin(.5,260/384));
+        for(let i=0;i<2;i++)this.nearWings.push(image('power-wings',12.08,0)?.setOrigin(.5,260/384)
+          .setCrop(256,220,42,120));
       }
+      if(this.ready['power-cloak'])this.cloakRoot=image('power-cloak',12.16,0);
+      if(this.ready['power-bones'])for(let i=0;i<64;i++)this.bonePool.push(image('power-bones',14.75,0));
       if(this.ready['power-effects']){
         for(let i=0;i<MAX_BURSTS;i++)this.pool.push(image('power-effects',14.7,0));
       }
@@ -64,7 +83,9 @@
         const source=scene.textures.get('power-summit-shrine-open').getSourceImage();
         this.cinemaShrineOpen.setCrop(source.width*.36,source.height*.48,source.width*.28,source.height*.37);
       }
-      this.cinemaReaper=image('power-reaper',24,12)?.setScrollFactor(0).setOrigin(288/512,400/512);
+      this.cinemaReaper=image(this.ready['power-relic-motion']?'power-relic-motion':'power-reaper',24,
+        this.ready['power-relic-motion']?0:12)?.setScrollFactor(0)
+        .setOrigin(this.ready['power-relic-motion']?.5:288/512,this.ready['power-relic-motion']?456/512:400/512);
       this.cinemaBow=image('power-bone-crossbow',25)?.setScrollFactor(0);
       this.cinemaFX=scene.add.graphics().setScrollFactor(0).setDepth(25.5);
       this.weapon=image('power-bone-crossbow',14.3);
@@ -76,6 +97,7 @@
     reset(){
       this.bursts=[];this.sequence=0;
       for(const sprite of this.pool)sprite?.setVisible(false);
+      for(const sprite of this.bonePool)sprite?.setVisible(false);
       this.fx?.clear();
     }
     trigger(id,x,y,kind='use',level){
@@ -85,6 +107,15 @@
       const item={id,index,x:x??p.x,y:y??(p.y-55),age:0,
         level:level??this.level(id),kind,seed:++this.sequence,
         duration:kind==='purchase'?780:kind==='blast'?600:id==='brittleBones'?780:420};
+      if(id==='brittleBones'&&kind==='blast'){
+        item.duration=950;item.bones=[];
+        const count=28+Math.min(4,Math.max(1,item.level))*4;
+        for(let i=0;i<count;i++){
+          const angle=i*2.399963+item.seed*.73,speed=115+((i*47+item.seed*19)%155);
+          item.bones.push({frame:i%12,vx:Math.cos(angle)*speed+65,vy:Math.sin(angle)*speed-90,
+            spin:(i%2?-1:1)*(3+(i%5)),size:10+(i*7%15),phase:i*.47});
+        }
+      }
       if(this.bursts.length>=MAX_BURSTS)this.bursts.shift();
       this.bursts.push(item);
     }
@@ -154,25 +185,32 @@
     renderWings(){
       const s=this.scene,p=s.player,air=!p.grounded&&['playing','paused','rewinding','countdown'].includes(s.state);
       for(const sprite of this.wingSprites)sprite?.setVisible(false);
+      for(const sprite of this.nearWings)sprite?.setVisible(false);
+      this.cloakRoot?.setVisible(false);
       if(!air||!this.wingsReady)return;
       const raven=this.level('ravenWings'),bone=this.level('skeletalWings');
       const phase=Math.floor(s.elapsed*(p.hovering?8:7))%4;
       const tucked=Boolean(p.airTuck||p.holdSlide),rootY=s.feetY-(tucked?41:70);
       let used=0;
+      const attach=(frame,x,y,scale,rotation,alpha)=>{
+        const n=used++;
+        for(const sprite of [this.wingSprites[n],this.nearWings[n]])sprite?.setFrame(frame)
+          .setPosition(x,y).setScale(scale*1.5).setRotation(rotation).setAlpha(alpha).setVisible(true);
+      };
       if(raven){
         const jumpStroke=p.airJumpUsed&&p.jumpAgeMs<280?Math.min(3,Math.floor(p.jumpAgeMs/70)):phase;
-        this.wingSprites[used++]?.setFrame(jumpStroke).setPosition(p.x-12,rootY-3)
-          .setScale(tucked?.25:.34).setRotation(tucked?-.12:0).setAlpha(.95).setVisible(true);
+        attach(jumpStroke,p.x-15,rootY-3,tucked?.25:.34,tucked?-.12:0,.95);
       }
       if(bone){
         const row=raven?8:4;
-        this.wingSprites[used++]?.setFrame(row+phase).setPosition(p.x-12,rootY+(raven?14:0))
-          .setScale(tucked?.24:.34).setRotation(tucked?.1:0)
-          .setAlpha(p.hovering?1:.8).setVisible(true);
+        attach(row+phase,p.x-15,rootY+(raven?14:0),tucked?.24:.34,tucked?.1:0,p.hovering?1:.8);
         const ratio=clamp(p.hoverBudgetMs/Math.max(1,s.powerManager.skeletalHoverMs()),0,1);
-        this.fx.fillStyle(0x0d1424,.78);this.fx.fillRoundedRect(p.x-32,rootY-83,64,7,3);
-        if(ratio>0){this.fx.fillStyle(0xd5e2e0,.93);this.fx.fillRoundedRect(p.x-30,rootY-81,60*ratio,3,1.5);}
+        this.fx.fillStyle(0x0d1424,.78);this.fx.fillRoundedRect(p.x-32,rootY-130,64,7,3);
+        if(ratio>0){this.fx.fillStyle(0xd5e2e0,.93);this.fx.fillRoundedRect(p.x-30,rootY-128,60*ratio,3,1.5);}
       }
+      if(used&&this.cloakRoot)this.cloakRoot.setFrame(tucked?1:p.attackMs>0?2:0)
+        .setPosition(p.x-13,rootY+9).setDisplaySize(tucked?29:32,tucked?27:34)
+        .setRotation(tucked?-.12:0).setVisible(true);
     }
     motes(x,y,id,count,spread,phase,alpha){
       const g=this.fx,index=ORDER.indexOf(id);if(index<0)return;
@@ -188,9 +226,23 @@
     renderEffects(){
       const s=this.scene,p=s.player,g=this.fx;
       for(const sprite of this.pool)sprite?.setVisible(false);
+      for(const sprite of this.bonePool)sprite?.setVisible(false);
       if(!['playing','paused','rewinding','countdown','upgrade'].includes(s.state))return;
       let used=0;
+      let boneUsed=0;
       if(s.state!=='rewinding')for(const b of this.bursts){
+        if(b.bones){
+          const seconds=b.age/1000,alpha=clamp((b.duration-b.age)/330,0,1);
+          for(const piece of b.bones){
+            const x=b.x+piece.vx*seconds,y=b.y+piece.vy*seconds+190*seconds*seconds;
+            const sprite=this.bonePool[boneUsed++];
+            if(sprite)sprite.setFrame(piece.frame).setPosition(x,y)
+              .setDisplaySize(piece.size,piece.size).setRotation(piece.phase+piece.spin*seconds)
+              .setAlpha(alpha).setVisible(true);
+            else if(!this.bonePool.length){g.lineStyle(2,0xe7dfcf,alpha);g.lineBetween(x-3,y-2,x+3,y+2);g.fillStyle(0xe7dfcf,alpha);g.fillCircle(x-3,y-2,2);g.fillCircle(x+3,y+2,2);}
+          }
+          continue;
+        }
         const t=b.age/b.duration,a=Math.sin(Math.PI*t)*.7;
         const purchase=b.kind==='purchase',blast=b.kind==='blast';
         const x=purchase?p.x:b.x,y=purchase?s.feetY-60-t*20:b.y;
@@ -247,24 +299,34 @@
       this.cinema.fillStyle(0x03101c,.65);this.cinema.fillRect(0,0,w,h*.115);this.cinema.fillRect(0,h*.88,w,h*.12);
       const shrineX=w*.57,ground=h*.82;
       if(this.cinemaShrine){
-        const open=this.cinemaShrineOpen?clamp((t-1.5)/.35,0,1):0;
+        const open=this.cinemaShrineOpen?clamp((t-.45)/.55,0,1):0;
         this.cinemaShrine.setOrigin(.5,1).setPosition(shrineX,ground+13)
           .setDisplaySize(h*.90,h*.60).setAlpha(1).setVisible(true);
         this.cinemaShrineOpen?.setOrigin(.5,1).setPosition(shrineX,ground+13)
           .setDisplaySize(h*.90,h*.60).setAlpha(open).setVisible(open>0);
       }
-      if(this.cinemaReaper&&this.ready['power-reaper']){
-        const frame=t<1.9?12:t<4.9?13:14;
-        this.cinemaReaper.setFrame(frame).setPosition(w*.37,ground).setScale(h/950).setVisible(true);
+      const motion=relicMotionAt(t),smooth=this.ready['power-relic-motion'];
+      const cinemaScale=h/(smooth?760:950);
+      if(this.cinemaReaper&&(smooth||this.ready['power-reaper'])){
+        const frame=smooth?motion.frame:t<1.9?12:t<4.9?13:14;
+        this.cinemaReaper.setFrame(frame).setPosition(w*.37,ground).setScale(cinemaScale).setVisible(true);
         this.hideBase();this.action?.setVisible(false);this.weapon?.setVisible(false);
         for(const sprite of this.wingSprites)sprite?.setVisible(false);
+        for(const sprite of this.nearWings)sprite?.setVisible(false);
+        this.cloakRoot?.setVisible(false);
       }
-      const bx=shrineX-(shrineX-w*.38)*clamp((t-2.7)/.8,0,1);
-      const by=ground-h*.18-reveal*h*.27;
-      if(this.cinemaBow&&t>1.5){
-        const lower=clamp((t-5.0)/.8,0,1);
-        this.cinemaBow.setPosition(bx,by+lower*h*.17).setDisplaySize(h*.24,h*.24)
-          .setRotation(Math.sin(t*1.4)*.04).setAlpha(reveal).setVisible(true);
+      let bx=shrineX-(shrineX-w*.38)*clamp((t-2.7)/.8,0,1),by=ground-h*.18-reveal*h*.27;
+      if(smooth&&scope.GRIM_REVISION_ART?.relicHands){
+        const a=Math.floor(motion.pose),b=Math.min(23,a+1),f=motion.pose-a;
+        const points=scope.GRIM_REVISION_ART.relicHands,hand=[points[a][0]+(points[b][0]-points[a][0])*f,points[a][1]+(points[b][1]-points[a][1])*f];
+        const targetX=w*.37+(hand[0]-256)*cinemaScale,targetY=ground+(hand[1]-456)*cinemaScale-h*.035;
+        let follow=clamp((t-.7)/.6,0,1);follow=follow*follow*(3-2*follow);
+        bx=shrineX+(targetX-shrineX)*follow;by=ground-h*.18+(targetY-(ground-h*.18))*follow;
+      }
+      const bowAlpha=clamp((t-.7)/.35,0,1);
+      if(this.cinemaBow&&t>.7){
+        this.cinemaBow.setPosition(bx,by).setDisplaySize(h*.24,h*.24)
+          .setRotation(Math.sin(t*1.4)*.025).setAlpha(bowAlpha).setVisible(true);
       }
       const g=this.cinemaFX;
       if(reveal>0){
@@ -279,8 +341,8 @@
         }
       }
       const title=scope.document?.getElementById?.('relic-title'),button=scope.document?.getElementById?.('chest-continue-btn');
-      if(title)title.textContent=t<3.1?'THE SUMMIT RELIQUARY':'BONE CROSSBOW ACQUIRED';
-      if(button)button.textContent=t<3.1?'SKIP ▶':'CONTINUE ▶';
+      if(title)title.textContent=t<2.1?'THE SUMMIT RELIQUARY':'BONE CROSSBOW ACQUIRED';
+      if(button)button.textContent=t<2.1?'SKIP ▶':'CONTINUE ▶';
     }
     render(){
       if(!this.enabled||this.disposed)return;
@@ -289,9 +351,9 @@
     destroy(){
       if(this.disposed)return;this.disposed=true;
       for(const sprite of [this.action,this.weapon,this.shrine,this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow,
-        this.fx,this.cinema,this.cinemaFX,...this.wingSprites,...this.pool])sprite?.destroy();
+        this.fx,this.cinema,this.cinemaFX,this.cloakRoot,...this.wingSprites,...this.nearWings,...this.bonePool,...this.pool])sprite?.destroy();
       this.bursts=[];this.pool=[];this.wingSprites=[];
     }
   }
-  scope.GRIM_POWER_ART={preload,PowerAnimations,actionFrame,ORDER,COLORS,SHRINE_METERS,SHRINE_MS,MAX_BURSTS,SHEETS};
+  scope.GRIM_POWER_ART={preload,PowerAnimations,actionFrame,relicMotionAt,ORDER,COLORS,SHRINE_METERS,SHRINE_MS,MAX_BURSTS,SHEETS};
 })(typeof window!=='undefined'?window:globalThis);

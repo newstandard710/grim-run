@@ -196,3 +196,13 @@ Only normal Cavern Bats are replaced in this phase. Skeletal Bats, Crawlers, Imp
 - Use the established power colors and reinforce them with shape and motion. Keep persistent effects scarce; stronger levels add restrained accents during their relevant action. No full-screen ability haze or continuous multicolor cloud.
 - Snowy summit shrine has matching closed/open states. Use the same original Reaper in the acquisition poses, a separately animated Bone Crossbow and restrained cyan/ivory light. Keep the mountain backdrop visible. This is a gothic treasure-acquisition scene.
 - The old chest overlay's SVG figures are removed. The scene uses the same real Phaser-rendered painted assets as gameplay. Skip and full playback have identical rewards.
+
+
+## Cloak-root wings and living thorn refinement — v0.15.1
+
+- Enlarge all three wing types by 50% in both dimensions. Keep full silhouettes behind the body at depth 11.5. A small cropped near-side root section sits at 12.08; the original body stays at 12; a painted pose-specific cloth fold at 12.16 conceals the joint. Preserve the face and weapon silhouette. Do not move the full wing pair over the body.
+- The new carnivorous mountain plant has a hinged toothed maw, slate/frost leaves and burgundy inner mouth. Roots remain fixed; jaw shapes are separate authored poses. Preserve mouth and leaf-base proportions when fitting the existing height cycle.
+- Brittle Bones needs recognizable separately spinning bone pieces, short ballistic arcs and restrained fade. An expanding generic icon is not its activation animation. Keep the bounded pool and use visual phase values rather than consuming gameplay random numbers.
+- Shrine reach/lift/lower artwork has 24 frames. The feet are registered and per-pose hand coordinates drive the separately rendered relic. Keep hand motion, weapon motion and overhead hold synchronized; preserve the accepted shrine and Reaper design.
+- Surface fog must continue across gaps at a virtual interpolated lip height, while canyon depth and physical gaps stay open. Keep the previous waist-heavy/chest-wisp profile, variation and biome tint.
+- Air-bramble supports must curve, branch, taper and join terrain naturally. Six new PNGs under `assets/obstacles/air-bramble-support-v2/` replace the previous diagonal supports. Keep real terrain above the lower attachment and airborne foreground art above the support.
