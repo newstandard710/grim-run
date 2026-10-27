@@ -6,7 +6,7 @@
   const files={reaper:'characters/illustrated-v2/reaper/reaper_idle_v1.png',
     crawler:'enemies/illustrated-v2/bone-crawler/crawler_crawl_01_v1.png',
     imp:'enemies/illustrated-v2/ember-imp/ember_imp_atlas_v1.png',
-    batFlight:'combat/v0170/bat-flight.png?v=0.17.0'};
+    batFlight:'encounters/v0190/bat-flight.png?v=0.19.0'};
   const bats=['bat_wings_raised_v1.png','bat_flap_mid_up_v1.png','bat_neutral_v1.png','bat_flap_mid_down_v1.png','bat_wings_lowered_v1.png','bat_flap_mid_down_v1.png','bat_neutral_v1.png','bat_flap_mid_up_v1.png'];
   for(const file of new Set(bats))files[file]='enemies/illustrated-v2/bat/'+file;
   const images={},bounds={};let mode='home',frame=0,last=0,clock=0,loaded=false;

@@ -3,7 +3,7 @@
   'use strict';
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const smooth=v=>{v=clamp(v,0,1);return v*v*(3-2*v);};
-  const INTRO_MS=3000,HALF_METERS=25,VENDOR_SCALE=1.75;
+  const INTRO_MS=10000,HALF_METERS=25,VENDOR_SCALE=1.75;
   function preload(s){
     for(const kind of ['angel','devil']){
       s.load.image('sanctuary-'+kind+'-floor','assets/vendors/v0152/'+kind+'-floor.png?v=0.15.2');
@@ -84,19 +84,20 @@
       const s=this.scene;this.shade.clear();this.back.clear();this.light.clear();
       this.cinema.forEach(v=>v.setVisible(false));
       if(s.state!=='vendorIntro')return;
-      const t=clamp((INTRO_MS-s.vendorIntroMs)/1000,0,3),motion=approachAt(t);
+      const elapsed=clamp((INTRO_MS-s.vendorIntroMs)/1000,0,10);
+      const t=elapsed<2.3?elapsed:elapsed<9.3?2.3:2.3+(elapsed-9.3),motion=approachAt(t);
       const w=s.width,h=s.height,devil=s.vendorType==='devil',kind=devil?'devil':'angel';
       const ground=h*.84,vx=w*.66,rx=w*(.12+.24*motion.travel);
       // Small framing motion is shared by every staged element.
       const push=smooth(t/3)*h*.016;
       this.shade.fillStyle(devil?0x120811:0x071321,.88);this.shade.fillRect(0,0,w,h);
       this.shade.fillStyle(0x020710,.7);this.shade.fillRect(0,0,w,h*.11);this.shade.fillRect(0,h*.91,w,h*.09);
-      drawAura(this.back,vx,ground,devil,t,h*.72/142*(1+motion.presence*.05));
+      drawAura(this.back,vx,ground,devil,elapsed,h*.72/142*(1+motion.presence*.05));
       this.floor?.setTexture('sanctuary-'+kind+'-floor').setOrigin(.5,0).setPosition(w*.5,ground-3)
         .setDisplaySize(w*.94+push,h*.19).setVisible(true);
       this.columns.forEach((v,i)=>v?.setTexture('sanctuary-'+kind+'-architecture',i).setOrigin(.5,740/768)
         .setPosition(vx+(i?1:-1)*w*.20,ground+9).setDisplaySize(w*.21+push,h*.82+push).setVisible(true));
-      const breath=1+Math.sin(t*2.3)*.006;
+      const breath=1+Math.sin(elapsed*2.3)*.006;
       this.merchant?.setTexture(devil?'vendor-demon':'vendor-angel').setOrigin(.5,1).setPosition(vx,ground+5)
         .setDisplaySize(h*(devil?.88:.85)*breath+push,h*.72*breath+push).setVisible(true);
       this.reaper?.setFrame(this.approachReady?motion.frame:12)

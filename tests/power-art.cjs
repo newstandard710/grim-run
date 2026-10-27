@@ -17,7 +17,7 @@ const w={GRIM_CONFIG:{attackDurationMs:260}};w.window=w;vm.createContext(w);
 vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals/power-animations.js'),'utf8'),w);
 const A=w.GRIM_POWER_ART;
 assert.equal(A.SHRINE_METERS,4900);assert.equal(A.SHRINE_MS,6000);
-assert.equal(A.ORDER.length,12);
+assert.equal(A.ORDER.length,13);
 const s={state:'playing',player:{grounded:false,onSoulPlatform:false,airTuck:true,visualTuckMs:25}};
 assert.equal(A.actionFrame(s),0);
 s.player.visualTuckMs=100;assert.equal(A.actionFrame(s),1);

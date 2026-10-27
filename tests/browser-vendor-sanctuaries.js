@@ -38,21 +38,21 @@ const server=http.createServer((req,res)=>{
     const s=window.grimRun.scene.scenes[0];s.lastVendorNumber=k-1;s.state='playing';s.triggerVendor(k);s.drawScene();
     return {state:s.state,ms:s.vendorIntroMs,hp:s.player.hp,coins:s.coinCount,rng:s.rng.state,offers:JSON.stringify(s.pendingOffers),x:s.player.x,elapsed:s.elapsed};
    },k);
-   assert.equal(entry.state,'vendorIntro');assert.equal(entry.ms,3000);
+   assert.equal(entry.state,'vendorIntro');assert.equal(entry.ms,10000);
    assert(await page.locator('#upgrade-screen').evaluate(e=>e.classList.contains('hidden')),'Choices stay hidden during introduction');
    const frames=new Set();
    for(let i=0;i<60;i++){
     const sample=await page.evaluate(i=>{
-     const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=3000-i*50;s.drawScene();window.grimRun.step(performance.now(),0);
+     const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=10000-i*50;s.drawScene();window.grimRun.step(performance.now(),0);
      return {frame:s.vendorArt.reaper.frame.name,x:s.vendorArt.reaper.x,y:s.vendorArt.reaper.y,ms:s.vendorIntroMs,merchant:s.vendorArt.merchant.displayHeight};
-    },i);frames.add(Number(sample.frame));assert.equal(sample.ms,3000-i*50);assert(sample.merchant>300);
+    },i);frames.add(Number(sample.frame));assert.equal(sample.ms,10000-i*50);assert(sample.merchant>300);
     if([12,32,50].includes(i))await page.screenshot({path:path.join(dir,'vendor-intro-'+kind+'-'+i+'.png')});
     await page.waitForTimeout(30);
    }
    assert.equal(frames.size,12,'All twelve approach/settle poses actually render');
    const frozen=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return {hp:s.player.hp,coins:s.coinCount,rng:s.rng.state,offers:JSON.stringify(s.pendingOffers),x:s.player.x,elapsed:s.elapsed};});
    for(const key of Object.keys(frozen))assert.equal(frozen[key],entry[key],kind+' intro preserves '+key);
-   if(kind==='angel')await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,50));
+   if(kind==='angel')await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=50;s.update(0,50);});
    else await page.locator('#vendor-intro-skip').click();
    assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'upgrade');
    const subsequent=await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.leaveVendor();s.triggerVendor(k+1);const state=s.state;s.leaveVendor();return state;},k);

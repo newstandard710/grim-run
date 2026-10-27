@@ -54,12 +54,12 @@ const server=http.createServer((req,res)=>{
       s.ui.update(p.hp,p.maxHp,s.distance,s.soulCount,s.coinCount,s.points,s.powerManager.summary());
       return {frame:s.powerArt.action?.frame.name,visible:s.powerArt.action?.visible,
         motion:s.motionArt.state,motionVisible:s.motionArt.body.some(v=>v.visible),weapon:s.motionArt.weapon.visible,
-        wings:s.powerArt.wingSprites.filter(v=>v.visible).map(v=>Number(v.frame.name)),x:p.x,y:p.y};
+        wingKeys:s.powerArt.wingSprites.filter(v=>v.visible).map(v=>v.texture.key),wings:s.powerArt.wingSprites.filter(v=>v.visible).map(v=>Number(v.frame.name)),x:p.x,y:p.y};
     },{mode,elapsed});
     const wingFrames=[];
     for(let i=0;i<4;i++){
       const info=await setup('hover',(i+.1)/8);wingFrames.push(info.wings);
-      assert.equal(info.wings.length,2);assert(info.wings[0]<4&&info.wings[1]>=8,'Combined loadout selects alternate skeletal set');
+      assert.equal(info.wings.length,2);assert(info.wingKeys.every(k=>k==='gravewing-wings')&&info.wings.every(f=>f<8),'Combined loadout uses a single integrated authored wing set');
       await page.waitForTimeout(180);
     }
     assert.equal(new Set(wingFrames.map(JSON.stringify)).size,4,'Wings articulate through four poses');
@@ -71,7 +71,8 @@ const server=http.createServer((req,res)=>{
           roots:a.nearWings.filter(v=>v.visible).map(v=>({cropped:v.isCropped,depth:v.depth})),
           cloak:a.cloakRoot.visible,cloakDepth:a.cloakRoot.depth,bodyDepth:s.visuals.reaper.depth};
       },{raven,bone});
-      const expected=tuck?[.375,.36]:Array(raven&&bone?2:1).fill(.51);
+      assert(raven&&bone?measure.scales.length>=1&&measure.scales.length<=2:measure.scales.length===1,'One wing set, with up to two blended drawings');
+      const expected=Array(measure.scales.length).fill(tuck?.42:.51);
       assert.equal(measure.scales.length,expected.length);measure.scales.forEach((v,i)=>assert(Math.abs(v-expected[i])<.00001,'Each wing type is exactly 50% larger'));
       assert(measure.cloak&&measure.cloakDepth>measure.bodyDepth,'Cloth folds conceal wing joints');
       assert(measure.roots.every(v=>v.cropped&&v.depth>measure.bodyDepth&&v.depth<measure.cloakDepth),'Only the near root emerges between body cloth and its overlap fold');
@@ -112,7 +113,7 @@ const server=http.createServer((req,res)=>{
     for(let i=0;i<8;i++){await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.powerArt.tick(75);s.drawScene();});await page.waitForTimeout(75);}
     const paused=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],a=s.powerArt,b=a.bursts.find(b=>b.bones);const before=b.age;
-      s.update(0,34);const paused=b.age===before,rng=s.rng.state;a.tick(1000);s.drawScene();
+      s.update(0,34);const paused=b.age===before,rng=s.rng.state;a.tick(1100);s.drawScene();
       return {paused,rng,visible:a.bonePool.filter(v=>v.visible).length};
     });
     assert(paused.paused);assert.equal(paused.rng,explosion.rng,'Visual fragment motion consumes no gameplay randomness');assert.equal(paused.visible,0,'Bone pieces expire and return to their fixed pool');

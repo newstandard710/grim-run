@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.18.0</title>
+  <title>GRIM RUN — v0.19.0</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -200,7 +200,7 @@ button {cursor:pointer;}
 .chest-title{position:absolute;bottom:13%;left:0;right:0;font-size:clamp(16px,4.4vh,32px);font-weight:1000;letter-spacing:.10em;text-shadow:0 0 18px #8cebe770;}
 .chest-caption{position:absolute;bottom:7.5%;left:0;right:0;font-size:clamp(8px,1.8vh,13px);font-weight:850;letter-spacing:.12em;color:#a4d3d2;}
 #chest-continue-btn{position:absolute;right:14px;bottom:14px;pointer-events:auto;min-height:32px;width:auto;padding:5px 18px;margin:0;}
-.vendor-intro-scene{position:absolute;inset:0;z-index:24;pointer-events:none;text-align:center;color:#e7fff5;text-shadow:0 2px 6px #020714;}
+.vendor-intro-scene{position:absolute;inset:0;z-index:24;pointer-events:auto;touch-action:manipulation;text-align:center;color:#e7fff5;text-shadow:0 2px 6px #020714;}
 #vendor-intro-title{position:absolute;top:4%;width:100%;font-weight:900;letter-spacing:.22em;font-size:clamp(12px,3vh,20px)}
 #vendor-intro-caption{position:absolute;bottom:3%;width:100%;font-weight:800;letter-spacing:.2em;font-size:clamp(10px,2.5vh,15px)}
 #vendor-intro-skip{position:absolute;right:14px;bottom:12px;pointer-events:auto;min-height:30px;padding:5px 16px}
@@ -208,13 +208,13 @@ button {cursor:pointer;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
-  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.18.0">
+  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.19.0">
 </head>
 <body>
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.18.0</div>
+    <div class="home-edition">GRIM RUN · v0.19.0</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
@@ -239,7 +239,7 @@ button {cursor:pointer;}
     <button id="attack-btn" class="action attack" aria-label="Cut with scythe"><span class="symbol">⚔</span><span>CUT</span></button>
     <button id="crossbow-btn" class="action crossbow hidden" aria-label="Shoot Bone Crossbow"><span class="symbol">⌁</span><span>SHOOT</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
     <button id="rewind-btn" class="action rewind hidden" aria-label="Rewind Time"><span class="symbol">↶</span><span>REWIND</span><span id="rewind-cd" class="rewind-cd hidden"></span></button>
-    <button id="practice-slow-btn" class="action practice-slow hidden" aria-label="Toggle half speed" aria-pressed="false"><span class="symbol">◷</span><span>0.5× SPEED</span></button>
+    <button id="practice-slow-btn" class="action practice-slow hidden" aria-label="Time controls: normal speed" aria-pressed="false"><span class="symbol">◷</span><span id="practice-time-label">1× SPEED</span></button>
     <div class="right-buttons">
       <button id="jump-btn" class="action jump" aria-label="Jump"><span class="symbol">↑</span><span>JUMP</span></button>
       <button id="slide-btn" class="action slide" aria-label="Slide"><span class="symbol">⇥</span><span>SLIDE</span></button>
@@ -252,7 +252,7 @@ button {cursor:pointer;}
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.18.0 · THE REAPER IN MOTION</div>
+      <div class="mini">v0.19.0 · GRAVEWING ASCENSION</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -360,13 +360,16 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.18.0',
+  version: '0.19.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
-  initialSpeed: 282,
-  speedGainPerMeter: (465-282)/5000,
+  initialSpeed: 197.4,
+  speedGainPerMeter: (325.5-197.4)/5000,
   accelerationEndMeters: 5000,
-  maxSpeed: 465,
+  maxSpeed: 325.5,
+  vendorIntroDurationMs: 10000,
+  practiceTimeScales: Object.freeze([1,.5,.25,0]),
+  projectileVisualScale: 3,
   pxPerMeter: 12,
   jumpVelocity: -610,            // full hold keeps v0.1 jump ceiling
   gravity: 1550,
@@ -800,7 +803,11 @@ window.GRIM_CONFIG = Object.freeze({
     let cachedSummary=[];
     function summary(){
       if(summaryIds.some((id,i)=>summaryLevels[i]!==levels[id])){
-        cachedSummary=summaryIds.filter(id=>levels[id]>0).map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:false}));
+        const combined=levels.ravenWings>0&&levels.skeletalWings>0;
+        cachedSummary=summaryIds.filter(id=>levels[id]>0&&!(combined&&id==='skeletalWings')).map(id=>
+          combined&&id==='ravenWings'?{id:'gravewingAscension',name:'GRAVEWING ASCENSION',level:levels.ravenWings,
+            detail:'Raven '+levels.ravenWings+' · Skeletal '+levels.skeletalWings,oneOff:false}:
+            {id,name:POWERS[id].name,level:levels[id],oneOff:false});
         for(let i=0;i<summaryIds.length;i++)summaryLevels[i]=levels[summaryIds[i]];
       }
       return cachedSummary;
@@ -808,8 +815,11 @@ window.GRIM_CONFIG = Object.freeze({
     const maxFor=id=>['rapidFire','powerShot','chainShot'].includes(id)?3:MAX_LEVEL;
     function offer(id){
       const p=POWERS[id],current=levels[id];
-      return {id,name:p.name,action:p.action,icon:p.icon,color:p.color,
-        description:p.descriptions[current],levelFrom:current,levelTo:current+1,type:'power'};
+      const wing=id==='ravenWings'||id==='skeletalWings',other=id==='ravenWings'?'skeletalWings':'ravenWings';
+      const completesCombo=wing&&current===0&&levels[other]>0,combined=wing&&levels[other]>0;
+      return {id,name:combined?'GRAVEWING ASCENSION':p.name,action:combined?'JUMP + HOVER':p.action,icon:p.icon,color:p.color,
+        completesCombo,combined,description:(completesCombo?'Unite Raven and Skeletal Wings. ':'')+p.descriptions[current],
+        levelFrom:current,levelTo:current+1,type:'power'};
     }
     return {
       levels,level:id=>levels[id]||0,maxFor,
@@ -851,7 +861,7 @@ window.GRIM_CONFIG = Object.freeze({
     const rarity=roll<.03?'legendary':roll<.13?'rare':'common';
     const wanted=rarity==='legendary'?3:rarity==='rare'?2:1;
     const actual=Math.min(wanted,MAX_LEVEL-offer.levelFrom);
-    const description=POWERS[offer.id]?.descriptions[offer.levelFrom+actual-1]||offer.description;
+    const description=(offer.completesCombo?'Unite Raven and Skeletal Wings. ':'')+(POWERS[offer.id]?.descriptions[offer.levelFrom+actual-1]||offer.description);
     return {...offer,description,rarity,levelsGained:actual,levelTo:offer.levelFrom+actual};
   }
   function shuffle(options,rng){
@@ -946,7 +956,10 @@ window.GRIM_CONFIG = Object.freeze({
       // tighter horizontal clearances and greater vertical step variety.
       const count=group===0?1:group===1?2:m<1500?3:m<2250?4:m<3100?5:m<6500?6:m<8000?7:m<9300?8:9;
       const gapWidth=group===0?88:group===1?108:Math.min(230,120+Math.max(0,m-1200)*.018);
-      const widths=Array.from({length:count},(_,i)=>Math.round(gapWidth+(i%3===1?9:i%3===2?-5:0)));
+      const cfg=scope.GRIM_CONFIG,velocity=Math.abs(cfg.jumpVelocity),step=group===0?0:Math.min(58,33+Math.max(0,m-1000)*.006);
+      const flight=(velocity+Math.sqrt(Math.max(0,velocity*velocity-2*cfg.gravity*step)))/cfg.gravity;
+      const reachable=Math.floor(scope.GRIM_CORE.runSpeed(m)*flight-24);
+      const widths=Array.from({length:count},(_,i)=>Math.min(reachable,Math.round(gapWidth+(i%3===1?9:i%3===2?-5:0))));
       const platformWidth=group===0?350:group===1?330:Math.max(190,306-Math.max(0,m-1200)*.017);
       return {widths,platformWidth,length:widths.reduce((a,b)=>a+b,0)+(count-1)*platformWidth};
     }
@@ -1204,6 +1217,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('revive-no-btn').addEventListener('click', () => actions.declineRevive());
       el('chest-continue-btn').addEventListener('click', () => actions.finishChest());
       el('vendor-intro-skip').addEventListener('click', () => actions.finishVendorIntro());
+      el('vendor-intro-screen').addEventListener('click', event => {event.preventDefault();event.stopPropagation();actions.finishVendorIntro();});
       el('menu-btn').addEventListener('click', () => actions.menu());
       el('pause-btn').addEventListener('click', () => actions.pause());
       el('resume-btn').addEventListener('click', () => actions.resume());
@@ -1306,10 +1320,15 @@ window.GRIM_CONFIG = Object.freeze({
       show('practice-slow-btn',on);
       if(!on)this.showPracticeSlow(false);
     }
-    showPracticeSlow(on){
-      el('practice-slow-btn').classList.toggle('active',on);
-      el('practice-slow-btn').setAttribute('aria-pressed',String(on));
-      el('practice-slow-btn').title=on?'Return to normal speed':'Slow game to 50%';
+    showPracticeSlow(scale){
+      if(typeof scale!=='number')scale=scale?.5:1;
+      const active=scale!==1,label=scale===0?'TIME PAUSED':scale+'× SPEED';
+      const next=scale===1?'50%':scale===.5?'25%':scale===.25?'paused':'normal';
+      el('practice-slow-btn').classList.toggle('active',active);
+      el('practice-slow-btn').setAttribute('aria-pressed',String(active));
+      el('practice-slow-btn').setAttribute('aria-label','Time controls: '+label+'. Tap for '+next+' speed');
+      el('practice-slow-btn').title='Tap for '+next+' speed';
+      writeText('practice-time-label',label);
     }
     updateTeleportValue(value){
       const rounded=Math.max(500,Math.min(20000,Math.round((Number(value)||500)/500)*500));
@@ -1364,7 +1383,7 @@ window.GRIM_CONFIG = Object.freeze({
           const card=document.createElement('button');card.type='button';card.className='reward-card rarity-'+(reward.rarity||'common');
           card.style.setProperty('--card-color',reward.color);
           const cost=devil?window.GRIM_POWERS.devilPrice(reward):5;
-          const parts=[['reward-rarity',reward.rarity==='legendary'?`★ LEGENDARY · +${reward.levelsGained} LEVELS`:reward.rarity==='rare'?`◆ RARE · +${reward.levelsGained} LEVELS`:'COMMON'],
+          const parts=[['reward-rarity',reward.completesCombo?'✦ WING ASCENSION':reward.rarity==='legendary'?`★ LEGENDARY · +${reward.levelsGained} LEVELS`:reward.rarity==='rare'?`◆ RARE · +${reward.levelsGained} LEVELS`:'COMMON'],
             ['reward-icon',reward.icon],['reward-action',reward.action],['reward-name',reward.name],['reward-desc',reward.description],
             ['reward-level',reward.type==='passive'?'THIS RUN':reward.levelFrom===undefined?'ONE UPGRADE':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`],
             ['reward-price',devil?`${cost} HP`:'5 GOLD']];
@@ -1443,7 +1462,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(previous[id]!==value){writeText(id,value.toLocaleString());previous[id]=value;}
       }
       if(previous.summary!==powerSummary){
-        writeText('power-strip',powerSummary.map(x=>`${x.name} ${x.level}`).join(' · '));previous.summary=powerSummary;
+        writeText('power-strip',powerSummary.map(x=>`${x.name} ${x.detail||x.level}`).join(' · '));previous.summary=powerSummary;
       }
     }
     offerRevive(balance,earned){
@@ -1512,19 +1531,20 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/motion/v0180/animation-data.js?v=0.18.0"></script>
-  <script src="assets/visuals/motion-animations.js?v=0.18.0"></script>
-  <script src="assets/combat/v0170/animation-data.js?v=0.18.0"></script>
-  <script src="assets/visuals/combat-animations.js?v=0.18.0"></script>
-  <script src="assets/ui/v0160/frontispiece.js?v=0.18.0"></script>
-  <script src="assets/visuals/visual-system.js?v=0.18.0"></script>
+  <script src="assets/motion/v0180/animation-data.js?v=0.19.0"></script>
+  <script src="assets/visuals/motion-animations.js?v=0.19.0"></script>
+  <script src="assets/combat/v0170/animation-data.js?v=0.19.0"></script>
+  <script src="assets/visuals/combat-animations.js?v=0.19.0"></script>
+  <script src="assets/ui/v0160/frontispiece.js?v=0.19.0"></script>
+  <script src="assets/visuals/visual-system.js?v=0.19.0"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
-  <script src="assets/visuals/power-animations.js?v=0.18.0"></script>
+  <script src="assets/encounters/v0190/animation-data.js?v=0.19.0"></script>
+  <script src="assets/visuals/power-animations.js?v=0.19.0"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=0.15.2"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.0"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
-  <script src="assets/visuals/world-polish.js?v=0.18.0"></script>
+  <script src="assets/visuals/world-polish.js?v=0.19.0"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1719,7 +1739,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorIntroSeen={angel:false,devil:false};this.vendorIntroMs=0;
       this.soulPlatform=null;
       this.totalSouls=0;
-      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
+      this.godMode=false;this.practiceSlow=false;this.practiceTimeMode=0;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
       this.distance = 0;
       this.points = 0;
       this.powerManager = Powers.makePowerManager();
@@ -1841,10 +1861,16 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='abandonConfirm')return;
       this.goToMenu();
     }
+    practiceScale(){return this.godMode?C.practiceTimeScales[this.practiceTimeMode||0]:1;}
     togglePracticeSlow(){
-      if(!this.godMode||this.state!=='playing')return false;
-      this.practiceSlow=!this.practiceSlow;
-      this.ui.showPracticeSlow(this.practiceSlow);
+      if(!this.godMode||!['playing','rewinding'].includes(this.state))return false;
+      this.practiceTimeMode=((this.practiceTimeMode||0)+1)%C.practiceTimeScales.length;
+      this.practiceSlow=this.practiceTimeMode!==0;
+      if(this.practiceScale()===0||this.practiceTimeMode===0){
+        this.ui.releaseAll();this.player.jumpHeld=false;this.player.holdSlide=false;
+        this.player.slideReleaseBufferMs=0;
+      }
+      this.ui.showPracticeSlow(this.practiceScale());
       return true;
     }
     askTeleport(value){
@@ -1937,7 +1963,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.souls=this.souls.filter(s=>!s.taken&&s.x>x-this.width);
       this.goFlashMs=0;this.countdownMs=0;this.ui.hideCountdown();
       this.state='playing';this.ui.setMode('playing');
-      this.ui.showPracticeSlow(this.practiceSlow);
+      this.ui.showPracticeSlow(this.practiceScale());
       this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,
         this.coinCount,this.points,this.powerManager.summary());
       this.captureRewind();this.updateRewindButton();
@@ -2184,6 +2210,7 @@ window.GRIM_CONFIG = Object.freeze({
       });
     }
     rewind(){
+      if(this.practiceScale()===0)return false;
       if(this.state!=='playing'||this.rewindLevel()<=0||
         (!this.godMode&&this.rewindCooldownMs>0))return false;
       const duration=this.rewindLengthMs();
@@ -2245,7 +2272,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorIntroSeen={angel:false,devil:false};this.vendorIntroMs=0;
       this.soulPlatform=null;
       this.totalSouls=this.meta.souls;
-      this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
+      this.godMode=false;this.practiceSlow=false;this.practiceTimeMode=0;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
       for (const tip of this.tips) tip.label.destroy();
       this.tips = [];
       this.tipped = new Set();
@@ -2288,7 +2315,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
       this.player.sliding=false;this.player.holdSlide=false;this.player.jumpHeld=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
-      this.practiceSlow=false;this.pendingTeleport=null;
+      this.practiceSlow=false;this.practiceTimeMode=0;this.pendingTeleport=null;
       this.ui.showTimeSlow(false);this.ui.showFallNotice(false);this.ui.showPortal(false);this.ui.showGun(false);this.ui.showGodMode(false);
       this.rewindFrames=[];this.rewindFlashMs=0;
       this.ui.rewindFlash(false);this.ui.showRewindPlayback(false);this.ui.showRewind(0,0,false,0,0);this.ui.setMode('menu');
@@ -2307,7 +2334,7 @@ window.GRIM_CONFIG = Object.freeze({
     setGodMode(on){
       const had=this.rewindLevel();
       this.godMode=Boolean(on);this.ui.showGodMode(this.godMode);
-      if(!this.godMode){this.practiceSlow=false;this.ui.showPracticeSlow(false);}
+      if(!this.godMode){this.practiceSlow=false;this.practiceTimeMode=0;this.ui.showPracticeSlow(false);}
       if(had===0&&this.rewindLevel()>0)this.resetRewindHistory();
       if(had>0&&this.rewindLevel()===0)this.resetRewindHistory();
       this.updateRewindButton();
@@ -2320,7 +2347,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     resume() { if(this.state==='paused') this.beginCountdown(); }
     jump() {
-      if(this.state!=='playing')return;
+      if(this.state!=='playing'||this.practiceScale()===0)return;
       const p=this.player;
       const grounded=p.grounded||(p.coyoteMs>0&&!p.airJumpUsed&&p.jumpsUsed===0);
       const airAvailable=this.powerManager.level('ravenWings')>0&&!p.airJumpUsed;
@@ -2360,7 +2387,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     attack() {
       const p = this.player;
-      if (this.state!=='playing' || p.attackCooldownMs > 0) return;
+      if (this.state!=='playing' || this.practiceScale()===0 || p.attackCooldownMs > 0) return;
       p.attackMs = C.attackDurationMs;
       p.previousAttackMs=p.attackMs;p.visualLandingMs=0;
       p.attackCooldownMs = C.attackCooldownMs;
@@ -2378,7 +2405,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     startSlide() {
       const p=this.player;
-      if(this.state!=='playing' || p.holdSlide) return;
+      if(this.state!=='playing' || this.practiceScale()===0 || p.holdSlide) return;
       p.holdSlide=true;
       if(!p.slideConsumed){
         p.slideConsumed=true;
@@ -2445,6 +2472,13 @@ window.GRIM_CONFIG = Object.freeze({
       return p.x+14>=center-half&&p.x-14<=center+half&&p.grounded&&!p.onSoulPlatform&&
         Number.isFinite(floor)&&Math.abs(p.y-floor)<=2;
     }
+    readyForVendor(number){
+      if(!this.touchingVendorFloor(number))return false;
+      const type=number*C.vendorEveryMeters<5000?'angel':'devil';
+      if(!this.vendorIntroSeen?.[type])return true;
+      const center=this.startX+number*C.vendorEveryMeters*C.pxPerMeter;
+      return this.player.x+14>=center-34;
+    }
     triggerVendor(number){
       if(this.state!=='playing'||number>14||number<=this.lastVendorNumber)return;
       this.resetRewindHistory();
@@ -2462,7 +2496,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorIntroSeen??={angel:false,devil:false};
       if(!this.vendorIntroSeen[this.vendorType]){
         this.vendorIntroSeen[this.vendorType]=true;
-        this.vendorIntroMs=3000;this.state='vendorIntro';
+        this.vendorIntroMs=C.vendorIntroDurationMs;this.state='vendorIntro';
         const floor=this.terrain?.groundAt(p.x);
         if(Number.isFinite(floor)){p.y=floor;p.grounded=true;p.velocityY=0;p.jumpsUsed=0;p.onSoulPlatform=false;}
         this.ui.setMode('vendorIntro');
@@ -2506,7 +2540,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.resetRewindHistory();
       if(devil)this.player.hp-=price;
       else this.coinCount-=price;
-      this.powerArt?.purchase(id,this.powerManager.level(id)||1);
+      this.powerArt?.purchase(offer.completesCombo?'gravewingAscension':id,this.powerManager.level(id)||1);
       this.puff(this.player.x,this.feetY-45,devil?0xff765e:0xffd98e,14);
       this.vendorPurchased=true;this.vendorAcquiredId=id;this.refreshHud();this.showVendor();
     }
@@ -2614,9 +2648,10 @@ window.GRIM_CONFIG = Object.freeze({
       // Include the painted foreground, ceiling backing and terrain tether,
       // rather than allowing overhang from a spawn point outside the pad.
       if(type==='airBramble')return {x:x-245,width:415};
+      if(type==='snappingBramble')return {x:x+width/2-245*.768,width:384*.768};
       const paintedWidth=type==='branch'?560:type==='tuckGate'?235:
         type==='bramble'?width*3:type==='rock'?width*2.5:
-        type==='fire'?width*2:type==='snappingBramble'?256*.32*3:width;
+        type==='fire'?width*2:width;
       return {x:x+width/2-paintedWidth/2,width:paintedWidth};
     }
     vendorObstacleBlocked(type,x,width){
@@ -2777,10 +2812,47 @@ window.GRIM_CONFIG = Object.freeze({
           variant:this.rng.integer(0,5),dealtDamage:false,destroyed:false});
       }
     }
+    updatePlants(frameMs){
+      for(const ob of this.obstacles){
+        if(ob.type!=='snappingBramble'||ob.destroyed)continue;
+        const ahead=ob.x+ob.width/2-this.player.x;
+        ob.plantState??='idle';ob.plantMs??=0;
+        if(ob.plantState==='idle'){
+          if(ahead>0&&ahead<=180+this.speed*.48){ob.plantState='windup';ob.plantMs=0;}
+          continue;
+        }
+        ob.plantMs+=frameMs;
+        const durations={windup:420,strike:260,recover:600,cooldown:1100};
+        for(let i=0;i<4&&ob.plantMs>=durations[ob.plantState];i++){
+          ob.plantMs-=durations[ob.plantState];
+          ob.plantState={windup:'strike',strike:'recover',recover:'cooldown',cooldown:'idle'}[ob.plantState];
+          if(ob.plantState==='idle'){ob.plantMs=0;break;}
+        }
+      }
+    }
+    plantFrame(ob){
+      const ms=ob.plantMs||0;
+      if(ob.plantState==='windup')return 2+Math.min(1,ms/420)*3;
+      if(ob.plantState==='strike')return 5+Math.min(1,ms/260)*6;
+      if(ob.plantState==='recover')return 11+Math.min(1,ms/600)*4;
+      if(ob.plantState==='cooldown')return 15;
+      return 1-Math.cos((this.elapsed*.9+(ob.variant||0))% (Math.PI*2));
+    }
+    plantGeometry(ob){
+      const data=scope.GRIM_ENCOUNTER_DATA?.plant,frame=this.plantFrame(ob),a=Math.floor(frame),mix=frame-a;
+      const floor=this.terrain.anchorAt(ob.x)+this.obstacleVisualInset(ob),x=ob.x+ob.width/2;
+      const fallback=[75,175,125,90],first=data?.jaws[a]||fallback,next=data?.jaws[Math.min(15,a+1)]||first;
+      const jaw=first.map((v,i)=>v+(next[i]-v)*mix),anchor=data?.anchor||[245,375],scale=.768;
+      return {frame,x,floor,jaw:{x:x+(jaw[0]-anchor[0])*scale,y:floor+(jaw[1]-anchor[1])*scale,
+        width:jaw[2]*scale,height:jaw[3]*scale},root:{x:x-18,y:floor-42,width:36,height:42}};
+    }
     snappingBox(ob){
-      const ground=this.terrain.anchorAt(ob.x);
-      const height=Combat.snappingHeight(this.elapsed*5.1+ob.variant*1.7);
-      return {...ob,y:ground-height,height};
+      const {jaw,root}=this.plantGeometry(ob),x=Math.min(jaw.x,root.x),y=Math.min(jaw.y,root.y);
+      return {...ob,x,y,width:Math.max(jaw.x+jaw.width,root.x+root.width)-x,height:Math.max(jaw.y+jaw.height,root.y+root.height)-y};
+    }
+    plantHits(box,ob){
+      const g=this.plantGeometry(ob);
+      return Core.overlaps(box,g.root)||(ob.plantState==='strike'&&Core.overlaps(box,g.jaw));
     }
     spawnAhead(){
       const ahead=this.player.x+Math.max(950,this.width*1.26);
@@ -2818,7 +2890,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     update(_,deltaMs) {
       this.lastUpdateHeartbeatAt=Date.now();
-      if(this.state==='rewinding')this.playRewindFrame(Math.min(250,Math.max(0,deltaMs))*(this.godMode&&this.practiceSlow?.5:1));
+      if(['playing','rewinding'].includes(this.state)&&this.practiceScale()===0){this.drawScene();return;}
+      if(this.state==='rewinding')this.playRewindFrame(Math.min(250,Math.max(0,deltaMs))*this.practiceScale());
       else if(this.state==='portal'){
         this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.portalMs===0)this.finishPortal();
@@ -2865,7 +2938,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       else if (this.state === 'playing') {
         // Cap large frame steps after browser interruptions to avoid tunneling through hazards.
-        const frameMs = clamp(deltaMs*(this.godMode&&this.practiceSlow?.5:1),0,34);
+        const frameMs = clamp(deltaMs*this.practiceScale(),0,34);
         const dt = frameMs/1000;
         const p=this.player;
         this.elapsed += dt;
@@ -2976,13 +3049,14 @@ window.GRIM_CONFIG = Object.freeze({
         // A real foot contact on the decorated floor owns encounter timing.
         while(this.nextVendorNumber<=14&&p.x-14>this.startX+(this.nextVendorNumber*C.vendorEveryMeters+C.vendorSanctuaryHalfMeters)*C.pxPerMeter)
           this.nextVendorNumber++;
-        if(this.nextVendorNumber<=14&&this.touchingVendorFloor(this.nextVendorNumber)){
+        if(this.nextVendorNumber<=14&&this.readyForVendor(this.nextVendorNumber)){
           this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,
             this.points,this.powerManager.summary());
           const target=this.nextVendorNumber++;
           this.triggerVendor(target);this.drawScene();return;
         }
         this.spawnAhead();
+        this.updatePlants(frameMs*worldFactor);
         if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)||
           (p.previousAttackMs>C.attackDurationMs*(1-C.attackActiveEnd)&&p.attackMs<C.attackDurationMs*(1-C.attackActiveStart))) this.cutNearby();
         this.updateCombat(frameMs,dt);
@@ -3009,7 +3083,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       if(this.state==='playing'&&this.player.visualFireMs>0)
         this.player.visualFireMs=Math.max(0,this.player.visualFireMs-
-          Math.min(250,deltaMs)*(this.godMode&&this.practiceSlow?.5:1));
+          Math.min(250,deltaMs)*this.practiceScale());
       if(this.fallFeedbackMs>0){
         this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
         if(this.fallFeedbackMs===0)this.ui.showFallNotice(false);
@@ -3023,7 +3097,7 @@ window.GRIM_CONFIG = Object.freeze({
       const delta=target-this.cameraY;
       if(Math.abs(delta)>8){
         const referenceEase=this.state==='portal'?.28:.115;
-        this.cameraY+=delta*(1-Math.pow(1-referenceEase,clamp(deltaMs,0,100)/(1000/60)));
+        this.cameraY+=delta*(1-Math.pow(1-referenceEase,clamp(deltaMs*(this.state==='playing'?this.practiceScale():1),0,100)/(1000/60)));
       }
       this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.drawScene();
@@ -3041,7 +3115,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     fireCrossbow(){
-      if(this.state!=='playing'||!this.gunUnlocked||this.gunCooldownMs>0)return false;
+      if(this.state!=='playing'||this.practiceScale()===0||!this.gunUnlocked||this.gunCooldownMs>0)return false;
       const p=this.player,left=p.x-this.width*C.reaperXRatio,right=left+this.width;
       const target=Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,
         this.powerManager.level('powerShot'),0);
@@ -3332,7 +3406,7 @@ window.GRIM_CONFIG = Object.freeze({
             p.y>=localSlideGround-14 && p.y<=localSlideGround+24));
         const hit=ob.type==='branch'
           ? Core.branchHits(box,ob,this.terrain.groundAt.bind(this.terrain),C.slideClearancePx,nearGroundSlide)
-          : Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob);
+          : ob.type==='snappingBramble'?this.plantHits(box,ob):Core.overlaps(box,ob);
         if(!hit)continue;
         ob.dealtDamage=true;
         if(ob.type==='fire' && this.blockFireHit()){
@@ -4912,10 +4986,16 @@ window.GRIM_CONFIG = Object.freeze({
       }else if(o.type==='snappingBramble'){
         const b=this.snappingBox(o);
         if(plant){
-          const phase=((this.elapsed*5.1+o.variant*1.7+Math.PI/2)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
-          image.setFrame(Math.round(phase/(Math.PI*2)*8)%8);
-          width=256*.32*3;height=320*.32*3;x=o.x+o.width/2;
-          y=this.terrain.anchorAt(o.x)+this.obstacleVisualInset(o);originY=300/320;
+          const g=this.plantGeometry(o),frame=g.frame,first=Math.floor(frame+1e-8),mix=Math.max(0,frame-first);
+          image.setFrame(first).setAlpha(1-mix);
+          if(!image.plantNext){
+            image.plantNext=this.add.image(0,0,textureKey,0).setDepth(16);
+            image.once?.('destroy',()=>image.plantNext?.destroy());
+          }
+          width=384*.768;height=400*.768;x=g.x;y=g.floor;originY=375/400;
+          image.setOrigin(245/384,originY);
+          image.plantNext.setFrame(Math.min(15,first+1)).setPosition(x,y).setOrigin(245/384,originY)
+            .setDisplaySize(width,height).setAlpha(mix).setVisible(mix>.001);
         }else{width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2+this.obstacleVisualInset(o);}
       }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
@@ -4929,11 +5009,11 @@ window.GRIM_CONFIG = Object.freeze({
         width=o.width*scale.x;height=o.height*scale.y;
         x=o.x+o.width/2;y=o.y+o.height/2+this.obstacleVisualInset(o);
       }
-      image.setOrigin(.5,originY).setPosition(x,y).setDisplaySize(width,height)
+      image.setOrigin(plant?(scope.GRIM_ENCOUNTER_DATA?.plant.anchor[0]||245)/384:.5,originY).setPosition(x,y).setDisplaySize(width,height)
         .setRotation(rotation).setVisible(true);
       this.worldPolish?.maskRoots(image,o,skin);
       if(o.type==='fire')image.setAlpha(.96+.04*Math.sin(this.elapsed*11+o.x*.017));
-      else image.setAlpha(1);
+      else if(!plant)image.setAlpha(1);
       return true;
     }
     drawObstacle(o) {
@@ -5151,11 +5231,14 @@ window.GRIM_CONFIG = Object.freeze({
       }
       // Fast bright bolts are visually distinct from slow, deflectable fireballs.
       for(const b of this.bullets){
-        const dx=b.x-this.player.x,dy=b.y-(this.player.y-58);
-        const len=Math.max(1,Math.hypot(dx,dy));
-        g.lineStyle(3,0xbefaff,.9);g.lineBetween(b.x,b.y,b.x-dx/len*17,b.y-dy/len*17);
-        g.fillStyle(b.damage===2?0xffe6b5:0xd3f8e7,.96);g.fillCircle(b.x,b.y,3.8);
-        g.lineStyle(2,0xe6e3d7,.94);g.lineBetween(b.x-11,b.y-4,b.x-6,b.y+4);
+        const origin=scope.GRIM_COMBAT_ART?.muzzle(this)||{x:this.player.x+29,y:this.player.y-58};
+        const dx=b.x-origin.x,dy=b.y-origin.y,len=Math.max(1,Math.hypot(dx,dy));
+        const ux=dx/len||1,uy=dy/len,k=C.projectileVisualScale;
+        g.lineStyle(3*k,0xbefaff,.9);g.lineBetween(b.x,b.y,b.x-ux*17*k,b.y-uy*17*k);
+        g.fillStyle(b.damage===2?0xffe6b5:0xd3f8e7,.96);g.fillCircle(b.x,b.y,3.8*k);
+        g.lineStyle(2*k,0xe6e3d7,.94);
+        g.lineBetween(b.x-ux*11*k-uy*4*k,b.y-uy*11*k+ux*4*k,
+          b.x-ux*6*k+uy*4*k,b.y-uy*6*k-ux*4*k);
       }
       for(const ball of this.fireballs){
         g.fillStyle(ball.reflected?0x71ffff:0xff7a37,.21);g.fillCircle(ball.x,ball.y,16);
@@ -5163,10 +5246,10 @@ window.GRIM_CONFIG = Object.freeze({
         g.fillStyle(0xffffff,.85);g.fillCircle(ball.x-2,ball.y-2,2.5);
       }
       for(const arc of this.chainArcs){
-        g.lineStyle(5,0xd7bbff,.85*arc.lifeMs/250);
+        g.lineStyle(5*C.projectileVisualScale,0xd7bbff,.85*arc.lifeMs/250);
         g.lineBetween(arc.x1,arc.y1,arc.x2,arc.y2);
         g.fillStyle(0xe4cfff,.8*arc.lifeMs/250);
-        g.fillCircle(arc.x2,arc.y2,5);
+        g.fillCircle(arc.x2,arc.y2,5*C.projectileVisualScale);
       }
     }
     drawParticles() {

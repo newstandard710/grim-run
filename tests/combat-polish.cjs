@@ -16,7 +16,7 @@ for(const k of [1,8]){
  s.player.x=left+20;s.player.y=s.terrain.groundAt(s.player.x)-20;s.player.grounded=false;s.player.velocityY=0;
  s.update(0,0);assert.equal(s.state,'playing','Passing over floor does not snap the player down');
  s.player.y=s.terrain.groundAt(s.player.x)-1;s.player.velocityY=300;s.update(0,10);
- assert.equal(s.state,'vendorIntro');assert.equal(s.vendorIntroMs,3000);assert(s.player.grounded);
+ assert.equal(s.state,'vendorIntro');assert.equal(s.vendorIntroMs,10000);assert(s.player.grounded);
 }
 // The original cards survive purchase and healing. Currency/health effects
 // remain independent, and no transaction reopens reward eligibility.

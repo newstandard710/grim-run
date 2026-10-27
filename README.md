@@ -1,3 +1,17 @@
+# Grim Run — v0.19.0 · Gravewing Ascension
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.0)
+
+Carnivorous plants now face the approaching Reaper and deliver a telegraphed, proximity-triggered bite with sixteen rooted drawings and synchronized jaw collision. First Angel and Devil introductions last ten seconds and skip with any screen tap; repeat vendor menus wait until the merchant is reached.
+
+God Mode cycles normal / half / quarter / paused world time. Running is 30% slower, accelerating from 197.4 to 325.5 through 5,000m; gaps that exceed the new base-jump range are capped conservatively. The distance-linked running gait follows automatically.
+
+Gravewing Ascension names the Raven + Skeletal Wings combination, with a dedicated integrated ivory-bone/black-feather wing set and twelve flap/tuck drawings. It activates through the ordinary second-wing purchase, retaining the two existing power ranks and costs. The active build shows both ranks. Crossbow bolts and chain visuals are 3× larger. Brittle Bones fragments are 3× larger and move at half speed over a doubled lifetime, retaining their offscreen reach and ability effect. Two incorrect bat eye registrations are corrected without replacing its accepted wing drawings.
+
+[Production assets, exact built-in Imagegen prompts and registration](assets/encounters/v0190/README.md). Rollback base: v0.18.0 (`d0437520bd76e53b33540243561e80e7782998eb`).
+
+---
+
 # Grim Run — v0.18.0
 
 The Reaper in Motion adds 24-pose running, physical jump/landing phases, a rebuilt point-leading standard scythe cut, slower shared bat flight and rendering/frame-pacing fixes.
@@ -60,7 +74,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.16.0 — Beyond Death**
+**Current build: v0.19.0 — Gravewing Ascension**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 
