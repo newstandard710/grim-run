@@ -99,9 +99,10 @@ const server=http.createServer((req,res)=>{
     assert.equal(powers.cap,20,'Burst pool remains bounded under stress');
     const explosion=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],a=s.powerArt;a.reset();s.godMode=true;
+      Object.assign(s.player,{attackMs:0,airTuck:false,holdSlide:false,hovering:false,visualTuckMs:0,visualTuckReleaseMs:0});
       s.player.grounded=true;s.player.y=s.terrain.groundAt(s.player.x)??s.terrain.anchorAt(s.player.x);
       s.powerManager.levels.brittleBones=4;const hp=s.player.hp;s.takeDamage(1,'rock');
-      const b=a.bursts.find(b=>b.id==='brittleBones');a.tick(140);s.drawScene();
+      const b=a.bursts.find(b=>b.id==='brittleBones');a.tick(300);s.drawScene();
       return {count:b.bones.length,visible:a.bonePool.filter(v=>v.visible).length,hp:s.player.hp===hp,rng:s.rng.state};
     });
     assert.equal(explosion.count,44);assert.equal(explosion.visible,44);assert(explosion.hp,'God Mode damage still visibly activates Brittle Bones');

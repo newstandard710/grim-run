@@ -19,7 +19,9 @@ const server=http.createServer((req,res)=>{
   await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='paused';s.enemies=[];s.obstacles=[];s.godMode=true;s.nextVendorNumber=15;s.ui.setMode('playing');s._revisionUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};});
   const plant=await page.evaluate(()=>{
-   const s=window.grimRun.scene.scenes[0];s.player.x=s.startX+3400*12;s.distance=3400;s.spawnAhead();
+   const s=window.grimRun.scene.scenes[0];s.player.x=s.startX+3400*12;s.distance=3400;
+   s.terrain.advance(s.startX+4630*12+1000);s.coins=[];s.obstacles=[];
+   s.nextSnapSpawnX=s.startX+3000*12;s.spawnCombatAhead(s.startX+4630*12);
    const found=s.obstacles.find(o=>o.type==='snappingBramble');if(!found)return null;
    s.obstacles=[found];s.enemies=[];s.player.x=found.x-180;s.player.y=s.terrain.groundAt(s.player.x)??s.terrain.anchorAt(s.player.x);s.player.grounded=true;
    s.cameraX=s.player.x-s.width*.32;s.cameraY=s.terrain.anchorAt(found.x)-s.groundY;s.cameras.main.setScroll(s.cameraX,s.cameraY);

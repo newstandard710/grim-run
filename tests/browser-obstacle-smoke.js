@@ -105,9 +105,9 @@ const server=http.createServer((req,res)=>{
         const expected=placement?{width:placement.width,height:placement.height}:
           type==='tuckGate'?{width:skin.biome==='ashlands'?196:176,height:400}:
           type==='airBramble'?{width:148,height:218}:
-          type==='snappingBramble'?{width:o.width,height:o.height}:
+          type==='snappingBramble'?{width:256*.32,height:320*.32}:
           {width:o.width*scale.x,height:o.height*scale.y};
-        if(!ok||!image||image.texture.key!==skin.key||
+        if(!ok||!image||image.texture.key!==(type==='snappingBramble'?'revision-plant':skin.key)||
           Math.abs(image?.displayWidth-expected.width)>.001||
           Math.abs(image?.displayHeight-expected.height)>.001){
           renderMisses++;renderFailures.push({id:skin.id,expected,actual:image&&
