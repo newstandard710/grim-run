@@ -30,7 +30,7 @@ jobs:
       - name: Select changed interface checks
         id: scope
         run: |
-          if [ '${{ github.event_name }}' != push ] || ! git diff --quiet HEAD^ HEAD -- index.html assets/ui tests/beyond-death.cjs tests/browser-beyond-death.js; then
+          if [ '${{ github.ref }}' = refs/heads/main ] || [ '${{ github.event_name }}' != push ] || ! git diff --quiet HEAD^ HEAD -- index.html assets/ui tests/beyond-death.cjs tests/browser-beyond-death.js; then
             echo 'interface=true' >> "$GITHUB_OUTPUT"
           else
             echo 'interface=false' >> "$GITHUB_OUTPUT"
