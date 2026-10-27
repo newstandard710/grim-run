@@ -246,7 +246,7 @@ const server=http.createServer((req,res)=>{
     }
     await page.reload({waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu');
-    await page.locator('#start-btn').click();
+    await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing');
     await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0];

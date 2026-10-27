@@ -23,7 +23,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump,null,{timeout:45000});
-  await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   const ready=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=function(){};s._polishSkin=s.obstacleSkinFor.bind(s);s.obstacleSkinFor=o=>o.reviewSkin||s._polishSkin(o);return {ready:s.worldPolish.ready,platforms:window.GRIM_WORLD_POLISH.BIOMES.filter(b=>s.textures.exists('soul-platform-'+b))};});
   assert(Object.values(ready.ready).every(Boolean));assert.equal(ready.platforms.length,8);
   await stage(400);

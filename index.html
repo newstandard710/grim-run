@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.15.3</title>
+  <title>GRIM RUN — v0.16.0</title>
+  <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -207,8 +208,14 @@ button {cursor:pointer;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
+  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.16.0">
 </head>
 <body>
+  <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
+  <div id="home-screen" class="home-screen">
+    <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
+    <div class="home-edition">GRIM RUN · v0.16.0</div>
+  </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
     <div id="hearts" class="top-left" aria-label="Health">♥ ♥ ♥</div>
@@ -229,8 +236,8 @@ button {cursor:pointer;}
   </div>
   <div id="fall-notice" class="fall-notice hidden">ABYSS · −1 HP</div>
   <div id="controls" class="hidden" aria-label="Touch controls">
-    <button id="attack-btn" class="action attack" aria-label="Attack"><span class="symbol">⚔</span><span>ATTACK</span></button>
-    <button id="crossbow-btn" class="action crossbow hidden" aria-label="Fire Bone Crossbow"><span class="symbol">⌁</span><span>FIRE</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
+    <button id="attack-btn" class="action attack" aria-label="Cut with scythe"><span class="symbol">⚔</span><span>CUT</span></button>
+    <button id="crossbow-btn" class="action crossbow hidden" aria-label="Shoot Bone Crossbow"><span class="symbol">⌁</span><span>SHOOT</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
     <button id="rewind-btn" class="action rewind hidden" aria-label="Rewind Time"><span class="symbol">↶</span><span>REWIND</span><span id="rewind-cd" class="rewind-cd hidden"></span></button>
     <button id="practice-slow-btn" class="action practice-slow hidden" aria-label="Toggle half speed" aria-pressed="false"><span class="symbol">◷</span><span>0.5× SPEED</span></button>
     <div class="right-buttons">
@@ -238,16 +245,16 @@ button {cursor:pointer;}
       <button id="slide-btn" class="action slide" aria-label="Slide"><span class="symbol">⇥</span><span>SLIDE</span></button>
     </div>
   </div>
-  <div id="menu" class="modal-wrap">
+  <div id="menu" class="modal-wrap hidden">
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1>GRIM <em>RUN</em></h1>
-      <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
+      <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.15.3 · SOULS &amp; SHADOWS</div>
+      <div class="mini">v0.16.0 · BEYOND DEATH</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
-      <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
+      <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
   </div>
   <div id="reliquary-screen" class="modal-wrap meta-wrap hidden" aria-label="The Underworld Reliquary">
@@ -255,19 +262,19 @@ button {cursor:pointer;}
       <div class="eyebrow">POWERS THAT OUTLIVE DEATH</div>
       <h2 id="reliquary-title">THE RELIQUARY</h2>
       <div class="meta-wallet"><span class="soul-icon">✦</span> <span id="reliquary-souls">0</span> SOULS AVAILABLE</div>
-      <p class="meta-intro">Spend collected Souls on permanent powers. All bonuses apply at the start of every future run.</p>
+      <p class="meta-intro">Spend Souls to strengthen every future run.</p>
       <div id="reliquary-cards" class="meta-grid"></div>
       <div id="reliquary-notice" class="meta-notice" aria-live="polite"></div>
-      <button id="reliquary-reset-btn" class="secondary meta-reset">RESET ALL UPGRADES · 1 SOUL</button>
+      <button id="reliquary-reset-btn" class="secondary meta-reset">REFUND UPGRADES · 1 SOUL FEE</button>
       <button id="reliquary-back-btn" class="primary">← MAIN MENU</button>
     </div>
   </div>
   <div id="reliquary-reset-confirm" class="modal-wrap confirm-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="reset-title">
     <div class="modal compact">
       <div class="eyebrow">PERMANENT UPGRADE RESET</div>
-      <h2 id="reset-title">RESET THE RELIQUARY?</h2>
+      <h2 id="reset-title">REFUND YOUR POWERS?</h2>
       <p id="reset-description"></p>
-      <p>Requires 1 unspent Soul in your bank before resetting. Resets cost 1 Soul.</p>
+      <p>All upgrade costs return to your bank. Requires 1 unspent Soul for the fee.</p>
       <button id="reset-cancel-btn" class="secondary">CANCEL</button>
       <button id="reset-confirm-btn" class="primary">CONFIRM RESET · 1 SOUL</button>
     </div>
@@ -279,7 +286,7 @@ button {cursor:pointer;}
       <div class="reward-subtitle"><span id="reward-distance">666</span> METERS · <span id="vendor-stats">♥ 3/3 · GOLD 0</span></div>
       <div id="reward-cards" class="reward-cards" aria-label="Vendor merchandise"></div>
       <div id="vendor-actions" class="vendor-actions"></div>
-      <div class="reward-foot">GAMEPLAY PAUSED · CONTINUE WITHOUT A COUNTDOWN</div>
+      <div class="reward-foot">CHOOSE UP TO ONE GIFT · HEALING IS SEPARATE · LEAVE ANY TIME</div>
     </div>
   </div>
   <div id="countdown-overlay" class="countdown-overlay hidden" aria-live="off" aria-label="Resume countdown">
@@ -288,7 +295,7 @@ button {cursor:pointer;}
   <div id="pause-screen" class="modal-wrap hidden">
     <div class="modal compact"><h2>PAUSED</h2><p>The Underworld can wait.</p>
       <label class="god-mode-setting"><input id="god-mode-checkbox" type="checkbox"><span> GOD MODE — INVINCIBLE</span></label>
-      <p class="god-mode-desc">Playtest only: invincibility, max-level Rewind, half-speed gameplay, and distance teleport up to 20,000m. God Mode lets you run past the 9,999m finish.</p>
+      <p class="god-mode-desc">Practice with invincibility, Rewind, slow motion and teleport. Continue beyond the final gate.</p>
       <div id="god-teleport-panel" class="god-teleport-panel hidden">
         <label for="god-teleport-range">TEST TELEPORT <strong id="god-teleport-value">5,000M</strong></label>
         <input id="god-teleport-range" type="range" min="500" max="20000" step="500" value="5000" aria-label="Select destination in 500m increments">
@@ -312,7 +319,7 @@ button {cursor:pointer;}
   <div id="abandon-confirm" class="modal-wrap confirm-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="abandon-title">
     <div class="modal compact">
       <div class="eyebrow">NO RETURN</div><h2 id="abandon-title">ABANDON RUN?</h2>
-      <p>Are you sure you want to abandon your current run? Run upgrades and progress will be lost. Collected Souls remain banked.</p>
+      <p>End this run and lose its powers. Collected Souls stay banked.</p>
       <button id="abandon-cancel-btn" class="primary">KEEP PLAYING</button>
       <button id="abandon-confirm-btn" class="secondary">ABANDON RUN</button>
     </div>
@@ -321,7 +328,7 @@ button {cursor:pointer;}
     <div class="modal compact revive-modal" role="dialog" aria-modal="true" aria-labelledby="revive-title">
       <div class="eyebrow">DEATH IS NOT THE END</div>
       <h2 id="revive-title">ONE MORE CHANCE</h2>
-      <p>Restore your body by offering three Souls to the Underworld.</p>
+      <p>Offer 3 Souls. Return with 3 HP and keep your powers.</p>
       <div class="revive-hearts">♥ ♥ ♥</div>
       <div class="revive-wallet" id="revive-wallet">SOULS AVAILABLE: 0</div>
       <div class="revive-cost">COST: ✦ 3 SOULS · ONCE PER RUN</div>
@@ -353,11 +360,12 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.15.3',
+  version: '0.16.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
-  speedGainPerMeter: 0.095,
+  speedGainPerMeter: (465-282)/5000,
+  accelerationEndMeters: 5000,
   maxSpeed: 465,
   pxPerMeter: 12,
   jumpVelocity: -610,            // full hold keeps v0.1 jump ceiling
@@ -414,6 +422,10 @@ window.GRIM_CONFIG = Object.freeze({
   function overlaps(a, b) { return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y; }
   function score(distance, souls, soulScore, coins = 0, coinScore = 5) {
     return Math.max(0, Math.floor(distance)) + Math.max(0, souls) * soulScore + Math.max(0, coins) * coinScore;
+  }
+  function runSpeed(meters, config=scope.GRIM_CONFIG) {
+    const progress=Math.max(0,Math.min(config.accelerationEndMeters,Number(meters)||0));
+    return Math.min(config.maxSpeed,config.initialSpeed+progress*config.speedGainPerMeter);
   }
   function obstacle(type, x, groundY, variant = 0, clearance = 76, viewHeight = 440) {
     // Hanging branches extend above the camera. Their AABB is a coarse
@@ -616,7 +628,7 @@ window.GRIM_CONFIG = Object.freeze({
     const progress = 1 - remainingMs / durationMs;
     return progress >= start && progress <= end;
   }
-  scope.GRIM_CORE = { makeRng, overlaps, score, obstacle, collisionBox, attackBox,
+  scope.GRIM_CORE = { makeRng, overlaps, score, runSpeed, obstacle, collisionBox, attackBox,
     encounterGap, chooseEncounter, canClearJumpObstacle, milestoneX, isUpgradeSafe, intersectsVendorCorridor, overlapsSoulPlatform,
     fullJumpCoinArc, comboBufferAfterFrame, canAirTuck, cutJumpVelocity, attackActive, landsOnGround, sweptTerrainLanding,
     slideCeilingBottomAt, branchHits };
@@ -632,17 +644,23 @@ window.GRIM_CONFIG = Object.freeze({
   const COSTS=Object.freeze([5,10,25]);
   const DEFINITIONS=Object.freeze([
     {id:'boneheart',name:'BONEHEART',icon:'♥',color:'#ffc2c9',
-      description:'Start with +1 maximum HP per level. Also begin at full health.',
+      description:'Begin each run with +1 maximum HP per level, fully healed.',
       amounts:[0,1,2,3]},
     {id:'graveWealth',name:'GRAVE WEALTH',icon:'●',color:'#ffdaa0',
-      description:'Start every run with additional spendable gold.',
+      description:'Begin each run with +2 Gold per level.',
       amounts:[0,2,4,6]},
     {id:'deathsLeap',name:"DEATH'S LEAP",icon:'↑',color:'#c6bbff',
-      description:'Increase the height of your initial jump. Short hops remain possible.',
+      description:'Jump 5% higher per level. Release early for a short hop.',
       amounts:[0,5,10,15]},
     {id:'graveGlide',name:'GRAVE GLIDE',icon:'⇥',color:'#a4eccc',
-      description:'Increase maximum slide duration in every run.',
-      amounts:[0,150,300,450]}
+      description:'Slide up to 0.15 seconds longer per level.',
+      amounts:[0,150,300,450]},
+    {id:'fatesBargain',name:"FATE'S BARGAIN",icon:'↻',color:'#b8dddb',
+      description:'Refresh a vendor’s three offers. +1 reroll per run per level.',
+      amounts:[0,1,2,3]},
+    {id:'deathDenied',name:'DEATH DENIED',icon:'☽',color:'#d2b8df',
+      description:'Rise from your first death for free each run. Restore 3 HP.',
+      amounts:[0,1],costs:[15]}
   ]);
   const MAX_SOULS=1000000000;
   function boundedInt(x,min,max){
@@ -653,7 +671,7 @@ window.GRIM_CONFIG = Object.freeze({
     const obj=candidate&&typeof candidate==='object'?candidate:{};
     const source=obj.levels&&typeof obj.levels==='object'?obj.levels:{};
     const levels={};
-    for(const entry of DEFINITIONS)levels[entry.id]=boundedInt(source[entry.id],0,3);
+    for(const entry of DEFINITIONS)levels[entry.id]=boundedInt(source[entry.id],0,entry.amounts.length-1);
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels};
   }
   function load(){
@@ -680,9 +698,9 @@ window.GRIM_CONFIG = Object.freeze({
   function purchase(state,id){
     const entry=DEFINITIONS.find(d=>d.id===id);
     if(!entry)return {ok:false,reason:'Unknown upgrade.'};
-    const level=boundedInt(state.levels[id],0,3);
-    if(level>=3)return {ok:false,reason:'This upgrade is already at its maximum level.'};
-    const cost=COSTS[level];
+    const maxLevel=entry.amounts.length-1,level=boundedInt(state.levels[id],0,maxLevel);
+    if(level>=maxLevel)return {ok:false,reason:'This upgrade is already at its maximum level.'};
+    const cost=(entry.costs||COSTS)[level];
     if(state.souls<cost)return {ok:false,reason:'Not enough Souls.'};
     state.souls-=cost;
     state.levels[id]=level+1;
@@ -691,8 +709,8 @@ window.GRIM_CONFIG = Object.freeze({
   }
   function investedSouls(state){
     return DEFINITIONS.reduce((sum,item)=>{
-      const level=boundedInt(state.levels[item.id],0,3);
-      return sum+COSTS.slice(0,level).reduce((a,b)=>a+b,0);
+      const level=boundedInt(state.levels[item.id],0,item.amounts.length-1);
+      return sum+(item.costs||COSTS).slice(0,level).reduce((a,b)=>a+b,0);
     },0);
   }
   function refundAll(state){
@@ -734,7 +752,7 @@ window.GRIM_CONFIG = Object.freeze({
     soulCleave:{id:'soulCleave',name:'SOUL CLEAVE',action:'ATTACK',icon:'⚔',color:'#a5fbef',descriptions:[
       'Scythe reaches 20% farther.','Scythe reaches 35% farther.','Scythe reaches 50% farther.','Scythe reaches 65% farther.']},
     ravenWings:{id:'ravenWings',name:'RAVEN WINGS',action:'JUMP',icon:'✦',color:'#c5b5ff',descriptions:[
-      'Unlock one extra midair jump.','Your aerial jump gains more height.','A still stronger aerial jump.','Maximum aerial jump height.']},
+      'Unlock one extra midair jump.','Extra midair jump with increased height.','Extra midair jump with greater height.','Extra midair jump at maximum height.']},
     deathsDelay:{id:'deathsDelay',name:"DEATH'S DELAY",action:'SLIDE',icon:'◷',color:'#9bdcff',descriptions:[
       'Slide slows time by 25% for 0.8s.','Slow time 35% for 1.05s.','Slow time 45% for 1.3s.','Slow time 55% for 1.55s.']},
     brittleBones:{id:'brittleBones',name:'BRITTLE BONES',action:'DAMAGE',icon:'☠',color:'#e7efff',descriptions:[
@@ -748,22 +766,22 @@ window.GRIM_CONFIG = Object.freeze({
       'Rewind 7 seconds; cooldown reduced to 50 seconds.',
       'Rewind 8 seconds; cooldown reduced to 45 seconds.']},
     skeletalWings:{id:'skeletalWings',name:'SKELETAL WINGS',action:'HOVER',icon:'☠',color:'#ffb08e',descriptions:[
-      'Share 0.70s of hover over an entire flight.','Share 1.05s of hover per flight.',
-      'Share 1.40s of hover per flight.','Share 1.75s of hover per flight.']},
+      'Hold Jump to hover. 0.70s shared per flight.','Hold Jump to hover. 1.05s shared per flight.',
+      'Hold Jump to hover. 1.40s shared per flight.','Hold Jump to hover. 1.75s shared per flight.']},
     infernalBoots:{id:'infernalBoots',name:'INFERNAL BOOTS',action:'FIRE / LAVA',icon:'♨',color:'#ffb65f',descriptions:[
       'Lava falls deal 1 less HP; block a fire hit every 10 seconds.',
       'Lava protection stays; fire shield recharges in 8 seconds.',
       'Lava protection stays; fire shield recharges in 6 seconds.',
       'Lava protection stays; fire shield recharges in 4 seconds.']},
-    rapidFire:{id:'rapidFire',name:'RAPID FIRE',action:'GUN',icon:'➤',color:'#b2ecff',descriptions:[
-      'Soulcaster fires every 0.85 seconds.','Soulcaster fires every 0.70 seconds.',
-      'Soulcaster fires every 0.55 seconds.']},
-    powerShot:{id:'powerShot',name:'POWER SHOT',action:'GUN',icon:'✹',color:'#ffca84',descriptions:[
-      'Soulcaster projectiles deal 2 damage.',
-      'When no enemy is in range, Soulcaster shoots cuttable obstacles.',
-      'Every 10 seconds, clear visible obstacles and damage flying enemies in a blast.']},
-    chainShot:{id:'chainShot',name:'CHAIN SHOT',action:'GUN',icon:'ϟ',color:'#d9c0ff',descriptions:[
-      'Each gun hit chains to one nearby flying enemy.',
+    rapidFire:{id:'rapidFire',name:'RAPID FIRE',action:'CROSSBOW',icon:'➤',color:'#b2ecff',descriptions:[
+      'Shoot every 0.85 seconds.','Shoot every 0.70 seconds.',
+      'Shoot every 0.55 seconds.']},
+    powerShot:{id:'powerShot',name:'POWER SHOT',action:'CROSSBOW',icon:'✹',color:'#ffca84',descriptions:[
+      'Crossbow bolts deal 2 damage.',
+      'Bolts deal 2 damage and target cuttable obstacles when no enemy is near.',
+      'Bolts keep their bonuses. Every 10s, blast visible obstacles and flying enemies.']},
+    chainShot:{id:'chainShot',name:'CHAIN SHOT',action:'CROSSBOW',icon:'ϟ',color:'#d9c0ff',descriptions:[
+      'Each crossbow hit chains to one nearby flying enemy.',
       'Chain to two nearby flying enemies.','Chain to three nearby flying enemies.']}
   });
   const DEVIL_POWER=POWERS.skeletalWings;
@@ -825,29 +843,34 @@ window.GRIM_CONFIG = Object.freeze({
     const rarity=roll<.03?'legendary':roll<.13?'rare':'common';
     const wanted=rarity==='legendary'?3:rarity==='rare'?2:1;
     const actual=Math.min(wanted,MAX_LEVEL-offer.levelFrom);
-    return {...offer,rarity,levelsGained:actual,levelTo:offer.levelFrom+actual};
+    const description=POWERS[offer.id]?.descriptions[offer.levelFrom+actual-1]||offer.description;
+    return {...offer,description,rarity,levelsGained:actual,levelTo:offer.levelFrom+actual};
   }
   function shuffle(options,rng){
     for(let i=options.length-1;i>0;i--){const j=Math.floor(rng.next()*(i+1));[options[i],options[j]]=[options[j],options[i]];}
     return options;
   }
-  function rewardOffers(manager,player,rng,count=3){
+  function preferNew(options,rng,excluded=[]){
+    return [...shuffle(options.filter(x=>!excluded.includes(x.id)),rng),
+      ...shuffle(options.filter(x=>excluded.includes(x.id)),rng)];
+  }
+  function rewardOffers(manager,player,rng,count=3,excluded=[]){
     const available=manager.eligible();
     if(player.maxHp<HEALTH_CAP||player.hp<player.maxHp)available.push({id:HEALTH.id,name:HEALTH.name,
       action:HEALTH.action,icon:HEALTH.icon,color:HEALTH.color,
       description:player.maxHp>=HEALTH_CAP?'Heal 1 HP.':HEALTH.description,type:'health'});
     if(available.length<count && player.hp<player.maxHp)available.push({...FALLBACKS.soulMend,type:'recovery'});
-    return shuffle(available,rng).slice(0,count).map(x=>addRarity(x,rng));
+    return preferNew(available,rng,excluded).slice(0,count).map(x=>addRarity(x,rng));
   }
   const GUN_IDS=['rapidFire','powerShot','chainShot'];
   function devilPrice(offer){
     return (offer.id==='skeletalWings'||offer.id==='infernalBoots') && offer.levelFrom===0?2:1;
   }
-  function devilOffers(manager,rng,count=3){
+  function devilOffers(manager,rng,count=3,excluded=[]){
     const all=manager.devilEligible();
-    const guns=shuffle(all.filter(x=>GUN_IDS.includes(x.id)),rng);
+    const guns=preferNew(all.filter(x=>GUN_IDS.includes(x.id)),rng,excluded);
     const guaranteed=guns.length?guns.slice(0,1):[];
-    const remaining=shuffle(all.filter(x=>!guaranteed.some(y=>y.id===x.id)),rng);
+    const remaining=preferNew(all.filter(x=>!guaranteed.some(y=>y.id===x.id)),rng,excluded);
     // Devil vendor purchases always grant just one level (never rarity bonuses).
     return [...guaranteed,...remaining].slice(0,count).map(x=>({...x,rarity:'common',levelsGained:1,levelTo:x.levelFrom+1}));
   }
@@ -1160,6 +1183,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
       el('start-btn').addEventListener('click', () => actions.start());
+      el('home-enter-btn').addEventListener('click', () => actions.enter());
       el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
       el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
       el('reliquary-reset-btn').addEventListener('click', () => actions.openRefund());
@@ -1187,6 +1211,10 @@ window.GRIM_CONFIG = Object.freeze({
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
+        if(!el('home-screen').classList.contains('hidden')){
+          if(event.code==='Enter'||event.code==='Space')actions.enter();
+          return;
+        }
         switch(event.code) {
           case 'Space': case 'ArrowUp': case 'KeyJ': actions.jump(); break;
           case 'KeyA': actions.attack(); break;
@@ -1230,6 +1258,8 @@ window.GRIM_CONFIG = Object.freeze({
       for (const id of ['attack-btn','crossbow-btn','rewind-btn','practice-slow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
+      show('home-screen',mode==='home');
+      scope.GRIM_FRONTEND?.setMode(mode);
       show('countdown-overlay', mode === 'countdown');
       if(mode!=='portal')show('portal-overlay',false);
       show('menu', mode === 'menu');
@@ -1303,26 +1333,26 @@ window.GRIM_CONFIG = Object.freeze({
     }
     rewindFlash(on){show('rewind-flash',on);}
     showRewindPlayback(on){show('rewind-playback',on);}
-    offerVendor(offers,type,phase,meters,hp,maxHp,gold) {
+    offerVendor(offers,type,phase,meters,hp,maxHp,gold,status={}) {
       this.selecting=false;
       const devil=type==='devil', healing=phase==='heal';
       el('upgrade-screen').classList.toggle('devil',devil);
       el('vendor-eyebrow').textContent=devil?'THE DEVIL OFFERS A BARGAIN':'A HEAVENLY MERCHANT';
-      el('reward-title').textContent=devil?(healing?'DEVIL\'S INFIRMARY':'DEVIL VENDOR'):'ANGEL VENDOR';
+      el('reward-title').textContent=devil?(healing?'THE INFIRMARY':'THE DEVIL’S BARGAIN'):'THE ANGEL’S GIFTS';
       el('reward-distance').textContent=Math.floor(meters).toLocaleString();
       el('vendor-stats').textContent=`♥ ${hp}/${maxHp}  ·  GOLD ${gold}`;
       const holder=el('reward-cards'),buttons=el('vendor-actions');
       holder.replaceChildren();buttons.replaceChildren();
       holder.style.gridTemplateColumns=offers.length===1?'minmax(0,min(320px,100%))':'';
       holder.style.justifyContent=offers.length===1?'center':'';
-      if(!healing){
+      if(!healing&&!status.purchased){
         offers.forEach(reward=>{
           const cost=devil?window.GRIM_POWERS.devilPrice(reward):5, affordable=devil?hp>cost:gold>=cost;
           const card=document.createElement('button');
           card.type='button';card.className='reward-card rarity-'+(reward.rarity||'common');card.style.setProperty('--card-color',reward.color);
           const parts=[['reward-rarity',reward.rarity==='legendary'?`★ LEGENDARY · +${reward.levelsGained} LEVELS`:reward.rarity==='rare'?`◆ RARE · +${reward.levelsGained} LEVELS`:'COMMON'],['reward-icon',reward.icon],['reward-action',reward.action],
             ['reward-name',reward.name],['reward-desc',reward.description],
-            ['reward-level',reward.type==='passive'?'PERMANENT PASSIVE':reward.levelFrom===undefined?'ONE UPGRADE':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`],
+            ['reward-level',reward.type==='passive'?'THIS RUN':reward.levelFrom===undefined?'ONE UPGRADE':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`],
             ['reward-price',devil?`${cost} HP · REMAINING ${hp-cost} HP`:'5 GOLD']];
           for(const [cls,value] of parts){
             const div=document.createElement('span');div.className=cls;div.textContent=value;card.appendChild(div);
@@ -1340,6 +1370,9 @@ window.GRIM_CONFIG = Object.freeze({
           empty.textContent=devil?'All Devil powers already acquired.':'All available upgrades are already maxed.';
           holder.appendChild(empty);
         }
+      }else if(status.purchased){
+        const empty=document.createElement('div');empty.className='vendor-empty vendor-purchased';
+        empty.textContent='Gift acquired. Heal, or continue your journey.';holder.appendChild(empty);
       }else{
         const empty=document.createElement('div');empty.className='vendor-empty';
         empty.textContent=gold<8?'Insufficient gold for healing (requires 8).':hp>=maxHp?'You already have full health.':'RESTORE 1 HP FOR 8 GOLD';
@@ -1349,8 +1382,12 @@ window.GRIM_CONFIG = Object.freeze({
         const btn=document.createElement('button');btn.type='button';btn.className=primary?'primary':'secondary';
         btn.textContent=label;btn.disabled=disabled;btn.addEventListener('click',callback);buttons.appendChild(btn);
       };
-      if(devil&&!healing)action(gold>=8&&hp<maxHp?'DECLINE · HEALING':'DECLINE DEAL',()=>this.actions.declineDeal());
-      if(devil&&healing)action('HEAL +1 HP · 8 GOLD',()=>this.actions.heal(),true,gold<8||hp>=maxHp);
+      const healPrice=scope.GRIM_CONFIG.devilHealPrice;
+      if(!healing&&!status.purchased){
+        action(`REROLL · ${status.rerolls||0} LEFT`,()=>this.actions.reroll(),false,!status.canReroll);
+      }
+      if(devil&&!healing)action(gold>=healPrice&&hp<maxHp?'DECLINE · VIEW HEALING':'DECLINE DEAL',()=>this.actions.declineDeal());
+      if(!devil||healing)action(hp>=maxHp?'FULL HEALTH':`HEAL 1 HP · ${healPrice} GOLD`,()=>this.actions.heal(),true,gold<healPrice||hp>=maxHp);
       action('CONTINUE RUN ▶',()=>this.actions.leaveVendor());
       this.setMode('upgrade');
     }
@@ -1359,26 +1396,28 @@ window.GRIM_CONFIG = Object.freeze({
       el('reliquary-souls').textContent=meta.souls.toLocaleString();
       const holder=el('reliquary-cards');holder.replaceChildren();
       for(const item of DEFINITIONS){
-        const level=meta.levels[item.id],nextCost=level<3?COSTS[level]:null;
+        const level=meta.levels[item.id],maxLevel=item.amounts.length-1,nextCost=level<maxLevel?(item.costs||COSTS)[level]:null;
         const card=document.createElement('div');card.className='meta-card';
         const ico=document.createElement('div');ico.className='meta-icon';
         ico.style.color=item.color;ico.textContent=item.icon;card.appendChild(ico);
         const title=document.createElement('div');title.className='meta-title';title.textContent=item.name;card.appendChild(title);
-        const rank=document.createElement('div');rank.className='meta-level';rank.textContent=`LEVEL ${level} / 3`;card.appendChild(rank);
+        const rank=document.createElement('div');rank.className='meta-level';rank.textContent=`LEVEL ${level} / ${maxLevel}`;card.appendChild(rank);
         const dots=document.createElement('div');dots.className='meta-dots';
-        for(let i=0;i<3;i++){const dot=document.createElement('span');dot.className='meta-dot'+(i<level?' filled':'');dots.appendChild(dot);}
+        for(let i=0;i<maxLevel;i++){const dot=document.createElement('span');dot.className='meta-dot'+(i<level?' filled':'');dots.appendChild(dot);}
         card.appendChild(dots);
         const desc=document.createElement('div');desc.className='meta-desc';desc.textContent=item.description;card.appendChild(desc);
         const effect=document.createElement('div');effect.className='meta-price';
-        if(item.id==='boneheart')effect.textContent=`STARTING HP: ${3+level}${level<3?' → '+(4+level):''}`;
+        if(item.id==='fatesBargain')effect.textContent=`REROLLS / RUN: ${level}${level<maxLevel?' → '+(level+1):''}`;
+        else if(item.id==='deathDenied')effect.textContent=level?'1 FREE RESURRECTION / RUN':'FREE RESURRECTIONS: 0 → 1';
+        else if(item.id==='boneheart')effect.textContent=`STARTING HP: ${3+level}${level<3?' → '+(4+level):''}`;
         else if(item.id==='graveWealth')effect.textContent=`STARTING GOLD: ${item.amounts[level]}${level<3?' → '+item.amounts[level+1]:''}`;
         else if(item.id==='deathsLeap')effect.textContent=`JUMP HEIGHT: +${item.amounts[level]}%${level<3?' → +'+item.amounts[level+1]+'%':''}`;
         else effect.textContent=`SLIDE LIMIT: ${((850+item.amounts[level])/1000).toFixed(2)}s${level<3?' → '+((850+item.amounts[level+1])/1000).toFixed(2)+'s':''}`;
         card.appendChild(effect);
         const buy=document.createElement('button');buy.type='button';buy.className='meta-buy';
-        buy.disabled=level>=3||meta.souls<nextCost;
-        buy.textContent=level>=3?'MAX LEVEL':`BUY · ${nextCost} SOULS`;
-        buy.setAttribute('aria-label',level>=3?`${item.name} fully upgraded`:
+        buy.disabled=level>=maxLevel||meta.souls<nextCost;
+        buy.textContent=level>=maxLevel?'FULLY AWAKENED':`UPGRADE · ${nextCost} SOULS`;
+        buy.setAttribute('aria-label',level>=maxLevel?`${item.name} fully upgraded`:
           `Purchase ${item.name} level ${level+1} for ${nextCost} Souls`);
         buy.addEventListener('click',()=>this.actions.purchaseMeta(item.id));
         card.appendChild(buy);holder.appendChild(card);
@@ -1470,6 +1509,7 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
+  <script src="assets/ui/v0160/frontispiece.js?v=0.16.0"></script>
   <script src="assets/visuals/visual-system.js?v=0.15.3"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/visuals/power-animations.js?v=0.15.2"></script>
@@ -1634,7 +1674,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.groundFogViews.clear();
         this.groundFogMaskGraphics?.destroy?.();
       });
-      this.state = 'menu';
+      this.state = 'home';
       this.countdownMs = 0;
       this.goFlashMs = 0;
       this.elapsed = 0;
@@ -1662,6 +1702,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.nextEncounterX = C.firstEncounterX;
       this.soulCount = 0;
       this.runSoulsAvailable=0;this.reviveUsed=false;
+      this.freeLifeAvailable=false;this.freeLifeUsed=false;this.rerollsRemaining=0;
       this.coinCount = 0; // Current spendable gold
       this.goldCollected = 0; // Lifetime collected this run, for scoring
       this.nextVendorNumber=1;
@@ -1676,12 +1717,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastVendorNumber=0;
       this.pendingOffers=[];
       this.ui = new GrimUI({
-        start: () => this.startRun(), menu: () => this.goToMenu(),
+        start: () => this.startRun(), menu: () => this.goToMenu(), enter:()=>this.enterHome(),
         attack: () => this.attack(), jump: () => this.jump(), jumpEnd: () => this.jumpEnd(),
         slideStart: () => this.startSlide(), slideEnd: () => this.endSlide(),
         pause: () => this.togglePause(), resume: () => this.resume(), autoPause: () => this.autoPause(),
         chooseUpgrade: id => this.chooseUpgrade(id),
-        leaveVendor: () => this.leaveVendor(), declineDeal: () => this.declineDeal(), heal: () => this.healFromDevil(),
+        leaveVendor: () => this.leaveVendor(), declineDeal: () => this.declineDeal(), heal: () => this.healFromVendor(),
+        reroll:()=>this.rerollVendor(),
         setGodMode: on => this.setGodMode(on),
         togglePracticeSlow:()=>this.togglePracticeSlow(),
         askTeleport:value=>this.askTeleport(value),
@@ -1706,7 +1748,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.installLoopRecovery();
       this.meta=Meta.load();
       this.totalSouls=this.meta.souls;
-      this.ui.setMode('menu');
+      this.state='home';this.ui.setMode('home');
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.scale.on('resize', this.handleResize, this);
       this.events.once('shutdown', () => this.scale.off('resize', this.handleResize, this));
@@ -1731,6 +1773,10 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorArt=scope.GRIM_VENDOR_ART?new scope.GRIM_VENDOR_ART.VendorSanctuaries(this):null;
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.drawScene();
+    }
+    enterHome(){
+      if(this.state!=='home')return false;
+      this.wakeGameLoop();this.state='menu';this.ui.setMode('menu');return true;
     }
     openReliquary(){
       if(this.state!=='menu')return;
@@ -1854,7 +1900,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.slideMs=0;p.slideReleaseBufferMs=0;p.attackMs=0;p.attackCooldownMs=0;
       p.invulMs=Math.max(p.invulMs,1400);
       this.distance=(x-this.startX)/C.pxPerMeter;
-      this.speed=Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
+      this.speed=Core.runSpeed(this.distance);
       this.cameraX=x-this.width*C.reaperXRatio;
       this.cameraY=y-this.groundY;
       this.hasTeleported=d>=5000;
@@ -2197,6 +2243,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.particles = [];
       this.soulCount = 0;
       this.runSoulsAvailable=0;this.reviveUsed=false;
+      this.freeLifeAvailable=this.meta.levels.deathDenied>0;this.freeLifeUsed=false;
+      this.rerollsRemaining=this.meta.levels.fatesBargain||0;
+      this.vendorPurchased=false;this.respawnNextMode='playing';
       this.coinCount = Meta.startingGold(this.meta); // Starting gold does not increase collected-gold score
       this.goldCollected = 0; // Lifetime collected this run, for scoring
       this.distance = 0;
@@ -2381,6 +2430,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastVendorNumber=number;
       this.vendorType=number*C.vendorEveryMeters<5000?'angel':'devil';
       this.vendorPhase='deal';
+      this.vendorPurchased=false;
       this.pendingOffers=this.vendorType==='angel'
         ?Powers.rewardOffers(this.powerManager,this.player,this.rng,3)
         :Powers.devilOffers(this.powerManager,this.rng,3);
@@ -2404,35 +2454,54 @@ window.GRIM_CONFIG = Object.freeze({
     showVendor(){
       if(this.state!=='upgrade')return;
       this.ui.offerVendor(this.pendingOffers,this.vendorType,this.vendorPhase,
-        this.lastVendorNumber*C.vendorEveryMeters,this.player.hp,this.player.maxHp,this.coinCount);
+        this.lastVendorNumber*C.vendorEveryMeters,this.player.hp,this.player.maxHp,this.coinCount,
+        {purchased:this.vendorPurchased,rerolls:this.rerollsRemaining,canReroll:this.canRerollVendor()});
+    }
+    canRerollVendor(){
+      if(this.state!=='upgrade'||this.vendorPhase!=='deal'||this.vendorPurchased||this.rerollsRemaining<=0)return false;
+      const ids=new Set(this.pendingOffers.map(v=>v.id));
+      const available=this.vendorType==='devil'?this.powerManager.devilEligible():this.powerManager.eligible();
+      if(this.vendorType==='angel'){
+        if(this.player.maxHp<Powers.HEALTH_CAP||this.player.hp<this.player.maxHp)available.push(Powers.HEALTH);
+        if(available.length<3&&this.player.hp<this.player.maxHp)available.push(Powers.FALLBACKS.soulMend);
+      }
+      return available.some(v=>!ids.has(v.id));
+    }
+    rerollVendor(){
+      if(!this.canRerollVendor())return false;
+      const old=this.pendingOffers.map(v=>v.id);
+      this.pendingOffers=this.vendorType==='devil'?Powers.devilOffers(this.powerManager,this.rng,3,old):
+        Powers.rewardOffers(this.powerManager,this.player,this.rng,3,old);
+      this.rerollsRemaining--;this.resetRewindHistory();this.showVendor();return true;
     }
     chooseUpgrade(id){
-      if(this.state!=='upgrade'||this.vendorPhase!=='deal'||!this.pendingOffers.some(o=>o.id===id))return;
+      if(this.state!=='upgrade'||this.vendorPhase!=='deal'||this.vendorPurchased||!this.pendingOffers.some(o=>o.id===id))return;
       const devil=this.vendorType==='devil';
       const offer=this.pendingOffers.find(o=>o.id===id);
       const price=devil?Powers.devilPrice(offer):5;
       if((devil&&this.player.hp<=price)||(!devil&&this.coinCount<price))return;
-      if(!offer||!this.powerManager.apply(id,this.player,()=>{},offer.levelsGained||1))return;
+      if(!offer||!this.powerManager.apply(id,this.player,()=>{},offer.levelsGained||1)){this.showVendor();return;}
       if(id==='skeletalWings')this.player.hoverBudgetMs=this.powerManager.skeletalHoverMs();
       this.resetRewindHistory();
       if(devil)this.player.hp-=price;
       else this.coinCount-=price;
       this.powerArt?.purchase(id,this.powerManager.level(id)||1);
       this.puff(this.player.x,this.feetY-45,devil?0xff765e:0xffd98e,14);
-      this.leaveVendor();
+      if(devil)this.leaveVendor();
+      else {this.vendorPurchased=true;this.pendingOffers=[];this.refreshHud();this.showVendor();}
     }
     declineDeal(){
       if(this.state!=='upgrade'||this.vendorType!=='devil'||this.vendorPhase!=='deal')return;
       if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp){this.leaveVendor();return;}
       this.vendorPhase='heal';this.pendingOffers=[];this.showVendor();
     }
-    healFromDevil(){
-      if(this.state!=='upgrade'||this.vendorType!=='devil'||this.vendorPhase!=='heal')return;
-      if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp)return;
+    healFromVendor(){
+      if(this.state!=='upgrade'||!(this.vendorType==='angel'||this.vendorType==='devil'&&this.vendorPhase==='heal'))return false;
+      if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp)return false;
       this.coinCount-=C.devilHealPrice;this.player.hp++;
       this.powerArt?.purchase('soulMend',1);
       this.resetRewindHistory();
-      this.showVendor();
+      this.refreshHud();this.showVendor();return true;
     }
     leaveVendor(){
       if(this.state!=='upgrade')return;
@@ -2702,7 +2771,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(x>this.brittleClearUntilX && this.terrain.canPlace(x,width) &&
            Core.canClearJumpObstacle(this.terrain.groundAt.bind(this.terrain),
              {type,x,width,y:(this.terrain.groundAt(x)??0)-(type==='rock'?48:41)},
-             Math.min(C.maxSpeed,C.initialSpeed+((x-this.startX)/C.pxPerMeter)*C.speedGainPerMeter),
+             Core.runSpeed((x-this.startX)/C.pxPerMeter),
              C.jumpVelocity,C.gravity) &&
            !this.vendorObstacleBlocked(type,x,width) &&
            !Core.overlapsSoulPlatform(x,width,this.soulPlatform,30) &&
@@ -2783,7 +2852,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.distance = (p.x-this.startX)/C.pxPerMeter;
         if(this.godMode&&this.distance>=C.finishMeters)this.godModePastFinish=true;
-        this.speed = Math.min(C.maxSpeed,C.initialSpeed+this.distance*C.speedGainPerMeter);
+        this.speed = Core.runSpeed(this.distance);
         p.invulMs = Math.max(0,p.invulMs-frameMs);
         p.fireproofCooldownMs=Math.max(0,p.fireproofCooldownMs-frameMs);
         this.damageFlashMs=Math.max(0,this.damageFlashMs-frameMs);
@@ -3244,6 +3313,9 @@ window.GRIM_CONFIG = Object.freeze({
         hell?`LAVA · −${damage} HP`:'ABYSS · −1 HP';
       p.x=group.respawnX;
       this.takeDamage(damage,hell?'lava':'abyss');
+      // Free resurrection owns its landing, invulnerability and smoke scene.
+      // Do not overwrite them with the surviving-fall recovery below.
+      if(this.state==='respawning')return false;
       this.terrain.advance(p.x+800);
       p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
       p.grounded=true;p.onSoulPlatform=false;p.coyoteMs=0;p.velocityY=0;p.jumpsUsed=0;p.airJumpUsed=false;p.hovering=false;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
@@ -3265,6 +3337,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       p.slideConsumed=false;p.jumpAgeMs=0;p.visualLandingMs=0;p.visualFireMs=0;
       this.state='respawning';this.respawnMs=1500;
+      this.respawnNextMode='playing';
       this.respawnCamera={fromX:fromCamera.x,fromY:fromCamera.y,
         toX:p.x-this.width*C.reaperXRatio,toY:p.y-this.groundY};
       this.worldPolish?.reset();this.powerArt?.reset();this.resetRewindHistory();
@@ -3277,6 +3350,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.damageFlashMs=0;this.bonesBlastMs=0;this.blastFlashMs=0;
       this.ui.setMode('playing');this.refreshHud();
       this.resetRewindHistory();this.captureRewind();
+      if(this.respawnNextMode==='countdown'){this.respawnNextMode='playing';this.beginCountdown();}
       return true;
     }
     startChest(){
@@ -3361,6 +3435,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.resetRewindHistory();
       this.countdownMs=0;this.goFlashMs=0;
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
+      if(this.freeLifeAvailable&&!this.freeLifeUsed){
+        this.freeLifeUsed=true;this.lastResurrection='free';this.resurrect();return;
+      }
       if(!this.reviveUsed){
         this.state='revive';
         this.ui.offerRevive(this.meta.souls,this.runSoulsAvailable);
@@ -3375,6 +3452,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.runSoulsAvailable-=spentFromRun;
       this.lastRevivePayment={currentRun:spentFromRun,priorRuns:3-spentFromRun};
       this.reviveUsed=true;
+      this.lastResurrection='paid';this.resurrect();return true;
+    }
+    resurrect(){
       this.resetRewindHistory();
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
@@ -3402,10 +3482,14 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.tips=this.tips.filter(t=>t.atX<left-80||t.atX>right);
       this.distance=(p.x-this.startX)/C.pxPerMeter;
+      this.speed=Core.runSpeed(this.distance);
       this.cameraX=p.x-this.width*C.reaperXRatio;
       this.cameraY=p.y-this.groundY;
       this.refreshHud();
-      this.beginCountdown(); // Unobstructed 3-second restart.
+      this.state='respawning';this.respawnMs=1500;this.respawnNextMode='countdown';
+      this.respawnCamera=null;this.damageFlashMs=0;this.fallFeedbackMs=0;
+      this.worldPolish?.reset();this.powerArt?.reset();
+      this.ui.showFallNotice(false);this.ui.setMode('respawning');
       return true;
     }
     declineRevive(){

@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{
  try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump,null,{timeout:45000});
-  await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._vendorTestUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};s.godMode=true;s.coinCount=25;});
   for(const [kind,k]of [['angel',1],['devil',8]]){
    const world=await page.evaluate(({k})=>{

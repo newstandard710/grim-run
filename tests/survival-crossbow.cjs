@@ -17,7 +17,7 @@ for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 }
 const M=w.GRIM_META,C=w.GRIM_CONFIG,Combat=w.GRIM_COMBAT;
-assert.equal(C.version,'0.15.3');
+assert.equal(C.version,'0.16.0');
 const wallet=M.load();assert.equal(wallet.souls,60);
 assert.equal(wallet.levels.graveGlide,0);
 for(const [lvl,cost] of [[1,5],[2,10],[3,25]]){
@@ -41,13 +41,13 @@ a.player.maxHp=7;a.player.hp=1;
 a.powerManager.apply('rapidFire',a.player,()=>{},1);
 a.takeDamage(1,'rock');
 assert.equal(a.state,'revive');assert.equal(get('revive-yes-btn').disabled,false);
-assert.equal(a.revive(),true);assert.equal(a.state,'countdown');
+assert.equal(a.revive(),true);assert.equal(a.state,'respawning');
 assert.equal(a.player.hp,3);assert.equal(a.player.maxHp,3);
 assert.equal(a.powerManager.level('rapidFire'),1,'Temporary power retained on revive');
 assert.equal(a.lastRevivePayment.currentRun,2);assert.equal(a.lastRevivePayment.priorRuns,1);
 assert.equal(a.runSoulsAvailable,0);assert.equal(a.meta.souls,before-3);
 assert.equal(M.load().souls,before-3);assert.equal(a.revive(),false);
-tick(a,13,250);assert.equal(a.state,'playing');
+tick(a,6,250);assert.equal(a.state,'countdown');tick(a,13,250);assert.equal(a.state,'playing');
 a.player.invulMs=0;a.takeDamage(3,'bat');assert.equal(a.state,'dead');
 
 const b=game(23);

@@ -16,7 +16,7 @@ const server=http.createServer((req,res)=>{
  try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump,null,{timeout:45000});
-  await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='paused';s.enemies=[];s.obstacles=[];s.godMode=true;s.nextVendorNumber=15;s.ui.setMode('playing');s._revisionUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};});
   const plant=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0];s.player.x=s.startX+3400*12;s.distance=3400;
