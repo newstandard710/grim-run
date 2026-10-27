@@ -1,6 +1,17 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.14.9 — *Airborne Art and Vendor Auras*.
+**Current build:** v0.15.0 — *Wings, Powers & Summit Relic*.
+
+## v0.15.0 — Vendor power animation and summit shrine
+
+- Fifteen new registered Reaper poses: four air-tuck frames, four aerial scythe strikes, four compact tuck strikes and three acquisition poses. Landing adds a small visual weight shift. The accepted run, ground-slide and ground-attack art is preserved.
+- Twelve new wing component frames: four raven, four standalone skeletal and four lower-swept alternate skeletal poses. Equipping both powers selects the alternate skeletal set, allowing both wing pairs to remain visible.
+- All ten purchasable powers and both Angel healing offers have brief illustrated acquisition effects. Devil healing also animates. Higher levels add bounded, action-local color accents using the established power palette. Ability caps, costs, effects and cooldowns are unchanged.
+- A snowy gothic summit shrine triggers at 4,900m. Gameplay pauses for a six-second skippable acquisition: chest opens, Bone Crossbow rises, Reaper holds it overhead, then play resumes. Skip and automatic completion grant the same weapon once. The 5,000m portal retains the weapon and no longer opens a second reward scene.
+- New animation clocks are player fields included in existing rewind snapshots. Visual effects use separate deterministic phase values, never gameplay RNG, and stay frozen during ordinary pause. Pools cap at twenty simultaneous bursts.
+- Asset sources, exact checksums, registration script, and prompts are preserved under `assets/powers/` and `scripts/prepare-power-art.py`. Missing atlases retain existing character rendering; the shrine reward remains functional if artwork is unavailable.
+- Stable prior build: commit `00e2d116d80962b2d24c3aaa0f8740d5ed5b0860` (v0.14.9).
+- Validation: gameplay and source-integrity suites; actual Chromium action/wing/effect/shrine checks plus existing full-route art regressions. Phone playtesting remains necessary for subjective motion and device performance.
 
 The six jump-plus-attack brambles now each have dedicated biome foreground art and a paired, dimmer cliff tether; the new skins fill Tundra, Caverns, and Ashlands. Both jump-plus-tuck gates have unique ceiling mounts and enlarged foregrounds whose visible lower edges follow the original clearance line. Angel and Demon Vendor auras glow behind their figures. These are visual-only changes: spawn rates, encounter positions, collisions, clearance, and gameplay logic are unchanged.
 

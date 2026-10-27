@@ -1,0 +1,122 @@
+{
+  "version": "0.15.0",
+  "sources": {
+    "air-scythe.png": {
+      "bytes": 2129204,
+      "sha256": "fce3b33252096ded1b764319139dc7fad77046001876430c17ac0498298b4981"
+    },
+    "air-tuck.png": {
+      "bytes": 2101494,
+      "sha256": "e63b9efc35bc8ce404c81135aaf454a1ccf6fdc947e19d402a6757f5bede8b37"
+    },
+    "bone-crossbow.png": {
+      "bytes": 897212,
+      "sha256": "7f5e5530f377a5ae251017eb01786f10383ddc40223e02ae8d898eff5aff6ceb"
+    },
+    "power-effects.png": {
+      "bytes": 2534976,
+      "sha256": "cb006f3f78e46afada95515eb1c293e993dde3272eb3d9e376570bc0d48a8a87"
+    },
+    "relic-acquisition.png": {
+      "bytes": 2125467,
+      "sha256": "3179cc0dc4b63cce423fc137e5ab204aa9f74cd63bedd56a4946959b44e5abbd"
+    },
+    "summit-shrine-open.png": {
+      "bytes": 2490378,
+      "sha256": "43cbfba0d417f2afa6a2847f91ec148d27a068a9d2c8fa53c223f6da6ed35f79"
+    },
+    "summit-shrine.png": {
+      "bytes": 2319920,
+      "sha256": "56bb55304ed08cbf1a6919015858964cc330bd0854e91a4c74fed9fb985aa31c"
+    },
+    "wings.png": {
+      "bytes": 2117694,
+      "sha256": "e1112d7963d1d49a54c9b7c0a27c837f3a46fdbe240c0f21f6a394801d59485c"
+    }
+  },
+  "atlases": {
+    "reaper-actions": {
+      "file": "reaper-actions.png",
+      "cell": [
+        512,
+        512
+      ],
+      "frames": 15,
+      "anchor": [
+        288,
+        400
+      ],
+      "scale": 0.375
+    },
+    "wings": {
+      "file": "wings.png",
+      "cell": [
+        512,
+        384
+      ],
+      "frames": 12,
+      "root": [
+        256,
+        260
+      ]
+    },
+    "power-effects": {
+      "file": "power-effects.png",
+      "cell": [
+        256,
+        256
+      ],
+      "frames": 12
+    }
+  },
+  "runtime": {
+    "power-effects.png": {
+      "bytes": 862812,
+      "sha256": "b8fa8f9f0aeb4c1d585f42ba13e1d060f61e9c8c3abef50506344b371b31215a",
+      "size": [
+        1024,
+        768
+      ]
+    },
+    "bone-crossbow.png": {
+      "bytes": 168874,
+      "sha256": "02e88843a58d5e65a22ac1f25c0ce7362996fc61947f83d4b8d1d9117d393563",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "summit-shrine-open.png": {
+      "bytes": 1050999,
+      "sha256": "b24ecfa148bbe036a2455174b05ffb7f001a0be3424af0ecc7838932fe9b059a",
+      "size": [
+        1024,
+        683
+      ]
+    },
+    "wings.png": {
+      "bytes": 1161183,
+      "sha256": "65a080a92c4dabd1acb49c529534338692d07431238d1c895527436cf7ff11ef",
+      "size": [
+        2048,
+        1152
+      ]
+    },
+    "summit-shrine.png": {
+      "bytes": 850880,
+      "sha256": "96e2f11eb6161a8d1353c7732dd3d5491e3d6d8e26baa6e0393f46d28803e41c",
+      "size": [
+        1024,
+        683
+      ]
+    },
+    "reaper-actions.png": {
+      "bytes": 1741137,
+      "sha256": "aa3b927f0644dede4a92783e5c53f88391bdc204b91dbf0c3e59289709daee9b",
+      "size": [
+        2048,
+        2048
+      ]
+    }
+  }
+}

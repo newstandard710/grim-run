@@ -1,5 +1,14 @@
 # Grim Run
 
+## v0.15.0 — Wings, Powers & Summit Relic
+
+New painted action poses animate airborne tuck and scythe combinations. Raven and Skeletal Wings have articulated cycles, with a second skeletal set for the combined loadout. All vendor powers and healing purchases receive short effects, and higher levels add subtle color accents during use.
+
+The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-second skippable scene. The **5,000m** portal keeps the acquired weapon and resumes without a second chest. Controls, attack windows, ability balance and collision geometry are preserved.
+
+[Power art and production prompts](assets/powers/README.md). [Play Grim Run](https://newstandard710.github.io/grim-run/).
+
+
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
 **Current build: v0.14.9 — Airborne Art and Vendor Auras**

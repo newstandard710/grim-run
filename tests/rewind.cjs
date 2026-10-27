@@ -16,7 +16,7 @@ w.window=w;vm.createContext(w);
 for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 const C=w.GRIM_CONFIG,P=w.GRIM_POWERS,Core=w.GRIM_CORE;
-assert.equal(C.version,'0.13.6');
+assert.equal(C.version,'0.15.0');
 assert.ok(P.POWER_ORDER.includes('deathsReversal'),'Rewind must be Angel vendor power');
 const m=P.makePowerManager();
 for(const [lvl,seconds,cooldown] of [[1,5,60000],[2,6,55000],[3,7,50000],[4,8,45000]]){
@@ -149,8 +149,7 @@ barriers.enterUnderworld();
 assert.equal(barriers.state,'portal');
 assert.equal(barriers.rewindFrames.length,0,'Portal resets history');
 step(barriers,6,250);
-assert.equal(barriers.state,'chest');
-barriers.finishChest();
+assert.equal(barriers.state,'playing');
 assert.equal(barriers.state,'playing');assert.equal(barriers.rewind(),false);
 
 console.log('PASS v0.13.6: Angel tiers, God Mode level-4 override, snapshot rewind, non-rewindable cooldown, referenced projectiles, Brittle Bones terrain rollback, Soul/vendor/portal boundaries.');

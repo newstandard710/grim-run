@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.14.9</title>
+  <title>GRIM RUN — v0.15.0</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -194,23 +194,13 @@ button {cursor:pointer;}
  box-shadow:inset 0 0 160px #ae87f8bb;animation:rewindPulse .55s ease-out forwards}
 @keyframes rewindPulse{from{opacity:.95;filter:hue-rotate(0)}to{opacity:0;filter:hue-rotate(42deg)}}
 @media(max-height:310px){.rewind{top:45px;width:53px;height:53px}}
-.chest-scene{position:absolute;inset:0;z-index:22;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#213d46f4 0%,#09101dfb 75%);text-align:center;color:#e5fff5;padding:5px 12px 9px;}
-.chest-eyebrow{font-size:clamp(10px,2vh,15px);font-weight:900;letter-spacing:.30em;color:#b7fff4;}
-.chest-illustration{position:relative;width:min(335px,40vw);height:clamp(104px,42vh,220px);flex-shrink:0;}
-.chest-beam{position:absolute;bottom:12%;left:35%;width:30%;height:68%;background:linear-gradient(0deg,#8cebe75e,transparent);filter:blur(9px);animation:beamPulse 1.4s infinite alternate;}
-.chest-base{position:absolute;bottom:7%;left:60%;width:34%;height:34%;border:3px solid #d5a66b;border-radius:10px;background:linear-gradient(#6c534c,#292e3b);box-shadow:0 7px 15px #0008;}
-.chest-lid{position:absolute;left:-5%;right:-5%;top:-11%;height:36%;border:4px solid #d6bc8c;border-radius:9px;background:#554640;transform-origin:bottom center;animation:openLid 4.4s ease forwards;}
-.chest-lock{position:absolute;left:40%;top:25%;color:#ffe5a5;font-size:clamp(18px,5vh,33px);}
-.chest-crossbow{position:absolute;width:35%;height:68%;left:58%;top:12%;filter:drop-shadow(0 0 17px #8cebe7);animation:liftRelic 4.4s ease forwards;}
-.chest-reaper{position:absolute;left:13%;bottom:3%;width:36%;height:70%;filter:drop-shadow(0 4px 7px #000);animation:reaperReveal 4.4s ease-out forwards;}
-.chest-rune{position:absolute;left:50%;top:0;transform:translateX(-50%);font-size:clamp(20px,7vh,42px);color:#a6ffea;animation:beamPulse 1.2s infinite alternate;}
-.chest-title{font-size:clamp(16px,4.4vh,35px);font-weight:1000;letter-spacing:.12em;text-shadow:0 0 21px #8cebe794;}
-.chest-caption{font-size:clamp(9px,2vh,14px);font-weight:850;letter-spacing:.15em;margin:4px;color:#a4d3d2;}
-#chest-continue-btn{min-height:32px;padding:5px 20px;margin:5px auto 0;}
-@keyframes openLid{0%,15%{transform:rotate(0)}35%,100%{transform:rotate(-69deg)}}
-@keyframes liftRelic{0%,19%{transform:translateY(40%) scale(.45);opacity:0}35%{opacity:1}72%,100%{transform:translate(-115%,-32%) scale(1.08);opacity:1}}
-@keyframes reaperReveal{0%,15%{opacity:0;transform:translateY(12px)}35%,100%{opacity:1;transform:translateY(0)}}
-@keyframes beamPulse{from{opacity:.42}to{opacity:1}}
+.chest-scene{position:absolute;inset:0;z-index:22;display:block;pointer-events:none;background:transparent;text-align:center;color:#e5fff5;padding:8px 12px;text-shadow:0 2px 6px #020714;}
+.chest-eyebrow{position:absolute;top:4%;left:0;right:0;font-size:clamp(9px,2vh,14px);font-weight:900;letter-spacing:.25em;color:#b7fff4;}
+.chest-title{position:absolute;bottom:13%;left:0;right:0;font-size:clamp(16px,4.4vh,32px);font-weight:1000;letter-spacing:.10em;text-shadow:0 0 18px #8cebe770;}
+.chest-caption{position:absolute;bottom:7.5%;left:0;right:0;font-size:clamp(8px,1.8vh,13px);font-weight:850;letter-spacing:.12em;color:#a4d3d2;}
+#chest-continue-btn{position:absolute;right:14px;bottom:14px;pointer-events:auto;min-height:32px;width:auto;padding:5px 18px;margin:0;}
+#vendor-stats.healing{animation:vendorHealing .6s ease;}
+@keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
 </head>
@@ -224,34 +214,9 @@ button {cursor:pointer;}
   </div>
   <div id="portal-overlay" class="portal-overlay hidden"><div class="portal-rune">✦</div><div class="portal-title">DESCENT INTO THE UNDERWORLD</div><div class="portal-subtitle">A RELIC RESTS BEYOND THE GATE</div></div>
   <div id="chest-screen" class="chest-scene hidden" aria-label="Bone Crossbow acquired">
-    <div class="chest-eyebrow">AN ANCIENT RELIC</div>
-    <div class="chest-illustration" aria-hidden="true">
-      <div class="chest-beam"></div>
-      <div class="chest-rune">✦</div>
-      <svg class="chest-crossbow" viewBox="0 0 220 140" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21 61 Q55 0 108 62 Q163 -2 199 61" stroke="#e7e1c9" stroke-width="14" fill="none" stroke-linecap="round"/>
-        <path d="M20 61 L200 61" stroke="#b6ffe8" stroke-width="2" fill="none"/>
-        <path d="M47 69 Q110 53 173 69" stroke="#6a574e" stroke-width="10" fill="none"/>
-        <path d="M110 31 L112 123" stroke="#e4c9a9" stroke-width="20" stroke-linecap="round"/>
-        <path d="M110 32 L110 108" stroke="#455169" stroke-width="5"/>
-        <path d="M112 19 L100 40 L124 40 Z" fill="#8cebe7"/>
-        <path d="M110 89 L145 105 L134 120 L112 106" fill="#ccb99a"/>
-      </svg>
-      <svg class="chest-reaper" viewBox="0 0 110 165" xmlns="http://www.w3.org/2000/svg">
-        <path d="M55 84 L25 106 L10 162 L103 162 L80 103 Z" fill="#172034" stroke="#506575" stroke-width="4"/>
-        <path d="M55 86 Q12 84 19 42 Q22 13 57 10 Q99 13 95 50 L84 91 Z" fill="#28374c" stroke="#627482" stroke-width="4"/>
-        <ellipse cx="58" cy="58" rx="23" ry="25" fill="#061321"/>
-        <ellipse cx="61" cy="62" rx="16" ry="18" fill="#e3e5d9"/>
-        <circle cx="55" cy="61" r="5" fill="#1b2a34"/><circle cx="69" cy="61" r="5" fill="#1b2a34"/>
-        <path d="M62 72 L57 78 L67 78 Z" fill="#2b3233"/>
-        <path d="M35 101 Q18 67 32 36 L46 20" fill="none" stroke="#d5d7c9" stroke-width="9" stroke-linecap="round"/>
-        <path d="M82 101 Q106 70 88 35 L73 20" fill="none" stroke="#d5d7c9" stroke-width="9" stroke-linecap="round"/>
-        <circle cx="46" cy="20" r="7" fill="#ebe3ce"/><circle cx="73" cy="20" r="7" fill="#ebe3ce"/>
-      </svg>
-      <div class="chest-base"><div class="chest-lid"></div><div class="chest-lock">✦</div></div>
-    </div>
-    <div class="chest-title">BONE CROSSBOW ACQUIRED</div>
-    <div class="chest-caption">AIM IS AUTOMATIC · PRESS FIRE TO SHOOT</div>
+    <div class="chest-eyebrow">4,900m · THE MOUNTAIN SUMMIT</div>
+    <div id="relic-title" class="chest-title" aria-live="polite">THE SUMMIT RELIQUARY</div>
+    <div class="chest-caption">BONE CROSSBOW · AIM IS AUTOMATIC · PRESS FIRE TO SHOOT</div>
     <button id="chest-continue-btn" class="primary" aria-label="Continue from weapon acquisition">CONTINUE ▶</button>
   </div>
   <div id="rewind-flash" class="rewind-flash hidden" aria-hidden="true"></div>
@@ -276,7 +241,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.14.9 · AIRBORNE ART & AURAS</div>
+      <div class="mini">v0.15.0 · WINGS, POWERS & SUMMIT RELIC</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -379,7 +344,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.13.6',
+  version: '0.15.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1461,6 +1426,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.14.7-slide-support"></script>
+  <script src="assets/visuals/power-animations.js?v=0.15.0"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1529,6 +1495,7 @@ window.GRIM_CONFIG = Object.freeze({
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
     preload(){
+      scope.GRIM_POWER_ART?.preload(this);
       this.biomeBackdropGroup='surface';
       this.biomeBackdropPendingGroup=null;
       this.biomeBackdropFailedGroups=new Set();
@@ -1559,7 +1526,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY = 0;
       this.fallFeedbackMs=0;
       this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
-      this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
+      this.hasTeleported=false;this.portalMs=0;this.chestMs=0;this.shrineClaimed=false;
       // Phaser calls preload before create. Keep art loading optional for
       // reduced/headless scene hosts so a missing loader never stops gameplay.
       this.biomeBackdropGroup??='surface';
@@ -1705,6 +1672,7 @@ window.GRIM_CONFIG = Object.freeze({
         else this.visuals.beginReviewV2();
         this.events.once('shutdown',()=>this.visuals.shutdown());
       }
+      this.powerArt=scope.GRIM_POWER_ART?new scope.GRIM_POWER_ART.PowerAnimations(this):null;
       this.drawScene();
     }
     openReliquary(){
@@ -1834,6 +1802,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=y-this.groundY;
       this.hasTeleported=d>=5000;
       this.gunUnlocked=this.hasTeleported;
+      this.shrineClaimed=this.gunUnlocked;
+      this.powerArt?.reset();
       this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.ui.showGun(this.gunUnlocked);this.ui.showGunCooldown(0);
       this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
@@ -2111,6 +2081,7 @@ window.GRIM_CONFIG = Object.freeze({
         lastIndex:-1};
       this.rewindPlayback.target=saved;
       this.state='rewinding';
+      this.powerArt?.reset();
       this.ui.setMode('rewinding');
       this.ui.showRewindPlayback(true);
       this.ui.rewindFlash(false);
@@ -2126,7 +2097,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.rng = Core.makeRng(this.seed);
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
       this.cameraY=0;this.fallFeedbackMs=0;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
-      this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;
+      this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;this.shrineClaimed=false;
+      this.powerArt?.reset();
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
       this.rewindFrames=[];this.rewindTerrainBase=new Map();
       this.rewindClockMs=0;this.rewindSampleMs=0;
@@ -2187,6 +2159,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     goToMenu() {
+      this.powerArt?.reset();
       this.wakeGameLoop();
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
@@ -2243,6 +2216,7 @@ window.GRIM_CONFIG = Object.freeze({
         p.airJumpUsed=true;p.jumpsUsed=Math.max(p.jumpsUsed,2);
         p.grounded=false;p.onSoulPlatform=false;p.coyoteMs=0;
         p.velocityY=this.powerManager.secondJumpVelocity();
+        this.powerArt?.trigger('ravenWings',p.x-15,p.y-65);
         this.puff(p.x-8,p.y-32,0xc9bbff,12);
         p.hoverPressKind='air';
       }else{
@@ -2265,12 +2239,14 @@ window.GRIM_CONFIG = Object.freeze({
       p.attackMs = C.attackDurationMs;
       p.attackCooldownMs = C.attackCooldownMs;
       this.swingSequence++;
+      if(this.powerManager.level('soulCleave')>0)this.powerArt?.trigger('soulCleave',p.x+35,this.feetY-(this.lowProfile?30:65));
       // Damage is applied only during the visible scythe swing, in update().
     }
     activateSlowTime(){
       const p=this.player, power=this.powerManager.slowEffect();
       if(power.durationMs>0 && p.slowCooldownMs<=0){
         p.slowMs=power.durationMs; p.slowCooldownMs=C.slowCooldownMs;
+        this.powerArt?.trigger('deathsDelay',p.x,this.feetY-25);
         this.puff(p.x,this.feetY-24,0x8bdcf4,8);
       }
     }
@@ -2369,6 +2345,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.resetRewindHistory();
       if(devil)this.player.hp-=price;
       else this.coinCount-=price;
+      this.powerArt?.purchase(id,this.powerManager.level(id)||1);
       this.puff(this.player.x,this.feetY-45,devil?0xff765e:0xffd98e,14);
       this.leaveVendor();
     }
@@ -2381,6 +2358,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='upgrade'||this.vendorType!=='devil'||this.vendorPhase!=='heal')return;
       if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp)return;
       this.coinCount-=C.devilHealPrice;this.player.hp++;
+      this.powerArt?.purchase('soulMend',1);
       this.resetRewindHistory();
       this.showVendor();
     }
@@ -2660,10 +2638,10 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state==='rewinding')this.playRewindFrame(Math.min(250,Math.max(0,deltaMs))*(this.godMode&&this.practiceSlow?.5:1));
       else if(this.state==='portal'){
         this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
-        if(this.portalMs===0)this.startChest();
+        if(this.portalMs===0)this.finishPortal();
       }
       else if(this.state==='chest'){
-        this.chestMs=Math.max(0,this.chestMs-Math.min(250,Math.max(0,deltaMs)));
+        if(!document.hidden)this.chestMs=Math.max(0,this.chestMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.chestMs===0)this.finishChest();
       }
       else if(this.state==='countdown'){
@@ -2770,6 +2748,10 @@ window.GRIM_CONFIG = Object.freeze({
           p.slideMs += frameMs;
           if (p.slideMs >= Meta.slideDuration(C.slideMaxMs,this.meta) || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
         }
+        // The summit shrine precedes the portal and is an irreversible reward boundary.
+        if(!this.shrineClaimed&&this.distance>=4900&&!this.hasTeleported){
+          this.startChest();this.drawScene();return;
+        }
         // Portal traversal happens BEFORE hazards and rewards at the 5,000m threshold.
         if(!this.hasTeleported && this.distance>=5000){
           this.enterUnderworld();this.drawScene();return;
@@ -2806,10 +2788,12 @@ window.GRIM_CONFIG = Object.freeze({
         this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
+        this.powerArt?.tick(frameMs);
         this.tickRewind(frameMs);
       }
       if(this.state==='playing'&&this.player.visualFireMs>0)
-        this.player.visualFireMs=Math.max(0,this.player.visualFireMs-Math.min(250,deltaMs));
+        this.player.visualFireMs=Math.max(0,this.player.visualFireMs-
+          Math.min(250,deltaMs)*(this.godMode&&this.practiceSlow?.5:1));
       if(this.fallFeedbackMs>0){
         this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
         if(this.fallFeedbackMs===0)this.ui.showFallNotice(false);
@@ -2844,6 +2828,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.fireSoulcaster(target);
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
       this.player.visualFireMs=180;
+      if(this.powerManager.level('rapidFire'))this.powerArt?.trigger('rapidFire',this.player.x+35,this.player.y-58);
+      if(this.powerManager.level('powerShot'))this.powerArt?.trigger('powerShot',this.player.x+48,this.player.y-58);
       this.ui.showGunCooldown(this.gunCooldownMs);
       return true;
     }
@@ -2865,6 +2851,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const bat of bats)this.hitEnemy(bat,2,true);
       this.puff(this.player.x+80,this.feetY-90,0xffbd77,24);
       this.blastFlashMs=420;
+      this.powerArt?.trigger('powerShot',this.player.x+80,this.feetY-75,'blast',3);
       this.blastCooldownMs=10000;
       return true;
     }
@@ -2880,6 +2867,7 @@ window.GRIM_CONFIG = Object.freeze({
         valid.sort((a,b)=>Math.hypot(a.x-origin.x,a.y-origin.y)-Math.hypot(b.x-origin.x,b.y-origin.y));
         const next=valid[0];
         this.chainArcs.push({x1:origin.x,y1:origin.y,x2:next.x,y2:next.y,lifeMs:250});
+        this.powerArt?.trigger('chainShot',next.x,next.y);
         this.hitEnemy(next,damage,true);visited.add(next);origin=next;
       }
     }
@@ -3063,6 +3051,7 @@ window.GRIM_CONFIG = Object.freeze({
     triggerBrittleBones(){
       const range=this.powerManager.brittleRangeMeters();
       if(!range)return;
+      this.powerArt?.trigger('brittleBones',this.player.x,this.feetY-45,'blast');
       const from=this.player.x,to=from+range*C.pxPerMeter;
       this.brittleClearUntilX=Math.max(this.brittleClearUntilX,to);
       this.saveTerrainOriginal(from-12,to);
@@ -3088,6 +3077,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.powerManager.level('infernalBoots')<=0||p.fireproofCooldownMs>0)return false;
       p.fireproofCooldownMs=this.powerManager.fireCooldownMs();
       p.invulMs=Math.max(p.invulMs,420);
+      this.powerArt?.trigger('infernalBoots',p.x,p.y-18);
       this.puff(p.x,p.y-30,0xffcf7c,15);
       return true;
     }
@@ -3156,25 +3146,45 @@ window.GRIM_CONFIG = Object.freeze({
       // takeDamage() already handled lethal damage and Brittle Bones.
     }
     startChest(){
-      if(this.state!=='portal')return;
+      if(this.state!=='playing'||this.shrineClaimed||this.hasTeleported)return false;
+      const p=this.player;
+      p.x=this.startX+4900*C.pxPerMeter;
+      p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
+      p.velocityY=0;p.grounded=true;p.onSoulPlatform=false;
+      p.attackMs=0;p.jumpHeld=false;p.holdSlide=false;p.sliding=false;p.airTuck=false;p.hovering=false;
+      p.jumpsUsed=0;p.airJumpUsed=false;p.coyoteMs=0;p.slideConsumed=false;p.slideReleaseBufferMs=0;
+      p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
+      p.visualTuckMs=0;p.visualTuckReleaseMs=0;p.visualWasAirborne=false;p.visualFireMs=0;
+      this.distance=4900;this.cameraX=p.x-this.width*C.reaperXRatio;
+      this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
+      this.powerArt?.reset();
       this.ui.showPortal(false);
-      this.state='chest';this.chestMs=4400;this.resetRewindHistory();
+      this.state='chest';this.chestMs=6000;this.resetRewindHistory();
       this.ui.setMode('chest');
+      return true;
     }
     finishChest(){
       if(this.state!=='chest')return;
       this.state='playing';this.chestMs=0;
-      this.gunUnlocked=true;this.gunCooldownMs=0;
+      this.gunUnlocked=true;this.gunCooldownMs=0;this.shrineClaimed=true;
+      this.player.jumpHeld=false;this.player.holdSlide=false;this.player.slideReleaseBufferMs=0;
       this.player.invulMs=Math.max(this.player.invulMs,1600);
       this.ui.setMode('playing');this.ui.showGun(true);this.ui.showGunCooldown(0);
       this.resetRewindHistory();this.captureRewind();
       this.puff(this.player.x,this.player.y-70,0x9effe0,22);
     }
+    finishPortal(){
+      if(this.state!=='portal')return;
+      // Direct God Mode/test entry also remains playable if the shrine was skipped.
+      this.gunUnlocked=true;this.shrineClaimed=true;this.gunCooldownMs=0;
+      this.state='playing';this.portalMs=0;this.ui.setMode('playing');this.ui.showGun(true);
+      this.ui.showGunCooldown(0);this.resetRewindHistory();this.captureRewind();
+    }
     enterUnderworld(){
       const p=this.player;
       this.hasTeleported=true;
       this.resetRewindHistory();
-      this.gunUnlocked=false;this.gunCooldownMs=0;this.blastCooldownMs=0;
+      this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.ui.showGun(false);
       this.portalMs=1450;
       this.state='portal';
@@ -3432,6 +3442,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawReaper();
       this.drawForeground();
       if(this.visuals)this.visuals.render();
+      this.powerArt?.render();
     }
     groundFogHash(index,salt){
       let h=Math.imul(index^salt,0x45d9f3b);
@@ -4904,7 +4915,7 @@ window.GRIM_CONFIG = Object.freeze({
           g.lineStyle(3,0xb6fff1,.88);g.beginPath();
           g.arc(x+15,cy,reach-1,angle-.5,angle+.25);g.strokePath();
         }
-        if(!p.grounded&&(this.powerManager.level('skeletalWings')>0||
+        if(!this.powerArt?.wingsReady&&!p.grounded&&(this.powerManager.level('skeletalWings')>0||
             this.powerManager.level('ravenWings')>0)){
           const t=Math.sin(this.elapsed*15)*8;
           for(const side of [-1,1]){
