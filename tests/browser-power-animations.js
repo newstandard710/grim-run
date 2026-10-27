@@ -94,6 +94,8 @@ const server=http.createServer((req,res)=>{
       return {state:s.state,distance:s.distance,x:s.player.x,hp:s.player.hp,coins:s.coinCount};
     });
     assert.equal(entry.state,'chest');assert.equal(entry.distance,4900);
+    assert(await page.evaluate(()=>window.grimRun.scene.scenes[0].powerArt.cinemaShrineOpen.isCropped),
+      'Only the open chest edit is overlaid; the original shrine keeps its clean transparent edges');
     // Freeze the scene timer while recording selected phases; manually advance
     // the same rendered time so screenshots have reproducible acquisition poses.
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._powerUpdate=s.update;s.update=function(){};});

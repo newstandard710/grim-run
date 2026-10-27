@@ -58,6 +58,12 @@
       this.cinema=scene.add.graphics().setScrollFactor(0).setDepth(22);
       this.cinemaShrine=image('power-summit-shrine',23)?.setScrollFactor(0);
       this.cinemaShrineOpen=image('power-summit-shrine-open',23.1)?.setScrollFactor(0);
+      if(this.cinemaShrineOpen){
+        // Use only the edited chest region. The authoritative closed shrine
+        // supplies the architecture and clean outer alpha in both states.
+        const source=scene.textures.get('power-summit-shrine-open').getSourceImage();
+        this.cinemaShrineOpen.setCrop(source.width*.36,source.height*.48,source.width*.28,source.height*.37);
+      }
       this.cinemaReaper=image('power-reaper',24,12)?.setScrollFactor(0).setOrigin(288/512,400/512);
       this.cinemaBow=image('power-bone-crossbow',25)?.setScrollFactor(0);
       this.cinemaFX=scene.add.graphics().setScrollFactor(0).setDepth(25.5);
@@ -243,7 +249,7 @@
       if(this.cinemaShrine){
         const open=this.cinemaShrineOpen?clamp((t-1.5)/.35,0,1):0;
         this.cinemaShrine.setOrigin(.5,1).setPosition(shrineX,ground+13)
-          .setDisplaySize(h*.90,h*.60).setAlpha(1-open).setVisible(open<1);
+          .setDisplaySize(h*.90,h*.60).setAlpha(1).setVisible(true);
         this.cinemaShrineOpen?.setOrigin(.5,1).setPosition(shrineX,ground+13)
           .setDisplaySize(h*.90,h*.60).setAlpha(open).setVisible(open>0);
       }
