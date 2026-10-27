@@ -1,4 +1,4 @@
-/* Biome-exclusive obstacle art catalog for v0.14.7. Purely visual metadata. */
+/* Biome-exclusive obstacle art catalog for v0.14.9. Purely visual metadata. */
 (function(scope){'use strict';scope.GRIM_OBSTACLE_SPRITES=Object.freeze([
   {
     "id": "forest_jump_root-knot",
@@ -1127,7 +1127,9 @@
     "gameW": 80,
     "gameH": 340,
     "src": "assets/obstacles/air-tuck/ashlands/ashlands_air-tuck_basalt-tuck-gate.png",
-    "key": "obstacle-ashlands_air-tuck_basalt-tuck-gate"
+    "key": "obstacle-ashlands_air-tuck_basalt-tuck-gate",
+    "supportSrc": "assets/obstacles/air-tuck-support/ashlands/ashlands_basalt-tuck-gate-support.webp",
+    "supportKey": "obstacle-support-ashlands_basalt-tuck-gate"
   },
   {
     "id": "lava_air-tuck_molten-chain-tuck-gate",
@@ -1138,7 +1140,9 @@
     "gameW": 80,
     "gameH": 340,
     "src": "assets/obstacles/air-tuck/lava/lava_air-tuck_molten-chain-tuck-gate.png",
-    "key": "obstacle-lava_air-tuck_molten-chain-tuck-gate"
+    "key": "obstacle-lava_air-tuck_molten-chain-tuck-gate",
+    "supportSrc": "assets/obstacles/air-tuck-support/lava/lava_molten-chain-tuck-gate-support.webp",
+    "supportKey": "obstacle-support-lava_molten-chain-tuck-gate"
   },
   {
     "id": "foothills_air-bramble_windblown-root-tangle",
@@ -1149,7 +1153,9 @@
     "gameW": 80,
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/foothills/foothills_air-bramble_windblown-root-tangle.png",
-    "key": "obstacle-foothills_air-bramble_windblown-root-tangle"
+    "key": "obstacle-foothills_air-bramble_windblown-root-tangle",
+    "supportSrc": "assets/obstacles/air-bramble-support/foothills/foothills_windblown-root-tangle-support.webp",
+    "supportKey": "obstacle-support-foothills_windblown-root-tangle"
   },
   {
     "id": "crystals_air-bramble_floating-prism-briar",
@@ -1160,7 +1166,9 @@
     "gameW": 80,
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/crystals/crystals_air-bramble_floating-prism-briar.png",
-    "key": "obstacle-crystals_air-bramble_floating-prism-briar"
+    "key": "obstacle-crystals_air-bramble_floating-prism-briar",
+    "supportSrc": "assets/obstacles/air-bramble-support/crystals/crystals_floating-prism-briar-support.webp",
+    "supportKey": "obstacle-support-crystals_floating-prism-briar"
   },
   {
     "id": "lava_air-bramble_ember-air-briar",
@@ -1171,7 +1179,48 @@
     "gameW": 80,
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/lava/lava_air-bramble_ember-air-briar.png",
-    "key": "obstacle-lava_air-bramble_ember-air-briar"
+    "key": "obstacle-lava_air-bramble_ember-air-briar",
+    "supportSrc": "assets/obstacles/air-bramble-support/lava/lava_ember-air-briar-support.webp",
+    "supportKey": "obstacle-support-lava_ember-air-briar"
+  },
+  {
+    "id": "tundra_air-bramble_frostthorn-knot",
+    "category": "air-bramble",
+    "biome": "tundra",
+    "biomeTitle": "Tundra",
+    "name": "frostthorn-knot",
+    "gameW": 80,
+    "gameH": 143,
+    "src": "assets/obstacles/air-bramble/tundra/tundra_air-bramble_frostthorn-knot.png",
+    "key": "obstacle-tundra_air-bramble_frostthorn-knot",
+    "supportSrc": "assets/obstacles/air-bramble-support/tundra/tundra_frostthorn-knot-support.webp",
+    "supportKey": "obstacle-support-tundra_frostthorn-knot"
+  },
+  {
+    "id": "caves_air-bramble_cavern-root-knot",
+    "category": "air-bramble",
+    "biome": "caves",
+    "biomeTitle": "Caverns",
+    "name": "cavern-root-knot",
+    "gameW": 80,
+    "gameH": 143,
+    "src": "assets/obstacles/air-bramble/caves/caves_air-bramble_cavern-root-knot.png",
+    "key": "obstacle-caves_air-bramble_cavern-root-knot",
+    "supportSrc": "assets/obstacles/air-bramble-support/caves/caves_cavern-root-knot-support.webp",
+    "supportKey": "obstacle-support-caves_cavern-root-knot"
+  },
+  {
+    "id": "ashlands_air-bramble_charred-thorn-knot",
+    "category": "air-bramble",
+    "biome": "ashlands",
+    "biomeTitle": "Ashlands",
+    "name": "charred-thorn-knot",
+    "gameW": 80,
+    "gameH": 143,
+    "src": "assets/obstacles/air-bramble/ashlands/ashlands_air-bramble_charred-thorn-knot.png",
+    "key": "obstacle-ashlands_air-bramble_charred-thorn-knot",
+    "supportSrc": "assets/obstacles/air-bramble-support/ashlands/ashlands_charred-thorn-knot-support.webp",
+    "supportKey": "obstacle-support-ashlands_charred-thorn-knot"
   },
   {
     "id": "tundra_snapping-bramble_frost-snap-vine",

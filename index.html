@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.14.8</title>
+  <title>GRIM RUN — v0.14.9</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -276,7 +276,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.14.8 · FOG & VENDORS</div>
+      <div class="mini">v0.14.9 · AIRBORNE ART & AURAS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -1548,7 +1548,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
         this.load.image(skin.key,skin.src+'?v=0.14.5-forest-obstacles');
         if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.5-forest-obstacles');
-        if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.14.7-slide-support');
+        if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.14.9-air-support');
       }
     }
     create() {
@@ -1599,6 +1599,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.world = this.add.graphics().setDepth(2);
       this.fx = this.add.graphics().setDepth(5);
       this.vendorFallback=this.add.graphics().setDepth(10);
+      this.vendorAura=this.add.graphics().setDepth(9);
       this.actor = this.add.graphics().setDepth(14);
       this.obstacleFront=this.add.graphics().setDepth(16);
       this.foreground = this.add.graphics().setScrollFactor(0).setDepth(20);
@@ -3564,6 +3565,8 @@ window.GRIM_CONFIG = Object.freeze({
     drawVendors(){
       const g=this.vendorFallback;
       g?.clear();
+      const glow=this.vendorAura;
+      glow?.clear();
       if(!Number.isFinite(this.startX)||this.state==='menu'){
         for(const sprite of this.vendorSpriteObjects?.values()||[])sprite.setVisible(false);
         return;
@@ -3573,6 +3576,30 @@ window.GRIM_CONFIG = Object.freeze({
         const x=this.startX+k*C.vendorEveryMeters*C.pxPerMeter;
         if(Math.abs(x-this.player.x)>this.width*1.4)continue;
         const devil=k>=8,y=this.terrain.groundAt(x)??this.terrain.anchorAt(x);
+        if(glow){
+          const pulse=1+Math.sin(this.elapsed*2.1+k*1.7)*.075;
+          if(devil){
+            glow.fillStyle(0x270820,.17);glow.fillEllipse(x,y-78,192*pulse,181*pulse);
+            glow.fillStyle(0x7a1944,.14);glow.fillEllipse(x,y-76,148*pulse,153*pulse);
+            glow.lineStyle(5,0xad2947,.28);glow.strokeEllipse(x,y-80,130*pulse,141*pulse);
+            for(let n=0;n<8;n++){
+              const t=n*2.4+k*1.7+this.elapsed*.68;
+              glow.fillStyle(n%2?0xe84f37:0xb73572,.32);
+              glow.fillCircle(x+Math.sin(t)*66,y-38-(n*17%105)+Math.sin(t*2)*7,
+                (n%3+2)*pulse);
+            }
+          }else{
+            glow.fillStyle(0xf7e5ab,.10);glow.fillEllipse(x,y-83,207*pulse,188*pulse);
+            glow.fillStyle(0xb5d9ee,.13);glow.fillEllipse(x,y-80,166*pulse,163*pulse);
+            glow.lineStyle(3,0xffe9a8,.31);glow.strokeEllipse(x,y-84,146*pulse,155*pulse);
+            for(let n=0;n<9;n++){
+              const a=n*Math.PI*2/9+this.elapsed*.11;
+              glow.lineStyle(n%2?2:3,0xffeac0,.19);
+              glow.lineBetween(x+Math.cos(a)*73,y-88+Math.sin(a)*73,
+                x+Math.cos(a)*104*pulse,y-88+Math.sin(a)*101*pulse);
+            }
+          }
+        }
         const key=devil?'vendor-demon':'vendor-angel';
         if(this.textures?.exists?.(key)&&this.add?.image){
           let sprite=this.vendorSpriteObjects.get(k);
@@ -4471,9 +4498,7 @@ window.GRIM_CONFIG = Object.freeze({
         snappingBramble:'snapping-bramble'}[o.type];
       if(!family)return null;
       let skins=this.obstacleSpriteFamilies?.get(`${family}:${biome}`)||[];
-      // Air brambles share the existing cuttable visual family where no
-      // dedicated air-bramble art is assigned; every selected file remains
-      // biome-exclusive and collision/type behavior is unchanged.
+      // Keep a biome-local fallback for a missing texture catalog entry.
       if(o.type==='airBramble'&&!skins.length)
         skins=this.obstacleSpriteFamilies?.get(`cut:${biome}`)||[];
       if(!skins.length)return null;
@@ -4539,6 +4564,31 @@ window.GRIM_CONFIG = Object.freeze({
       image.setOrigin(.5,1).setPosition(x,bottom).setDisplaySize(width*1.6,height)
         .setRotation(rotation).setTint(0xbfc6bf).setAlpha(.95).setVisible(true);
     }
+    drawAirObstacleSupport(o,skin){
+      if(!skin?.supportKey||!this.textures?.exists?.(skin.supportKey))return;
+      let image=this.obstacleSupportObjects.get(o);
+      if(image&&image.texture?.key!==skin.supportKey){image.destroy();image=null;}
+      if(!image){
+        image=this.add.image(0,0,skin.supportKey).setDepth(.53);
+        this.obstacleSupportObjects.set(o,image);
+      }
+      const base=o.baseY??this.terrain.anchorAt(o.x);
+      if(o.type==='airBramble'){
+        // The tether starts inside the cliff behind the ground and joins the
+        // upper side of the foreground tangle. It never changes the hitbox.
+        image.setOrigin(0,1).setPosition(o.x-245,base+33)
+          .setDisplaySize(415,335).setTint(0x89929b).setAlpha(.79);
+      }else{
+        // Recessed chain mount disappears beyond the screen ceiling; its
+        // painted lower links meet the upper part of the physical gate.
+        // The two source images have different transparent lower margins.
+        const ash=skin.biome==='ashlands';
+        image.setOrigin(.5,ash?586/720:339/720)
+          .setPosition(o.x+o.width/2,base-210)
+          .setDisplaySize(235,ash?180:286).setTint(0xc8c3bb).setAlpha(.95);
+      }
+      image.setVisible(true);
+    }
     cleanupObstacleSprites(){
       if(!this.obstacleSpriteObjects?.size&&!this.obstacleBackObjects?.size&&
         !this.obstacleSupportObjects?.size)return;
@@ -4573,8 +4623,14 @@ window.GRIM_CONFIG = Object.freeze({
       }
       else if(o.type==='tuckGate'){
         const bottom=o.y+o.height;
-        width=o.width;height=skin.gameH;
-        x=o.x+o.width/2;y=bottom-height/2;
+        width=skin.biome==='ashlands'?196:176;height=400;
+        x=o.x+o.width/2;y=bottom;
+        // Source art has a transparent lower margin. Pin its actual lowest
+        // gate pixel to the existing clearance line, independent of scale.
+        originY=skin.biome==='ashlands'?696/1020:713/1020;
+      }else if(o.type==='airBramble'){
+        width=148;height=218;
+        x=o.x+o.width/2;y=o.y+o.height/2;
       }else if(o.type==='snappingBramble'){
         const b=this.snappingBox(o);
         width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2+this.obstacleVisualInset(o);
@@ -4598,6 +4654,8 @@ window.GRIM_CONFIG = Object.freeze({
       const g=this.obstacleFront||this.world, x=o.x,
         ground=this.terrain.anchorAt(o.x);
       const v=o.variant%6;
+      if(o.type==='airBramble'||o.type==='tuckGate')
+        this.drawAirObstacleSupport(o,this.obstacleSkinFor(o));
       if(o.type!=='branch'&&this.drawObstacleSprite(o)){
         if(this.obstacleVisualInset(o))this.drawObstacleContact(o);
         return;
