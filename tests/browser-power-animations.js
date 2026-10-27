@@ -20,6 +20,7 @@ const server=http.createServer((req,res)=>{
   try{
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperReady,null,{timeout:45000});
+    await page.waitForFunction(()=>window.grimRun.scene.scenes[0].visuals.reaperPoseSprites.hover,null,{timeout:45000});
     await page.locator('#start-btn').click();
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='paused';s.ui.setMode('playing');s.obstacles=[];s.enemies=[];});
     const ready=await page.evaluate(()=>{
@@ -61,6 +62,21 @@ const server=http.createServer((req,res)=>{
       await page.waitForTimeout(180);
     }
     assert.equal(new Set(wingFrames.map(JSON.stringify)).size,4,'Wings articulate through four poses');
+    for(const [name,raven,bone,tuck] of [['raven',4,0,false],['skeletal',0,4,false],['combined',4,4,false],['combined-tuck',4,4,true]]){
+      await setup(tuck?'tuck':'hover');
+      const measure=await page.evaluate(({raven,bone})=>{
+        const s=window.grimRun.scene.scenes[0],a=s.powerArt;s.powerManager.levels.ravenWings=raven;s.powerManager.levels.skeletalWings=bone;s.drawScene();
+        return {scales:a.wingSprites.filter(v=>v.visible).map(v=>v.scaleX),
+          roots:a.nearWings.filter(v=>v.visible).map(v=>({cropped:v.isCropped,depth:v.depth})),
+          cloak:a.cloakRoot.visible,cloakDepth:a.cloakRoot.depth,bodyDepth:s.visuals.reaper.depth};
+      },{raven,bone});
+      const expected=tuck?[.375,.36]:Array(raven&&bone?2:1).fill(.51);
+      assert.equal(measure.scales.length,expected.length);measure.scales.forEach((v,i)=>assert(Math.abs(v-expected[i])<.00001,'Each wing type is exactly 50% larger'));
+      assert(measure.cloak&&measure.cloakDepth>measure.bodyDepth,'Cloth folds conceal wing joints');
+      assert(measure.roots.every(v=>v.cropped&&v.depth>measure.bodyDepth&&v.depth<measure.cloakDepth),'Only the near root emerges between body cloth and its overlap fold');
+      await page.locator('#game canvas').screenshot({path:path.join(dir,'revision-wings-'+name+'.png')});
+    }
+    await setup('hover');
     await page.locator('#game canvas').screenshot({path:path.join(dir,'power-combined-wings-phone.png')});
     for(const mode of ['tuck','attack','tuck-attack']){
       const info=await setup(mode);assert(info.visible,'Dedicated '+mode+' pose is visible');
@@ -81,6 +97,25 @@ const server=http.createServer((req,res)=>{
     });
     assert(powers.results.every(x=>x.burst===1&&x.visible===1),'All twelve vendor power/recovery purchases animate');
     assert.equal(powers.cap,20,'Burst pool remains bounded under stress');
+    const explosion=await page.evaluate(()=>{
+      const s=window.grimRun.scene.scenes[0],a=s.powerArt;a.reset();s.godMode=true;
+      Object.assign(s.player,{attackMs:0,airTuck:false,holdSlide:false,hovering:false,visualTuckMs:0,visualTuckReleaseMs:0});
+      s.player.grounded=true;s.player.y=s.terrain.groundAt(s.player.x)??s.terrain.anchorAt(s.player.x);
+      s.powerManager.levels.brittleBones=4;const hp=s.player.hp;s.takeDamage(1,'rock');
+      const b=a.bursts.find(b=>b.id==='brittleBones');a.tick(300);s.drawScene();
+      return {count:b.bones.length,visible:a.bonePool.filter(v=>v.visible).length,hp:s.player.hp===hp,rng:s.rng.state};
+    });
+    assert.equal(explosion.count,44);assert.equal(explosion.visible,44);assert(explosion.hp,'God Mode damage still visibly activates Brittle Bones');
+    await page.locator('#game canvas').screenshot({path:path.join(dir,'revision-brittle-explosion.png')});
+    for(let i=0;i<8;i++){await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.powerArt.tick(75);s.drawScene();});await page.waitForTimeout(75);}
+    const paused=await page.evaluate(()=>{
+      const s=window.grimRun.scene.scenes[0],a=s.powerArt,b=a.bursts.find(b=>b.bones);const before=b.age;
+      s.update(0,34);const paused=b.age===before,rng=s.rng.state;a.tick(1000);s.drawScene();
+      return {paused,rng,visible:a.bonePool.filter(v=>v.visible).length};
+    });
+    assert(paused.paused);assert.equal(paused.rng,explosion.rng,'Visual fragment motion consumes no gameplay randomness');assert.equal(paused.visible,0,'Bone pieces expire and return to their fixed pool');
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.powerArt.reset();s.takeDamage(1,'rock');});
+    for(let i=0;i<16;i++){await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.powerArt.tick(45);s.drawScene();});await page.waitForTimeout(90);}
     await setup('attack');
     await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0];for(const id of window.GRIM_POWER_ART.ORDER)s.powerManager.levels[id]=4;
@@ -98,19 +133,22 @@ const server=http.createServer((req,res)=>{
       'Only the open chest edit is overlaid; the original shrine keeps its clean transparent edges');
     // Freeze the scene timer while recording selected phases; manually advance
     // the same rendered time so screenshots have reproducible acquisition poses.
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._powerUpdate=s.update;s.update=function(){};});
-    for(let i=0;i<=30;i++){
-      await page.evaluate(i=>{
-        const s=window.grimRun.scene.scenes[0];s.chestMs=6000-i*190;s.drawScene();window.grimRun.step(performance.now(),0);
-      },i);
-      if(i===4||i===13||i===21)await page.screenshot({path:path.join(dir,'shrine-'+i+'-phone.png')});
-      await page.waitForTimeout(100);
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._powerUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};});
+    const relicFrames=new Set();
+    for(let i=0;i<120;i++){
+      const sample=await page.evaluate(i=>{
+        const s=window.grimRun.scene.scenes[0];s.chestMs=6000-i*50;s.drawScene();window.grimRun.step(performance.now(),0);
+        return {frame:s.powerArt.cinemaReaper.frame.name,chestMs:s.chestMs};
+      },i);assert.equal(sample.chestMs,6000-i*50,'Phaser fixture clock stays at the requested phase');relicFrames.add(Number(sample.frame));
+      if([10,32,68,103].includes(i))await page.screenshot({path:path.join(dir,'revision-shrine-'+i+'.png')});
+      await page.waitForTimeout(25);
     }
+    assert.equal(relicFrames.size,24,'Actual renderer uses all 24 acquisition poses');
     const exit=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0];const x=s.player.x,hp=s.player.hp,coins=s.coinCount;
       s.finishChest();const granted=s.gunUnlocked;
       s.state='playing';s.player.x=s.startX+5000*12;s.enterUnderworld();const portalGun=s.gunUnlocked;
-      s.finishPortal();s.update=s._powerUpdate;
+      s.finishPortal();s.sys.sceneUpdate=s._powerUpdate;
       return {granted,portalGun,state:s.state,unchanged:hp===s.player.hp&&coins===s.coinCount};
     });
     assert(exit.granted&&exit.portalGun&&exit.unchanged);assert.equal(exit.state,'playing');

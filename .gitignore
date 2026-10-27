@@ -1,2 +1,4 @@
 test-results/
 node_modules/
+
+/assets/powers/revision-v2/*.tmp

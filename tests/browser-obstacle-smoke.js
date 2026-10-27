@@ -67,7 +67,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,96,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.15.0 · WINGS, POWERS & SUMMIT RELIC','visible version badge matches the current art release');
+    assert.equal(loaded.badge,'v0.15.1 · CLOAK WINGS & LIVING THORNS','visible version badge matches the current art release');
     assert.deepEqual(loaded.missing,[],'all 96 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,152,'all 24 upper paintings and 32 unique supports load');
@@ -105,9 +105,9 @@ const server=http.createServer((req,res)=>{
         const expected=placement?{width:placement.width,height:placement.height}:
           type==='tuckGate'?{width:skin.biome==='ashlands'?196:176,height:400}:
           type==='airBramble'?{width:148,height:218}:
-          type==='snappingBramble'?{width:o.width,height:o.height}:
+          type==='snappingBramble'?{width:256*.32,height:320*.32}:
           {width:o.width*scale.x,height:o.height*scale.y};
-        if(!ok||!image||image.texture.key!==skin.key||
+        if(!ok||!image||image.texture.key!==(type==='snappingBramble'?'revision-plant':skin.key)||
           Math.abs(image?.displayWidth-expected.width)>.001||
           Math.abs(image?.displayHeight-expected.height)>.001){
           renderMisses++;renderFailures.push({id:skin.id,expected,actual:image&&

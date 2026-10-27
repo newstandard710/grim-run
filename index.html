@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.15.0</title>
+  <title>GRIM RUN — v0.15.1</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -241,7 +241,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.15.0 · WINGS, POWERS & SUMMIT RELIC</div>
+      <div class="mini">v0.15.1 · CLOAK WINGS & LIVING THORNS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -344,7 +344,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.15.0',
+  version: '0.15.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1426,7 +1426,8 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.14.7-slide-support"></script>
-  <script src="assets/visuals/power-animations.js?v=0.15.0"></script>
+  <script src="assets/visuals/power-animations.js?v=0.15.1"></script>
+  <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1515,7 +1516,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
         this.load.image(skin.key,skin.src+'?v=0.14.5-forest-obstacles');
         if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.5-forest-obstacles');
-        if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.14.9-air-support');
+        if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.15.1-curved-support');
       }
     }
     create() {
@@ -3466,6 +3467,13 @@ window.GRIM_CONFIG = Object.freeze({
       const tint=(Math.round(red/total)<<16)|(Math.round(green/total)<<8)|Math.round(blue/total);
       return {tint,opacity:opacity/total};
     }
+    groundFogSurfaceAt(x){
+      const ground=this.terrain.groundAt(x);
+      if(Number.isFinite(ground))return ground;
+      const gap=this.terrain.visibleSections(x,x).find(s=>s.kind==='gap'&&x>=s.start&&x<=s.end);
+      if(!gap||!Number.isFinite(gap.y0)||!Number.isFinite(gap.y1))return null;
+      return gap.y0+(gap.y1-gap.y0)*clamp((x-gap.start)/(gap.end-gap.start),0,1);
+    }
     drawGroundFog(){
       const views=this.groundFogViews,mask=this.groundFogMaskGraphics;
       if(!views||!mask||!this.groundFogMask||!this.add?.image||
@@ -3475,11 +3483,10 @@ window.GRIM_CONFIG = Object.freeze({
       }
       const left=this.cameraX-400,right=this.cameraX+this.width+400;
       mask.clear();mask.fillStyle(0xffffff,1);
-      // One world-space mask follows solid terrain and ends at each real gap.
-      // The art does not add a surface or change any terrain geometry.
-      const solidSections=this.terrain.visibleSections(left,right)
-        .filter(section=>section.kind!=='gap');
-      for(const section of solidSections){
+      // Fog follows a virtual surface across gaps. Only this atmosphere layer
+      // interpolates the lips; groundAt and all abyss/collision rules stay open.
+      const fogSections=this.terrain.visibleSections(left,right);
+      for(const section of fogSections){
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
         const y0=Number.isFinite(section.y0)?section.y0:section.y;
@@ -3504,7 +3511,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(!this.textures?.exists?.(key))continue;
         const spread=this.groundFogHash(index,91)%105-52;
         const x=(index+.5)*GROUND_FOG_STRIDE+spread;
-        const ground=this.terrain.groundAt(x);
+        const ground=this.groundFogSurfaceAt(x);
         if(!Number.isFinite(ground))continue;
         const width=350+this.groundFogHash(index,131)%180;
         const height=139+this.groundFogHash(index,167)%21;
@@ -3524,12 +3531,12 @@ window.GRIM_CONFIG = Object.freeze({
         active.add(index);
         placedCenters.push(x);
       }
-      // Short ledges and split ground can fall between the world-spaced banks.
-      // Give a substantial solid section one localized wisp if it has none.
-      for(const section of solidSections){
+      // Short ledges and gaps can fall between the world-spaced banks.
+      // Give either kind of section a localized wisp if it has none.
+      for(const section of fogSections){
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to-from<110||placedCenters.some(x=>x>=from&&x<=to))continue;
-        const x=(from+to)/2,ground=this.terrain.groundAt(x);
+        const x=(from+to)/2,ground=this.groundFogSurfaceAt(x);
         if(!Number.isFinite(ground))continue;
         const seed=Math.round(section.start*10);
         const key=GROUND_FOG_KEYS[this.groundFogHash(seed,313)%GROUND_FOG_KEYS.length];
@@ -4620,10 +4627,12 @@ window.GRIM_CONFIG = Object.freeze({
     drawObstacleSprite(o,placement=null){
       const skin=this.obstacleSkinFor(o);
       if(!skin||!this.textures?.exists?.(skin.key)||!this.add?.image)return false;
+      const plant=o.type==='snappingBramble'&&this.textures.exists('revision-plant');
+      const textureKey=plant?'revision-plant':skin.key;
       let image=this.obstacleSpriteObjects.get(o);
-      if(image&&image.texture?.key!==skin.key){image.destroy();this.obstacleSpriteObjects.delete(o);image=null;}
+      if(image&&image.texture?.key!==textureKey){image.destroy();this.obstacleSpriteObjects.delete(o);image=null;}
       if(!image){
-        image=this.add.image(0,0,skin.key).setOrigin(.5).setDepth(16);
+        image=this.add.image(0,0,textureKey).setOrigin(.5).setDepth(16);
         this.obstacleSpriteObjects.set(o,image);
       }
       let x,y,width,height,originY=.5,rotation=0;
@@ -4644,7 +4653,12 @@ window.GRIM_CONFIG = Object.freeze({
         x=o.x+o.width/2;y=o.y+o.height/2;
       }else if(o.type==='snappingBramble'){
         const b=this.snappingBox(o);
-        width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2+this.obstacleVisualInset(o);
+        if(plant){
+          const phase=((this.elapsed*5.1+o.variant*1.7+Math.PI/2)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+          image.setFrame(Math.round(phase/(Math.PI*2)*8)%8);
+          width=256*.32;height=320*.32;x=o.x+o.width/2;
+          y=this.terrain.anchorAt(o.x)+this.obstacleVisualInset(o);originY=300/320;
+        }else{width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2+this.obstacleVisualInset(o);}
       }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
         width=o.width*scale.x;height=o.height*scale.y;
@@ -4931,7 +4945,7 @@ window.GRIM_CONFIG = Object.freeze({
             }
           }
         }
-        if(!p.grounded&&this.powerManager.level('skeletalWings')>0){
+        if(!this.powerArt?.wingsReady&&!p.grounded&&this.powerManager.level('skeletalWings')>0){
           const total=this.powerManager.skeletalHoverMs();
           const ratio=Math.max(0,Math.min(1,p.hoverBudgetMs/Math.max(total,1)));
           g.fillStyle(0x0d1424,.78);g.fillRoundedRect(x-32,feet-153,64,7,3);

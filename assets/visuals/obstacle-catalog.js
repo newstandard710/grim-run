@@ -1154,7 +1154,7 @@
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/foothills/foothills_air-bramble_windblown-root-tangle.png",
     "key": "obstacle-foothills_air-bramble_windblown-root-tangle",
-    "supportSrc": "assets/obstacles/air-bramble-support/foothills/foothills_windblown-root-tangle-support.webp",
+    "supportSrc": "assets/obstacles/air-bramble-support-v2/foothills/foothills-curved-support.png",
     "supportKey": "obstacle-support-foothills_windblown-root-tangle"
   },
   {
@@ -1167,7 +1167,7 @@
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/crystals/crystals_air-bramble_floating-prism-briar.png",
     "key": "obstacle-crystals_air-bramble_floating-prism-briar",
-    "supportSrc": "assets/obstacles/air-bramble-support/crystals/crystals_floating-prism-briar-support.webp",
+    "supportSrc": "assets/obstacles/air-bramble-support-v2/crystals/crystals-curved-support.png",
     "supportKey": "obstacle-support-crystals_floating-prism-briar"
   },
   {
@@ -1180,7 +1180,7 @@
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/lava/lava_air-bramble_ember-air-briar.png",
     "key": "obstacle-lava_air-bramble_ember-air-briar",
-    "supportSrc": "assets/obstacles/air-bramble-support/lava/lava_ember-air-briar-support.webp",
+    "supportSrc": "assets/obstacles/air-bramble-support-v2/lava/lava-curved-support.png",
     "supportKey": "obstacle-support-lava_ember-air-briar"
   },
   {
@@ -1193,7 +1193,7 @@
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/tundra/tundra_air-bramble_frostthorn-knot.png",
     "key": "obstacle-tundra_air-bramble_frostthorn-knot",
-    "supportSrc": "assets/obstacles/air-bramble-support/tundra/tundra_frostthorn-knot-support.webp",
+    "supportSrc": "assets/obstacles/air-bramble-support-v2/tundra/tundra-curved-support.png",
     "supportKey": "obstacle-support-tundra_frostthorn-knot"
   },
   {
@@ -1206,7 +1206,7 @@
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/caves/caves_air-bramble_cavern-root-knot.png",
     "key": "obstacle-caves_air-bramble_cavern-root-knot",
-    "supportSrc": "assets/obstacles/air-bramble-support/caves/caves_cavern-root-knot-support.webp",
+    "supportSrc": "assets/obstacles/air-bramble-support-v2/caves/caves-curved-support.png",
     "supportKey": "obstacle-support-caves_cavern-root-knot"
   },
   {
@@ -1219,7 +1219,7 @@
     "gameH": 143,
     "src": "assets/obstacles/air-bramble/ashlands/ashlands_air-bramble_charred-thorn-knot.png",
     "key": "obstacle-ashlands_air-bramble_charred-thorn-knot",
-    "supportSrc": "assets/obstacles/air-bramble-support/ashlands/ashlands_charred-thorn-knot-support.webp",
+    "supportSrc": "assets/obstacles/air-bramble-support-v2/ashlands/ashlands-curved-support.png",
     "supportKey": "obstacle-support-ashlands_charred-thorn-knot"
   },
   {
