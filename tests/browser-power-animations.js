@@ -132,13 +132,13 @@ const server=http.createServer((req,res)=>{
       'Only the open chest edit is overlaid; the original shrine keeps its clean transparent edges');
     // Freeze the scene timer while recording selected phases; manually advance
     // the same rendered time so screenshots have reproducible acquisition poses.
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._powerUpdate=s.update;s.update=function(){};});
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._powerUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};});
     const relicFrames=new Set();
     for(let i=0;i<120;i++){
-      const frame=await page.evaluate(i=>{
+      const sample=await page.evaluate(i=>{
         const s=window.grimRun.scene.scenes[0];s.chestMs=6000-i*50;s.drawScene();window.grimRun.step(performance.now(),0);
-        return s.powerArt.cinemaReaper.frame.name;
-      },i);relicFrames.add(Number(frame));
+        return {frame:s.powerArt.cinemaReaper.frame.name,chestMs:s.chestMs};
+      },i);assert.equal(sample.chestMs,6000-i*50,'Phaser fixture clock stays at the requested phase');relicFrames.add(Number(sample.frame));
       if([10,32,68,103].includes(i))await page.screenshot({path:path.join(dir,'revision-shrine-'+i+'.png')});
       await page.waitForTimeout(25);
     }
@@ -147,7 +147,7 @@ const server=http.createServer((req,res)=>{
       const s=window.grimRun.scene.scenes[0];const x=s.player.x,hp=s.player.hp,coins=s.coinCount;
       s.finishChest();const granted=s.gunUnlocked;
       s.state='playing';s.player.x=s.startX+5000*12;s.enterUnderworld();const portalGun=s.gunUnlocked;
-      s.finishPortal();s.update=s._powerUpdate;
+      s.finishPortal();s.sys.sceneUpdate=s._powerUpdate;
       return {granted,portalGun,state:s.state,unchanged:hp===s.player.hp&&coins===s.coinCount};
     });
     assert(exit.granted&&exit.portalGun&&exit.unchanged);assert.equal(exit.state,'playing');
