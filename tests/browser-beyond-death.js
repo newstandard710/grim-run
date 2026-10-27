@@ -24,6 +24,15 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    await page.getByRole('button',{name:'Purchase DEATH DENIED level 1 for 15 Souls',exact:true}).click();
    await page.getByRole('button',{name:'Purchase GRAVE WEALTH level 2 for 10 Souls',exact:true}).click();
    assert.equal(await page.locator('#reliquary-souls').innerText(),'70');await page.locator('#reliquary-title').scrollIntoViewIfNeeded();await shot('reliquary');
+   const scrollBox=await page.locator('.meta-modal').evaluate(e=>{const r=e.getBoundingClientRect();return {x:r.x+28,y:r.bottom-70,needed:e.scrollHeight>e.clientHeight+10};});
+   if(scrollBox.needed){
+    await page.locator('.meta-modal').evaluate(e=>e.scrollTop=0);
+    const touch=await context.newCDPSession(page);
+    await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:scrollBox.x,y:scrollBox.y,id:0}]});
+    for(let i=1;i<=8;i++){await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:scrollBox.x,y:scrollBox.y-i*12,id:0}]});await page.waitForTimeout(20);}
+    await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(120);
+    assert(await page.locator('.meta-modal').evaluate(e=>e.scrollTop>10),label+' Reliquary supports a real finger swipe');await shot('reliquary-scrolled');
+   }
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false,'No horizontal document overflow');
    const textClips=await page.locator('.meta-card').evaluateAll(cards=>cards.flatMap(c=>[...c.querySelectorAll('.meta-title,.meta-desc,.meta-price')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.textContent)));
    assert.deepEqual(textClips,[],label+' upgrade text fits its cards');

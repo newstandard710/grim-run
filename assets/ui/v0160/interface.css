@@ -2,7 +2,8 @@
 @font-face{font-family:Cinzel;src:url('fonts/cinzel.ttf') format('truetype');font-weight:400 900;font-display:swap}
 @font-face{font-family:'Source Sans 3';src:url('fonts/source-sans-3.ttf') format('truetype');font-weight:200 900;font-display:swap}
 :root{--ivory:#f0e5ce;--muted:#c0baae;--bronze:#ae8655;--cyan:#a9ddd5;--stone:url('reliquary-stone.webp');--heading:Cinzel,Georgia,serif;--body:'Source Sans 3',sans-serif;--action-size:calc(clamp(70px,21vh,91px)*1.15);--control-gap:calc(26px*1.15);--right-bottom:max(env(safe-area-inset-bottom),19.55px);--edge-left:max(env(safe-area-inset-left),21px);--edge-right:max(env(safe-area-inset-right),21.85px)}
-html,body{background:#080d15;color:var(--ivory);font-family:var(--body)}
+html,body{background:#080d15;color:var(--ivory);font-family:var(--body);touch-action:manipulation}
+.modal-wrap,.modal{touch-action:pan-y;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
 button,input{font-family:inherit}button{touch-action:manipulation}button:focus-visible,input:focus-visible{outline:2px solid #f5e4ba;outline-offset:4px}button:disabled{cursor:default}
 h1,h2,.eyebrow,.primary,.secondary,.meta-title,.reward-name,.reward-action,.veil-enter,.game-wordmark,.countdown-caption,.chest-title,.chest-eyebrow,.portal-title,#vendor-intro-title{font-family:var(--heading);font-weight:650}
 h1{font-size:clamp(40px,11vh,76px);letter-spacing:.045em;color:var(--ivory);text-shadow:0 3px 2px #000,0 0 28px #d6c48a22}h1 em{color:#cfac73}

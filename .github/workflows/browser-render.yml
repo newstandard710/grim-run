@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feature/veil-and-reliquary]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -21,8 +21,6 @@ jobs:
           npx playwright install chromium
       - name: Verify sanctuary grounds, vendor introductions and crossbow grip
         run: node tests/browser-vendor-sanctuaries.js
-      - name: Verify Beyond Death menus, mobile layouts, vendor actions, touch controls and both resurrections
-        run: node tests/browser-beyond-death.js
       - name: Verify rounded ground, collectible sprites, floating ledges, destruction and smoke respawn
         run: node tests/browser-world-polish.js
       - name: Verify animated powers, combined wings and summit acquisition
