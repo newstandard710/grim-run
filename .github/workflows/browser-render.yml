@@ -19,6 +19,8 @@ jobs:
         run: |
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
+      - name: Verify animated powers, combined wings and summit acquisition
+        run: node tests/browser-power-animations.js
       - name: Verify gameplay and obstacle textures in actual Chromium Phaser
         run: node tests/browser-visual-smoke.js
       - name: Verify biome obstacle sprite loading and phone-scale rendering
@@ -27,8 +29,6 @@ jobs:
         run: node tests/browser-air-combos.js
       - name: Verify ground fog and vendor sprites across all biomes
         run: node tests/browser-ground-fog-vendors.js
-      - name: Verify animated powers, combined wings and summit acquisition
-        run: node tests/browser-power-animations.js
       - name: Save mobile-size render evidence
         if: always()
         uses: actions/upload-artifact@v4
