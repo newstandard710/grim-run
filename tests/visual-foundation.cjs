@@ -7,7 +7,7 @@ const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
 assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.17.0"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.18.0"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('ABYSS_BACKDROP_FILES')&&
  html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog')"),
@@ -298,6 +298,10 @@ assert.equal(staticRenderer.illustratedReaperPose(),'run');
 staticScene.player.sliding=true;assert.equal(staticRenderer.illustratedReaperPose(),'slide');
 staticScene.player.sliding=false;staticScene.player.grounded=false;staticScene.player.velocityY=80;
 assert.equal(staticRenderer.illustratedReaperPose(),'fall');
+staticScene.combatArt={ready:{'bat-flight':true}};
+staticScene.enemies=[{kind:'bat',x:450,y:120,mode:'glide',hp:2,phase:0,dead:false}];
+staticRenderer.renderIllustrated();
+assert.equal(staticRenderer.batPool[0].visible,true,'The explicit illustrated fallback keeps its bats when the default combat atlas is loaded');
 staticRenderer.shutdown();
 
 const skeletalEnemy={kind:'skeletalBat',x:450,y:120,mode:'glide',hp:2,phase:0,dead:false};

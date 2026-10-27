@@ -1,0 +1,1455 @@
+{
+  "version": "0.18.0",
+  "sources": {
+    "reaper-cut-body.png": {
+      "bytes": 2654803,
+      "sha256": "e85157c35a8bd873a1b657c5a1b9d87b8bd32146e82548c06d15812437d13690",
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    "reaper-jump.png": {
+      "bytes": 2720513,
+      "sha256": "44210c83c598b16b73dde207c14309e775402e4618f6e643f2f0d1a0339bd3df",
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    "reaper-run-contact-correction.png": {
+      "bytes": 1199202,
+      "sha256": "25114e22742031de4801d7f5ef257049060ad960e49f5eb0ace17e25e86e2ca6",
+      "size": [
+        1355,
+        1161
+      ]
+    },
+    "reaper-run.png": {
+      "bytes": 2659599,
+      "sha256": "aea3f03d35e2c038b5a34f3011a440a2c601684c7db986c7b1f65c0014d49b49",
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    "scythe.png": {
+      "bytes": 455315,
+      "sha256": "5c2593631c9873b84f6f54d6a47c66a79059864e6973f58041b6808d5d1dcd54",
+      "size": [
+        1254,
+        1254
+      ]
+    }
+  },
+  "runtime": {
+    "reaper-cut-body.png": {
+      "bytes": 2097240,
+      "sha256": "f9ac5c84d165d956d19ca60cbe944af45167dcb838e261cbff5be263f6d3d46c",
+      "size": [
+        1920,
+        1280
+      ]
+    },
+    "reaper-jump.png": {
+      "bytes": 2202186,
+      "sha256": "7ec3f54220a86c320fb8950e90ea95140e69c9a4e5eaa1d103851e0ef7d13b70",
+      "size": [
+        1920,
+        1280
+      ]
+    },
+    "reaper-run.png": {
+      "bytes": 2111751,
+      "sha256": "e564ea5dbe0bd838c4cf26ba7b5cbc05423030f31cb324b6e80dbd2785508799",
+      "size": [
+        1920,
+        1280
+      ]
+    },
+    "scythe.png": {
+      "bytes": 53856,
+      "sha256": "34890226d0ef7b3d14fb64ce11baea83f67ebf9711f472cb9c115e888d6c84b0",
+      "size": [
+        384,
+        384
+      ]
+    }
+  },
+  "registration": {
+    "reaper-run": [
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          0,
+          256,
+          256
+        ],
+        "sourceEye": [
+          214.0,
+          117.0
+        ],
+        "foot": 247,
+        "position": [
+          -9,
+          33
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          0,
+          512,
+          256
+        ],
+        "sourceEye": [
+          206.0,
+          117.0
+        ],
+        "foot": 247,
+        "position": [
+          -1,
+          33
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          0,
+          768,
+          256
+        ],
+        "sourceEye": [
+          198.5,
+          116.5
+        ],
+        "foot": 247,
+        "position": [
+          6,
+          33
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          0,
+          1024,
+          256
+        ],
+        "sourceEye": [
+          197.0,
+          118.0
+        ],
+        "foot": 247,
+        "position": [
+          8,
+          33
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          0,
+          1280,
+          256
+        ],
+        "sourceEye": [
+          209.0,
+          116.0
+        ],
+        "foot": 247,
+        "position": [
+          -4,
+          33
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          0,
+          1536,
+          256
+        ],
+        "sourceEye": [
+          217.0,
+          117.0
+        ],
+        "foot": 248,
+        "position": [
+          -12,
+          32
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          256,
+          256,
+          512
+        ],
+        "sourceEye": [
+          219.0,
+          109.0
+        ],
+        "foot": 239,
+        "position": [
+          -14,
+          41
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          256,
+          512,
+          512
+        ],
+        "sourceEye": [
+          216.5,
+          106.0
+        ],
+        "foot": 239,
+        "position": [
+          -12,
+          41
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          256,
+          768,
+          512
+        ],
+        "sourceEye": [
+          220.0,
+          104.0
+        ],
+        "foot": 233.03108891324553,
+        "position": [
+          -15,
+          47
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          256,
+          1024,
+          512
+        ],
+        "sourceEye": [
+          220.0,
+          105.0
+        ],
+        "foot": 234.5,
+        "position": [
+          -15,
+          46
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          256,
+          1280,
+          512
+        ],
+        "sourceEye": [
+          223.0,
+          106.0
+        ],
+        "foot": 238,
+        "position": [
+          -18,
+          42
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          256,
+          1536,
+          512
+        ],
+        "sourceEye": [
+          219.0,
+          104.0
+        ],
+        "foot": 239,
+        "position": [
+          -14,
+          41
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          512,
+          256,
+          768
+        ],
+        "sourceEye": [
+          215.0,
+          103.0
+        ],
+        "foot": 234,
+        "position": [
+          -10,
+          46
+        ]
+      },
+      {
+        "sourceFile": "reaper-run-contact-correction.png",
+        "sourceScale": 0.20257234726688103,
+        "sourceBox": [
+          0,
+          0,
+          1355,
+          1161
+        ],
+        "sourceEye": [
+          213.0,
+          96.5
+        ],
+        "foot": 223,
+        "position": [
+          -8,
+          57
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          512,
+          768,
+          768
+        ],
+        "sourceEye": [
+          212.0,
+          106.0
+        ],
+        "foot": 235,
+        "position": [
+          -7,
+          45
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          512,
+          1024,
+          768
+        ],
+        "sourceEye": [
+          215.0,
+          104.0
+        ],
+        "foot": 237,
+        "position": [
+          -10,
+          43
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          512,
+          1280,
+          768
+        ],
+        "sourceEye": [
+          214.5,
+          107.5
+        ],
+        "foot": 234,
+        "position": [
+          -10,
+          46
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          512,
+          1536,
+          768
+        ],
+        "sourceEye": [
+          216.0,
+          106.0
+        ],
+        "foot": 236,
+        "position": [
+          -11,
+          44
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          768,
+          256,
+          1024
+        ],
+        "sourceEye": [
+          220.0,
+          92.5
+        ],
+        "foot": 224,
+        "position": [
+          -15,
+          56
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          768,
+          512,
+          1024
+        ],
+        "sourceEye": [
+          220.0,
+          92.0
+        ],
+        "foot": 224,
+        "position": [
+          -15,
+          56
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          768,
+          768,
+          1024
+        ],
+        "sourceEye": [
+          224.0,
+          95.0
+        ],
+        "foot": 224.03108891324553,
+        "position": [
+          -19,
+          56
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          768,
+          1024,
+          1024
+        ],
+        "sourceEye": [
+          226.0,
+          95.0
+        ],
+        "foot": 224.5,
+        "position": [
+          -21,
+          56
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          768,
+          1280,
+          1024
+        ],
+        "sourceEye": [
+          221.0,
+          94.0
+        ],
+        "foot": 225,
+        "position": [
+          -16,
+          55
+        ]
+      },
+      {
+        "sourceFile": "reaper-run.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          768,
+          1536,
+          1024
+        ],
+        "sourceEye": [
+          218.0,
+          94.0
+        ],
+        "foot": 224,
+        "position": [
+          -13,
+          56
+        ]
+      }
+    ],
+    "reaper-jump": [
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          0,
+          256,
+          256
+        ],
+        "sourceEye": [
+          222.5,
+          120.0
+        ],
+        "foot": 246.0,
+        "position": [
+          -18,
+          34
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          0,
+          512,
+          256
+        ],
+        "sourceEye": [
+          213.0,
+          125.0
+        ],
+        "foot": 251.0,
+        "position": [
+          -8,
+          29
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          0,
+          768,
+          256
+        ],
+        "sourceEye": [
+          205.5,
+          113.0
+        ],
+        "foot": 239.0,
+        "position": [
+          0,
+          41
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          0,
+          1024,
+          256
+        ],
+        "sourceEye": [
+          215.0,
+          107.0
+        ],
+        "foot": 233.0,
+        "position": [
+          -10,
+          47
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          0,
+          1280,
+          256
+        ],
+        "sourceEye": [
+          222.0,
+          110.0
+        ],
+        "foot": 236.0,
+        "position": [
+          -17,
+          44
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          0,
+          1536,
+          256
+        ],
+        "sourceEye": [
+          210.5,
+          109.0
+        ],
+        "foot": 235.0,
+        "position": [
+          -6,
+          45
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          256,
+          256,
+          512
+        ],
+        "sourceEye": [
+          218.5,
+          97.0
+        ],
+        "foot": 223.0,
+        "position": [
+          -14,
+          57
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          256,
+          512,
+          512
+        ],
+        "sourceEye": [
+          209.0,
+          96.5
+        ],
+        "foot": 222.5,
+        "position": [
+          -4,
+          58
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          256,
+          768,
+          512
+        ],
+        "sourceEye": [
+          210.0,
+          104.0
+        ],
+        "foot": 230.0,
+        "position": [
+          -5,
+          50
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          256,
+          1024,
+          512
+        ],
+        "sourceEye": [
+          212.0,
+          105.0
+        ],
+        "foot": 231.0,
+        "position": [
+          -7,
+          49
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          256,
+          1280,
+          512
+        ],
+        "sourceEye": [
+          217.0,
+          100.0
+        ],
+        "foot": 226.0,
+        "position": [
+          -12,
+          54
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          256,
+          1536,
+          512
+        ],
+        "sourceEye": [
+          208.0,
+          106.0
+        ],
+        "foot": 232.0,
+        "position": [
+          -3,
+          48
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          512,
+          256,
+          768
+        ],
+        "sourceEye": [
+          209.0,
+          106.5
+        ],
+        "foot": 232.5,
+        "position": [
+          -4,
+          48
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          512,
+          512,
+          768
+        ],
+        "sourceEye": [
+          218.0,
+          108.0
+        ],
+        "foot": 234.0,
+        "position": [
+          -13,
+          46
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          512,
+          768,
+          768
+        ],
+        "sourceEye": [
+          210.0,
+          108.0
+        ],
+        "foot": 234.0,
+        "position": [
+          -5,
+          46
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          512,
+          1024,
+          768
+        ],
+        "sourceEye": [
+          208.0,
+          107.0
+        ],
+        "foot": 233.0,
+        "position": [
+          -3,
+          47
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          512,
+          1280,
+          768
+        ],
+        "sourceEye": [
+          213.0,
+          108.0
+        ],
+        "foot": 234.0,
+        "position": [
+          -8,
+          46
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          512,
+          1536,
+          768
+        ],
+        "sourceEye": [
+          220.0,
+          113.0
+        ],
+        "foot": 239.0,
+        "position": [
+          -15,
+          41
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          768,
+          256,
+          1024
+        ],
+        "sourceEye": [
+          206.0,
+          101.0
+        ],
+        "foot": 240,
+        "position": [
+          -1,
+          40
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          768,
+          512,
+          1024
+        ],
+        "sourceEye": [
+          218.0,
+          110.0
+        ],
+        "foot": 239,
+        "position": [
+          -13,
+          41
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          768,
+          768,
+          1024
+        ],
+        "sourceEye": [
+          215.5,
+          138.0
+        ],
+        "foot": 238,
+        "position": [
+          -10,
+          42
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          768,
+          1024,
+          1024
+        ],
+        "sourceEye": [
+          207.0,
+          103.5
+        ],
+        "foot": 241,
+        "position": [
+          -2,
+          39
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          768,
+          1280,
+          1024
+        ],
+        "sourceEye": [
+          210.0,
+          106.0
+        ],
+        "foot": 241,
+        "position": [
+          -5,
+          39
+        ]
+      },
+      {
+        "sourceFile": "reaper-jump.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          768,
+          1536,
+          1024
+        ],
+        "sourceEye": [
+          215.0,
+          103.5
+        ],
+        "foot": 240,
+        "position": [
+          -10,
+          40
+        ]
+      }
+    ],
+    "reaper-cut-body": [
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          0,
+          256,
+          256
+        ],
+        "sourceEye": [
+          205.0,
+          82.0
+        ],
+        "foot": 255,
+        "position": [
+          0,
+          25
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          0,
+          512,
+          256
+        ],
+        "sourceEye": [
+          202.0,
+          75.0
+        ],
+        "foot": 256,
+        "position": [
+          3,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          0,
+          768,
+          256
+        ],
+        "sourceEye": [
+          184.0,
+          72.0
+        ],
+        "foot": 256,
+        "position": [
+          21,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          0,
+          1024,
+          256
+        ],
+        "sourceEye": [
+          190.0,
+          70.0
+        ],
+        "foot": 256,
+        "position": [
+          15,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          0,
+          1280,
+          256
+        ],
+        "sourceEye": [
+          203.5,
+          82.0
+        ],
+        "foot": 256,
+        "position": [
+          2,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          0,
+          1536,
+          256
+        ],
+        "sourceEye": [
+          197.0,
+          85.0
+        ],
+        "foot": 256,
+        "position": [
+          8,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          256,
+          256,
+          512
+        ],
+        "sourceEye": [
+          207.0,
+          59.5
+        ],
+        "foot": 256,
+        "position": [
+          -2,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          256,
+          512,
+          512
+        ],
+        "sourceEye": [
+          200.0,
+          75.5
+        ],
+        "foot": 256,
+        "position": [
+          5,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          256,
+          768,
+          512
+        ],
+        "sourceEye": [
+          199.0,
+          82.0
+        ],
+        "foot": 256,
+        "position": [
+          6,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          256,
+          1024,
+          512
+        ],
+        "sourceEye": [
+          203.0,
+          85.0
+        ],
+        "foot": 256,
+        "position": [
+          2,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          256,
+          1280,
+          512
+        ],
+        "sourceEye": [
+          193.0,
+          92.5
+        ],
+        "foot": 256,
+        "position": [
+          12,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          256,
+          1536,
+          512
+        ],
+        "sourceEye": [
+          182.0,
+          96.5
+        ],
+        "foot": 256,
+        "position": [
+          23,
+          24
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          512,
+          256,
+          768
+        ],
+        "sourceEye": [
+          197.0,
+          69.0
+        ],
+        "foot": 230,
+        "position": [
+          8,
+          50
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          512,
+          512,
+          768
+        ],
+        "sourceEye": [
+          192.0,
+          82.0
+        ],
+        "foot": 232,
+        "position": [
+          13,
+          48
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          512,
+          768,
+          768
+        ],
+        "sourceEye": [
+          185.5,
+          94.5
+        ],
+        "foot": 233,
+        "position": [
+          20,
+          47
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          512,
+          1024,
+          768
+        ],
+        "sourceEye": [
+          182.0,
+          103.0
+        ],
+        "foot": 236,
+        "position": [
+          23,
+          44
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          512,
+          1280,
+          768
+        ],
+        "sourceEye": [
+          188.0,
+          94.0
+        ],
+        "foot": 236,
+        "position": [
+          17,
+          44
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          512,
+          1536,
+          768
+        ],
+        "sourceEye": [
+          190.0,
+          91.0
+        ],
+        "foot": 237,
+        "position": [
+          15,
+          43
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          0,
+          768,
+          256,
+          1024
+        ],
+        "sourceEye": [
+          210.0,
+          51.0
+        ],
+        "foot": 229,
+        "position": [
+          -5,
+          51
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          256,
+          768,
+          512,
+          1024
+        ],
+        "sourceEye": [
+          205.0,
+          50.0
+        ],
+        "foot": 229,
+        "position": [
+          0,
+          51
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          512,
+          768,
+          768,
+          1024
+        ],
+        "sourceEye": [
+          198.0,
+          46.0
+        ],
+        "foot": 230,
+        "position": [
+          7,
+          50
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          768,
+          768,
+          1024,
+          1024
+        ],
+        "sourceEye": [
+          182.0,
+          41.0
+        ],
+        "foot": 230,
+        "position": [
+          23,
+          50
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1024,
+          768,
+          1280,
+          1024
+        ],
+        "sourceEye": [
+          189.0,
+          46.0
+        ],
+        "foot": 231,
+        "position": [
+          16,
+          49
+        ]
+      },
+      {
+        "sourceFile": "reaper-cut-body.png",
+        "sourceScale": 1,
+        "sourceBox": [
+          1280,
+          768,
+          1536,
+          1024
+        ],
+        "sourceEye": [
+          193.0,
+          51.0
+        ],
+        "foot": 231,
+        "position": [
+          12,
+          49
+        ]
+      }
+    ]
+  }
+}

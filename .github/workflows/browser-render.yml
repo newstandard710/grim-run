@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  real-browser-sprite-smoke:
+  browser-checks:
+    name: Chromium — ${{ matrix.group }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [movement, powers, world]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,30 +25,44 @@ jobs:
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
       - name: Verify combat animation, persistent vendors and enlarged pickups
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-combat-polish.js
+      - name: Verify fluid movement, blade sweep, phone rendering and CPU frame budget
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
+        run: node tests/browser-motion-performance.js
       - name: Verify sanctuary grounds, vendor introductions and crossbow grip
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-vendor-sanctuaries.js
       - name: Verify rounded ground, collectible sprites, floating ledges, destruction and smoke respawn
+        if: ${{ !cancelled() && matrix.group == 'powers' }}
         run: node tests/browser-world-polish.js
       - name: Verify animated powers, combined wings and summit acquisition
+        if: ${{ !cancelled() && matrix.group == 'powers' }}
         run: node tests/browser-power-animations.js
       - name: Verify rooted carnivorous plants, curved supports and continuous fog
+        if: ${{ !cancelled() && matrix.group == 'powers' }}
         run: node tests/browser-visual-revision.js
       - name: Verify gameplay and obstacle textures in actual Chromium Phaser
+        if: ${{ !cancelled() && matrix.group == 'world' }}
         run: node tests/browser-visual-smoke.js
       - name: Verify biome obstacle sprite loading and phone-scale rendering
+        if: ${{ !cancelled() && matrix.group == 'world' }}
         run: node tests/browser-obstacle-smoke.js
       - name: Verify and capture jump-plus-tuck and jump-plus-attack encounters
+        if: ${{ !cancelled() && matrix.group == 'world' }}
         run: node tests/browser-air-combos.js
       - name: Verify ground fog and vendor sprites across all biomes
+        if: ${{ !cancelled() && matrix.group == 'world' }}
         run: node tests/browser-ground-fog-vendors.js
       - name: Save mobile-size render evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: grim-run-mobile-renders
+          name: grim-run-mobile-renders-${{ matrix.group }}
           path: |
             test-results/*.png
+            test-results/motion-performance.json
+            test-results/motion-animation-preview.webm
             test-results/power-animation-preview.webm
             test-results/combat-animation-preview.webm
             test-results/visual-revision-preview.webm
@@ -51,3 +70,12 @@ jobs:
             test-results/world-polish-preview.webm
             test-results/beyond-death-preview.webm
           if-no-files-found: ignore
+  real-browser-sprite-smoke:
+    if: always()
+    needs: browser-checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every Chromium group
+        env:
+          RESULT: ${{ needs.browser-checks.result }}
+        run: test "$RESULT" = success

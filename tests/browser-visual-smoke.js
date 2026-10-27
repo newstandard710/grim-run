@@ -1042,6 +1042,8 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const v2Anchors=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_REAPER;
+    // Exercise the retained regular-bat fallback directly; production motion is tested separately.
+    s.combatArt.ready['bat-flight']=false;
     s.player.sliding=true;v.render();
     const slide=v.reaperPoseSprites.slide;
     const slideVisible=slide.visible;
@@ -1138,6 +1140,9 @@ const server=http.createServer((req,res)=>{
   assert.ok(Math.max(...eyeYOffsets)-Math.min(...eyeYOffsets)<2.5,
     'decoded cyan-eye pixels stay aligned vertically with only a small natural bounce: '+JSON.stringify(eyeYOffsets));
   const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
+  // Keep explicit coverage of the retained eight-pose/four-cut fallback. The
+  // default 24-pose distance-driven renderer is exercised by its own suite.
+  await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.motionArt.hide();s.motionArt.ready=false;});
   await page.setViewportSize({width:950,height:430});
   const renderedRunFrames=[];
   for(const [i,name] of Array.from({length:8},(_,i)=>[i,'pose-'+String(i+1).padStart(2,'0')])){
@@ -1214,11 +1219,11 @@ const server=http.createServer((req,res)=>{
   await earlyPage.waitForFunction(()=>{
     const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return s?.state==='playing'&&v?.reviewV2===true&&
-      v.reaperPoseSprites.run_pose_01?.visible===true&&v.loaded===false&&s.distance<5;
+      (s.motionArt?.body.some(p=>p.visible)||v.reaperPoseSprites.run_pose_01?.visible===true)&&v.loaded===false&&s.distance<5;
   },null,{timeout:12000});
   const earlySprite=await earlyPage.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,p=v.reaperPoseSprites.run_pose_01;
-    return {visible:p.visible,texture:s.textures.exists('gr_v2_reaper_run_pose_01'),loading:!v.loaded,
+    return {visible:p.visible||s.motionArt.body.some(p=>p.visible),texture:s.textures.exists('gr_v2_reaper_run_pose_01'),loading:!v.loaded,
       distance:s.distance,buttonEnabled:!document.getElementById('start-btn').disabled};
   });
   assert.equal(earlySprite.visible,true);

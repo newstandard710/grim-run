@@ -1,3 +1,15 @@
+# Grim Run — v0.18.0
+
+The Reaper in Motion adds 24-pose running, physical jump/landing phases, a rebuilt point-leading standard scythe cut, slower shared bat flight and rendering/frame-pacing fixes.
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.18.0) · [Review the movement](https://newstandard710.github.io/grim-run/assets/motion/v0180/review.html) · [Motion artwork and exact prompts](assets/motion/v0180/README.md)
+
+Running follows distance traveled, so animation cadence automatically matches pace changes. Jump controls and physics remain responsive; landing recovery is interruptible. The standard cut keeps its existing action/cooldown timing and uses the same rigid blade path for art, trail and refined hit detection. Special cuts and existing powers remain available.
+
+Rollback base: v0.17.0, `590af511776d94bbddfa4f83c1e191f90fc1e58d`. See `PROJECT_STATUS.md` for current scope and validation.
+
+---
+
 ## v0.17.0 — Bone & Shadow
 
 Painted combat now includes full low slide strikes, Soul Cleave, standing/sliding/airborne crossbow cycles, distinct crossbow-upgrade FX, all four enemies’ hit/defeat sequences and Reaper hurt/defeat. The Cavern Bat has a new shared sixteen-pose flight loop on the opening screen and in gameplay. Defeat views continue after combat collision ends; Reaper defeat freezes the world briefly before the established resurrection/results flow.

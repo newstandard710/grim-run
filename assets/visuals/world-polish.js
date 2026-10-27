@@ -51,8 +51,11 @@
       scene.events?.once?.('shutdown',()=>this.destroy());
     }
     beginFrame(){
-      this.activePickups=new Set();this.activePlatforms=new Set();this.light?.clear();
+      (this.activePickups||(this.activePickups=new Set())).clear();
+      (this.activePlatforms||(this.activePlatforms=new Set())).clear();this.light?.clear();
       const s=this.scene,g=this.rootMaskGraphics;if(!g)return;
+      // Five skins need a root mask. Do no contour work when none is visible.
+      if(!(s.obstacles||[]).some(ob=>!ob.destroyed&&ob.type==='bramble'&&this.visible(ob.x,ob.width)&&s.obstacleSkinFor(ob)?.buryRoots))return;
       g.clear();g.fillStyle(0xffffff,1);
       // Only the five lowered, long-rooted skins use this mask. Buried paint
       // disappears under the exact physical surface, including on hills.

@@ -44,7 +44,7 @@
         ctx.drawImage(images.batFlight,(frame%4)*512,Math.floor(frame/4)*512,512,512,-330*scale,-292*scale,512*scale,512*scale);
       }
       ctx.restore();
-    }else {const bat=bats[Math.floor(clock*9)%bats.length];actor(bat,w*.84,batY,batHeight,true,.9);}
+    }else {const bat=bats[Math.floor(clock*8/.96)%bats.length];actor(bat,w*.84,batY,batHeight,true,.9);}
     actor('crawler',w*.86,h*.91,h*(portrait?.17:.28),true,.9);
     actor('imp',w*.69,h*.91+Math.sin(clock*2)*.8,h*(portrait?.12:.2),true,.88);
     // Dim moving motes sit below typography, independently of the run RNG.

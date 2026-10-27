@@ -5,6 +5,8 @@
   const FIRE_MS=260,HURT_MS=340,DEATH_MS=880,DEFEAT_MS=760,MAX_DEFEATS=12;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const RESPONSE={bat:'bat-response',skeletalBat:'skeletal-response',crawler:'crawler-response',imp:'imp-response'};
+  const FRAME_RANGES=Object.fromEntries(Object.entries(DATA).map(([name,m])=>[name,Array.from({length:m.frames},(_,i)=>i)]));
+  const BAT_CYCLE_SECONDS=.96;
   function preload(s){
     if(!s.load?.spritesheet)return;
     for(const [name,m]of Object.entries(DATA))s.load.spritesheet('combat-'+name,ROOT+name+'.png?v=0.17.0',
@@ -16,8 +18,9 @@
     return {a,b,mix:f-a};
   }
   function batMotion(seconds,phase=0){
-    // Sixteen distinct drawings at 24 poses/sec; body/eyes have one fixed root.
-    return sample(seconds*24+phase*2.54648,16,true);
+    // The authored sheet contains repeated wing-extreme poses. Give the full
+    // loop a calmer 0.96s cadence; home and gameplay call this exact function.
+    return sample(seconds*16/BAT_CYCLE_SECONDS+phase*2.54648,16,true);
   }
   function muzzle(s){return {x:s.player.x+52,y:s.player.y-(s.lowProfile?36:65)};}
   function attackFrame(progress,count){
@@ -43,7 +46,7 @@
       }
       s.events?.once?.('shutdown',()=>this.destroy());
     }
-    all(){return [...this.reaper,...this.bats.flat(),...this.responses.flat(),...this.effects.flat(),...this.echoes.flat()];}
+    all(){return this.views||(this.views=[...this.reaper,...this.bats.flat(),...this.responses.flat(),...this.effects.flat(),...this.echoes.flat()]);}
     reset(){this.corpses=[];this.sequence=0;this.reaperState=null;for(const v of this.all())v.setVisible(false);}
     snapshot(){return this.corpses.map(v=>({...v}));}
     restore(values=[]){this.corpses=values.map(v=>({...v}));}
@@ -65,7 +68,7 @@
     }
     blend(pair,name,t,x,y,scale,alpha=1,rotation=0,frames=null){
       const m=DATA[name];if(!m||!this.ready[name]||!pair?.length)return false;
-      const span=frames||Array.from({length:m.frames},(_,i)=>i),f=sample(t,span.length);
+      const span=frames||FRAME_RANGES[name],f=sample(t,span.length);
       for(let i=0;i<2;i++){
         const v=pair[i],weight=i?f.mix:1-f.mix;
         v.setTexture('combat-'+name,span[i?f.b:f.a]).setOrigin(m.anchor[0]/m.cell[0],m.anchor[1]/m.cell[1])
@@ -186,7 +189,8 @@
     renderTimeEchoes(){
       const s=this.scene,p=s.player;
       if(!p||!['playing','paused','rewinding'].includes(s.state)||!(p.slowMs>0||s.state==='rewinding'))return;
-      const base=Object.values(s.visuals?.reaperPoseSprites||{}).find(v=>v.visible);if(!base)return;
+      const base=s.motionArt?.body?.find(v=>v.visible&&v.alpha>.1)||this.reaper.find(v=>v.visible&&v.alpha>.1)||
+        Object.values(s.visuals?.reaperPoseSprites||{}).find(v=>v.visible);if(!base)return;
       for(let i=0;i<3;i++){
         const v=this.echoes[i]?.[0];if(!v)continue;
         v.setTexture(base.texture.key,base.frame.name).setOrigin(base.originX,base.originY).setScale(base.scaleX,base.scaleY)
@@ -196,9 +200,9 @@
     }
     render(){
       for(const v of this.all())v.setVisible(false);this.reaperState=null;
-      this.renderBats();this.renderResponses();this.renderReaper();this.renderEffects();this.renderTimeEchoes();
+      this.renderBats();this.renderResponses();this.renderReaper();this.renderEffects();
     }
     destroy(){for(const v of this.all())v.destroy();this.corpses=[];}
   }
-  scope.GRIM_COMBAT_ART={CombatAnimations,preload,sample,batMotion,muzzle,attackFrame,FIRE_MS,HURT_MS,DEATH_MS,DEFEAT_MS,MAX_DEFEATS};
+  scope.GRIM_COMBAT_ART={CombatAnimations,preload,sample,batMotion,muzzle,attackFrame,FIRE_MS,HURT_MS,DEATH_MS,DEFEAT_MS,MAX_DEFEATS,BAT_CYCLE_SECONDS};
 })(typeof window!=='undefined'?window:globalThis);

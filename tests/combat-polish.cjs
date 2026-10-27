@@ -48,7 +48,7 @@ for(const [group,folder]of [['sources','source/'],['runtime','']])for(const [nam
 }
 assert.equal(m.registration['bat-flight'].frames,16);assert(m.registration['reaper-slide-cut'].frames>=8);assert.equal(m.registration['reaper-crossbow'].frames,16);
 const art={};art.window=art;vm.createContext(art);vm.runInContext(read('assets/combat/v0170/animation-data.js'),art);vm.runInContext(read('assets/visuals/combat-animations.js'),art);
-const A=art.GRIM_COMBAT_ART,frames=new Set();for(let i=0;i<160;i++)frames.add(A.batMotion(i/240).a);assert.equal(frames.size,16);assert.equal(A.batMotion(16/24).a,0);
+const A=art.GRIM_COMBAT_ART,frames=new Set();for(let i=0;i<160;i++)frames.add(A.batMotion(i/160*A.BAT_CYCLE_SECONDS).a);assert.equal(frames.size,16);assert.equal(A.batMotion(A.BAT_CYCLE_SECONDS).a,0);
 for(const count of [10,12]){assert.equal(A.attackFrame(.20,count),3);assert.equal(A.attackFrame(.79,count),count-4);assert.equal(A.attackFrame(1,count),count-1);}
 const abyss=game();abyss.combatArt={ready:{'reaper-hurt-death':true},reset(){},tick(){},snapshot(){return [];}};
 let scroll;abyss.cameras.main.setScroll=(x,y)=>{scroll=[x,y];};abyss.player.hp=1;abyss.player.x=abyss.terrain.sequences[0].startX+30;abyss.rescueFromAbyss();

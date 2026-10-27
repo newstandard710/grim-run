@@ -53,6 +53,7 @@ const server=http.createServer((req,res)=>{
       s.drawScene();window.grimRun.step(performance.now(),0);
       s.ui.update(p.hp,p.maxHp,s.distance,s.soulCount,s.coinCount,s.points,s.powerManager.summary());
       return {frame:s.powerArt.action?.frame.name,visible:s.powerArt.action?.visible,
+        motion:s.motionArt.state,motionVisible:s.motionArt.body.some(v=>v.visible),weapon:s.motionArt.weapon.visible,
         wings:s.powerArt.wingSprites.filter(v=>v.visible).map(v=>Number(v.frame.name)),x:p.x,y:p.y};
     },{mode,elapsed});
     const wingFrames=[];
@@ -79,8 +80,9 @@ const server=http.createServer((req,res)=>{
     await setup('hover');
     await page.locator('#game canvas').screenshot({path:path.join(dir,'power-combined-wings-phone.png')});
     for(const mode of ['tuck','attack','tuck-attack']){
-      const info=await setup(mode);assert(info.visible,'Dedicated '+mode+' pose is visible');
-      assert.equal(info.frame,mode==='tuck'?2:mode==='attack'?5:9);
+      const info=await setup(mode);
+      if(mode==='attack')assert(info.motion?.name==='reaper-cut-body'&&info.motionVisible&&info.weapon,'The rebuilt aerial cut and rigid blade are visible with equipped wings');
+      else {assert(info.visible,'Dedicated '+mode+' pose is visible');assert.equal(info.frame,mode==='tuck'?2:9);}
       await page.locator('#game canvas').screenshot({path:path.join(dir,'power-'+mode+'-phone.png')});
       await page.waitForTimeout(350);
     }
