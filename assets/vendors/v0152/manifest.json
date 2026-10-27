@@ -1,0 +1,79 @@
+{
+  "version": "0.15.2",
+  "sources": {
+    "assets/vendors/source/v0152/angel-sanctuary.png": {
+      "bytes": 1844409,
+      "sha256": "e916f09414f7a44a5efd573507d11283a785df9b7bc6494d9ab8b6b1b7eec82f",
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    "assets/vendors/source/v0152/devil-sanctuary.png": {
+      "bytes": 2458697,
+      "sha256": "ce28ad26edd19c1900f3f7f487fe93fcdc1d72fd2790ed8e1309163f0fd0fc57",
+      "size": [
+        1536,
+        1024
+      ]
+    },
+    "assets/vendors/source/v0152/reaper-approach.png": {
+      "bytes": 2437013,
+      "sha256": "6c806bc1e82c3694d4fc2aeb2a2880cdd6c887f31baa018e7ada53f14079c9e3",
+      "size": [
+        1536,
+        1024
+      ]
+    }
+  },
+  "runtime": {
+    "assets/vendors/v0152/angel-architecture.png": {
+      "bytes": 632042,
+      "sha256": "dbbdc29f88b8f8866e5573200a45bb1fff394586c8161afb74387ac251f7020e",
+      "size": [
+        768,
+        768
+      ]
+    },
+    "assets/vendors/v0152/angel-floor.png": {
+      "bytes": 130530,
+      "sha256": "3da5606fb20d3d3e60f404f66fb50e82b72619ed0d6dad774537d584e53837c6",
+      "size": [
+        768,
+        128
+      ]
+    },
+    "assets/vendors/v0152/devil-architecture.png": {
+      "bytes": 764112,
+      "sha256": "7fbb7404fd44e210eb3c3764b227fa7969e698f6642db0346bdb38f1208c7ae1",
+      "size": [
+        768,
+        768
+      ]
+    },
+    "assets/vendors/v0152/devil-floor.png": {
+      "bytes": 139432,
+      "sha256": "a72625eb76ba1bcc4b13c2b8d1a0bac5fd9073e87d3c641b0a876fbcdd0f3896",
+      "size": [
+        768,
+        128
+      ]
+    },
+    "assets/vendors/v0152/reaper-approach.png": {
+      "bytes": 1951987,
+      "sha256": "9a62d603d17c3d7e861cc1eb5a48cf3dc3e4f85e3e123b048fc6dbd8bcbc62fd",
+      "size": [
+        2048,
+        1536
+      ]
+    },
+    "assets/vendors/v0152/relic-grip-overlay.png": {
+      "bytes": 79698,
+      "sha256": "174acf0459b50e0ded613b3227681fe580b3305bb2c208a4fb464db16fe6edcc",
+      "size": [
+        2048,
+        3072
+      ]
+    }
+  }
+}

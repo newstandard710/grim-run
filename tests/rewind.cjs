@@ -16,7 +16,7 @@ w.window=w;vm.createContext(w);
 for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 const C=w.GRIM_CONFIG,P=w.GRIM_POWERS,Core=w.GRIM_CORE;
-assert.equal(C.version,'0.15.1');
+assert.equal(C.version,'0.15.2');
 assert.ok(P.POWER_ORDER.includes('deathsReversal'),'Rewind must be Angel vendor power');
 const m=P.makePowerManager();
 for(const [lvl,seconds,cooldown] of [[1,5,60000],[2,6,55000],[3,7,50000],[4,8,45000]]){
@@ -140,6 +140,9 @@ assert.equal(barriers.meta.souls,soulsBefore+1);
 assert.equal(barriers.rewind(),false,'Cannot rewind before a banked Soul');
 assert.equal(barriers.meta.souls,soulsBefore+1,'Banked Souls never reversed');
 barriers.triggerVendor(1);
+assert.equal(barriers.state,'vendorIntro');
+assert.equal(barriers.rewindFrames.length,0,'Introduction starts beyond the rewind boundary');
+barriers.finishVendorIntro();
 assert.equal(barriers.state,'upgrade');
 assert.equal(barriers.rewindFrames.length,0,'Vendor resets history');
 barriers.leaveVendor();
