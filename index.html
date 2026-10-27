@@ -2648,9 +2648,10 @@ window.GRIM_CONFIG = Object.freeze({
       // Include the painted foreground, ceiling backing and terrain tether,
       // rather than allowing overhang from a spawn point outside the pad.
       if(type==='airBramble')return {x:x-245,width:415};
+      if(type==='snappingBramble')return {x:x+width/2-245*.768,width:384*.768};
       const paintedWidth=type==='branch'?560:type==='tuckGate'?235:
         type==='bramble'?width*3:type==='rock'?width*2.5:
-        type==='fire'?width*2:type==='snappingBramble'?256*.32*3:width;
+        type==='fire'?width*2:width;
       return {x:x+width/2-paintedWidth/2,width:paintedWidth};
     }
     vendorObstacleBlocked(type,x,width){

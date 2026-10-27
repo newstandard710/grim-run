@@ -42,6 +42,13 @@ for(const [first,later]of [[1,2],[8,9]]){
  }
 }
 
+// The new leftward strike cannot overhang either sanctuary's protected ground.
+for(const k of [1,5,8,14]){
+ const g=game(),end=g.startX+(k*666+50)*12;
+ assert(g.vendorObstacleBlocked('snappingBramble',end+130,62));
+ assert(!g.vendorObstacleBlocked('snappingBramble',end+200,62));
+}
+
 // Proximity, explicit attack windows, roots, cutting, and rewind own plant state.
 const s=game();s.player.x=s.startX+3400*12;s.terrain.advance(s.player.x+2000);s.player.y=s.terrain.groundAt(s.player.x);s.player.grounded=true;
 const plant={type:'snappingBramble',x:s.player.x+500,width:62,height:62,variant:0,destroyed:false,dealtDamage:false};s.obstacles=[plant];
