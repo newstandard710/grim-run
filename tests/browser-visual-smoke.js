@@ -1140,6 +1140,9 @@ const server=http.createServer((req,res)=>{
   assert.ok(Math.max(...eyeYOffsets)-Math.min(...eyeYOffsets)<2.5,
     'decoded cyan-eye pixels stay aligned vertically with only a small natural bounce: '+JSON.stringify(eyeYOffsets));
   const artifactDir=path.join(root,'test-results');fs.mkdirSync(artifactDir,{recursive:true});
+  // Keep explicit coverage of the retained eight-pose/four-cut fallback. The
+  // default 24-pose distance-driven renderer is exercised by its own suite.
+  await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.motionArt.hide();s.motionArt.ready=false;});
   await page.setViewportSize({width:950,height:430});
   const renderedRunFrames=[];
   for(const [i,name] of Array.from({length:8},(_,i)=>[i,'pose-'+String(i+1).padStart(2,'0')])){
