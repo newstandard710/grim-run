@@ -1,3 +1,13 @@
+# Grim Run — v0.19.2 · Fluid Bat Flight
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.2)
+
+The bat now uses a stable painted body with articulated wing poses instead of blending inconsistent full-body drawings. Its single flap lasts 1.6 seconds, 40% slower than before, with 96 closely spaced poses, delayed wrist motion and a folded return stroke. Home and gameplay share the same phase mapping and displayed scale. A single solid drawing removes the opacity pulse from overlapping crossfades.
+
+[Review at home/game sizes](assets/bat/v0192/review.html) · [Rig, reproducible build and exact source/runtime hashes](assets/bat/v0192/README.md). Rollback base: v0.19.1 (`6fb1afe5320d12776ab20a978bef93e6209981a7`).
+
+---
+
 # Grim Run — v0.19.1 · Scythe & Stride
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.1)
@@ -86,7 +96,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.19.0 — Gravewing Ascension**
+**Current build: v0.19.2 — Fluid Bat Flight**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 

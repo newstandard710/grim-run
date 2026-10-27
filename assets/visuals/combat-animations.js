@@ -1,15 +1,17 @@
 /* v0.17.0 — registered painted combat, shared bat flight and detached defeat views. */
 (function(scope){
   'use strict';
-  const ROOT='assets/combat/v0170/',DATA=scope.GRIM_COMBAT_DATA?.sheets||{};
+  const ROOT='assets/combat/v0170/',BAT=scope.GRIM_BAT_FLIGHT;
+  const DATA={...(scope.GRIM_COMBAT_DATA?.sheets||{})};
+  if(BAT)DATA['bat-flight']=BAT.SPEC;
   const FIRE_MS=260,HURT_MS=340,DEATH_MS=880,DEFEAT_MS=760,MAX_DEFEATS=12;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const RESPONSE={bat:'bat-response',skeletalBat:'skeletal-response',crawler:'crawler-response',imp:'imp-response'};
   const FRAME_RANGES=Object.fromEntries(Object.entries(DATA).map(([name,m])=>[name,Array.from({length:m.frames},(_,i)=>i)]));
-  const BAT_CYCLE_SECONDS=.96;
+  const BAT_CYCLE_SECONDS=BAT?.CYCLE_SECONDS||.96;
   function preload(s){
     if(!s.load?.spritesheet)return;
-    for(const [name,m]of Object.entries(DATA))s.load.spritesheet('combat-'+name,name==='bat-flight'?'assets/encounters/v0190/bat-flight.png?v=0.19.0':ROOT+name+'.png?v=0.17.0',
+    for(const [name,m]of Object.entries(DATA))s.load.spritesheet('combat-'+name,name==='bat-flight'?(BAT?.FILE||'assets/encounters/v0190/bat-flight.png?v=0.19.0'):ROOT+name+'.png?v=0.17.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
   }
   function sample(t,count,loop=false){
@@ -18,8 +20,7 @@
     return {a,b,mix:f-a};
   }
   function batMotion(seconds,phase=0){
-    // The authored sheet contains repeated wing-extreme poses. Give the full
-    // loop a calmer 0.96s cadence; home and gameplay call this exact function.
+    if(BAT)return BAT.motion(seconds,phase);
     return sample(seconds*16/BAT_CYCLE_SECONDS+phase*2.54648,16,true);
   }
   function muzzle(s){return {x:s.player.x+52,y:s.player.y-(s.lowProfile?36:65)};}
@@ -120,18 +121,15 @@
         if(e.kind!=='bat'||e.dead||e.x<s.cameraX-130||e.x>s.cameraX+s.width+130||n>=this.bats.length)continue;
         const pair=this.bats[n++];for(const v of pair)v.setVisible(false).setRotation(0).setFlipX(false).clearTint();if(e.visualHitMs>0&&this.ready['bat-response'])continue;
         const f=batMotion(s.elapsed||0,e.phase||0);
-        this.blend(pair,'bat-flight',f.a+f.mix,e.x,e.y,.32);
-        if(f.a===15&&f.mix>0){
-          pair[1].setTexture('combat-bat-flight',0).setOrigin(330/512,292/512).setScale(.32)
-            .setPosition(e.x,e.y).setRotation(0).setAlpha(f.mix).setVisible(true);
-          pair[0].setAlpha(1-f.mix);
-        }
-        // Keep both flight drawings alive during the dive transition. A third
-        // pooled view avoids replacing a blended drawing with a differently
-        // registered texture, so neither the anchor nor opacity can jump.
+        // Dense, rigid-body poses need no crossfade: compositing two overlapping
+        // alpha sprites made even stationary body pixels pulse down to 75% opacity.
+        const m=DATA['bat-flight'];
+        pair[0].setTexture('combat-bat-flight',f.a).setOrigin(m.anchor[0]/m.cell[0],m.anchor[1]/m.cell[1])
+          .setScale(.32/(BAT?.SOURCE_SCALE||1)).setPosition(e.x,e.y).setAlpha(1).setVisible(true);
+        // Dive uses a separate pooled view; its handoff does not disturb flight phase.
         const weight=e.mode==='dive'?clamp((e.timer||0)/.12):
           e.mode==='recover'?1-clamp((e.timer||0)/.12):0;
-        for(let i=0;i<2;i++)pair[i].setAlpha(pair[i].alpha*(1-weight)).setVisible(pair[i].alpha>.001);
+        pair[0].setAlpha(1-weight).setVisible(weight<.999);pair[1].setAlpha(0).setVisible(false);
         if(weight>0){
           const m=scope.GRIM_VISUALS.V2_BAT.dive;
           pair[2].setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
