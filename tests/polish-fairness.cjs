@@ -14,7 +14,7 @@ w.window=w;vm.createContext(w);
 for(const [,attrs,script] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(script,w,{filename:'index.html'});
 const C=w.GRIM_CONFIG,Core=w.GRIM_CORE,M=w.GRIM_META,P=w.GRIM_POWERS;
-assert.equal(C.version,'0.16.0');let power=P.makePowerManager();
+assert.equal(C.version,'0.17.0');let power=P.makePowerManager();
 for(const distance of [150,200,250,300]){
  power.apply('brittleBones',{},()=>{},1);
  assert.equal(power.brittleRangeMeters(),distance);

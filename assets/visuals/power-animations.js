@@ -113,9 +113,11 @@
         item.duration=950;item.bones=[];
         const count=28+Math.min(4,Math.max(1,item.level))*4;
         for(let i=0;i<count;i++){
-          const angle=i*2.399963+item.seed*.73,speed=115+((i*47+item.seed*19)%155);
-          item.bones.push({frame:i%12,vx:Math.cos(angle)*speed+65,vy:Math.sin(angle)*speed-90,
-            spin:(i%2?-1:1)*(3+(i%5)),size:10+(i*7%15),phase:i*.47});
+          const angle=i<4?i*Math.PI/2:i*2.399963+item.seed*.73;
+          const reach=Math.hypot(this.scene.width,this.scene.height)*1.45;
+          const speed=reach*(1+(i%7)*.035);
+          item.bones.push({frame:i%12,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
+            spin:(i%2?-1:1)*(3+(i%5)),size:15+(i*7%21),phase:i*.47});
         }
       }
       if(this.bursts.length>=MAX_BURSTS)this.bursts.shift();
@@ -245,6 +247,7 @@
           }
           continue;
         }
+        if(s.combatArt?.handlesEffect(b))continue;
         const t=b.age/b.duration,a=Math.sin(Math.PI*t)*.7;
         const purchase=b.kind==='purchase',blast=b.kind==='blast';
         const x=purchase?p.x:b.x,y=purchase?s.feetY-60-t*20:b.y;

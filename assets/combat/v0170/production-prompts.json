@@ -1,0 +1,94 @@
+[
+  {
+    "id": "reaper-slide-cut",
+    "source": "source/reaper-slide-cut.png",
+    "prompt": "Use case: identity-preserve. Production game animation sprite sheet, fully transparent background. Preserve this exact accepted little hooded Reaper, ivory skull with single visible cyan eye, charcoal hood and layered armor, burgundy ragged cloak, bone-and-antique-bronze scythe. Create TWELVE chronological full-body drawings of one low ground SLIDE + SCYTHE ATTACK. EXACT grid FOUR columns THREE rows, equal square cells, read left-to-right then top-to-bottom. Each whole character and entire scythe fits within its own cell with generous transparent gutters, no overlaps, no text, no grid lines, no background or ground. Face RIGHT. Stay crouched at the same low head height in all frames; do not stand up. All grounded contact anchors and body proportions consistent. Frames 1\u20133 low anticipation, scythe pulled behind; 4\u20138 a coherent forceful forward low sweep led by sharp blade tip; 9\u201312 smooth follow-through and return to original crouch. Cloth trails left. Smooth closely spaced in-between poses, consistent weapon anatomy and arm grips. The reference slide defines the compact body; the other reference defines the actual weapon and painted gothic storybook style. No glow that hides weapon or body. This is usable game art, no concept presentation.",
+    "refs": [
+      "assets/characters/illustrated-v2/reaper/scythe-swing-v1/impact_mobile_v1.png",
+      "assets/characters/illustrated-v2/reaper/slide-mobile-v1.png"
+    ]
+  },
+  {
+    "id": "reaper-hurt-death",
+    "source": "source/reaper-hurt-death.png",
+    "prompt": "Use case: identity-preserve. Fully transparent production game sprite sheet, preserve EXACT referenced Reaper identity, ivory skull, cyan eye, charcoal hood, layered bronze armor, burgundy ragged robe and bone-bronze scythe. TWELVE full character poses in an exact FOUR columns THREE rows equal-cell grid, chronological read order. Face RIGHT, common foot baseline and fixed character scale per cell, full scythe fits with generous margins, no clipped parts, no text/grid/background/floor. First ROW FOUR frames: nonfatal hurt reaction: impact recoil backwards, recoil peak, regain balance, return to ready posture. Next TWO ROWS EIGHT frames: separate dramatic but restrained death sequence: losing balance, hunching and knees giving way, kneeling, sinking, slumping on ground, final fallen body and scythe lying beside it; cyan eye dims, cloak settles. Death is a collapse, not a magical respawn, no gore. Head and torso stay same sizes across drawings; maintain the approved hand-painted crisp mobile-game style. Full-body and full weapon each cell, do not crop.",
+    "refs": [
+      "assets/characters/illustrated-v2/reaper/reaper_idle_v1.png"
+    ]
+  },
+  {
+    "id": "bat-flight",
+    "source": "source/bat-flight.png",
+    "prompt": "Use case: identity-preserve. Rebuild the exact referenced painted gothic cavern bat as a very smooth SIXTEEN-POSE full wing-flap animation on a fully transparent sprite sheet. Exact FOUR columns FOUR rows equal cells, read left-to-right/top-to-bottom. Same dark violet furry torso, huge pointed ears, pink glowing eyes, burgundy leathery membranes, bone-gold wing fingers and claws, snarling face directed RIGHT. One complete continuous wingbeat: frames1\u20134 raised wings progressively beginning forceful downstroke;5\u20138 wings sweep down to low extreme;9\u201312 bent/folding upstroke;13\u201316 unfold back toward raised pose. Distinct closely spaced intermediate drawings, asymmetric perspective preserved and no identity changes. Torso, ears, skull, eyes, feet all fixed size and same cell anchor, only wings/shoulders/clothlike membrane flex; do not resize bat to fill each cell. Both full wingtips and feet fit every cell with generous transparent gutters. No motion blur, no text, no checkerboard, no panel lines, no scenery. Painted polished animation art, not a row of unrelated bat designs.",
+    "refs": [
+      "assets/enemies/illustrated-v2/bat/bat_neutral_v1.png"
+    ]
+  },
+  {
+    "id": "reaper-crossbow",
+    "source": "source/reaper-crossbow.png",
+    "prompt": "Production transparent game sprite sheet. Hand-painted gothic storybook style matching the reference EXACTLY. Equal-cell FOUR-column grid. Complete separate drawings, full silhouettes contained inside cells with generous transparent gutters, no overlap, no cropping, no floor, no backdrop, no labels or grid. Preserve identity, proportions, lighting, materials and palette. SIXTEEN full-body Reaper drawings, FOUR rows. Reference 1 is exact character, reference 2 is exact held Bone Crossbow. All face RIGHT. ROWS1\u20132: EIGHT chronological grounded crossbow firing poses, steady aim then trigger squeeze, tiny string snap, subtle backwards shoulder recoil, recovery and return to aim. ROWS3\u20134: EIGHT chronological LOW SLIDING crossbow firing poses with knees deeply bent and legs forward, body remains compact at the same low head height throughout that sequence. Same weapon held correctly in BOTH hands, pointing right, right palm at trigger stock, left palm supports body beneath, fingers wrap the stock; scythe not held during firing. Use short natural motions; avoid wildly changing body posture or bow shape. Skull cyan eye, charcoal hood, bronze armor, burgundy cloak trailing left. No large baked-in muzzle flame or magic; separate effects will be added in engine. All bones and full crossbow fit every cell. Keep character scale constant within each eight-pose sequence. Fully transparent.",
+    "refs": [
+      "assets/characters/illustrated-v2/reaper/reaper_idle_v1.png",
+      "assets/powers/bone-crossbow.png"
+    ]
+  },
+  {
+    "id": "reaper-air-crossbow",
+    "source": "source/reaper-air-crossbow.png",
+    "prompt": "Production transparent game sprite sheet. Hand-painted gothic storybook style matching the reference EXACTLY. Equal-cell FOUR-column grid. Complete separate drawings, full silhouettes contained inside cells with generous transparent gutters, no overlap, no cropping, no floor, no backdrop, no labels or grid. Preserve identity, proportions, lighting, materials and palette. EIGHT full-body Reaper airborne crossbow poses in TWO rows of FOUR. Exact reference character and exact bone crossbow. Face RIGHT; knees bent slightly behind, floating mid-jump, body at same fixed scale and anchor through all8 frames. Natural chronological aim, shoot, recoil, recover, aim sequence with both skeletal hands gripping actual stock and foregrip; bronze armor, charcoal hood, cyan eye, burgundy cloak trailing left. No wings (engine adds separate wings), no scythe in hands, no big muzzle flame. Show entire character, both feet, complete cloak and entire bow in each cell. Smooth closely spaced in-between motion and consistent weapon anatomy. Transparent.",
+    "refs": [
+      "assets/characters/illustrated-v2/reaper/reaper_idle_v1.png",
+      "assets/powers/bone-crossbow.png"
+    ]
+  },
+  {
+    "id": "combat-effects",
+    "source": "source/combat-effects.png",
+    "prompt": "Use case: stylized-concept. Fully transparent production animation effects atlas, crisp hand-painted gothic magic matching the game references. EXACT grid FOUR columns SIX rows, TWENTY FOUR equal cells, generous empty transparent gutters. No characters, no weapons, no objects, no lettering/grid/background. ROWS1 AND2 (8 frames) are one continuous SOUL CLEAVE sequence: narrow ivory-cyan spectral crescent growing into a forceful curved blade sweep, spectral wisp trailing behind, breaking into small soul sparks and fading. ROW3 (4 frames) RAPID FIRE: tight ivory-cyan forward muzzle streak and small mechanical-looking sparks, snap then brief fade, horizontal direction RIGHT. ROW4 (4 frames) POWER SHOT: compact amber/ivory charged muzzle burst expanding into a sharper forceful impact bloom with short jagged rays then fading, direction RIGHT. ROW5 (4 frames) CHAIN SHOT: violet/ivory forked lightning contact burst, snap, branching tendrils, dissipating small sparks; no long horizontal bolt, engine connects targets. ROW6 (4 frames) INFERNAL BOOTS FIRE BLOCK: amber ember ring forming and briefly flaring then fragmenting into ash. Every effect is a separate complete silhouette inside its cell, all illumination confined within it, edges fade into REAL alpha transparency. Painted brush texture not neon vector graphics, no rectangular glow haze.",
+    "refs": [
+      "assets/powers/bone-crossbow.png",
+      "assets/characters/illustrated-v2/reaper/scythe-swing-v1/impact_mobile_v1.png"
+    ]
+  },
+  {
+    "id": "bat-response",
+    "source": "source/bat-response.png",
+    "prompt": "Production transparent game sprite sheet. Hand-painted gothic storybook style matching the reference EXACTLY. Equal-cell FOUR-column grid. Complete separate drawings, full silhouettes contained inside cells with generous transparent gutters, no overlap, no cropping, no floor, no backdrop, no labels or grid. Preserve identity, proportions, lighting, materials and palette. EIGHT chronological full-body Cavern Bat response poses, TWO rows of FOUR. Preserve reference enemy's exact dark violet furry body, burgundy membrane wings, tall furry ears, magenta eyes and bronze claws. Face RIGHT. First THREE cells are a separate nonfatal impact/recoil/recovery sequence. Remaining FIVE cells are a defeat sequence: wing flutter breaks, body recoils, wings fold, slumps into a tumbling fall; final wing crumple. For sheet reference with multiple frames, use its matching character identity, do not copy entire sheet. Fixed body scale throughout, common root anchor, final disintegration may spread modestly inside its cell; all wings/tail/bones/limbs fit. Distinct smooth in-between drawings. No unrelated effects or creatures. Transparent.",
+    "refs": [
+      "assets/enemies/illustrated-v2/bat/bat_neutral_v1.png"
+    ]
+  },
+  {
+    "id": "skeletal-response",
+    "source": "source/skeletal-response.png",
+    "prompt": "Production transparent game sprite sheet. Hand-painted gothic storybook style matching the reference EXACTLY. Equal-cell FOUR-column grid. Complete separate drawings, full silhouettes contained inside cells with generous transparent gutters, no overlap, no cropping, no floor, no backdrop, no labels or grid. Preserve identity, proportions, lighting, materials and palette. EIGHT chronological full-body Skeletal Bat response poses, TWO rows of FOUR. Preserve reference enemy's exact ivory skull and rib cage, red glowing eyes, burgundy skeletal wings. Face RIGHT. First THREE cells are a separate nonfatal impact/recoil/recovery sequence. Remaining FIVE cells are a defeat sequence: skull recoils, ribs buckle and wings fold, body breaks into a few recognizable ivory bone pieces and a folded wing; no gore. For sheet reference with multiple frames, use its matching character identity, do not copy entire sheet. Fixed body scale throughout, common root anchor, final disintegration may spread modestly inside its cell; all wings/tail/bones/limbs fit. Distinct smooth in-between drawings. No unrelated effects or creatures. Transparent.",
+    "refs": [
+      "assets/enemies/illustrated-v2/skeletal-bat/skeletal_bat_atlas_v1.png"
+    ]
+  },
+  {
+    "id": "crawler-response",
+    "source": "source/crawler-response.png",
+    "prompt": "Production transparent game sprite sheet. Hand-painted gothic storybook style matching the reference EXACTLY. Equal-cell FOUR-column grid. Complete separate drawings, full silhouettes contained inside cells with generous transparent gutters, no overlap, no cropping, no floor, no backdrop, no labels or grid. Preserve identity, proportions, lighting, materials and palette. EIGHT chronological full-body Bone Crawler response poses, TWO rows of FOUR. Preserve reference enemy's exact ivory spiked armored skull and ribs, black claws, burgundy joints, warm pale glowing eye. Face LEFT. First THREE cells are a separate nonfatal impact/recoil/recovery sequence. Remaining FIVE cells are a defeat sequence: legs buckle, skull sinks and body collapses into recognizable bone armor pieces on the same ground line, no gore. For sheet reference with multiple frames, use its matching character identity, do not copy entire sheet. Fixed body scale throughout, common root anchor, final disintegration may spread modestly inside its cell; all wings/tail/bones/limbs fit. Distinct smooth in-between drawings. No unrelated effects or creatures. Transparent.",
+    "refs": [
+      "assets/enemies/illustrated-v2/bone-crawler/crawler_crawl_01_v1.png"
+    ]
+  },
+  {
+    "id": "imp-response",
+    "source": "source/imp-response.png",
+    "prompt": "Production transparent game sprite sheet. Hand-painted gothic storybook style matching the reference EXACTLY. Equal-cell FOUR-column grid. Complete separate drawings, full silhouettes contained inside cells with generous transparent gutters, no overlap, no cropping, no floor, no backdrop, no labels or grid. Preserve identity, proportions, lighting, materials and palette. EIGHT chronological full-body Ember Imp response poses, TWO rows of FOUR. Preserve reference enemy's exact red orange skin, two ivory horns, yellow glowing eyes, black claws, small pointed ears. Face RIGHT. First THREE cells are a separate nonfatal impact/recoil/recovery sequence. Remaining FIVE cells are a defeat sequence: flinches, knees buckle and body curls inward then dissolves into a small scatter of dark ash and dim amber embers; no gore. For sheet reference with multiple frames, use its matching character identity, do not copy entire sheet. Fixed body scale throughout, common root anchor, final disintegration may spread modestly inside its cell; all wings/tail/bones/limbs fit. Distinct smooth in-between drawings. No unrelated effects or creatures. Transparent.",
+    "refs": [
+      "assets/enemies/illustrated-v2/ember-imp/ember_imp_atlas_v1.png"
+    ]
+  },
+  {
+    "id": "reaper-soul-cleave",
+    "source": "source/reaper-soul-cleave.png",
+    "prompt": "Use case: identity-preserve. Production full-body game animation sheet, exactly the reference little Reaper with ivory skull/cyan eye, charcoal hood/armor, bronze fittings, burgundy cloak and the exact bone-bronze scythe. Fully transparent. TWELVE unique chronological poses in THREE COLUMNS and FOUR ROWS, generous transparent gutters all around each sprite. Same full character scale throughout; common ground foot baseline. Each character+scythe takes at most seventy percent of its own cell width, leaving every weapon tip and trailing cloak entirely inside that cell. Read left to right, top to bottom: frames1\u20133 crouched grounded anticipation with blade pulled back;4\u20138 a powerful grounded forward scythe sweep with sharp blade tip leading and both hands holding a consistent shaft;9\u201312 smooth follow-through and regain ready posture. Face RIGHT. Closely spaced natural in-betweens, no repeated poses, consistent head size and anatomy, keep boots connected to the same ground line. NO spectral effects (engine adds a separate painted Soul Cleave effect), no duplicate weapons, no missing hands, no background, text, grid, floor, blur, scenery or cropping. Follow the approved crisp painted gothic storybook style, do not redesign the character.",
+    "refs": [
+      "assets/characters/illustrated-v2/reaper/scythe-swing-v1/impact_mobile_v1.png"
+    ]
+  }
+]

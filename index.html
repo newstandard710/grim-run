@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.16.0</title>
+  <title>GRIM RUN — v0.17.0</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -208,13 +208,13 @@ button {cursor:pointer;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
-  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.16.0">
+  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.17.0">
 </head>
 <body>
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.16.0</div>
+    <div class="home-edition">GRIM RUN · v0.17.0</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
@@ -252,7 +252,7 @@ button {cursor:pointer;}
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.16.0 · BEYOND DEATH</div>
+      <div class="mini">v0.17.0 · BONE & SHADOW</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -360,7 +360,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.16.0',
+  version: '0.17.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -1274,7 +1274,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
       show('controls',mode==='playing');
-      show('hud', mode==='playing'||mode==='paused'||mode==='upgrade'||mode==='countdown'||mode==='portal'||mode==='rewinding'||mode==='respawning');
+      show('hud', mode==='playing'||mode==='paused'||mode==='upgrade'||mode==='countdown'||mode==='portal'||mode==='rewinding'||mode==='respawning'||mode==='dying');
       this.releaseAll();
     }
     updateCountdown(seconds) {
@@ -1335,62 +1335,51 @@ window.GRIM_CONFIG = Object.freeze({
     showRewindPlayback(on){show('rewind-playback',on);}
     offerVendor(offers,type,phase,meters,hp,maxHp,gold,status={}) {
       this.selecting=false;
-      const devil=type==='devil', healing=phase==='heal',healPrice=scope.GRIM_CONFIG.devilHealPrice;
+      const devil=type==='devil',healPrice=scope.GRIM_CONFIG.devilHealPrice,closed=Boolean(status.purchased);
       el('upgrade-screen').classList.toggle('devil',devil);
       el('vendor-eyebrow').textContent=devil?'THE DEVIL OFFERS A BARGAIN':'A HEAVENLY MERCHANT';
-      el('reward-title').textContent=devil?(healing?'THE INFIRMARY':'THE DEVIL’S BARGAIN'):'THE ANGEL’S GIFTS';
+      el('reward-title').textContent=devil?'THE DEVIL’S BARGAIN':'THE ANGEL’S GIFTS';
       el('reward-distance').textContent=Math.floor(meters).toLocaleString();
       el('vendor-stats').textContent=`♥ ${hp}/${maxHp}  ·  GOLD ${gold}`;
-      el('vendor-foot').textContent=devil?(healing?'HEAL 1 HP PER PURCHASE · LEAVE ANY TIME':
-        'PAY HP FOR ONE POWER · OR DECLINE THE DEAL'):'CHOOSE UP TO ONE GIFT · HEALING IS SEPARATE · LEAVE ANY TIME';
+      el('vendor-foot').textContent=closed?(status.acquiredId?'REWARD ACQUIRED · HEAL OR CONTINUE':'REWARDS DECLINED · HEAL OR CONTINUE'):
+        devil?'PAY HP FOR ONE POWER · HEALING IS SEPARATE · LEAVE ANY TIME':'CHOOSE UP TO ONE GIFT · HEALING IS SEPARATE · LEAVE ANY TIME';
       const holder=el('reward-cards'),buttons=el('vendor-actions');
-      holder.replaceChildren();buttons.replaceChildren();
-      holder.style.gridTemplateColumns=offers.length===1?'minmax(0,min(320px,100%))':'';
-      holder.style.justifyContent=offers.length===1?'center':'';
-      if(!healing&&!status.purchased){
+      const key=type+':'+meters+':'+JSON.stringify(offers);
+      if(this.vendorUiKey!==key){
+        this.vendorUiKey=key;this.vendorUiCards=[];holder.replaceChildren();buttons.replaceChildren();
+        holder.style.gridTemplateColumns=offers.length===1?'minmax(0,min(320px,100%))':'';
+        holder.style.justifyContent=offers.length===1?'center':'';
         offers.forEach(reward=>{
-          const cost=devil?window.GRIM_POWERS.devilPrice(reward):5, affordable=devil?hp>cost:gold>=cost;
-          const card=document.createElement('button');
-          card.type='button';card.className='reward-card rarity-'+(reward.rarity||'common');card.style.setProperty('--card-color',reward.color);
-          const parts=[['reward-rarity',reward.rarity==='legendary'?`★ LEGENDARY · +${reward.levelsGained} LEVELS`:reward.rarity==='rare'?`◆ RARE · +${reward.levelsGained} LEVELS`:'COMMON'],['reward-icon',reward.icon],['reward-action',reward.action],
-            ['reward-name',reward.name],['reward-desc',reward.description],
+          const card=document.createElement('button');card.type='button';card.className='reward-card rarity-'+(reward.rarity||'common');
+          card.style.setProperty('--card-color',reward.color);
+          const cost=devil?window.GRIM_POWERS.devilPrice(reward):5;
+          const parts=[['reward-rarity',reward.rarity==='legendary'?`★ LEGENDARY · +${reward.levelsGained} LEVELS`:reward.rarity==='rare'?`◆ RARE · +${reward.levelsGained} LEVELS`:'COMMON'],
+            ['reward-icon',reward.icon],['reward-action',reward.action],['reward-name',reward.name],['reward-desc',reward.description],
             ['reward-level',reward.type==='passive'?'THIS RUN':reward.levelFrom===undefined?'ONE UPGRADE':`LEVEL ${reward.levelFrom} → ${reward.levelTo}`],
-            ['reward-price',devil?`${cost} HP · REMAINING ${hp-cost} HP`:'5 GOLD']];
-          for(const [cls,value] of parts){
-            const div=document.createElement('span');div.className=cls;div.textContent=value;card.appendChild(div);
-          }
-          card.disabled=!affordable;
-          card.setAttribute('aria-label',`${reward.rarity||'common'} ${reward.name}, level ${reward.levelTo||1}: ${reward.description}. Cost ${devil?cost+' health':'5 gold'}`);
-          card.addEventListener('click',()=>{
-            if(this.selecting||card.disabled)return;
-            this.selecting=true;this.actions.chooseUpgrade(reward.id);
-          });
-          holder.appendChild(card);
+            ['reward-price',devil?`${cost} HP`:'5 GOLD']];
+          for(const [cls,value]of parts){const span=document.createElement('span');span.className=cls;span.textContent=value;card.appendChild(span);}
+          const mark=document.createElement('span');mark.className='reward-cross';mark.textContent='×';mark.setAttribute('aria-hidden','true');card.appendChild(mark);
+          const state=document.createElement('span');state.className='reward-state';card.appendChild(state);
+          card.addEventListener('click',()=>{if(this.selecting||card.disabled)return;this.selecting=true;this.actions.chooseUpgrade(reward.id);});
+          this.vendorUiCards.push({card,state,reward,cost});holder.appendChild(card);
         });
-        if(!offers.length){
-          const empty=document.createElement('div');empty.className='vendor-empty';
-          empty.textContent=devil?'All Devil powers already acquired.':'All available upgrades are already maxed.';
-          holder.appendChild(empty);
-        }
-      }else if(status.purchased){
-        const empty=document.createElement('div');empty.className='vendor-empty vendor-purchased';
-        empty.textContent='Gift acquired. Heal, or continue your journey.';holder.appendChild(empty);
-      }else{
-        const empty=document.createElement('div');empty.className='vendor-empty';
-        empty.textContent=hp>=maxHp?'Your health is full.':gold<healPrice?`You need ${healPrice} Gold to heal 1 HP.`:`RESTORE 1 HP FOR ${healPrice} GOLD`;
-        holder.appendChild(empty);
+        if(!offers.length){const empty=document.createElement('div');empty.className='vendor-empty';empty.textContent='All available upgrades are already maxed.';holder.appendChild(empty);}
+        const action=(label,callback,primary=false)=>{const btn=document.createElement('button');btn.type='button';btn.className=primary?'primary':'secondary';btn.textContent=label;btn.addEventListener('click',callback);buttons.appendChild(btn);return btn;};
+        this.vendorRerollButton=action('',()=>this.actions.reroll());
+        this.vendorHealButton=action('',()=>this.actions.heal(),true);
+        this.vendorContinueButton=action('CONTINUE RUN ▶',()=>this.actions.leaveVendor());
       }
-      const action=(label,callback,primary=false,disabled=false)=>{
-        const btn=document.createElement('button');btn.type='button';btn.className=primary?'primary':'secondary';
-        btn.textContent=label;btn.disabled=disabled;btn.addEventListener('click',callback);buttons.appendChild(btn);
-      };
-      if(!healing&&!status.purchased){
-        action(`REROLL · ${status.rerolls||0} LEFT`,()=>this.actions.reroll(),false,!status.canReroll);
+      for(const {card,state,reward,cost}of this.vendorUiCards){
+        const affordable=devil?hp>cost:gold>=cost,acquired=closed&&status.acquiredId===reward.id;
+        card.disabled=closed||!affordable;card.classList.toggle('reward-spent',closed);card.classList.toggle('reward-acquired',acquired);
+        state.textContent=closed?(acquired?'ACQUIRED':'UNAVAILABLE'):'';
+        card.setAttribute('aria-label',`${reward.name}: ${closed?(acquired?'acquired':'unavailable'):`${reward.description}. Cost ${cost} ${devil?'health':'gold'}`}`);
       }
-      if(devil&&!healing)action(gold>=healPrice&&hp<maxHp?'DECLINE · VIEW HEALING':'DECLINE DEAL',()=>this.actions.declineDeal());
-      if(!devil||healing)action(hp>=maxHp?'FULL HEALTH':`HEAL 1 HP · ${healPrice} GOLD`,()=>this.actions.heal(),true,gold<healPrice||hp>=maxHp);
-      action('CONTINUE RUN ▶',()=>this.actions.leaveVendor());
-      this.setMode('upgrade');
+      this.vendorRerollButton.textContent=`REROLL · ${status.rerolls||0} LEFT`;this.vendorRerollButton.disabled=closed||!status.canReroll;
+      this.vendorHealButton.textContent=hp>=maxHp?'FULL HEALTH':`HEAL 1 HP · ${healPrice} GOLD`;
+      this.vendorHealButton.disabled=gold<healPrice||hp>=maxHp;
+      if(this.vendorUiModeKey!==key){this.vendorUiModeKey=key;this.setMode('upgrade');}
+      else show('upgrade-screen',true);
     }
     updateReliquary(meta,notice='') {
       const {DEFINITIONS,COSTS}=window.GRIM_META;
@@ -1509,15 +1498,17 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/ui/v0160/frontispiece.js?v=0.16.0"></script>
-  <script src="assets/visuals/visual-system.js?v=0.15.3"></script>
+  <script src="assets/combat/v0170/animation-data.js?v=0.17.0"></script>
+  <script src="assets/visuals/combat-animations.js?v=0.17.0"></script>
+  <script src="assets/ui/v0160/frontispiece.js?v=0.17.0"></script>
+  <script src="assets/visuals/visual-system.js?v=0.17.0"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
-  <script src="assets/visuals/power-animations.js?v=0.15.2"></script>
+  <script src="assets/visuals/power-animations.js?v=0.17.0"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
   <script src="assets/visuals/vendor-sanctuaries.js?v=0.15.2"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
-  <script src="assets/visuals/world-polish.js?v=0.15.3"></script>
+  <script src="assets/visuals/world-polish.js?v=0.17.0"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1587,6 +1578,7 @@ window.GRIM_CONFIG = Object.freeze({
     constructor() { super('GrimRun'); }
     preload(){
       scope.GRIM_POWER_ART?.preload(this);
+      scope.GRIM_COMBAT_ART?.preload(this);
       scope.GRIM_VENDOR_ART?.preload(this);
       scope.GRIM_WORLD_POLISH?.preload(this);
       this.biomeBackdropGroup='surface';
@@ -1770,6 +1762,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.events.once('shutdown',()=>this.visuals.shutdown());
       }
       this.powerArt=scope.GRIM_POWER_ART?new scope.GRIM_POWER_ART.PowerAnimations(this):null;
+      this.combatArt=scope.GRIM_COMBAT_ART?new scope.GRIM_COMBAT_ART.CombatAnimations(this):null;
       this.vendorArt=scope.GRIM_VENDOR_ART?new scope.GRIM_VENDOR_ART.VendorSanctuaries(this):null;
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.drawScene();
@@ -1906,7 +1899,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.hasTeleported=d>=5000;
       this.gunUnlocked=this.hasTeleported;
       this.shrineClaimed=this.gunUnlocked;
-      this.powerArt?.reset();this.worldPolish?.reset();
+      this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.ui.showGun(this.gunUnlocked);this.ui.showGunCooldown(0);
       this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
@@ -2035,6 +2028,7 @@ window.GRIM_CONFIG = Object.freeze({
         coinCount:this.coinCount,goldCollected:this.goldCollected,points:this.points,
         enemies,obstacles,bullets,fireballs,
         coins:this.coins.map(o=>({...o})),souls:this.souls.map(o=>({...o})),
+        combatViews:this.combatArt?.snapshot()||[],
         rubble,rngState:this.rng.state
       });
       // 8 seconds max rewind plus one sample, at about 10 samples / second.
@@ -2076,6 +2070,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.swingSequence=saved.swingSequence;
       this.coinCount=saved.coinCount;this.goldCollected=saved.goldCollected;this.points=saved.points;
       this.enemies=copy(saved.enemies);this.obstacles=copy(saved.obstacles);
+      this.combatArt?.restore(saved.combatViews);
       this.bullets=saved.bullets.map(b=>{
         const {refEnemy,refObstacle,...data}=b;
         return {...data,ref:refEnemy>=0?this.enemies[refEnemy]:
@@ -2149,7 +2144,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastUpdateHeartbeatAt=Date.now();
       if(typeof window.setInterval==='function'){
         this.loopWatchdogId=window.setInterval(()=>{
-          if(document.hidden||!['playing','countdown','portal','chest','vendorIntro','respawning','rewinding','upgrade'].includes(this.state))return;
+          if(document.hidden||!['playing','countdown','portal','chest','vendorIntro','dying','respawning','rewinding','upgrade'].includes(this.state))return;
           if(Date.now()-this.lastUpdateHeartbeatAt<2500)return;
           // A renderer callback can stop being scheduled while leaving Phaser's
           // running flag set. Restart the timestep when an active scene has had
@@ -2188,7 +2183,7 @@ window.GRIM_CONFIG = Object.freeze({
         lastIndex:-1};
       this.rewindPlayback.target=saved;
       this.state='rewinding';
-      this.powerArt?.reset();this.worldPolish?.reset();
+      this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.ui.setMode('rewinding');
       this.ui.showRewindPlayback(true);
       this.ui.rewindFlash(false);
@@ -2205,7 +2200,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
       this.cameraY=0;this.fallFeedbackMs=0;this.respawnMs=0;this.respawnCamera=null;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;this.shrineClaimed=false;
-      this.powerArt?.reset();this.worldPolish?.reset();
+      this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
       this.rewindFrames=[];this.rewindTerrainBase=new Map();
       this.rewindClockMs=0;this.rewindSampleMs=0;
@@ -2270,7 +2265,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     goToMenu() {
-      this.powerArt?.reset();this.worldPolish?.reset();
+      this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.wakeGameLoop();
       this.state = 'menu'; this.pendingOffers=[];
       this.countdownMs=0;this.goFlashMs=0;
@@ -2424,13 +2419,19 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
     }
+    touchingVendorFloor(number){
+      const p=this.player,center=this.startX+number*C.vendorEveryMeters*C.pxPerMeter;
+      const half=C.vendorSanctuaryHalfMeters*C.pxPerMeter,floor=this.terrain.groundAt(p.x);
+      return p.x+14>=center-half&&p.x-14<=center+half&&p.grounded&&!p.onSoulPlatform&&
+        Number.isFinite(floor)&&Math.abs(p.y-floor)<=2;
+    }
     triggerVendor(number){
       if(this.state!=='playing'||number>14||number<=this.lastVendorNumber)return;
       this.resetRewindHistory();
       this.lastVendorNumber=number;
       this.vendorType=number*C.vendorEveryMeters<5000?'angel':'devil';
       this.vendorPhase='deal';
-      this.vendorPurchased=false;
+      this.vendorPurchased=false;this.vendorAcquiredId=null;this.ui.vendorUiKey=null;this.ui.vendorUiModeKey=null;
       this.pendingOffers=this.vendorType==='angel'
         ?Powers.rewardOffers(this.powerManager,this.player,this.rng,3)
         :Powers.devilOffers(this.powerManager,this.rng,3);
@@ -2455,7 +2456,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='upgrade')return;
       this.ui.offerVendor(this.pendingOffers,this.vendorType,this.vendorPhase,
         this.lastVendorNumber*C.vendorEveryMeters,this.player.hp,this.player.maxHp,this.coinCount,
-        {purchased:this.vendorPurchased,rerolls:this.rerollsRemaining,canReroll:this.canRerollVendor()});
+        {purchased:this.vendorPurchased,acquiredId:this.vendorAcquiredId,rerolls:this.rerollsRemaining,canReroll:this.canRerollVendor()});
     }
     canRerollVendor(){
       if(this.state!=='upgrade'||this.vendorPhase!=='deal'||this.vendorPurchased||this.rerollsRemaining<=0)return false;
@@ -2487,16 +2488,14 @@ window.GRIM_CONFIG = Object.freeze({
       else this.coinCount-=price;
       this.powerArt?.purchase(id,this.powerManager.level(id)||1);
       this.puff(this.player.x,this.feetY-45,devil?0xff765e:0xffd98e,14);
-      if(devil)this.leaveVendor();
-      else {this.vendorPurchased=true;this.pendingOffers=[];this.refreshHud();this.showVendor();}
+      this.vendorPurchased=true;this.vendorAcquiredId=id;this.refreshHud();this.showVendor();
     }
     declineDeal(){
       if(this.state!=='upgrade'||this.vendorType!=='devil'||this.vendorPhase!=='deal')return;
-      if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp){this.leaveVendor();return;}
-      this.vendorPhase='heal';this.pendingOffers=[];this.showVendor();
+      this.vendorPurchased=true;this.vendorAcquiredId=null;this.showVendor();
     }
     healFromVendor(){
-      if(this.state!=='upgrade'||!(this.vendorType==='angel'||this.vendorType==='devil'&&this.vendorPhase==='heal'))return false;
+      if(this.state!=='upgrade'||!['angel','devil'].includes(this.vendorType))return false;
       if(this.coinCount<C.devilHealPrice||this.player.hp>=this.player.maxHp)return false;
       this.coinCount-=C.devilHealPrice;this.player.hp++;
       this.powerArt?.purchase('soulMend',1);
@@ -2595,7 +2594,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(type==='airBramble')return {x:x-245,width:415};
       const paintedWidth=type==='branch'?560:type==='tuckGate'?235:
         type==='bramble'?width*3:type==='rock'?width*2.5:
-        type==='fire'?width*2:type==='snappingBramble'?256*.32:width;
+        type==='fire'?width*2:type==='snappingBramble'?256*.32*3:width;
       return {x:x+width/2-paintedWidth/2,width:paintedWidth};
     }
     vendorObstacleBlocked(type,x,width){
@@ -2802,6 +2801,11 @@ window.GRIM_CONFIG = Object.freeze({
         this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.portalMs===0)this.finishPortal();
       }
+      else if(this.state==='dying'){
+        if(!document.hidden)this.deathPoseMs=Math.min(880,(this.deathPoseMs||0)+Math.min(250,Math.max(0,deltaMs)));
+        if(this.deathPoseMs>=880)this.resolveDeath();
+        this.drawScene();return;
+      }
       else if(this.state==='vendorIntro'){
         if(!document.hidden)this.vendorIntroMs=Math.max(0,this.vendorIntroMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.vendorIntroMs===0)this.finishVendorIntro();
@@ -2829,6 +2833,9 @@ window.GRIM_CONFIG = Object.freeze({
           this.state='playing';this.goFlashMs=370;
           this.ui.setMode('playing');this.ui.showGo();
         }
+      }
+      else if(this.state==='upgrade'){
+        if(!document.hidden)this.powerArt?.tick(Math.min(34,Math.max(0,deltaMs)));
       }
       else if (this.state === 'playing') {
         // Cap large frame steps after browser interruptions to avoid tunneling through hazards.
@@ -2937,8 +2944,10 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.hasTeleported && this.distance>=C.finishMeters&&!this.godMode){
           this.completeRun();this.drawScene();return;
         }
-        const reachedVendor=Math.floor(this.distance/C.vendorEveryMeters);
-        if(reachedVendor>=this.nextVendorNumber&&this.nextVendorNumber<=14){
+        // A real foot contact on the decorated floor owns encounter timing.
+        while(this.nextVendorNumber<=14&&p.x-14>this.startX+(this.nextVendorNumber*C.vendorEveryMeters+C.vendorSanctuaryHalfMeters)*C.pxPerMeter)
+          this.nextVendorNumber++;
+        if(this.nextVendorNumber<=14&&this.touchingVendorFloor(this.nextVendorNumber)){
           this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,
             this.points,this.powerManager.summary());
           const target=this.nextVendorNumber++;
@@ -2965,7 +2974,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
-        this.powerArt?.tick(frameMs);this.worldPolish?.tick(frameMs);
+        this.powerArt?.tick(frameMs);this.worldPolish?.tick(frameMs);this.combatArt?.tick(frameMs);
         this.tickRewind(frameMs);
       }
       if(this.state==='playing'&&this.player.visualFireMs>0)
@@ -2990,6 +2999,7 @@ window.GRIM_CONFIG = Object.freeze({
     hitEnemy(enemy,damage,fromGun=false){
       if(enemy.dead)return;
       enemy.hp-=damage;
+      this.combatArt?.enemyHit(enemy,enemy.hp<=0);
       this.puff(enemy.x,enemy.y,enemy.kind==='skeletalBat'?0xe5d6cb:0x9edbf2,6);
       if(enemy.hp<=0){
         enemy.dead=true;
@@ -3004,14 +3014,14 @@ window.GRIM_CONFIG = Object.freeze({
         this.powerManager.level('powerShot'),0);
       this.fireSoulcaster(target);
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
-      this.player.visualFireMs=180;
-      if(this.powerManager.level('rapidFire'))this.powerArt?.trigger('rapidFire',this.player.x+35,this.player.y-58);
-      if(this.powerManager.level('powerShot'))this.powerArt?.trigger('powerShot',this.player.x+48,this.player.y-58);
+      this.player.visualFireMs=scope.GRIM_COMBAT_ART?.FIRE_MS||180;
+      if(this.powerManager.level('rapidFire'))this.powerArt?.trigger('rapidFire',this.player.x+52,this.player.y-(this.lowProfile?36:65));
+      if(this.powerManager.level('powerShot'))this.powerArt?.trigger('powerShot',this.player.x+52,this.player.y-(this.lowProfile?36:65));
       this.ui.showGunCooldown(this.gunCooldownMs);
       return true;
     }
     fireSoulcaster(target){
-      const p=this.player,originX=p.x+29,originY=p.y-58;
+      const p=this.player,origin=scope.GRIM_COMBAT_ART?.muzzle(this)||{x:p.x+29,y:p.y-58},originX=origin.x,originY=origin.y;
       this.bullets.push({x:originX,y:originY,
         ref:target?target.ref:null,kind:target?target.kind:'free',
         damage:this.powerManager.level('powerShot')>=1?2:1,ageMs:0,dead:false});
@@ -3187,7 +3197,7 @@ window.GRIM_CONFIG = Object.freeze({
         const body=Core.collisionBox(p.x,p.y,this.lowProfile);
         for(const e of this.enemies){
           if(e.dead||e.contactDone||!Core.overlaps(body,Combat.rectFor(e)))continue;
-          e.contactDone=true;e.dead=true;
+          e.contactDone=true;this.combatArt?.enemyHit(e,true);e.dead=true;
           p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,e.kind);
           break;
         }
@@ -3270,6 +3280,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.triggerBrittleBones();
       if(this.godMode)return false;
       this.player.hp=Math.max(0,this.player.hp-amount);
+      if(amount>0)this.player.visualHurtMs=scope.GRIM_COMBAT_ART?.HURT_MS||340;
       if(this.player.hp<=0)this.die();
       return true;
     }
@@ -3340,7 +3351,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.respawnNextMode='playing';
       this.respawnCamera={fromX:fromCamera.x,fromY:fromCamera.y,
         toX:p.x-this.width*C.reaperXRatio,toY:p.y-this.groundY};
-      this.worldPolish?.reset();this.powerArt?.reset();this.resetRewindHistory();
+      this.worldPolish?.reset();this.powerArt?.reset();this.combatArt?.reset();this.resetRewindHistory();
       this.ui.setMode('respawning');this.refreshHud();
       return true;
     }
@@ -3365,7 +3376,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.visualTuckMs=0;p.visualTuckReleaseMs=0;p.visualWasAirborne=false;p.visualFireMs=0;
       this.distance=4900;this.cameraX=p.x-this.width*C.reaperXRatio;
       this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
-      this.powerArt?.reset();this.worldPolish?.reset();
+      this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.ui.showPortal(false);
       this.state='chest';this.chestMs=6000;this.resetRewindHistory();
       this.ui.setMode('chest');
@@ -3432,9 +3443,18 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
     }
     die(){
+      if(['dying','dead','revive'].includes(this.state))return;
       this.resetRewindHistory();
       this.countdownMs=0;this.goFlashMs=0;
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
+      if(this.combatArt?.ready['reaper-hurt-death']){
+        this.state='dying';this.deathPoseMs=0;
+        this.player.attackMs=0;this.player.visualFireMs=0;this.player.jumpHeld=false;this.player.holdSlide=false;
+        this.ui.setMode('dying');return;
+      }
+      this.resolveDeath();
+    }
+    resolveDeath(){
       if(this.freeLifeAvailable&&!this.freeLifeUsed){
         this.freeLifeUsed=true;this.lastResurrection='free';this.resurrect();return;
       }
@@ -3488,7 +3508,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.refreshHud();
       this.state='respawning';this.respawnMs=1500;this.respawnNextMode='countdown';
       this.respawnCamera=null;this.damageFlashMs=0;this.fallFeedbackMs=0;
-      this.worldPolish?.reset();this.powerArt?.reset();
+      this.worldPolish?.reset();this.powerArt?.reset();this.combatArt?.reset();
       this.ui.showFallNotice(false);this.ui.setMode('respawning');
       return true;
     }
@@ -3664,6 +3684,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawForeground();
       if(this.visuals)this.visuals.render();
       this.powerArt?.render();
+      this.combatArt?.render();
       this.vendorArt?.renderCinema();
       this.worldPolish?.endFrame();
     }
@@ -4851,7 +4872,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(plant){
           const phase=((this.elapsed*5.1+o.variant*1.7+Math.PI/2)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
           image.setFrame(Math.round(phase/(Math.PI*2)*8)%8);
-          width=256*.32;height=320*.32;x=o.x+o.width/2;
+          width=256*.32*3;height=320*.32*3;x=o.x+o.width/2;
           y=this.terrain.anchorAt(o.x)+this.obstacleVisualInset(o);originY=300/320;
         }else{width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2+this.obstacleVisualInset(o);}
       }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){

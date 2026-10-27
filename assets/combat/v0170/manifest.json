@@ -1,0 +1,2033 @@
+{
+  "version": "0.17.0",
+  "sources": {
+    "bat-response.png": {
+      "bytes": 1461803,
+      "sha256": "5c2fc541960226c5e0b2e10dda68b6cf7cebcce1899b8a01e9a2537497e373b1"
+    },
+    "reaper-slide-cut.png": {
+      "bytes": 1549394,
+      "sha256": "03169d4915c188b988d6ddd7f37fc1ed4703cd2f8b7dc3fc630bae2798b67d4a"
+    },
+    "crawler-response.png": {
+      "bytes": 1488733,
+      "sha256": "5e08d0f4b5c9d931a5ae0ebe7f5ca300bbcaf95af4720da5d88530d683a9bd4e"
+    },
+    "reaper-crossbow.png": {
+      "bytes": 2697250,
+      "sha256": "e49574a9b359b42ab365e4684665055f3dbe051ad3f6b496e90728e8c93d00ed"
+    },
+    "bat-flight.png": {
+      "bytes": 2301314,
+      "sha256": "847faeeb501df9e341c07056e7fd5ee36d8af0c4c8092368effe77fab1a30422"
+    },
+    "reaper-air-crossbow.png": {
+      "bytes": 2191038,
+      "sha256": "23f1b5dff40e62718412220501b818ff84ab036afd24e7d5c1164f2d316bae68"
+    },
+    "reaper-soul-cleave.png": {
+      "bytes": 2402694,
+      "sha256": "d615c9dd4ed26671e242e096c994cdf259e82be5859ab3a3c6ecbd503069a387"
+    },
+    "reaper-hurt-death.png": {
+      "bytes": 2354085,
+      "sha256": "992b7a9f2a4c7a160949d383a6121a8ca961411ba8c11e6caee85bba41b43067"
+    },
+    "imp-response.png": {
+      "bytes": 2048357,
+      "sha256": "63b1e1589b95dfbad95b37a735125b1f3839a6643e32ab38f402b3d5bfb84028"
+    },
+    "skeletal-response.png": {
+      "bytes": 1391454,
+      "sha256": "4484f4871c6db7993e9d55d5cffc80e3848dedd6bfc6d222a0a61302ce5f378a"
+    },
+    "combat-effects.png": {
+      "bytes": 1899306,
+      "sha256": "ac0c9e5d1afb1922bfda2697bdcddc67e93de70419376e3c6440c67ad62dd2a6"
+    }
+  },
+  "runtime": {
+    "bat-flight.png": {
+      "bytes": 826660,
+      "sha256": "28b35cceca1ee2518150dcf34182114a3aa7cfaed8896dce3f87b6524ce41e1e",
+      "size": [
+        2048,
+        2048
+      ]
+    },
+    "bat-response.png": {
+      "bytes": 438814,
+      "sha256": "a7c83bdd58fb42079460a8384ada4ed718da218e23da15a686404a7aad0df179",
+      "size": [
+        2048,
+        1024
+      ]
+    },
+    "combat-effects.png": {
+      "bytes": 1170660,
+      "sha256": "bc16dd420f383d7ba01ac3933160a7ae63203e7d39e3f1b44fd2e7e2fbce2c5c",
+      "size": [
+        1024,
+        1536
+      ]
+    },
+    "crawler-response.png": {
+      "bytes": 798276,
+      "sha256": "66892eaaa529bc70317dd0a907dafc7da190ca343851ec05949c303d294ee046",
+      "size": [
+        2048,
+        1024
+      ]
+    },
+    "imp-response.png": {
+      "bytes": 660508,
+      "sha256": "dcd38e60a80e7dc6a58887cb1e33a38f4f56991c975b94baf194425b85b87d53",
+      "size": [
+        2048,
+        1024
+      ]
+    },
+    "reaper-air-crossbow.png": {
+      "bytes": 936351,
+      "sha256": "8bcfc750367ebd254068d25c20ccf367ab97c7851ab05121f2f12772255d5692",
+      "size": [
+        2048,
+        1024
+      ]
+    },
+    "reaper-crossbow.png": {
+      "bytes": 2021041,
+      "sha256": "4c9cd4838cec3e05bd4466253fe54e962da6a9797d76c8d97b95c25c2fad1ffc",
+      "size": [
+        2048,
+        2048
+      ]
+    },
+    "reaper-hurt-death.png": {
+      "bytes": 1429536,
+      "sha256": "44fa0e12e9a68d1d8b0f763c3a5a612feb2ab8a168a66abf4038ba1285349fa8",
+      "size": [
+        2048,
+        1536
+      ]
+    },
+    "reaper-slide-cut.png": {
+      "bytes": 1273420,
+      "sha256": "d83224ef5320cafb2e36a0298065bac0aec09b31893cd781e7ca879db2f18fd6",
+      "size": [
+        2048,
+        1536
+      ]
+    },
+    "reaper-soul-cleave.png": {
+      "bytes": 1203906,
+      "sha256": "a8bc5e3a032b469ca0445a6afa2c37b2510d98131abc4dd6f88781d647a7ab50",
+      "size": [
+        2048,
+        1536
+      ]
+    },
+    "skeletal-response.png": {
+      "bytes": 536185,
+      "sha256": "ad7290c82bef318a28cc5a7f4d8ed374a7207d5068e38d9329b680a520a9d559",
+      "size": [
+        2048,
+        1024
+      ]
+    }
+  },
+  "registration": {
+    "reaper-slide-cut": {
+      "frames": 10,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        280,
+        456
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            13,
+            66,
+            316,
+            364
+          ],
+          "sourceEye": [
+            262.0,
+            174.0
+          ],
+          "factor": 1.02,
+          "position": [
+            39,
+            155
+          ]
+        },
+        {
+          "sourceBox": [
+            354,
+            97,
+            691,
+            364
+          ],
+          "sourceEye": [
+            296.0,
+            147.0
+          ],
+          "factor": 1.02,
+          "position": [
+            5,
+            187
+          ]
+        },
+        {
+          "sourceBox": [
+            707,
+            145,
+            1071,
+            364
+          ],
+          "sourceEye": [
+            287.0,
+            94.0
+          ],
+          "factor": 1.02,
+          "position": [
+            14,
+            236
+          ]
+        },
+        {
+          "sourceBox": [
+            1058,
+            178,
+            1430,
+            373
+          ],
+          "sourceEye": [
+            265.5,
+            56.5
+          ],
+          "factor": 1.02,
+          "position": [
+            36,
+            260
+          ]
+        },
+        {
+          "sourceBox": [
+            2,
+            496,
+            384,
+            686
+          ],
+          "sourceEye": [
+            264.0,
+            56.5
+          ],
+          "factor": 1.02,
+          "position": [
+            37,
+            265
+          ]
+        },
+        {
+          "sourceBox": [
+            341,
+            492,
+            762,
+            685
+          ],
+          "sourceEye": [
+            237.0,
+            64.5
+          ],
+          "factor": 1.02,
+          "position": [
+            65,
+            262
+          ]
+        },
+        {
+          "sourceBox": [
+            3,
+            844,
+            417,
+            1025
+          ],
+          "sourceEye": [
+            258.0,
+            65.0
+          ],
+          "factor": 1.02,
+          "position": [
+            43,
+            274
+          ]
+        },
+        {
+          "sourceBox": [
+            418,
+            755,
+            758,
+            1031
+          ],
+          "sourceEye": [
+            271.0,
+            155.5
+          ],
+          "factor": 1.02,
+          "position": [
+            30,
+            178
+          ]
+        },
+        {
+          "sourceBox": [
+            757,
+            766,
+            1085,
+            1029
+          ],
+          "sourceEye": [
+            287.0,
+            145.0
+          ],
+          "factor": 1.02,
+          "position": [
+            14,
+            191
+          ]
+        },
+        {
+          "sourceBox": [
+            1101,
+            774,
+            1414,
+            1029
+          ],
+          "sourceEye": [
+            272.5,
+            134.0
+          ],
+          "factor": 1.02,
+          "position": [
+            29,
+            199
+          ]
+        }
+      ]
+    },
+    "reaper-soul-cleave": {
+      "frames": 12,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        280,
+        456
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            82,
+            12,
+            425,
+            282
+          ],
+          "sourceEye": [
+            298.0,
+            131.5
+          ],
+          "factor": 0.84,
+          "position": [
+            52,
+            232
+          ]
+        },
+        {
+          "sourceBox": [
+            597,
+            45,
+            937,
+            282
+          ],
+          "sourceEye": [
+            296.0,
+            111.0
+          ],
+          "factor": 0.84,
+          "position": [
+            53,
+            259
+          ]
+        },
+        {
+          "sourceBox": [
+            1094,
+            5,
+            1435,
+            282
+          ],
+          "sourceEye": [
+            267.0,
+            135.0
+          ],
+          "factor": 0.84,
+          "position": [
+            78,
+            226
+          ]
+        },
+        {
+          "sourceBox": [
+            33,
+            281,
+            497,
+            543
+          ],
+          "sourceEye": [
+            246.0,
+            104.0
+          ],
+          "factor": 0.84,
+          "position": [
+            95,
+            238
+          ]
+        },
+        {
+          "sourceBox": [
+            548,
+            323,
+            1006,
+            525
+          ],
+          "sourceEye": [
+            254.0,
+            56.0
+          ],
+          "factor": 0.84,
+          "position": [
+            88,
+            289
+          ]
+        },
+        {
+          "sourceBox": [
+            1039,
+            323,
+            1528,
+            521
+          ],
+          "sourceEye": [
+            249.0,
+            53.5
+          ],
+          "factor": 0.84,
+          "position": [
+            93,
+            292
+          ]
+        },
+        {
+          "sourceBox": [
+            38,
+            556,
+            493,
+            749
+          ],
+          "sourceEye": [
+            245.5,
+            57.0
+          ],
+          "factor": 0.84,
+          "position": [
+            96,
+            296
+          ]
+        },
+        {
+          "sourceBox": [
+            539,
+            564,
+            1031,
+            750
+          ],
+          "sourceEye": [
+            262.0,
+            59.0
+          ],
+          "factor": 0.84,
+          "position": [
+            82,
+            302
+          ]
+        },
+        {
+          "sourceBox": [
+            1059,
+            552,
+            1508,
+            746
+          ],
+          "sourceEye": [
+            258.5,
+            52.0
+          ],
+          "factor": 0.84,
+          "position": [
+            85,
+            296
+          ]
+        },
+        {
+          "sourceBox": [
+            39,
+            783,
+            474,
+            1003
+          ],
+          "sourceEye": [
+            262.5,
+            54.0
+          ],
+          "factor": 0.84,
+          "position": [
+            81,
+            274
+          ]
+        },
+        {
+          "sourceBox": [
+            554,
+            760,
+            962,
+            1003
+          ],
+          "sourceEye": [
+            239.5,
+            75.5
+          ],
+          "factor": 0.84,
+          "position": [
+            101,
+            254
+          ]
+        },
+        {
+          "sourceBox": [
+            1060,
+            779,
+            1501,
+            1003
+          ],
+          "sourceEye": [
+            263.0,
+            51.0
+          ],
+          "factor": 0.84,
+          "position": [
+            81,
+            270
+          ]
+        }
+      ]
+    },
+    "reaper-hurt-death": {
+      "frames": 12,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        280,
+        456
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            45,
+            35,
+            428,
+            375
+          ],
+          "sourceEye": [
+            204.0,
+            129.0
+          ],
+          "factor": 0.96,
+          "position": [
+            109,
+            132
+          ]
+        },
+        {
+          "sourceBox": [
+            381,
+            16,
+            791,
+            369
+          ],
+          "sourceEye": [
+            211.0,
+            125.5
+          ],
+          "factor": 0.96,
+          "position": [
+            102,
+            120
+          ]
+        },
+        {
+          "sourceBox": [
+            837,
+            62,
+            1131,
+            375
+          ],
+          "sourceEye": [
+            238.0,
+            147.0
+          ],
+          "factor": 0.96,
+          "position": [
+            76,
+            158
+          ]
+        },
+        {
+          "sourceBox": [
+            1199,
+            45,
+            1486,
+            378
+          ],
+          "sourceEye": [
+            223.5,
+            129.0
+          ],
+          "factor": 0.96,
+          "position": [
+            90,
+            139
+          ]
+        },
+        {
+          "sourceBox": [
+            73,
+            380,
+            356,
+            707
+          ],
+          "sourceEye": [
+            240.0,
+            153.0
+          ],
+          "factor": 0.96,
+          "position": [
+            75,
+            145
+          ]
+        },
+        {
+          "sourceBox": [
+            492,
+            396,
+            747,
+            707
+          ],
+          "sourceEye": [
+            218.0,
+            168.0
+          ],
+          "factor": 0.96,
+          "position": [
+            96,
+            160
+          ]
+        },
+        {
+          "sourceBox": [
+            823,
+            406,
+            1107,
+            704
+          ],
+          "sourceEye": [
+            248.0,
+            171.0
+          ],
+          "factor": 0.96,
+          "position": [
+            67,
+            173
+          ]
+        },
+        {
+          "sourceBox": [
+            1193,
+            403,
+            1521,
+            700
+          ],
+          "sourceEye": [
+            216.48,
+            106.92
+          ],
+          "factor": 0.96,
+          "position": [
+            97,
+            174
+          ]
+        },
+        {
+          "sourceBox": [
+            46,
+            742,
+            437,
+            1002
+          ],
+          "sourceEye": [
+            258.06,
+            93.6
+          ],
+          "factor": 0.96,
+          "position": [
+            57,
+            209
+          ]
+        },
+        {
+          "sourceBox": [
+            427,
+            824,
+            793,
+            1000
+          ],
+          "sourceEye": [
+            241.56,
+            63.36
+          ],
+          "factor": 0.96,
+          "position": [
+            73,
+            290
+          ]
+        },
+        {
+          "sourceBox": [
+            784,
+            841,
+            1165,
+            1012
+          ],
+          "sourceEye": [
+            251.46,
+            61.56
+          ],
+          "factor": 0.96,
+          "position": [
+            64,
+            295
+          ]
+        },
+        {
+          "sourceBox": [
+            1163,
+            846,
+            1524,
+            1011
+          ],
+          "sourceEye": [
+            238.26,
+            59.4
+          ],
+          "factor": 0.96,
+          "position": [
+            76,
+            300
+          ]
+        }
+      ]
+    },
+    "reaper-crossbow": {
+      "frames": 16,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        280,
+        456
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            14,
+            36,
+            394,
+            291
+          ],
+          "sourceEye": [
+            228.0,
+            49.0
+          ],
+          "factor": 1.02,
+          "position": [
+            74,
+            199
+          ]
+        },
+        {
+          "sourceBox": [
+            397,
+            43,
+            775,
+            291
+          ],
+          "sourceEye": [
+            228.5,
+            50.0
+          ],
+          "factor": 1.02,
+          "position": [
+            73,
+            206
+          ]
+        },
+        {
+          "sourceBox": [
+            769,
+            43,
+            1173,
+            291
+          ],
+          "sourceEye": [
+            229.0,
+            49.0
+          ],
+          "factor": 1.02,
+          "position": [
+            73,
+            206
+          ]
+        },
+        {
+          "sourceBox": [
+            1155,
+            44,
+            1516,
+            292
+          ],
+          "sourceEye": [
+            181.0,
+            46.0
+          ],
+          "factor": 1.02,
+          "position": [
+            122,
+            206
+          ]
+        },
+        {
+          "sourceBox": [
+            14,
+            316,
+            389,
+            571
+          ],
+          "sourceEye": [
+            225.0,
+            51.5
+          ],
+          "factor": 1.02,
+          "position": [
+            77,
+            199
+          ]
+        },
+        {
+          "sourceBox": [
+            391,
+            321,
+            775,
+            571
+          ],
+          "sourceEye": [
+            237.0,
+            52.0
+          ],
+          "factor": 1.02,
+          "position": [
+            65,
+            204
+          ]
+        },
+        {
+          "sourceBox": [
+            774,
+            325,
+            1151,
+            571
+          ],
+          "sourceEye": [
+            226.0,
+            50.0
+          ],
+          "factor": 1.02,
+          "position": [
+            76,
+            208
+          ]
+        },
+        {
+          "sourceBox": [
+            1146,
+            322,
+            1525,
+            571
+          ],
+          "sourceEye": [
+            231.0,
+            50.0
+          ],
+          "factor": 1.02,
+          "position": [
+            71,
+            205
+          ]
+        },
+        {
+          "sourceBox": [
+            10,
+            602,
+            404,
+            787
+          ],
+          "sourceEye": [
+            227.0,
+            49.0
+          ],
+          "factor": 0.94,
+          "position": [
+            91,
+            285
+          ]
+        },
+        {
+          "sourceBox": [
+            390,
+            607,
+            772,
+            790
+          ],
+          "sourceEye": [
+            211.0,
+            48.0
+          ],
+          "factor": 0.94,
+          "position": [
+            106,
+            287
+          ]
+        },
+        {
+          "sourceBox": [
+            764,
+            608,
+            1167,
+            790
+          ],
+          "sourceEye": [
+            211.0,
+            49.0
+          ],
+          "factor": 0.94,
+          "position": [
+            106,
+            288
+          ]
+        },
+        {
+          "sourceBox": [
+            1146,
+            608,
+            1509,
+            790
+          ],
+          "sourceEye": [
+            181.0,
+            45.0
+          ],
+          "factor": 0.94,
+          "position": [
+            134,
+            288
+          ]
+        },
+        {
+          "sourceBox": [
+            12,
+            809,
+            404,
+            1009
+          ],
+          "sourceEye": [
+            229.0,
+            50.0
+          ],
+          "factor": 0.94,
+          "position": [
+            89,
+            271
+          ]
+        },
+        {
+          "sourceBox": [
+            392,
+            812,
+            779,
+            1009
+          ],
+          "sourceEye": [
+            229.0,
+            49.0
+          ],
+          "factor": 0.94,
+          "position": [
+            89,
+            274
+          ]
+        },
+        {
+          "sourceBox": [
+            771,
+            812,
+            1148,
+            1009
+          ],
+          "sourceEye": [
+            217.0,
+            48.0
+          ],
+          "factor": 0.94,
+          "position": [
+            100,
+            274
+          ]
+        },
+        {
+          "sourceBox": [
+            1145,
+            815,
+            1525,
+            1009
+          ],
+          "sourceEye": [
+            221.0,
+            48.0
+          ],
+          "factor": 0.94,
+          "position": [
+            97,
+            276
+          ]
+        }
+      ]
+    },
+    "reaper-air-crossbow": {
+      "frames": 6,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        280,
+        456
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            5,
+            157,
+            400,
+            502
+          ],
+          "sourceEye": [
+            242.0,
+            60.0
+          ],
+          "factor": 0.92,
+          "position": [
+            81,
+            141
+          ]
+        },
+        {
+          "sourceBox": [
+            367,
+            160,
+            786,
+            494
+          ],
+          "sourceEye": [
+            241.0,
+            59.0
+          ],
+          "factor": 0.92,
+          "position": [
+            82,
+            151
+          ]
+        },
+        {
+          "sourceBox": [
+            742,
+            168,
+            1164,
+            499
+          ],
+          "sourceEye": [
+            241.0,
+            60.5
+          ],
+          "factor": 0.92,
+          "position": [
+            82,
+            154
+          ]
+        },
+        {
+          "sourceBox": [
+            1126,
+            163,
+            1535,
+            499
+          ],
+          "sourceEye": [
+            230.0,
+            66.5
+          ],
+          "factor": 0.92,
+          "position": [
+            92,
+            150
+          ]
+        },
+        {
+          "sourceBox": [
+            6,
+            560,
+            420,
+            895
+          ],
+          "sourceEye": [
+            229.0,
+            51.0
+          ],
+          "factor": 0.92,
+          "position": [
+            93,
+            151
+          ]
+        },
+        {
+          "sourceBox": [
+            1119,
+            564,
+            1533,
+            895
+          ],
+          "sourceEye": [
+            234.0,
+            58.0
+          ],
+          "factor": 0.92,
+          "position": [
+            89,
+            154
+          ]
+        }
+      ]
+    },
+    "bat-flight": {
+      "frames": 16,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        330,
+        292
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            16,
+            18,
+            443,
+            266
+          ],
+          "sourceEye": [
+            321.0,
+            164.0
+          ],
+          "factor": 0.7,
+          "position": [
+            105,
+            177
+          ]
+        },
+        {
+          "sourceBox": [
+            406,
+            33,
+            774,
+            266
+          ],
+          "sourceEye": [
+            307.0,
+            154.5
+          ],
+          "factor": 0.7,
+          "position": [
+            115,
+            184
+          ]
+        },
+        {
+          "sourceBox": [
+            775,
+            66,
+            1161,
+            265
+          ],
+          "sourceEye": [
+            313.0,
+            122.0
+          ],
+          "factor": 0.7,
+          "position": [
+            111,
+            207
+          ]
+        },
+        {
+          "sourceBox": [
+            1171,
+            89,
+            1527,
+            266
+          ],
+          "sourceEye": [
+            275.0,
+            93.5
+          ],
+          "factor": 0.7,
+          "position": [
+            138,
+            227
+          ]
+        },
+        {
+          "sourceBox": [
+            11,
+            308,
+            422,
+            487
+          ],
+          "sourceEye": [
+            301.5,
+            96.0
+          ],
+          "factor": 0.7,
+          "position": [
+            119,
+            225
+          ]
+        },
+        {
+          "sourceBox": [
+            440,
+            331,
+            794,
+            502
+          ],
+          "sourceEye": [
+            236.0,
+            74.0
+          ],
+          "factor": 0.7,
+          "position": [
+            165,
+            240
+          ]
+        },
+        {
+          "sourceBox": [
+            797,
+            332,
+            1183,
+            521
+          ],
+          "sourceEye": [
+            203.0,
+            41.0
+          ],
+          "factor": 0.7,
+          "position": [
+            188,
+            263
+          ]
+        },
+        {
+          "sourceBox": [
+            1205,
+            331,
+            1524,
+            501
+          ],
+          "sourceEye": [
+            224.0,
+            75.0
+          ],
+          "factor": 0.7,
+          "position": [
+            173,
+            240
+          ]
+        },
+        {
+          "sourceBox": [
+            68,
+            530,
+            403,
+            759
+          ],
+          "sourceEye": [
+            202.0,
+            125.0
+          ],
+          "factor": 0.7,
+          "position": [
+            189,
+            204
+          ]
+        },
+        {
+          "sourceBox": [
+            463,
+            560,
+            764,
+            759
+          ],
+          "sourceEye": [
+            228.0,
+            115.5
+          ],
+          "factor": 0.7,
+          "position": [
+            170,
+            211
+          ]
+        },
+        {
+          "sourceBox": [
+            824,
+            516,
+            1157,
+            759
+          ],
+          "sourceEye": [
+            252.0,
+            159.5
+          ],
+          "factor": 0.7,
+          "position": [
+            154,
+            180
+          ]
+        },
+        {
+          "sourceBox": [
+            1158,
+            514,
+            1525,
+            761
+          ],
+          "sourceEye": [
+            287.0,
+            164.0
+          ],
+          "factor": 0.7,
+          "position": [
+            129,
+            177
+          ]
+        },
+        {
+          "sourceBox": [
+            17,
+            774,
+            425,
+            1005
+          ],
+          "sourceEye": [
+            303.5,
+            147.0
+          ],
+          "factor": 0.7,
+          "position": [
+            118,
+            189
+          ]
+        },
+        {
+          "sourceBox": [
+            408,
+            788,
+            802,
+            1004
+          ],
+          "sourceEye": [
+            294.0,
+            132.0
+          ],
+          "factor": 0.7,
+          "position": [
+            124,
+            200
+          ]
+        },
+        {
+          "sourceBox": [
+            795,
+            767,
+            1184,
+            1004
+          ],
+          "sourceEye": [
+            287.0,
+            152.0
+          ],
+          "factor": 0.7,
+          "position": [
+            129,
+            186
+          ]
+        },
+        {
+          "sourceBox": [
+            1158,
+            769,
+            1532,
+            1005
+          ],
+          "sourceEye": [
+            291.0,
+            153.0
+          ],
+          "factor": 0.7,
+          "position": [
+            126,
+            185
+          ]
+        }
+      ]
+    },
+    "bat-response": {
+      "frames": 7,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        310,
+        270
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            18,
+            89,
+            647,
+            451
+          ],
+          "sourceEye": [
+            482.0,
+            119.0
+          ],
+          "factor": 0.51,
+          "position": [
+            64,
+            209
+          ]
+        },
+        {
+          "sourceBox": [
+            618,
+            52,
+            1212,
+            449
+          ],
+          "sourceEye": [
+            349.0,
+            263.0
+          ],
+          "factor": 0.51,
+          "position": [
+            132,
+            136
+          ]
+        },
+        {
+          "sourceBox": [
+            1153,
+            111,
+            1723,
+            474
+          ],
+          "sourceEye": [
+            521.0,
+            222.0
+          ],
+          "factor": 0.51,
+          "position": [
+            44,
+            157
+          ]
+        },
+        {
+          "sourceBox": [
+            21,
+            512,
+            462,
+            843
+          ],
+          "sourceEye": [
+            391.5,
+            185.5
+          ],
+          "factor": 0.51,
+          "position": [
+            110,
+            175
+          ]
+        },
+        {
+          "sourceBox": [
+            480,
+            510,
+            878,
+            861
+          ],
+          "sourceEye": [
+            275.0,
+            192.0
+          ],
+          "factor": 0.51,
+          "position": [
+            170,
+            172
+          ]
+        },
+        {
+          "sourceBox": [
+            881,
+            515,
+            1277,
+            829
+          ],
+          "sourceEye": [
+            341.0,
+            188.5
+          ],
+          "factor": 0.51,
+          "position": [
+            136,
+            174
+          ]
+        },
+        {
+          "sourceBox": [
+            1287,
+            643,
+            1757,
+            827
+          ],
+          "sourceEye": [
+            431.0,
+            140.0
+          ],
+          "factor": 0.51,
+          "position": [
+            90,
+            199
+          ]
+        }
+      ]
+    },
+    "skeletal-response": {
+      "frames": 8,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        310,
+        270
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            17,
+            92,
+            504,
+            446
+          ],
+          "sourceEye": [
+            319.0,
+            225.0
+          ],
+          "factor": 0.6,
+          "position": [
+            119,
+            135
+          ]
+        },
+        {
+          "sourceBox": [
+            497,
+            137,
+            839,
+            432
+          ],
+          "sourceEye": [
+            288.0,
+            183.0
+          ],
+          "factor": 0.6,
+          "position": [
+            137,
+            160
+          ]
+        },
+        {
+          "sourceBox": [
+            892,
+            118,
+            1343,
+            436
+          ],
+          "sourceEye": [
+            195.0,
+            146.0
+          ],
+          "factor": 0.6,
+          "position": [
+            193,
+            182
+          ]
+        },
+        {
+          "sourceBox": [
+            1393,
+            173,
+            1737,
+            459
+          ],
+          "sourceEye": [
+            242.0,
+            188.0
+          ],
+          "factor": 0.6,
+          "position": [
+            165,
+            157
+          ]
+        },
+        {
+          "sourceBox": [
+            103,
+            556,
+            405,
+            829
+          ],
+          "sourceEye": [
+            245.0,
+            195.0
+          ],
+          "factor": 0.6,
+          "position": [
+            163,
+            153
+          ]
+        },
+        {
+          "sourceBox": [
+            499,
+            569,
+            855,
+            828
+          ],
+          "sourceEye": [
+            303.0,
+            155.0
+          ],
+          "factor": 0.6,
+          "position": [
+            128,
+            177
+          ]
+        },
+        {
+          "sourceBox": [
+            930,
+            573,
+            1304,
+            831
+          ],
+          "sourceEye": [
+            224.0,
+            197.0
+          ],
+          "factor": 0.6,
+          "position": [
+            176,
+            152
+          ]
+        },
+        {
+          "sourceBox": [
+            1405,
+            612,
+            1732,
+            832
+          ],
+          "sourceEye": [
+            273.0,
+            133.0
+          ],
+          "factor": 0.6,
+          "position": [
+            146,
+            190
+          ]
+        }
+      ]
+    },
+    "crawler-response": {
+      "frames": 8,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        280,
+        456
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            8,
+            238,
+            466,
+            510
+          ],
+          "sourceEye": [
+            89.5,
+            133.5
+          ],
+          "factor": 0.72,
+          "position": [
+            115,
+            262
+          ]
+        },
+        {
+          "sourceBox": [
+            509,
+            194,
+            899,
+            512
+          ],
+          "sourceEye": [
+            82.0,
+            38.0
+          ],
+          "factor": 0.72,
+          "position": [
+            140,
+            229
+          ]
+        },
+        {
+          "sourceBox": [
+            907,
+            247,
+            1323,
+            514
+          ],
+          "sourceEye": [
+            65.0,
+            148.0
+          ],
+          "factor": 0.72,
+          "position": [
+            130,
+            266
+          ]
+        },
+        {
+          "sourceBox": [
+            1356,
+            274,
+            1769,
+            509
+          ],
+          "sourceEye": [
+            272.58,
+            84.6
+          ],
+          "factor": 0.72,
+          "position": [
+            131,
+            289
+          ]
+        },
+        {
+          "sourceBox": [
+            27,
+            619,
+            458,
+            858
+          ],
+          "sourceEye": [
+            60.0,
+            142.0
+          ],
+          "factor": 0.72,
+          "position": [
+            125,
+            286
+          ]
+        },
+        {
+          "sourceBox": [
+            472,
+            645,
+            891,
+            860
+          ],
+          "sourceEye": [
+            62.5,
+            147.0
+          ],
+          "factor": 0.72,
+          "position": [
+            129,
+            303
+          ]
+        },
+        {
+          "sourceBox": [
+            899,
+            678,
+            1343,
+            860
+          ],
+          "sourceEye": [
+            293.04,
+            65.52
+          ],
+          "factor": 0.72,
+          "position": [
+            120,
+            327
+          ]
+        },
+        {
+          "sourceBox": [
+            1348,
+            715,
+            1759,
+            853
+          ],
+          "sourceEye": [
+            271.26,
+            49.68
+          ],
+          "factor": 0.72,
+          "position": [
+            132,
+            359
+          ]
+        }
+      ]
+    },
+    "imp-response": {
+      "frames": 8,
+      "cell": [
+        512,
+        512
+      ],
+      "anchor": [
+        280,
+        456
+      ],
+      "poses": [
+        {
+          "sourceBox": [
+            34,
+            135,
+            384,
+            495
+          ],
+          "sourceEye": [
+            25.0,
+            182.0
+          ],
+          "factor": 0.67,
+          "position": [
+            163,
+            217
+          ]
+        },
+        {
+          "sourceBox": [
+            384,
+            150,
+            768,
+            497
+          ],
+          "sourceEye": [
+            3.5,
+            93.0
+          ],
+          "factor": 0.67,
+          "position": [
+            151,
+            226
+          ]
+        },
+        {
+          "sourceBox": [
+            768,
+            183,
+            1124,
+            498
+          ],
+          "sourceEye": [
+            0.0,
+            81.5
+          ],
+          "factor": 0.67,
+          "position": [
+            161,
+            247
+          ]
+        },
+        {
+          "sourceBox": [
+            1167,
+            164,
+            1488,
+            489
+          ],
+          "sourceEye": [
+            30.0,
+            265.0
+          ],
+          "factor": 0.67,
+          "position": [
+            172,
+            240
+          ]
+        },
+        {
+          "sourceBox": [
+            61,
+            596,
+            358,
+            952
+          ],
+          "sourceEye": [
+            14.0,
+            318.0
+          ],
+          "factor": 0.67,
+          "position": [
+            181,
+            219
+          ]
+        },
+        {
+          "sourceBox": [
+            422,
+            664,
+            728,
+            946
+          ],
+          "sourceEye": [
+            13.0,
+            251.0
+          ],
+          "factor": 0.67,
+          "position": [
+            177,
+            269
+          ]
+        },
+        {
+          "sourceBox": [
+            788,
+            614,
+            1152,
+            955
+          ],
+          "sourceEye": [
+            10.0,
+            183.0
+          ],
+          "factor": 0.67,
+          "position": [
+            158,
+            230
+          ]
+        },
+        {
+          "sourceBox": [
+            1152,
+            619,
+            1512,
+            955
+          ],
+          "sourceEye": [
+            61.5,
+            269.0
+          ],
+          "factor": 0.67,
+          "position": [
+            159,
+            233
+          ]
+        }
+      ]
+    },
+    "combat-effects": {
+      "frames": 24,
+      "cell": [
+        256,
+        256
+      ],
+      "anchor": [
+        128,
+        128
+      ]
+    }
+  }
+}

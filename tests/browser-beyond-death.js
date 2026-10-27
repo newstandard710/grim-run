@@ -14,6 +14,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const context=await browser.newContext({viewport,hasTouch:true,deviceScaleFactor:1,...(viewport.width===950?{recordVideo:{dir,size:viewport}}:{})});
    await context.addInitScript(()=>localStorage.setItem('grim-run-v07-meta',JSON.stringify({version:1,souls:100,levels:{boneheart:0,graveWealth:1,deathsLeap:0,graveGlide:0}})));
    const page=await context.newPage();page.on('pageerror',e=>errors.push(label+': '+e));page.on('response',r=>{if(r.status()>=400)failures.push(r.url());});
+   const completeDefeat=async()=>{assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');for(const dt of [250,250,250,130])await page.evaluate(dt=>window.grimRun.scene.scenes[0].update(0,dt),dt);};
    const shot=async name=>{await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:path.join(dir,'beyond-'+label+'-'+name+'.png')});};
    await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump&&window.GRIM_FRONTEND?.ready,null,{timeout:45000});await page.evaluate(()=>document.fonts.ready);
@@ -43,7 +44,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    await page.getByRole('button',{name:'REROLL · 1 LEFT',exact:true}).click();const fresh=await page.evaluate(()=>window.grimRun.scene.scenes[0].pendingOffers.map(v=>v.id));assert(fresh.every(id=>!offers.includes(id)));
    await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();
    const name=await page.evaluate(()=>window.grimRun.scene.scenes[0].pendingOffers.find(v=>v.type==='power').name);await page.locator('.reward-card').filter({has:page.locator('.reward-name',{hasText:name})}).click();
-   assert.equal(await page.locator('.vendor-purchased').count(),1);await shot('angel-gift-and-heal');await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();
+   assert.equal(await page.locator('.reward-spent').count(),3);assert.equal(await page.locator('.reward-acquired').count(),1);await shot('angel-gift-and-heal');await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();
    assert.deepEqual(await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return {hp:s.player.hp,gold:s.coinCount,state:s.state};}),{hp:3,gold:0,state:'upgrade'});
    await page.getByRole('button',{name:'CONTINUE RUN ▶',exact:true}).click();
    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.ui.showGun(true);s.gunUnlocked=true;s.setGodMode(true);s.powerArt.reset();s.worldPolish.reset();s.drawScene();});await shot('controls');
@@ -62,17 +63,18 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    await page.locator('#pause-btn').click();await shot('pause');await page.locator('#quit-btn').click();await shot('abandon');await page.locator('#abandon-cancel-btn').click();
    if(viewport.width===950){
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='playing';s.godMode=false;s.player.hp=1;s.takeDamage(1,'rock');s.drawScene();});
+    await completeDefeat();
     for(let i=0;i<50;i++){await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,30));if([3,15,28,40].includes(i))await shot('free-resurrection-'+i);await page.waitForTimeout(20);}
     assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'countdown');for(let i=0;i<12;i++)await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,250));
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.invulMs=0;s.takeDamage(3,'rock');});await shot('paid-resurrection-offer');await page.locator('#revive-yes-btn').click();
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.invulMs=0;s.takeDamage(3,'rock');});await completeDefeat();await shot('paid-resurrection-offer');await page.locator('#revive-yes-btn').click();
     assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'respawning');
     for(let i=0;i<50;i++){await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,30));await page.waitForTimeout(20);}
     for(let i=0;i<12;i++)await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,250));
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.invulMs=0;s.takeDamage(3,'rock');});await shot('results');
-    // Devil cards keep health pricing and a separate decline-to-heal path.
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.invulMs=0;s.takeDamage(3,'rock');});await completeDefeat();await shot('results');
+    // Devil cards retain health pricing and the same persistent healing panel.
     await page.locator('#retry-btn').click();await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=3;s.coinCount=16;s.triggerVendor(8);});await page.locator('#vendor-intro-skip').click();await shot('devil');
     await page.getByRole('button',{name:'REROLL · 1 LEFT',exact:true}).click();assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].rerollsRemaining),0);
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=2;s.showVendor();});await page.getByRole('button',{name:'DECLINE · VIEW HEALING',exact:true}).click();await shot('devil-healing');
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=2;s.showVendor();});await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();await shot('devil-healing');
    }
    console.log('PASS actual Chromium '+label+': home → menu → purchases, old save, Angel reroll/heal/reward/heal, text bounds, enlarged swapped controls, touch combination, pause and confirmation.');
    const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'beyond-death-preview.webm'));

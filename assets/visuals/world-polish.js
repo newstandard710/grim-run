@@ -7,7 +7,7 @@
   const ease=t=>{t=clamp(t);return t*t*(3-2*t);};
   const frac=v=>v-Math.floor(v);
   const hash=(n,s=0)=>frac(Math.sin(n*.073+s*31.13)*43758.5453);
-  const COIN_HEIGHT=19*1.75,COIN_WIDTH=17*1.75,SOUL_HEIGHT=23*1.75,SOUL_WIDTH=16*1.75;
+  const COIN_HEIGHT=19*1.75,COIN_WIDTH=17*1.75,SOUL_HEIGHT=23*1.75*2,SOUL_WIDTH=16*1.75*2;
   const SHEETS=[['polish-coin','coin-spin.png',128,128,12],
     ['polish-soul','soul-light.png',192,192,8],
     ['polish-fragments','cut-fragments.png',96,96,16],
@@ -89,12 +89,12 @@
         // Soft layered falloff avoids a hard halo ring and preserves legibility.
         for(let i=3;i>=1;i--){
           this.light.fillStyle(i===1?0xfff3d0:0x96fff0,(.012+motion.light*.012)*(4-i));
-          this.light.fillEllipse(x,y,25+i*17,30+i*18);
+          this.light.fillEllipse(x,y,(25+i*17)*2,(30+i*18)*2);
         }
         for(let i=0;i<3;i++){
           const phase=frac(time*.33+hash(x,i+11));
           this.light.fillStyle(0xe7fff2,Math.sin(phase*Math.PI)*.38);
-          this.light.fillCircle(x+Math.sin(time*.8+i*2.1)*19,y+24-phase*51,1.1);
+          this.light.fillCircle(x+Math.sin(time*.8+i*2.1)*38,y+48-phase*102,1.1);
         }
       }
       return true;
