@@ -138,8 +138,10 @@
         if(p.visualTuckMs>0&&!p.grounded)p.visualTuckReleaseMs=85;
         p.visualTuckMs=0;p.visualTuckReleaseMs=Math.max(0,(p.visualTuckReleaseMs||0)-ms);
       }
-      if(p.grounded&&p.visualWasAirborne)p.visualLandingMs=115;
-      else p.visualLandingMs=Math.max(0,(p.visualLandingMs||0)-ms);
+      if(!s.motionArt?.ready){
+        if(p.grounded&&p.visualWasAirborne)p.visualLandingMs=115;
+        else p.visualLandingMs=Math.max(0,(p.visualLandingMs||0)-ms);
+      }
       p.visualWasAirborne=!p.grounded;
       for(const b of this.bursts)b.age+=ms;
       this.bursts=this.bursts.filter(b=>b.age<b.duration);
@@ -159,7 +161,7 @@
           .setAlpha(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1)
           .setTint(p.slowMs>0?0xb9ecff:0xffffff);
         // Keep the attack trail even when the normal procedural actor is suppressed.
-        if(p.attackMs>0&&scope.GRIM_CORE.attackActive(p.attackMs,260,.20,.79)){
+        if(p.attackMs>0&&!s.motionArt?.handlesCut()&&scope.GRIM_CORE.attackActive(p.attackMs,260,.20,.79)){
           const t=1-p.attackMs/260,cy=s.feetY-(s.lowProfile?30:65);
           this.fx.lineStyle(2,0xa5fbef,.58).beginPath();
           this.fx.arc(p.x+15,cy,94*(1+s.powerManager.attackBonus()),3.8+t*2.4,4.5+t*2.4).strokePath();

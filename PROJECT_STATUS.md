@@ -1,7 +1,18 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.17.0 — *Bone & Shadow*.
+**Current build:** v0.18.0 — *The Reaper in Motion*.
 
+
+## v0.18.0 — Reaper movement and frame pacing
+
+- Rebuilt running with 24 authored poses, registered eye/body scale, subtle gait motion and cloak follow-through. Animation advances from actual world distance (188px per stride), automatically following acceleration, slow effects, practice speed and future speed settings; rewind uses the same historical position.
+- Added 24 launch/ascent/apex/descent/landing/recovery drawings. Airborne selection follows jump age and velocity; grounded recovery has one 175ms player timer and can be interrupted immediately by input. Jump physics are retained.
+- Standard grounded/aerial cutting uses 24 new body drawings and one rigid scythe with measured hand registration. Blade tip, trail and swept damage areas share one continuous trajectory; the point leads across the entire active stroke. The 260ms action, 405ms cooldown and 20%–79% damage window stay intact. Damage areas refine the previous broad rectangle within its maximum envelope. Existing slide/tuck and powered Soul Cleave sequences are retained.
+- Home and gameplay Cavern Bat flight share a 0.96s loop, about 31% slower, with fallback timing aligned.
+- Avoided unchanged HUD writes, cached summaries/combat lists, reused pickup sets, skipped unused root-mask contours and duplicate legacy-bat updates, suspended the complete hidden world render behind the home/menu canvas, and made camera easing independent of display refresh rate.
+- Source sheets, exact built-in Imagegen prompts, packed atlases, registration, checksums, interactive review and production notes: `assets/motion/v0180/`. Builder: `scripts/prepare-motion-art.py`. Runtime: `assets/visuals/motion-animations.js`.
+- Validation: 16 local gameplay/asset suites pass, including new dense blade-leading/collision checks and full PNG integrity. Phone-sized Chromium and interface regressions run on the review PR before publication. CPU timing is recorded separately from GPU frame pacing; real Android playtesting remains necessary.
+- Rollback base: `590af511776d94bbddfa4f83c1e191f90fc1e58d` (v0.17.0).
 
 ## v0.17.0 — Combat animation and persistent sanctuaries
 

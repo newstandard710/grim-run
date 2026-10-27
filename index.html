@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.17.0</title>
+  <title>GRIM RUN — v0.18.0</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -208,13 +208,13 @@ button {cursor:pointer;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
-  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.17.0">
+  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.18.0">
 </head>
 <body>
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.17.0</div>
+    <div class="home-edition">GRIM RUN · v0.18.0</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
@@ -252,7 +252,7 @@ button {cursor:pointer;}
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.17.0 · BONE & SHADOW</div>
+      <div class="mini">v0.18.0 · THE REAPER IN MOTION</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -360,7 +360,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.17.0',
+  version: '0.18.0',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -796,6 +796,15 @@ window.GRIM_CONFIG = Object.freeze({
   const BRITTLE_METERS=[0,150,200,250,300];
   function makePowerManager(){
     const levels=Object.fromEntries([...POWER_ORDER,...DEVIL_ORDER].map(id=>[id,0]));
+    const summaryIds=[...POWER_ORDER,...DEVIL_ORDER],summaryLevels=[];
+    let cachedSummary=[];
+    function summary(){
+      if(summaryIds.some((id,i)=>summaryLevels[i]!==levels[id])){
+        cachedSummary=summaryIds.filter(id=>levels[id]>0).map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:false}));
+        for(let i=0;i<summaryIds.length;i++)summaryLevels[i]=levels[summaryIds[i]];
+      }
+      return cachedSummary;
+    }
     const maxFor=id=>['rapidFire','powerShot','chainShot'].includes(id)?3:MAX_LEVEL;
     function offer(id){
       const p=POWERS[id],current=levels[id];
@@ -815,8 +824,7 @@ window.GRIM_CONFIG = Object.freeze({
       rewindSeconds:()=>levels.deathsReversal?4+levels.deathsReversal:0,
       rewindCooldownMs:()=>levels.deathsReversal?65000-5000*levels.deathsReversal:0,
       lavaDamage:()=>levels.infernalBoots>0?1:2,
-      summary:()=>[...POWER_ORDER,...DEVIL_ORDER].filter(id=>levels[id]>0)
-        .map(id=>({id,name:POWERS[id].name,level:levels[id],oneOff:false})),
+      summary,
       apply(id,player,addCoins,levelsGained=1){
         if(Object.hasOwn(levels,id)){
           if(levels[id]>=maxFor(id))return false;
@@ -1168,8 +1176,10 @@ window.GRIM_CONFIG = Object.freeze({
   <script>
 (function(scope) {
   'use strict';
-  const el = id => document.getElementById(id);
-  const show = (id, on) => el(id).classList.toggle('hidden', !on);
+  const uiNodes=new Map();
+  const el = id => {let node=uiNodes.get(id);if(!node){node=document.getElementById(id);if(node)uiNodes.set(id,node);}return node;};
+  const show = (id, on) => {const node=el(id);if(node.classList.contains('hidden')===Boolean(on))node.classList.toggle('hidden', !on);};
+  const writeText=(id,value)=>{const node=el(id),text=String(value);if(node.textContent!==text)node.textContent=text;};
   class GrimUI {
     constructor(actions) {
       this.actions = actions;
@@ -1317,7 +1327,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     showGunCooldown(ms){
       show('crossbow-cd',ms>0);
-      el('crossbow-cd').textContent=ms>0?(ms/1000).toFixed(1)+'s':'';
+      writeText('crossbow-cd',ms>0?(ms/1000).toFixed(1)+'s':'');
       el('crossbow-btn').classList.toggle('recharging',ms>0);
     }
     showRewind(level,cooldownMs,ready,historyMs,requiredMs){
@@ -1325,11 +1335,12 @@ window.GRIM_CONFIG = Object.freeze({
       if(level<=0)return;
       const pending=cooldownMs>0||!ready;
       show('rewind-cd',pending);
-      el('rewind-cd').textContent=cooldownMs>0?
-        Math.ceil(cooldownMs/1000)+'s':Math.ceil(Math.max(0,requiredMs-historyMs)/1000)+'s';
+      writeText('rewind-cd',cooldownMs>0?
+        Math.ceil(cooldownMs/1000)+'s':Math.ceil(Math.max(0,requiredMs-historyMs)/1000)+'s');
       el('rewind-btn').classList.toggle('recharging',pending);
-      el('rewind-btn').setAttribute('aria-label',cooldownMs>0?
-        'Rewind recharging':!ready?'Rewind history charging':'Rewind '+requiredMs/1000+' seconds');
+      const button=el('rewind-btn'),label=cooldownMs>0?
+        'Rewind recharging':!ready?'Rewind history charging':'Rewind '+requiredMs/1000+' seconds';
+      if(button.__grimLabel!==label){button.setAttribute('aria-label',label);button.__grimLabel=label;}
     }
     rewindFlash(on){show('rewind-flash',on);}
     showRewindPlayback(on){show('rewind-playback',on);}
@@ -1423,14 +1434,17 @@ window.GRIM_CONFIG = Object.freeze({
       this.setMode('refundConfirm');
     }
     update(hp,maxHp,distance,souls,coins,score,powerSummary=[]) {
-      const hearts=el('hearts');
-      hearts.textContent=maxHp>5 ? `♥ ${hp}/${maxHp}` : '♥ '.repeat(Math.max(0,hp)).trim() + ' ♡'.repeat(Math.max(0,maxHp-hp));
-      el('distance').textContent = Math.floor(distance).toLocaleString();
-      el('souls').textContent = souls.toLocaleString();
-      el('coins').textContent = coins.toLocaleString();
-      el('score').textContent = score.toLocaleString();
-      const text=powerSummary.map(x=>`${x.name} ${x.level}`).join(' · ');
-      if(el('power-strip').textContent!==text) el('power-strip').textContent=text;
+      const previous=this.hudValues||(this.hudValues={});
+      if(previous.hp!==hp||previous.maxHp!==maxHp){
+        writeText('hearts',maxHp>5 ? `♥ ${hp}/${maxHp}` : '♥ '.repeat(Math.max(0,hp)).trim() + ' ♡'.repeat(Math.max(0,maxHp-hp)));
+        previous.hp=hp;previous.maxHp=maxHp;
+      }
+      for(const [id,value]of [['distance',Math.floor(distance)],['souls',souls],['coins',coins],['score',score]]){
+        if(previous[id]!==value){writeText(id,value.toLocaleString());previous[id]=value;}
+      }
+      if(previous.summary!==powerSummary){
+        writeText('power-strip',powerSummary.map(x=>`${x.name} ${x.level}`).join(' · '));previous.summary=powerSummary;
+      }
     }
     offerRevive(balance,earned){
       el('revive-wallet').textContent=`SOULS AVAILABLE: ${balance} · EARNED THIS RUN: ${earned}`;
@@ -1498,17 +1512,19 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/combat/v0170/animation-data.js?v=0.17.0"></script>
-  <script src="assets/visuals/combat-animations.js?v=0.17.0"></script>
-  <script src="assets/ui/v0160/frontispiece.js?v=0.17.0"></script>
-  <script src="assets/visuals/visual-system.js?v=0.17.0"></script>
+  <script src="assets/motion/v0180/animation-data.js?v=0.18.0"></script>
+  <script src="assets/visuals/motion-animations.js?v=0.18.0"></script>
+  <script src="assets/combat/v0170/animation-data.js?v=0.18.0"></script>
+  <script src="assets/visuals/combat-animations.js?v=0.18.0"></script>
+  <script src="assets/ui/v0160/frontispiece.js?v=0.18.0"></script>
+  <script src="assets/visuals/visual-system.js?v=0.18.0"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
-  <script src="assets/visuals/power-animations.js?v=0.17.0"></script>
+  <script src="assets/visuals/power-animations.js?v=0.18.0"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
   <script src="assets/visuals/vendor-sanctuaries.js?v=0.15.2"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
-  <script src="assets/visuals/world-polish.js?v=0.17.0"></script>
+  <script src="assets/visuals/world-polish.js?v=0.18.0"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1577,6 +1593,7 @@ window.GRIM_CONFIG = Object.freeze({
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
     preload(){
+      scope.GRIM_MOTION_ART?.preload(this);
       scope.GRIM_POWER_ART?.preload(this);
       scope.GRIM_COMBAT_ART?.preload(this);
       scope.GRIM_VENDOR_ART?.preload(this);
@@ -1765,6 +1782,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.combatArt=scope.GRIM_COMBAT_ART?new scope.GRIM_COMBAT_ART.CombatAnimations(this):null;
       this.vendorArt=scope.GRIM_VENDOR_ART?new scope.GRIM_VENDOR_ART.VendorSanctuaries(this):null;
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
+      this.motionArt=scope.GRIM_MOTION_ART?new scope.GRIM_MOTION_ART.MotionAnimations(this):null;
       this.drawScene();
     }
     enterHome(){
@@ -1891,7 +1909,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.airTuck=false;p.hovering=false;p.hoverHoldMs=0;p.hoverPressKind='none';
       p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
       p.slideMs=0;p.slideReleaseBufferMs=0;p.attackMs=0;p.attackCooldownMs=0;
-      p.invulMs=Math.max(p.invulMs,1400);
+      p.invulMs=Math.max(p.invulMs,1400);p.visualLandingMs=0;p.previousAttackMs=0;
       this.distance=(x-this.startX)/C.pxPerMeter;
       this.speed=Core.runSpeed(this.distance);
       this.cameraX=x-this.width*C.reaperXRatio;
@@ -2331,6 +2349,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(canHover){p.velocityY=0;this.puff(p.x-15,p.y-55,0xe1ddd3,7);}
       }
       p.jumpHeld=true;p.jumpAgeMs=0;p.hoverHoldMs=0;
+      p.visualLandingMs=0;p.visualLaunchVelocity=Math.abs(p.velocityY)||610;
     }
     jumpEnd() {
       const p=this.player;
@@ -2343,6 +2362,7 @@ window.GRIM_CONFIG = Object.freeze({
       const p = this.player;
       if (this.state!=='playing' || p.attackCooldownMs > 0) return;
       p.attackMs = C.attackDurationMs;
+      p.previousAttackMs=p.attackMs;p.visualLandingMs=0;
       p.attackCooldownMs = C.attackCooldownMs;
       this.swingSequence++;
       if(this.powerManager.level('soulCleave')>0)this.powerArt?.trigger('soulCleave',p.x+35,this.feetY-(this.lowProfile?30:65));
@@ -2547,8 +2567,10 @@ window.GRIM_CONFIG = Object.freeze({
     cutNearby() {
       const bonus=126*this.powerManager.attackBonus();
       const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
+      const sweep=this.motionArt?.attackBoxes(this.player.previousAttackMs);
+      const hits=target=>sweep?sweep.some(edge=>Core.overlaps(edge,target)):Core.overlaps(box,target);
       for (const ob of this.obstacles) {
-        if (!Combat.cuttable(ob) || ob.destroyed || !Core.overlaps(box,ob.type==='snappingBramble'?this.snappingBox(ob):ob)) continue;
+        if (!Combat.cuttable(ob) || ob.destroyed || !hits(ob.type==='snappingBramble'?this.snappingBox(ob):ob)) continue;
         this.destroyObstacle(ob);
         // Cutting removes the obstruction; only placed gold pickups grant currency.
         this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12,Boolean(this.worldPolish?.ready['polish-fragments']));
@@ -2557,13 +2579,13 @@ window.GRIM_CONFIG = Object.freeze({
       // The same scythe cuts attacking enemies and deflects approaching fireballs.
       for(const e of this.enemies){
         if(e.dead||e.lastScytheSwing===this.swingSequence)continue;
-        if(!Core.overlaps(box,Combat.rectFor(e)))continue;
+        if(!hits(Combat.rectFor(e)))continue;
         e.lastScytheSwing=this.swingSequence;
         this.hitEnemy(e,1,false);
       }
       for(const ball of this.fireballs){
         if(ball.reflected||ball.dead)continue;
-        if(!Core.overlaps(box,{x:ball.x-9,y:ball.y-9,width:18,height:18}))continue;
+        if(!hits({x:ball.x-9,y:ball.y-9,width:18,height:18}))continue;
         ball.reflected=true;ball.ageMs=0;
         this.puff(ball.x,ball.y,0x9aefff,9);
       }
@@ -2868,7 +2890,9 @@ window.GRIM_CONFIG = Object.freeze({
         p.fireproofCooldownMs=Math.max(0,p.fireproofCooldownMs-frameMs);
         this.damageFlashMs=Math.max(0,this.damageFlashMs-frameMs);
         this.bonesBlastMs=Math.max(0,this.bonesBlastMs-frameMs);
+        p.previousAttackMs=p.attackMs;
         p.attackMs = Math.max(0,p.attackMs-frameMs);
+        if(this.motionArt?.ready)p.visualLandingMs=Math.max(0,(p.visualLandingMs||0)-frameMs);
         p.attackCooldownMs = Math.max(0,p.attackCooldownMs-frameMs);
         if(!p.grounded){
           p.jumpAgeMs+=frameMs;
@@ -2921,6 +2945,7 @@ window.GRIM_CONFIG = Object.freeze({
             p.y=groundHit;p.velocityY=0;p.grounded=true;p.onSoulPlatform=false;p.coyoteMs=0;
           }
           if(p.grounded){
+            if(this.motionArt?.ready)p.visualLandingMs=scope.GRIM_MOTION_ART.LAND_MS;
             p.jumpHeld=false;p.jumpAgeMs=0;p.jumpsUsed=0;p.airJumpUsed=false;p.airTuck=false;
             p.hovering=false;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
             if(p.holdSlide){p.sliding=true;p.slideMs=0;p.slideConsumed=true;}
@@ -2958,7 +2983,8 @@ window.GRIM_CONFIG = Object.freeze({
           this.triggerVendor(target);this.drawScene();return;
         }
         this.spawnAhead();
-        if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)) this.cutNearby();
+        if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)||
+          (p.previousAttackMs>C.attackDurationMs*(1-C.attackActiveEnd)&&p.attackMs<C.attackDurationMs*(1-C.attackActiveStart))) this.cutNearby();
         this.updateCombat(frameMs,dt);
         if(this.state!=='playing'){this.drawScene();return;}
         this.checkCollectibles();
@@ -2995,7 +3021,10 @@ window.GRIM_CONFIG = Object.freeze({
       // the treeline behind. A small dead zone avoids camera jitter on short hills.
       const target=anchor-this.groundY;
       const delta=target-this.cameraY;
-      if(Math.abs(delta)>8)this.cameraY+=delta*(this.state==='portal'?.28:.115);
+      if(Math.abs(delta)>8){
+        const referenceEase=this.state==='portal'?.28:.115;
+        this.cameraY+=delta*(1-Math.pow(1-referenceEase,clamp(deltaMs,0,100)/(1000/60)));
+      }
       this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.drawScene();
     }
@@ -3667,6 +3696,12 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawScene() {
       if (!this.bg) return;
+      // The opaque opening/menu has its own animated canvas. Do not draw a
+      // second complete world and fog stack behind it on every display frame.
+      if(scope.GRIM_FRONTEND&&['home','menu'].includes(this.state)){
+        this.cameras.main.visible=false;return;
+      }
+      this.cameras.main.visible=true;
       const g=this.bg;
       g.clear();
       this.ensureBiomeBackdropGroup(this.hasTeleported?'underworld':'surface');
@@ -3690,6 +3725,8 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.visuals)this.visuals.render();
       this.powerArt?.render();
       this.combatArt?.render();
+      this.motionArt?.render();
+      this.combatArt?.renderTimeEchoes();
       this.vendorArt?.renderCinema();
       this.worldPolish?.endFrame();
     }
@@ -5142,7 +5179,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.visuals&&this.visuals.reaperReady){
         // Art is drawn by a Phaser sprite. Keep combat arcs and hover indicators
         // on this separate FX layer and leave every collision box unchanged.
-        if(p.attackMs>0&&Core.attackActive(p.attackMs,C.attackDurationMs,
+        if(p.attackMs>0&&!this.motionArt?.handlesCut()&&Core.attackActive(p.attackMs,C.attackDurationMs,
              C.attackActiveStart,C.attackActiveEnd)){
           const progress=1-p.attackMs/C.attackDurationMs;
           const reach=94*(1+this.powerManager.attackBonus());

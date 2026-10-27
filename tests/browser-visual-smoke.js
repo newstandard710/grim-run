@@ -1042,6 +1042,8 @@ const server=http.createServer((req,res)=>{
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const v2Anchors=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_REAPER;
+    // Exercise the retained regular-bat fallback directly; production motion is tested separately.
+    s.combatArt.ready['bat-flight']=false;
     s.player.sliding=true;v.render();
     const slide=v.reaperPoseSprites.slide;
     const slideVisible=slide.visible;
@@ -1214,11 +1216,11 @@ const server=http.createServer((req,res)=>{
   await earlyPage.waitForFunction(()=>{
     const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return s?.state==='playing'&&v?.reviewV2===true&&
-      v.reaperPoseSprites.run_pose_01?.visible===true&&v.loaded===false&&s.distance<5;
+      (s.motionArt?.body.some(p=>p.visible)||v.reaperPoseSprites.run_pose_01?.visible===true)&&v.loaded===false&&s.distance<5;
   },null,{timeout:12000});
   const earlySprite=await earlyPage.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,p=v.reaperPoseSprites.run_pose_01;
-    return {visible:p.visible,texture:s.textures.exists('gr_v2_reaper_run_pose_01'),loading:!v.loaded,
+    return {visible:p.visible||s.motionArt.body.some(p=>p.visible),texture:s.textures.exists('gr_v2_reaper_run_pose_01'),loading:!v.loaded,
       distance:s.distance,buttonEnabled:!document.getElementById('start-btn').disabled};
   });
   assert.equal(earlySprite.visible,true);

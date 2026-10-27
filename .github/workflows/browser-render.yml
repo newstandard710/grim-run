@@ -21,6 +21,8 @@ jobs:
           npx playwright install chromium
       - name: Verify combat animation, persistent vendors and enlarged pickups
         run: node tests/browser-combat-polish.js
+      - name: Verify fluid movement, blade sweep, phone rendering and CPU frame budget
+        run: node tests/browser-motion-performance.js
       - name: Verify sanctuary grounds, vendor introductions and crossbow grip
         run: node tests/browser-vendor-sanctuaries.js
       - name: Verify rounded ground, collectible sprites, floating ledges, destruction and smoke respawn
@@ -44,6 +46,8 @@ jobs:
           name: grim-run-mobile-renders
           path: |
             test-results/*.png
+            test-results/motion-performance.json
+            test-results/motion-animation-preview.webm
             test-results/power-animation-preview.webm
             test-results/combat-animation-preview.webm
             test-results/visual-revision-preview.webm

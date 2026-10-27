@@ -639,7 +639,7 @@
           .setTint(p.slowMs>0?0xb9ecff:0xffffff);
       }
       let used=0;
-      if(!['menu','reliquary','refundConfirm'].includes(s.state)){
+      if(!s.combatArt?.ready['bat-flight']&&!['menu','reliquary','refundConfirm'].includes(s.state)){
         const left=s.cameraX-100,right=s.cameraX+s.width+100;
         for(const e of s.enemies||[]){
           if(e.kind!=='bat'||e.dead||e.x<left||e.x>right||used>=this.batPool.length)continue;
