@@ -7,6 +7,9 @@ on:
       - assets/ui/**
       - tests/beyond-death.cjs
       - tests/browser-beyond-death.js
+      - tests/browser-obstacle-smoke.js
+      - tests/browser-air-combos.js
+      - tests/browser-ground-fog-vendors.js
       - .github/workflows/interface.yml
   pull_request:
     branches: [main]
@@ -17,16 +20,27 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Verify upgrade, vendor, resurrection and speed rules
         run: node tests/beyond-death.cjs
+      - name: Select changed interface checks
+        id: scope
+        run: |
+          if [ '${{ github.event_name }}' != push ] || ! git diff --quiet HEAD^ HEAD -- index.html assets/ui tests/beyond-death.cjs tests/browser-beyond-death.js; then
+            echo 'interface=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'interface=false' >> "$GITHUB_OUTPUT"
+          fi
       - name: Install Chromium
         run: |
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
       - name: Verify four screen sizes, two thumbs, finger swipes and resurrection scenes
+        if: steps.scope.outputs.interface == 'true'
         run: node tests/browser-beyond-death.js
       - name: Verify remaining obstacle, combo and fog regressions on the release branch
         if: github.ref == 'refs/heads/feature/veil-and-reliquary'
