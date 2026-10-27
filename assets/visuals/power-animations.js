@@ -57,6 +57,7 @@
       this.shrine=image('power-summit-shrine',8);
       this.cinema=scene.add.graphics().setScrollFactor(0).setDepth(22);
       this.cinemaShrine=image('power-summit-shrine',23)?.setScrollFactor(0);
+      this.cinemaShrineOpen=image('power-summit-shrine-open',23.1)?.setScrollFactor(0);
       this.cinemaReaper=image('power-reaper',24,12)?.setScrollFactor(0).setOrigin(288/512,400/512);
       this.cinemaBow=image('power-bone-crossbow',25)?.setScrollFactor(0);
       this.cinemaFX=scene.add.graphics().setScrollFactor(0).setDepth(25.5);
@@ -128,13 +129,20 @@
         if(sprite)sprite.y+=Math.sin(p.visualLandingMs/115*Math.PI)*2;
       }
       if(this.weapon){
-        const visible=s.gunUnlocked&&p.visualFireMs>0&&['playing','paused','rewinding'].includes(s.state)&&!p.sliding;
+        // The accepted firing drawing already contains its crossbow. Add the
+        // separate weapon only when a compact action pose is replacing it.
+        const visible=s.gunUnlocked&&p.visualFireMs>0&&this.action?.visible&&p.attackMs<=0&&
+          ['playing','paused','rewinding'].includes(s.state)&&!p.sliding;
         this.weapon.setVisible(visible);
         if(visible){
           const recoil=3*Math.sin(clamp(p.visualFireMs/180,0,1)*Math.PI);
           this.weapon.setPosition(p.x+22-recoil,s.feetY-(s.lowProfile?30:61))
             .setDisplaySize(49,49).setRotation(-.05-recoil*.01);
         }
+      }
+      if(p.visualFireMs>0&&!this.action?.visible){
+        const sprite=Object.values(s.visuals?.reaperPoseSprites||{}).find(v=>v.visible);
+        if(sprite)sprite.x-=2*Math.sin(clamp(p.visualFireMs/180,0,1)*Math.PI);
       }
     }
     renderWings(){
@@ -226,16 +234,18 @@
       }
       const active=s.state==='chest';
       this.cinema?.clear();this.cinemaFX?.clear();
-      for(const sprite of [this.cinemaShrine,this.cinemaReaper,this.cinemaBow])sprite?.setVisible(false);
+      for(const sprite of [this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow])sprite?.setVisible(false);
       if(!active)return;
       const w=s.width,h=s.height,t=clamp((SHRINE_MS-s.chestMs)/1000,0,6),reveal=clamp((t-1.5)/1.5,0,1);
       this.cinema.fillStyle(0x030914,.76);this.cinema.fillRect(0,0,w,h);
       this.cinema.fillStyle(0x03101c,.65);this.cinema.fillRect(0,0,w,h*.115);this.cinema.fillRect(0,h*.88,w,h*.12);
       const shrineX=w*.57,ground=h*.82;
       if(this.cinemaShrine){
-        const open=t>1.5&&s.textures.exists('power-summit-shrine-open');
-        this.cinemaShrine.setTexture(open?'power-summit-shrine-open':'power-summit-shrine')
-          .setOrigin(.5,1).setPosition(shrineX,ground+13).setDisplaySize(h*.90,h*.60).setVisible(true);
+        const open=this.cinemaShrineOpen?clamp((t-1.5)/.35,0,1):0;
+        this.cinemaShrine.setOrigin(.5,1).setPosition(shrineX,ground+13)
+          .setDisplaySize(h*.90,h*.60).setAlpha(1-open).setVisible(open<1);
+        this.cinemaShrineOpen?.setOrigin(.5,1).setPosition(shrineX,ground+13)
+          .setDisplaySize(h*.90,h*.60).setAlpha(open).setVisible(open>0);
       }
       if(this.cinemaReaper&&this.ready['power-reaper']){
         const frame=t<1.9?12:t<4.9?13:14;
@@ -272,7 +282,7 @@
     }
     destroy(){
       if(this.disposed)return;this.disposed=true;
-      for(const sprite of [this.action,this.weapon,this.shrine,this.cinemaShrine,this.cinemaReaper,this.cinemaBow,
+      for(const sprite of [this.action,this.weapon,this.shrine,this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow,
         this.fx,this.cinema,this.cinemaFX,...this.wingSprites,...this.pool])sprite?.destroy();
       this.bursts=[];this.pool=[];this.wingSprites=[];
     }

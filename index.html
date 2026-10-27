@@ -2792,7 +2792,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.tickRewind(frameMs);
       }
       if(this.state==='playing'&&this.player.visualFireMs>0)
-        this.player.visualFireMs=Math.max(0,this.player.visualFireMs-Math.min(250,deltaMs));
+        this.player.visualFireMs=Math.max(0,this.player.visualFireMs-
+          Math.min(250,deltaMs)*(this.godMode&&this.practiceSlow?.5:1));
       if(this.fallFeedbackMs>0){
         this.fallFeedbackMs=Math.max(0,this.fallFeedbackMs-Math.min(deltaMs,80));
         if(this.fallFeedbackMs===0)this.ui.showFallNotice(false);
