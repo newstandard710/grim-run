@@ -14,7 +14,7 @@ on:
 jobs:
   interface-and-input:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,10 +24,16 @@ jobs:
         run: node tests/beyond-death.cjs
       - name: Install Chromium
         run: |
-          npm install --no-save playwright@1.56.1
+          npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
       - name: Verify four screen sizes, two thumbs, finger swipes and resurrection scenes
         run: node tests/browser-beyond-death.js
+      - name: Verify remaining obstacle, combo and fog regressions on the release branch
+        if: github.ref == 'refs/heads/feature/veil-and-reliquary'
+        run: |
+          node tests/browser-obstacle-smoke.js
+          node tests/browser-air-combos.js
+          node tests/browser-ground-fog-vendors.js
       - name: Save interface review evidence
         if: always()
         uses: actions/upload-artifact@v4

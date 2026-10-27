@@ -30,7 +30,7 @@ const server=http.createServer((req,res)=>{
     const errors=[];
     page.on('pageerror',e=>errors.push(String(e)));
     await page.goto(origin+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
-    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu',null,{timeout:45000});
+    await page.waitForFunction(()=>['home','menu'].includes(window.grimRun?.scene?.scenes?.[0]?.state),null,{timeout:45000});
     const loaded=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],skins=window.GRIM_OBSTACLE_SPRITES||[];
       const missing=skins.filter(skin=>!s.textures.exists(skin.key)||
@@ -205,7 +205,7 @@ const server=http.createServer((req,res)=>{
     fs.mkdirSync(resultDir,{recursive:true});
     await page.locator('#game canvas').screenshot({path:path.join(resultDir,'obstacle-sprites-phone-scale.png')});
     await page.reload({waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu');
+    await page.waitForFunction(()=>['home','menu'].includes(window.grimRun?.scene?.scenes?.[0]?.state));
     const slides=[
       ['forest','dead-bough-curtain'],['forest','root-shelf'],['forest','thorn-canopy'],
       ['foothills','rock-lip'],['foothills','fallen-pine-overhang'],['foothills','grass-root-ledge'],
@@ -245,7 +245,7 @@ const server=http.createServer((req,res)=>{
         biome+'-slide-'+name+'-phone-scene.png')});
     }
     await page.reload({waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu');
+    await page.waitForFunction(()=>['home','menu'].includes(window.grimRun?.scene?.scenes?.[0]?.state));
     await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing');
     await page.evaluate(()=>{

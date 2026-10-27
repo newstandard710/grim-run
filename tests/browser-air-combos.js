@@ -24,7 +24,7 @@ const server=http.createServer((req,res)=>{
     const errors=[];page.on('pageerror',e=>errors.push(String(e)));
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',
       {waitUntil:'domcontentloaded',timeout:45000});
-    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='menu');
+    await page.waitForFunction(()=>['home','menu'].includes(window.grimRun?.scene?.scenes?.[0]?.state));
     await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing');
     await page.evaluate(()=>{
