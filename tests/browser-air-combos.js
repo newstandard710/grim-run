@@ -5,7 +5,7 @@ const path=require('node:path');
 const http=require('node:http');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..');
-const mime={'.html':'text/html','.js':'application/javascript','.png':'image/png',
+const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.ttf':'font/ttf','.png':'image/png',
   '.webp':'image/webp','.svg':'image/svg+xml'};
 const server=http.createServer((req,res)=>{
   try{

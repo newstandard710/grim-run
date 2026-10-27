@@ -5,7 +5,7 @@ const root=path.resolve(__dirname,'..'),dir=path.join(root,'test-results');fs.mk
 const server=http.createServer((req,res)=>{
  try{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname.replace(/^\/+/,''))||'index.html');
   if(!file.startsWith(root+path.sep))return res.writeHead(403).end();
-  res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp'})[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));
+  res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.css':'text/css','.ttf':'font/ttf','.png':'image/png','.webp':'image/webp'})[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));
  }catch(e){res.writeHead(404).end(String(e));}
 });
 (async()=>{

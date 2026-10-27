@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{
   try{
     const rel=decodeURIComponent(new URL(req.url,'http://localhost').pathname.replace(/^\/+/,''))||'index.html';
     const file=path.resolve(root,rel);if(!file.startsWith(root+path.sep))return res.writeHead(403).end();
-    const types={'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp'};
+    const types={'.html':'text/html','.js':'application/javascript','.css':'text/css','.ttf':'font/ttf','.png':'image/png','.webp':'image/webp'};
     res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));
   }catch(e){res.writeHead(404).end(String(e));}
 });
