@@ -9,7 +9,7 @@
   const BAT_CYCLE_SECONDS=.96;
   function preload(s){
     if(!s.load?.spritesheet)return;
-    for(const [name,m]of Object.entries(DATA))s.load.spritesheet('combat-'+name,ROOT+name+'.png?v=0.17.0',
+    for(const [name,m]of Object.entries(DATA))s.load.spritesheet('combat-'+name,name==='bat-flight'?'assets/encounters/v0190/bat-flight.png?v=0.19.0':ROOT+name+'.png?v=0.17.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
   }
   function sample(t,count,loop=false){
@@ -118,7 +118,7 @@
       let n=0;
       for(const e of s.enemies||[]){
         if(e.kind!=='bat'||e.dead||e.x<s.cameraX-130||e.x>s.cameraX+s.width+130||n>=this.bats.length)continue;
-        const pair=this.bats[n++];if(e.visualHitMs>0&&this.ready['bat-response'])continue;
+        const pair=this.bats[n++];for(const v of pair)v.setVisible(false).setRotation(0).setFlipX(false).clearTint();if(e.visualHitMs>0&&this.ready['bat-response'])continue;
         if(e.mode==='dive'){
           const m=scope.GRIM_VISUALS.V2_BAT.dive,v=pair[0];
           const enter=clamp((e.timer||0)/.12),flight=batMotion(s.elapsed||0,e.phase||0);
@@ -130,10 +130,10 @@
           const f=batMotion(s.elapsed||0,e.phase||0);
           this.blend(pair,'bat-flight',f.a+f.mix,e.x,e.y,.32);
           // Close the loop by blending the final drawing into the first.
-          if(f.a===15&&f.mix>0){pair[1].setTexture('combat-bat-flight',0).setAlpha(f.mix).setVisible(true);pair[0].setAlpha(1-f.mix);}
+          if(f.a===15&&f.mix>0){pair[1].setTexture('combat-bat-flight',0).setOrigin(330/512,292/512).setScale(.32).setPosition(e.x,e.y).setRotation(0).setAlpha(f.mix).setVisible(true);pair[0].setAlpha(1-f.mix);}
           if(e.mode==='recover'&&(e.timer||0)<.12){
             const recovery=clamp((e.timer||0)/.12),m=scope.GRIM_VISUALS.V2_BAT.dive;
-            pair[0].setAlpha(recovery);
+            pair[0].setAlpha(recovery*(1-f.mix));
             pair[1].setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
               .setPosition(e.x,e.y).setRotation(.1*(1-recovery)).setAlpha(1-recovery).setVisible(true);
           }

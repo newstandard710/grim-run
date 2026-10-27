@@ -1277,6 +1277,10 @@ const server=http.createServer((req,res)=>{
   await page.click('#practice-slow-btn');
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),true);
   await page.click('#practice-slow-btn');
+  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceScale()),.25);
+  await page.click('#practice-slow-btn');
+  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceScale()),0);
+  await page.click('#practice-slow-btn');
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   await page.click('#pause-btn');
   await page.locator('#god-mode-checkbox').uncheck();

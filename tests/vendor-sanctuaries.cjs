@@ -26,10 +26,10 @@ for(let k=1;k<=14;k++){
  assert(!Core.intersectsVendorCorridor(begin-110,74,g.startX),'Fixture collision is outside sanctuary');
  assert(g.vendorObstacleBlocked('branch',begin-110,74),'Painted hanging obstacle may not overhang sanctuary');
 }
-g.triggerVendor(1);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,3000);
+g.triggerVendor(1);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,10000);
 const before=JSON.stringify({x:g.player.x,hp:g.player.hp,coins:g.coinCount,elapsed:g.elapsed,offers:g.pendingOffers,cooldown:g.player.attackCooldownMs,rng:g.rng.state});
-w.document.hidden=true;for(let i=0;i<8;i++)g.update(0,250);assert.equal(g.vendorIntroMs,3000);w.document.hidden=false;
-for(let i=0;i<11;i++)g.update(0,250);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,250);
+w.document.hidden=true;for(let i=0;i<8;i++)g.update(0,250);assert.equal(g.vendorIntroMs,10000);w.document.hidden=false;
+for(let i=0;i<39;i++)g.update(0,250);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,250);
 assert.equal(JSON.stringify({x:g.player.x,hp:g.player.hp,coins:g.coinCount,elapsed:g.elapsed,offers:g.pendingOffers,cooldown:g.player.attackCooldownMs,rng:g.rng.state}),before,'Introduction freezes gameplay, choices and randomness');
 g.update(0,250);assert.equal(g.state,'upgrade');assert.equal(g.vendorIntroMs,0);assert.equal(g.coinCount,16);
 g.leaveVendor();g.triggerVendor(2);assert.equal(g.state,'upgrade','Only the first Angel encounter introduces itself');g.leaveVendor();
@@ -57,4 +57,4 @@ for(const type of ['sources','runtime'])for(const[file,meta]of Object.entries(ma
  const b=fs.readFileSync(path.join(root,file));assert.equal(b.length,meta.bytes);assert.equal(crypto.createHash('sha256').update(b).digest('hex'),meta.sha256);
  assert.deepEqual([b.readUInt32BE(16),b.readUInt32BE(20)],meta.size);assert.equal(b[25],6,'Production sprites retain transparency');
 }
-console.log('PASS v0.15.2: 560 solid level sanctuaries, protected approaches, first-per-type three-second introductions, frozen gameplay, safe skip/reset, threat exclusion, hold/glow and art integrity.');
+console.log('PASS v0.15.2: 560 solid level sanctuaries, protected approaches, first-per-type ten-second introductions, frozen gameplay, safe skip/reset, threat exclusion, hold/glow and art integrity.');

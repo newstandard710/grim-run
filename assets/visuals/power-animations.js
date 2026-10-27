@@ -6,20 +6,21 @@
   'use strict';
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones','deathsReversal',
-    'skeletalWings','infernalBoots','rapidFire','powerShot','chainShot','vitalEssence','soulMend'];
+    'skeletalWings','infernalBoots','rapidFire','powerShot','chainShot','vitalEssence','soulMend','gravewingAscension'];
   const COLORS=[0xa5fbef,0xc5b5ff,0x9bdcff,0xe7efff,0xc7aaff,0xffb08e,
-    0xffb65f,0xb2ecff,0xffca84,0xd9c0ff,0xffc2c9,0xe0c9ff];
+    0xffb65f,0xb2ecff,0xffca84,0xd9c0ff,0xffc2c9,0xe0c9ff,0xc5b5ff];
   const SHEETS=[['power-reaper','reaper-actions.png',512,512,15],
     ['power-wings','wings.png',512,384,12],['power-effects','power-effects.png',256,256,12],
     ['power-bones','revision-v2/bone-fragments.png',128,128,12],
     ['power-cloak','revision-v2/cloak-roots.png',128,128,3],
     ['power-relic-motion','revision-v2/relic-motion.png',512,512,24],
-    ['revision-plant','revision-v2/snapping-plant.png',256,320,8]];
+    ['revision-plant','../encounters/v0190/plant-attack.png',384,400,16],
+    ['gravewing-wings','../encounters/v0190/gravewing.png',512,384,12]];
   const SHRINE_METERS=4900,SHRINE_MS=6000,MAX_BURSTS=20;
   function preload(scene){
     if(!scene.load?.spritesheet)return;
     for(const [key,file,w,h,count] of SHEETS)
-      scene.load.spritesheet(key,'assets/powers/'+file+'?v=0.15.1',
+      scene.load.spritesheet(key,'assets/powers/'+file+'?v=0.19.0',
         {frameWidth:w,frameHeight:h,endFrame:count-1});
     for(const name of ['summit-shrine','summit-shrine-open','bone-crossbow'])
       scene.load.image('power-'+name,'assets/powers/'+name+'.png?v=0.15.0');
@@ -106,18 +107,18 @@
       if(!this.enabled||this.scene.state==='rewinding')return;
       const index=ORDER.indexOf(id);if(index<0)return;
       const p=this.scene.player;
-      const item={id,index,x:x??p.x,y:y??(p.y-55),age:0,
+      const item={id,index:id==='gravewingAscension'?1:index,x:x??p.x,y:y??(p.y-55),age:0,
         level:level??this.level(id),kind,seed:++this.sequence,
-        duration:kind==='purchase'?780:kind==='blast'?600:id==='brittleBones'?780:420};
+        duration:id==='gravewingAscension'?1300:kind==='purchase'?780:kind==='blast'?600:id==='brittleBones'?780:420};
       if(id==='brittleBones'&&kind==='blast'){
-        item.duration=950;item.bones=[];
+        item.duration=1900;item.bones=[];
         const count=28+Math.min(4,Math.max(1,item.level))*4;
         for(let i=0;i<count;i++){
           const angle=i<4?i*Math.PI/2:i*2.399963+item.seed*.73;
           const reach=Math.hypot(this.scene.width,this.scene.height)*1.45;
-          const speed=reach*(1+(i%7)*.035);
+          const speed=reach*(1+(i%7)*.035)*.5;
           item.bones.push({frame:i%12,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
-            spin:(i%2?-1:1)*(3+(i%5)),size:15+(i*7%21),phase:i*.47});
+            spin:(i%2?-1:1)*(3+(i%5))*.5,size:3*(15+(i*7%21)),phase:i*.47});
         }
       }
       if(this.bursts.length>=MAX_BURSTS)this.bursts.shift();
@@ -203,13 +204,24 @@
         for(const sprite of [this.wingSprites[n],this.nearWings[n]])sprite?.setFrame(frame)
           .setPosition(x,y).setScale(scale*1.5).setRotation(rotation).setAlpha(alpha).setVisible(true);
       };
-      if(raven){
-        const jumpStroke=p.airJumpUsed&&p.jumpAgeMs<280?Math.min(3,Math.floor(p.jumpAgeMs/70)):phase;
-        attach(jumpStroke,p.x-15,rootY-3,tucked?.25:.34,tucked?-.12:0,.95);
+      const combined=raven>0&&bone>0&&this.ready['gravewing-wings'];
+      if(combined){
+        const f=tucked?8+((s.elapsed*4)%4):(s.elapsed*(p.hovering?1.25:1)*8/.96)%8;
+        const a=Math.floor(f),b=tucked?8+(a-8+1)%4:(a+1)%8,mix=f-a;
+        for(let i=0;i<2;i++){
+          const n=used++,alpha=i?mix:1-mix;
+          for(const sprite of [this.wingSprites[n],this.nearWings[n]])sprite?.setTexture('gravewing-wings',i?b:a)
+            .setPosition(p.x-15,rootY-3).setScale(tucked?.42:.51).setRotation(tucked?-.08:0).setAlpha(alpha).setVisible(alpha>.001);
+        }
+      }else{
+        for(const sprite of [...this.wingSprites,...this.nearWings])sprite?.setTexture('power-wings');
+        if(raven){
+          const jumpStroke=p.airJumpUsed&&p.jumpAgeMs<280?Math.min(3,Math.floor(p.jumpAgeMs/70)):phase;
+          attach(jumpStroke,p.x-15,rootY-3,tucked?.25:.34,tucked?-.12:0,.95);
+        }
+        if(bone)attach(4+phase,p.x-15,rootY,tucked?.24:.34,tucked?.1:0,p.hovering?1:.8);
       }
       if(bone){
-        const row=raven?8:4;
-        attach(row+phase,p.x-15,rootY+(raven?14:0),tucked?.24:.34,tucked?.1:0,p.hovering?1:.8);
         const ratio=clamp(p.hoverBudgetMs/Math.max(1,s.powerManager.skeletalHoverMs()),0,1);
         this.fx.fillStyle(0x0d1424,.78);this.fx.fillRoundedRect(p.x-32,rootY-130,64,7,3);
         if(ratio>0){this.fx.fillStyle(0xd5e2e0,.93);this.fx.fillRoundedRect(p.x-30,rootY-128,60*ratio,3,1.5);}
@@ -238,9 +250,9 @@
       let boneUsed=0;
       if(s.state!=='rewinding')for(const b of this.bursts){
         if(b.bones){
-          const seconds=b.age/1000,alpha=clamp((b.duration-b.age)/330,0,1);
+          const seconds=b.age/1000,alpha=clamp((b.duration-b.age)/660,0,1);
           for(const piece of b.bones){
-            const x=b.x+piece.vx*seconds,y=b.y+piece.vy*seconds+190*seconds*seconds;
+            const x=b.x+piece.vx*seconds,y=b.y+piece.vy*seconds+47.5*seconds*seconds;
             const sprite=this.bonePool[boneUsed++];
             if(sprite)sprite.setFrame(piece.frame).setPosition(x,y)
               .setDisplaySize(piece.size,piece.size).setRotation(piece.phase+piece.spin*seconds)
@@ -249,13 +261,21 @@
           }
           continue;
         }
+        if(b.id==='gravewingAscension'&&this.ready['gravewing-wings']){
+          const sprite=this.pool[used++],t=b.age/b.duration;
+          sprite?.setTexture('gravewing-wings',Math.floor(t*8)%8).setOrigin(.5,260/384)
+            .setPosition(s.player.x-15,s.feetY-70).setScale(.51*(.85+.15*Math.sin(Math.min(1,t*2)*Math.PI/2)))
+            .setAlpha(Math.min(1,t*8,(1-t)*5)).setVisible(true);
+          this.motes(s.player.x-15,s.feetY-70,'ravenWings',4,70,t,.75);
+          continue;
+        }
         if(s.combatArt?.handlesEffect(b))continue;
         const t=b.age/b.duration,a=Math.sin(Math.PI*t)*.7;
         const purchase=b.kind==='purchase',blast=b.kind==='blast';
         const x=purchase?p.x:b.x,y=purchase?s.feetY-60-t*20:b.y;
         const size=purchase?42:blast?115:b.id==='brittleBones'?82:30;
         const sprite=this.pool[used++];
-        if(sprite)sprite.setFrame(b.index).setPosition(x,y).setDisplaySize(size*(.75+t*.5),size*(.75+t*.5))
+        if(sprite)sprite.setTexture('power-effects',b.index).setOrigin(.5).setPosition(x,y).setDisplaySize(size*(.75+t*.5),size*(.75+t*.5))
           .setRotation((b.id==='deathsReversal'?-1:1)*t*.6).setAlpha(a).setVisible(true);
         this.motes(x,y,b.id,Math.min(10,3+b.level+(purchase?2:0)),(purchase?45:24)+t*23,b.seed+t*3,a);
         if(blast){g.lineStyle(2,COLORS[b.index],(1-t)*.28);g.strokeEllipse(x,y,70+t*270,35+t*130);}

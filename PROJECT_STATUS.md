@@ -1,6 +1,20 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.18.0 — *The Reaper in Motion*.
+**Current build:** v0.19.0 — *Gravewing Ascension*.
+
+## v0.19.0 — Proximity plants, deliberate pace and integrated wings
+
+- Sixteen authored left-facing plant poses share one fixed root painting. Obstacle-owned idle/windup (420ms)/strike (260ms)/recover (600ms)/cooldown (1100ms) state triggers from approach distance and speed. Jaw collision follows interpolated tooth metadata during strike; the visible root remains a small contact shape. Cutting and snapshots use the same geometry/state. Two sprites blend adjacent poses without moving roots.
+- First Angel/first Devil per run still begin on grounded floor contact, now last 10s and consume any screen tap to skip. The original approach is retained, followed by breathing/aura presence. Repeat menus open at the merchant interaction point (48px before its center with the 14px foot overlap). Cutscenes use presentation time independently of God Mode speed.
+- God Mode cycles 1 / .5 / .25 / 0 time scales. Zero exits simulation before frame, RNG, physics, FX, cooldown and camera changes. Gameplay action entry is guarded while paused; the same button resumes and leaving God Mode resets normal time. Rewind and fire animation use the same scale; ordinary pause/countdown/teleport flows are retained.
+- Run speed starts at 197.4 and reaches 325.5 at 5,000m, retaining the distance-driven gait. Widths that exceed the slower held base jump are capped using the maximum step height and a 24px margin; gap counts and jump physics stay intact. The full-route encounter regression now jumps gaps rather than repeatedly falling and skipping route sections.
+- Gravewing Ascension is presented by eligible wing offers when the other wing is owned, with a transformation on first completion. It retains original IDs, ranks, rarity, prices and effects, and summarizes Raven/Skeletal ranks together. Twelve dedicated fused bone/feather poses replace the stacked pair for the combined loadout. Standalone wing art is retained.
+- Bat flight drawings remain unchanged except frames 6 and 8, which had been anchored to ear highlights instead of their near eyes. Their offsets are corrected in a new atlas shared by gameplay and opening. Pooled dive/recovery views explicitly reset anchors/transforms and recovery preserves the blend weight.
+- Crossbow projectile/trail dimensions and Chain Shot links use a 3× visual scale, independent of damage/targeting/cooldowns. Brittle Bones pieces use 3× dimensions, half linear/angular speed, quarter gravity and 1,900ms lifetime (double); this retains the old trajectory and four-edge travel with slower visible motion. Hazard clearing/bridging/range remain intact.
+- Source PNGs and exact built-in Imagegen prompts: `assets/encounters/v0190/source/` and `production-prompts.json`. Reproducible registration: `scripts/prepare-encounter-art.py`; exact source/runtime hashes and collision metadata are in `manifest.json` and `animation-data.js`.
+- Validation: existing local gameplay/asset suites plus `tests/gravewing-build.cjs`; actual Chromium regression and v0.19 phone-sized touch/render captures run on the review PR before publication. Real Android playtesting remains the final aesthetic and feel check.
+- Rollback base: `d0437520bd76e53b33540243561e80e7782998eb` (v0.18.0).
+
 
 
 ## v0.18.0 — Reaper movement and frame pacing

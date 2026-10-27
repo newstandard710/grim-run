@@ -1,0 +1,26 @@
+{
+  "version": "0.19.0",
+  "generator": "Built-in image_gen",
+  "assets": [
+    {
+      "key": "plant",
+      "args": {
+        "transparent_background": true,
+        "referenced_image_paths": [
+          "/workspace/scratch/24116b25bf71/grim-run/assets/powers/revision-v2/snapping-plant.png"
+        ],
+        "prompt": "Use case: stylized-concept. Production game sprite animation sheet for Grim Run. Reference is the existing frosted carnivorous plant and defines the painted gothic fantasy style, colors, frosted metallic thorn leaves, dark wine red mouth and ivory teeth. Create a NEW fully redrawn attack animation: EXACTLY SIXTEEN separate complete plant drawings in a strict 4 columns by 4 rows equal-cell grid on genuinely TRANSPARENT background. No text or grid lines. ALL plants face LEFT, toward an approaching player, all leaves and roots remain in the SAME lower-center position in every equal cell, consistent proportions and head size. A rooted predatory plant with expressive bending stalk and snapping jaws, no pot or pipe. Read left to right top to bottom: frames 1-3 subtle alert idle jaws nearly closed head at medium height; 4-6 clearly lean BACK to the right and open jaws as anticipation; 7-10 fast sweeping lunge LEFT with the stalk bent strongly and mouth biting at chest/waist height; 11-12 teeth close at maximum LEFT reach; 13-16 recoil and smoothly recover to frame 1. Entire mouth faces left even during windup. Make each drawing distinct with coherent anatomy, fixed foot/root baseline and generous transparent margins, absolutely no touching/overlap between cells, no crops. The root cluster occupies lower middle of each cell; lunge reaches into left half, head stays inside its cell. Smooth action designed for a proximity-triggered bite, NOT vertical bobbing. Match the high-quality detailed painted game art exactly."
+      }
+    },
+    {
+      "key": "gravewing",
+      "args": {
+        "transparent_background": true,
+        "referenced_image_paths": [
+          "/workspace/scratch/24116b25bf71/grim-run/assets/powers/wings.png"
+        ],
+        "prompt": "Use case: stylized-concept. Production game component sprite sheet for Grim Run. Reference shows the established painted dark gothic fantasy raven and skeletal wings. Design ONE integrated upgraded wing set called Gravewing Ascension, with no text in image: articulated aged ivory bone leading edges and ribs STRUCTURALLY SUPPORTING ragged layered charcoal/violet-black raven feathers, small restrained violet soul light at joints. It must look like one coherent pair of spectacular undead raven wings, never two sets layered on top of each other. No character, body, skull, background, or floating particles. Each drawing is a complete symmetrical pair of wings joined at a small consistent central shoulder attachment. EXACTLY TWELVE separate drawings on a strict FOUR columns by THREE rows equal-cell grid, genuine transparent background, no labels or grid. Frames 1-8: one full smooth flap loop, raised, lowering, broad spread, powerful downstroke, lowest, then return upward through recovery to raised, with 8 distinct wing poses. Frames 9-12: four distinct compact folded/tucked poses suitable for an airborne sliding Reaper. Identical central shoulder anchor point and scale in EVERY cell. Bone and feather materials fuse anatomically. Strong readable silhouette at phone size, elegant narrow wing roots for attachment beneath cloak. Generous blank margins around each cell; no drawing touches or overlaps another and no clipping. Preserve the reference's sophisticated hand-painted shading and detail."
+      }
+    }
+  ]
+}

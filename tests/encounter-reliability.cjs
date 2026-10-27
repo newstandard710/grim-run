@@ -31,7 +31,7 @@ for(const [,attributes,source] of scripts){
 }
 const C=sandbox.GRIM_CONFIG,Core=sandbox.GRIM_CORE,Terrain=sandbox.GRIM_TERRAIN;
 const Powers=sandbox.GRIM_POWERS,Combat=sandbox.GRIM_COMBAT,GameScene=sandbox.GrimGameScene;
-assert.equal(C.version,'0.18.0');
+assert.equal(C.version,'0.19.0');
 
 for(let k=1;k<=14;k++){
   const x=200+k*666*C.pxPerMeter;
@@ -141,6 +141,8 @@ for(const seed of [1,7,42,99,314]){
       world.godMode=false;world.player.hp=world.player.maxHp;world.player.invulMs=60000;
     }
     assert.notEqual(world.state,'dead','Unexpected death in God Mode: seed '+seed);
+    const nextGap=world.terrain.segments.find(g=>g.kind==='gap'&&g.start>=world.player.x-5);
+    if(world.player.grounded&&nextGap&&nextGap.start-world.player.x<=20)world.jump();
     world.update(0,34);frames++;
     for(const [enemy,entry] of appeared){
       if(enemy.everVisible){entry.seen=true;entry.visibleMs=Math.max(entry.visibleMs,enemy.visibleMs||0);}

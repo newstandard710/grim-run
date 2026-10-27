@@ -32,15 +32,18 @@ const server=http.createServer((req,res)=>{
   for(let i=0;i<16;i++){
    const sample=await page.evaluate(({i,variant})=>{
     const s=window.grimRun.scene.scenes[0],o=s.obstacles[0];
-    s.elapsed=((i%8)*Math.PI/4-Math.PI/2-variant*1.7+Math.PI*8)/5.1;s.drawScene();window.grimRun.step(performance.now(),0);
+    if(i<3){o.plantState='idle';s.elapsed=(Math.acos(1-i)-variant+Math.PI*8)/.9;}
+    else if(i<6){o.plantState='windup';o.plantMs=(i-2)/3*420;}
+    else if(i<12){o.plantState='strike';o.plantMs=(i-5)/6*260;}
+    else{o.plantState='recover';o.plantMs=(i-11)/4*600;}s.drawScene();window.grimRun.step(performance.now(),0);
     const image=s.obstacleSpriteObjects.get(o);return {key:image.texture.key,frame:image.frame.name,y:image.y,origin:image.originY,width:image.displayWidth,height:image.displayHeight,box:s.snappingBox(o)};
    },{i,variant:plant.variant});
    assert.equal(sample.key,'revision-plant');frames.add(Number(sample.frame));roots.push(sample.y);
-   assert.equal(sample.origin,300/320);assert(Math.abs(sample.width-256*.32*3)<.0001);assert(Math.abs(sample.height-320*.32*3)<.0001);
+   assert.equal(sample.origin,375/400);assert(Math.abs(sample.width-384*.768)<.0001);assert(Math.abs(sample.height-320*.32*3)<.0001);
    if(i===0||i===3)await page.locator('#game canvas').screenshot({path:path.join(dir,'revision-plant-'+i+'.png')});
    await page.waitForTimeout(i<8?154:308);
   }
-  assert.equal(frames.size,8);assert(roots.every(y=>y===roots[0]),'Plant base remains fixed through its entire cycle');
+  assert.equal(frames.size,16);assert(roots.every(y=>y===roots[0]),'Plant base remains fixed through its entire cycle');
   // Render all six support variants on real terrain/gaps, including rare skins.
   for(const [biome,from,to] of [['foothills',1700,2300],['tundra',2500,4600],['caves',5200,5900],['crystals',6200,6900],['ashlands',7200,7900],['lava',8200,9200]]){
    const setup=await page.evaluate(({biome,from,to})=>{

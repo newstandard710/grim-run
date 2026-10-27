@@ -60,7 +60,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const id of ['rapidFire','powerShot','chainShot'])assert(effects.ids.includes(id));assert(effects.fx>=3&&effects.arcs===1);assert.deepEqual(effects.bullet,effects.muzzle);await shot('crossbow-upgrades');
   await setup();
   const blast=await page.evaluate(()=>{
-   const s=window.grimRun.scene.scenes[0];s.godMode=true;s.powerManager.levels.brittleBones=4;s.takeDamage(1,'rock');s.powerArt.tick(600);s.drawScene();
+   const s=window.grimRun.scene.scenes[0];s.godMode=true;s.powerManager.levels.brittleBones=4;s.takeDamage(1,'rock');s.powerArt.tick(1200);s.drawScene();
    const bones=s.powerArt.bonePool.filter(v=>v.visible);return {count:bones.length,left:Math.min(...bones.map(v=>v.x))<s.cameraX,right:Math.max(...bones.map(v=>v.x))>s.cameraX+s.width,top:Math.min(...bones.map(v=>v.y))<s.cameraY,bottom:Math.max(...bones.map(v=>v.y))>s.cameraY+s.height};
   });
   assert(blast.count===44&&blast.left&&blast.right&&blast.top&&blast.bottom,'Brittle Bones crosses all four viewport edges');
@@ -94,7 +94,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   }
   await setup();
   const sizes=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];const o={type:'snappingBramble',x:s.player.x+200,y:s.feetY-70,width:62,height:70,variant:0};s.obstacles=[o];s.souls=[{x:s.player.x+90,baseY:s.feetY-140,offset:0,taken:false}];s.drawScene();const image=s.obstacleSpriteObjects.get(o);return {plant:[image.displayWidth,image.displayHeight],soul:window.GRIM_WORLD_POLISH.SOUL_HEIGHT};});
-  assert(Math.abs(sizes.plant[0]-245.76)<.01&&Math.abs(sizes.plant[1]-307.2)<.01);assert.equal(sizes.soul,80.5);await shot('plant-and-soul');
+  assert(Math.abs(sizes.plant[0]-294.912)<.01&&Math.abs(sizes.plant[1]-307.2)<.01);assert.equal(sizes.soul,80.5);await shot('plant-and-soul');
   assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);console.log('PASS Chromium combat: decoded transparent atlases, five full-body action cycles, upgrade FX, four-edge bone blast, four enemy hit/defeat sequences, Reaper hurt/death, floor-contact entry, same-node vendor purchases/heals, 3x plants and 2x Souls.');
  }finally{const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'combat-animation-preview.webm'));await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

@@ -67,7 +67,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,96,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.18.0 · THE REAPER IN MOTION','visible version badge matches the current art release');
+    assert.equal(loaded.badge,'v0.19.0 · GRAVEWING ASCENSION','visible version badge matches the current art release');
     assert.deepEqual(loaded.missing,[],'all 96 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,152,'all 24 upper paintings and 32 unique supports load');
