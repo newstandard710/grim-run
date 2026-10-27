@@ -3152,6 +3152,9 @@ window.GRIM_CONFIG = Object.freeze({
       p.y=this.terrain.groundAt(p.x)??this.terrain.anchorAt(p.x);
       p.velocityY=0;p.grounded=true;p.onSoulPlatform=false;
       p.attackMs=0;p.jumpHeld=false;p.holdSlide=false;p.sliding=false;p.airTuck=false;p.hovering=false;
+      p.jumpsUsed=0;p.airJumpUsed=false;p.coyoteMs=0;p.slideConsumed=false;p.slideReleaseBufferMs=0;
+      p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
+      p.visualTuckMs=0;p.visualTuckReleaseMs=0;p.visualWasAirborne=false;p.visualFireMs=0;
       this.distance=4900;this.cameraX=p.x-this.width*C.reaperXRatio;
       this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.powerArt?.reset();
