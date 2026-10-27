@@ -1,6 +1,16 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.15.1 — *Cloak Wings & Living Thorns*.
+**Current build:** v0.15.2 — *Merchant Sanctuaries*.
+
+## v0.15.2 — Vendor grounds, introductions and relic grip
+
+- Angel sanctuaries use marble tiles and paired marble columns; Devil sanctuaries use red hellstone bricks and paired stone sentinels. The 50m decorated span is real flat, supported terrain. Floors are at 2.1; columns/statues share obstacle-support depth .53. Vendor figures and complete auras use 1.75x previous dimensions and remain grounded.
+- User-authorized gameplay change: shared vendor exclusion now begins 25m before each vendor, retaining the existing 50m after it. Procedural gaps/landing runs, obstacles, enemies and moving projectiles respect it. Moving threats are removed before contact damage.
+- First Angel and first Devil encounters each run have a three-second approach/settle introduction with twelve registered Reaper poses, eased staging and merchant presence effects. Later vendors show selection immediately. Playback and skip preserve the already-generated offers, HP, gold and gameplay clock. New runs reset flags; rewind and practice teleport do not re-enable consumed introductions.
+- Shrine: smaller crossbow attaches at its rear stock to per-pose palms, rotates along the hand line and receives matching palm occlusion. The final lifted body/weapon hold still for 1.4 seconds under one restrained glow pulse. Six-second total, skip/reward and portal behavior are preserved.
+- Source artwork, exact built-in Imagegen prompts, registration data and checksums: `assets/vendors/source/v0152/` and `assets/vendors/v0152/`. Builder: `scripts/prepare-vendor-art.py`. Renderer: `assets/visuals/vendor-sanctuaries.js`.
+- Validation includes 560 flat solid sanctuaries across 40 seeds, all previous encounter/gameplay suites, first-per-type timing/skip/reset/freeze checks and actual Chromium captures of both sanctuary types and both introductions. Reviewed stable base: `65b13efb0247656cbc91a59d43dac7a0597d99c2` (v0.15.1).
+
 
 ## v0.15.1 — Six visual refinements
 

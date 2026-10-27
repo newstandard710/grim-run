@@ -1,5 +1,13 @@
 # Grim Run
 
+## v0.15.2 — Merchant Sanctuaries
+
+Angel vendors stand on marble tile between worn columns; Devil vendors stand on red hellstone brick between ominous statues. Each decorated sanctuary extends 25m to either side, on real level ground. Enemies and hazards are excluded from the new approach and the existing 50m exit corridor. Vendor sprites and their auras are 75% larger.
+
+The first Angel and first Devil encountered each run receive a smooth, skippable three-second introduction before selection. The shrine crossbow is smaller, attached at its stock to the Reaper’s palms, and held still for a 1.4-second glow.
+
+[Sanctuary assets and Imagegen prompts](assets/vendors/v0152/README.md). [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.15.2).
+
 ## v0.15.1 — Cloak Wings & Living Thorns
 
 Wings are 50% larger and emerge beneath matching cloak folds. Brittle Bones throws visible tumbling bone fragments; the moving mountain bramble is an animated toothed carnivorous plant. The summit reward has 24 registered motion poses and a hand-following crossbow path. Foreground fog crosses abyss openings, and all six airborne bramble supports use curved organic artwork.
@@ -18,7 +26,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.14.9 — Airborne Art and Vendor Auras**
+**Current build: v0.15.2 — Merchant Sanctuaries**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 

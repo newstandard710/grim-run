@@ -19,6 +19,8 @@ jobs:
         run: |
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
+      - name: Verify sanctuary grounds, vendor introductions and crossbow grip
+        run: node tests/browser-vendor-sanctuaries.js
       - name: Verify animated powers, combined wings and summit acquisition
         run: node tests/browser-power-animations.js
       - name: Verify rooted carnivorous plants, curved supports and continuous fog
@@ -40,4 +42,5 @@ jobs:
             test-results/*.png
             test-results/power-animation-preview.webm
             test-results/visual-revision-preview.webm
+            test-results/vendor-sanctuary-preview.webm
           if-no-files-found: ignore

@@ -31,14 +31,14 @@ for(const [,attributes,source] of scripts){
 }
 const C=sandbox.GRIM_CONFIG,Core=sandbox.GRIM_CORE,Terrain=sandbox.GRIM_TERRAIN;
 const Powers=sandbox.GRIM_POWERS,Combat=sandbox.GRIM_COMBAT,GameScene=sandbox.GrimGameScene;
-assert.equal(C.version,'0.15.1');
+assert.equal(C.version,'0.15.2');
 
 for(let k=1;k<=14;k++){
   const x=200+k*666*C.pxPerMeter;
   assert.equal(Core.intersectsVendorCorridor(x,100,200,666,12),true);
   assert.equal(Core.intersectsVendorCorridor(x+49*12,25,200,666,12),true);
   assert.equal(Core.intersectsVendorCorridor(x+50*12,25,200,666,12),false);
-  assert.equal(Core.intersectsVendorCorridor(x-25,20,200,666,12),false);
+  assert.equal(Core.intersectsVendorCorridor(x-25,20,200,666,12),true);
 }
 const counts={},totals=[];
 for(let seed=1;seed<=300;seed++){

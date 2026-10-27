@@ -82,7 +82,7 @@ const server=http.createServer((req,res)=>{
         name+' ground stays behind vendor layer');
       if(name.endsWith('vendor')){
         assert(result.vendor.some(v=>v.key===('vendor-'+name.split('-')[0])&&
-          v.depth===10&&v.height===142),name+' has the grounded character sprite');
+          v.depth===10&&v.height===142*1.75),name+' has the grounded character sprite');
       }
       await page.waitForTimeout(80);
       await page.locator('#game canvas').screenshot({path:path.join(dir,

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.15.1</title>
+  <title>GRIM RUN — v0.15.2</title>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
 * { box-sizing: border-box; -webkit-tap-highlight-color:transparent; }
@@ -199,6 +199,10 @@ button {cursor:pointer;}
 .chest-title{position:absolute;bottom:13%;left:0;right:0;font-size:clamp(16px,4.4vh,32px);font-weight:1000;letter-spacing:.10em;text-shadow:0 0 18px #8cebe770;}
 .chest-caption{position:absolute;bottom:7.5%;left:0;right:0;font-size:clamp(8px,1.8vh,13px);font-weight:850;letter-spacing:.12em;color:#a4d3d2;}
 #chest-continue-btn{position:absolute;right:14px;bottom:14px;pointer-events:auto;min-height:32px;width:auto;padding:5px 18px;margin:0;}
+.vendor-intro-scene{position:absolute;inset:0;z-index:24;pointer-events:none;text-align:center;color:#e7fff5;text-shadow:0 2px 6px #020714;}
+#vendor-intro-title{position:absolute;top:4%;width:100%;font-weight:900;letter-spacing:.22em;font-size:clamp(12px,3vh,20px)}
+#vendor-intro-caption{position:absolute;bottom:3%;width:100%;font-weight:800;letter-spacing:.2em;font-size:clamp(10px,2.5vh,15px)}
+#vendor-intro-skip{position:absolute;right:14px;bottom:12px;pointer-events:auto;min-height:30px;padding:5px 16px}
 #vendor-stats.healing{animation:vendorHealing .6s ease;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
@@ -241,7 +245,7 @@ button {cursor:pointer;}
       <p>Climb beyond the forest, collect Souls at 4,850m and 9,500m, and cross the Underworld to reach the final gate at 9,999m. God Mode can continue into the Boss Biome beyond the gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.15.1 · CLOAK WINGS & LIVING THORNS</div>
+      <div class="mini">v0.15.2 · MERCHANT SANCTUARIES</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">⚔ Swing · ↑ Tap/hold to jump · ⇥ Slide, then ↑ within 0.5s of release to air tuck</div>
     </div>
@@ -338,13 +342,18 @@ button {cursor:pointer;}
   <div id="error" class="modal-wrap hidden"><div class="modal compact"><h2>Unable to start</h2><p id="error-message"></p></div></div>
   <!-- npm run build copies the pinned Phaser library to vendor for offline Android use. -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <div id="vendor-intro-screen" class="vendor-intro-scene hidden">
+    <div id="vendor-intro-title">THE HEAVENLY MERCHANT</div>
+    <div id="vendor-intro-caption">A MOMENT OF SANCTUARY</div>
+    <button id="vendor-intro-skip" class="primary" aria-label="Skip vendor introduction">SKIP ▶</button>
+  </div>
   <script>
     // When opening the unbuilt source directly on a phone, load Phaser from its pinned CDN.
     if (!window.Phaser) document.write('<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"><\/script>');
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.15.1',
+  version: '0.15.2',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 282,
@@ -367,7 +376,8 @@ window.GRIM_CONFIG = Object.freeze({
   coinScore: 5,
   soulScore: 50,
   minEncounterGapSeconds: 1.40,
-  upgradeSafetyAfterMeters: 50, // hazard-free ground after vendor
+  upgradeSafetyAfterMeters: 50, // retain the existing post-vendor protection
+  vendorSanctuaryHalfMeters: 25,
   resumeCountdownMs: 3000,
   slowCooldownMs: 3300,
   slideReleaseComboMs: 500, // tap JUMP within half a second after releasing SLIDE to latch air tuck
@@ -502,13 +512,11 @@ window.GRIM_CONFIG = Object.freeze({
   function milestoneX(startX, soulNumber, meters = 666, pxPerMeter = 12) {
     return startX + soulNumber * meters * pxPerMeter;
   }
-  // One universal spawn exclusion: the 50m corridor AFTER each vendor.
-  // Retain old optional arguments solely for backward compatibility; they no longer
-  // create independent pre-vendor or oversized post-vendor restrictions.
+  // One universal corridor: 25m before every vendor, retaining 50m after it.
   function intersectsVendorCorridor(x, width, startX, meters = 666, pxPerMeter = 12) {
     const a=(x-startX)/pxPerMeter, b=(x+Math.max(0,width)-startX)/pxPerMeter;
     for(let k=Math.max(1,Math.floor(a/meters)-1);k<=Math.min(14,Math.floor(b/meters)+1);k++){
-      if(b>k*meters && a<k*meters+50)return true;
+      if(b>k*meters-25 && a<k*meters+50)return true;
     }
     return false;
   }
@@ -919,11 +927,11 @@ window.GRIM_CONFIG = Object.freeze({
       if(m>=5000 && m<5105)return false;
       if(m<10050&&m+lengthMeters>9950)return false; // Keep the normal finish approach safely supported.
       if(m+lengthMeters>worldEndMeters-50)return false;
-      // No pre-vendor exclusion. Gap groups cannot intersect the 50m
-      // post-vendor safe corridor; the sequence includes its landing runway.
+      // Gap groups and their landing runway cannot cross the sanctuary
+      // approach or the existing 50m post-vendor corridor.
       for(let k=1;k<=14;k++){
         const vendor=k*666;
-        if(m<vendor+50&&m+lengthMeters>vendor)return false;
+        if(m<vendor+50&&m+lengthMeters>vendor-25)return false;
       }
       return true;
     }
@@ -942,6 +950,15 @@ window.GRIM_CONFIG = Object.freeze({
         // Dedicated Soul approach. Descend into a flat UNDERPASS with a one-way
         // upper platform. Avoid random slope spikes through this encounter.
         const currentMeter=meters(cursor);
+        // The 50m decorated sanctuary is real level, solid terrain. Split the
+        // hills at its boundaries so no camera or generation chunk can move it.
+        const nextVendor=Math.max(1,Math.ceil((currentMeter-25+1e-7)/666));
+        if(nextVendor<=14){
+          const begin=startX+(nextVendor*666-25)*pxPerMeter;
+          const end=startX+(nextVendor*666+25)*pxPerMeter;
+          if(cursor>=begin-.0001&&cursor<end-.0001){add(Math.min(target,end),elevation);continue;}
+          if(cursor<begin&&target>begin){addHillsUntil(begin);continue;}
+        }
         // Long, solid 3–2–1 platform approach in Hell. No procedural gaps here.
         if(currentMeter<9380 && meters(target)>9380){
           addHillsUntil(startX+9380*pxPerMeter,true);continue;
@@ -1125,6 +1142,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('revive-yes-btn').addEventListener('click', () => actions.revive());
       el('revive-no-btn').addEventListener('click', () => actions.declineRevive());
       el('chest-continue-btn').addEventListener('click', () => actions.finishChest());
+      el('vendor-intro-skip').addEventListener('click', () => actions.finishVendorIntro());
       el('menu-btn').addEventListener('click', () => actions.menu());
       el('pause-btn').addEventListener('click', () => actions.pause());
       el('resume-btn').addEventListener('click', () => actions.resume());
@@ -1195,6 +1213,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('game-over', mode === 'dead');
       show('revive-screen', mode === 'revive');
       show('chest-screen', mode === 'chest');
+      show('vendor-intro-screen',mode==='vendorIntro');
       show('pause-screen', mode === 'paused');
       show('upgrade-screen', mode === 'upgrade');
       show('controls',mode==='playing');
@@ -1426,8 +1445,10 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.14.7-slide-support"></script>
-  <script src="assets/visuals/power-animations.js?v=0.15.1"></script>
+  <script src="assets/visuals/power-animations.js?v=0.15.2"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
+  <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=0.15.2"></script>
   <script>
 (function(scope) {
   'use strict';
@@ -1497,6 +1518,7 @@ window.GRIM_CONFIG = Object.freeze({
     constructor() { super('GrimRun'); }
     preload(){
       scope.GRIM_POWER_ART?.preload(this);
+      scope.GRIM_VENDOR_ART?.preload(this);
       this.biomeBackdropGroup='surface';
       this.biomeBackdropPendingGroup=null;
       this.biomeBackdropFailedGroups=new Set();
@@ -1614,6 +1636,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.goldCollected = 0; // Lifetime collected this run, for scoring
       this.nextVendorNumber=1;
       this.vendorType=null;this.vendorPhase='deal';
+      this.vendorIntroSeen={angel:false,devil:false};this.vendorIntroMs=0;
       this.soulPlatform=null;
       this.totalSouls=0;
       this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
@@ -1647,7 +1670,8 @@ window.GRIM_CONFIG = Object.freeze({
         declineRevive: () => this.declineRevive(),
         fireCrossbow: () => this.fireCrossbow(),
         rewind: () => this.rewind(),
-        finishChest: () => this.finishChest()
+        finishChest: () => this.finishChest(),
+        finishVendorIntro: () => this.finishVendorIntro()
       });
       this.installLoopRecovery();
       this.meta=Meta.load();
@@ -1674,6 +1698,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.events.once('shutdown',()=>this.visuals.shutdown());
       }
       this.powerArt=scope.GRIM_POWER_ART?new scope.GRIM_POWER_ART.PowerAnimations(this):null;
+      this.vendorArt=scope.GRIM_VENDOR_ART?new scope.GRIM_VENDOR_ART.VendorSanctuaries(this):null;
       this.drawScene();
     }
     openReliquary(){
@@ -1809,7 +1834,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showGun(this.gunUnlocked);this.ui.showGunCooldown(0);
       this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
       this.nextVendorNumber=this.lastVendorNumber+1;
-      this.vendorType=null;this.pendingOffers=[];this.vendorPhase='deal';
+      this.vendorType=null;this.pendingOffers=[];this.vendorPhase='deal';this.vendorIntroMs=0;
       this.nextEncounterX=x+Math.max(780,this.width);
       this.nextEnemySpawnX=Math.max(this.startX+5070*C.pxPerMeter,x+530);
       this.nextGroundSpawnX=Math.max(this.startX+5140*C.pxPerMeter,x+850);
@@ -2123,6 +2148,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.nextEncounterX = this.player.x + 850;
       this.nextVendorNumber=1;
       this.vendorType=null;this.vendorPhase='deal';
+      this.vendorIntroSeen={angel:false,devil:false};this.vendorIntroMs=0;
       this.soulPlatform=null;
       this.totalSouls=this.meta.souls;
       this.godMode=false;this.practiceSlow=false;this.teleportUsed=false;this.godModePastFinish=false;this.pendingTeleport=null;
@@ -2327,8 +2353,18 @@ window.GRIM_CONFIG = Object.freeze({
       p.jumpHeld=false;p.hovering=false;p.hoverHoldMs=0;p.hoverPressKind='none';
       p.holdSlide=false;p.slideReleaseBufferMs=0;p.airTuck=false;
       this.clearUpgradeCorridor(this.startX+number*C.vendorEveryMeters*C.pxPerMeter);
-      this.state='upgrade';
-      this.showVendor();
+      this.vendorIntroSeen??={angel:false,devil:false};
+      if(!this.vendorIntroSeen[this.vendorType]){
+        this.vendorIntroSeen[this.vendorType]=true;
+        this.vendorIntroMs=3000;this.state='vendorIntro';
+        const floor=this.terrain?.groundAt(p.x);
+        if(Number.isFinite(floor)){p.y=floor;p.grounded=true;p.velocityY=0;p.jumpsUsed=0;p.onSoulPlatform=false;}
+        this.ui.setMode('vendorIntro');
+      }else {this.state='upgrade';this.showVendor();}
+    }
+    finishVendorIntro(){
+      if(this.state!=='vendorIntro')return;
+      this.vendorIntroMs=0;this.state='upgrade';this.showVendor();this.drawScene();
     }
     showVendor(){
       if(this.state!=='upgrade')return;
@@ -2392,8 +2428,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     clearUpgradeCorridor(vendorX){
       const endX=vendorX+C.upgradeSafetyAfterMeters*C.pxPerMeter;
-      const beginX=vendorX;
-      this.obstacles=this.obstacles.filter(ob=>ob.x>endX||ob.x+ob.width<beginX);
+      const beginX=vendorX-C.vendorSanctuaryHalfMeters*C.pxPerMeter;
+      this.obstacles=this.obstacles.filter(ob=>{const b=this.vendorObstacleBounds(ob.type,ob.x,ob.width);return b.x>endX||b.x+b.width<beginX;});
       this.enemies=this.enemies.filter(e=>e.x+25<beginX||e.x-25>endX);
       this.fireballs=this.fireballs.filter(b=>b.x+9<beginX||b.x-9>endX);
       for(const tip of this.tips)if(tip.atX+80>=beginX&&tip.atX<=endX)tip.label.destroy();
@@ -2440,7 +2476,21 @@ window.GRIM_CONFIG = Object.freeze({
       const surface=this.terrain.groundAt(x);
       if(surface===null)return;
       const ob=Core.obstacle(type,x,surface,this.rng.integer(0,5),C.slideClearancePx,this.height);
+      if(this.vendorObstacleBlocked(type,x,ob.width))return;
       this.obstacles.push(ob);this.makeTip(type,ob);
+    }
+    vendorObstacleBounds(type,x,width){
+      // Include the painted foreground, ceiling backing and terrain tether,
+      // rather than allowing overhang from a spawn point outside the pad.
+      if(type==='airBramble')return {x:x-245,width:415};
+      const paintedWidth=type==='branch'?560:type==='tuckGate'?235:
+        type==='bramble'?width*3:type==='rock'?width*2.5:
+        type==='fire'?width*2:type==='snappingBramble'?256*.32:width;
+      return {x:x+width/2-paintedWidth/2,width:paintedWidth};
+    }
+    vendorObstacleBlocked(type,x,width){
+      const b=this.vendorObstacleBounds(type,x,width);
+      return Core.intersectsVendorCorridor(b.x,b.width,this.startX,C.vendorEveryMeters,C.pxPerMeter);
     }
     populateComboObstacles(){
       // Explicit encounter allocation. Old alternating gap logic sometimes
@@ -2451,12 +2501,12 @@ window.GRIM_CONFIG = Object.freeze({
         const meters=(section.start-this.startX)/C.pxPerMeter;
         if(meters<1700||meters>9300)continue;
         const x=section.start+Math.min(90,(section.end-section.start)*.42);
-        if(Core.intersectsVendorCorridor(x,80,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
+        if(this.vendorObstacleBlocked('airBramble',x,80)&&this.vendorObstacleBlocked('tuckGate',x,80))continue;
         if(Core.overlapsSoulPlatform(x,80,this.soulPlatform,30))continue;
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<80))continue;
         eligible.push({section,meters,x});
       }
-      const tucks=eligible.filter(c=>c.meters>=7000&&c.meters<=9250);
+      const tucks=eligible.filter(c=>c.meters>=7000&&c.meters<=9250&&!this.vendorObstacleBlocked('tuckGate',c.x,80));
       const target=2+((this.seed>>>0)%2);
       const selected=[];
       // Spread required tuck obstacles across later Underworld terrain.
@@ -2482,6 +2532,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Retain jump-and-attack variations without consuming required tuck slots.
       let lastAttack=-100000;
       for(const c of eligible){
+        if(this.vendorObstacleBlocked('airBramble',c.x,80))continue;
         if(chosen.has(c.section)||c.meters-lastAttack<310)continue;
         if(selected.some(s=>Math.abs(s.meters-c.meters)<125))continue;
         if(c.meters<7000 || (this.rng.next()<.36)){
@@ -2497,7 +2548,7 @@ window.GRIM_CONFIG = Object.freeze({
     trySpawnCombat(x,kind){
       const stats=this.encounterTelemetry;
       const flying=Combat.enemyIsFlying({kind});
-      const width=flying?46:kind==='crawler'?Combat.CRAWLER_HITBOX.width:42;
+      const width=Math.max(50,flying?46:kind==='crawler'?Combat.CRAWLER_HITBOX.width:42);
       if(Core.intersectsVendorCorridor(x-width/2,width,this.startX,C.vendorEveryMeters,C.pxPerMeter)){
         stats.rejectedVendor++;return false;
       }
@@ -2586,7 +2637,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(m<3000||m>4630)continue; // Preserve the mountain Soul approach.
         const nearGround=this.terrain.groundAt(x),farGround=this.terrain.groundAt(x+62);
         if(nearGround===null||farGround===null||Math.abs(nearGround-farGround)>105)continue;
-        if(Core.intersectsVendorCorridor(x,62,this.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
+        if(this.vendorObstacleBlocked('snappingBramble',x,62))continue;
         if(this.obstacles.some(o=>!o.destroyed&&Math.abs(o.x-x)<220))continue;
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
         const ground=this.terrain.groundAt(x),height=62;
@@ -2612,7 +2663,7 @@ window.GRIM_CONFIG = Object.freeze({
              {type,x,width,y:(this.terrain.groundAt(x)??0)-(type==='rock'?48:41)},
              Math.min(C.maxSpeed,C.initialSpeed+((x-this.startX)/C.pxPerMeter)*C.speedGainPerMeter),
              C.jumpVelocity,C.gravity) &&
-           !Core.intersectsVendorCorridor(x,width,this.startX,C.vendorEveryMeters,C.pxPerMeter) &&
+           !this.vendorObstacleBlocked(type,x,width) &&
            !Core.overlapsSoulPlatform(x,width,this.soulPlatform,30) &&
            Math.abs(x-this.terrain.portalX)>95 &&
            x+width<this.terrain.worldEndX-80 &&
@@ -2640,6 +2691,10 @@ window.GRIM_CONFIG = Object.freeze({
       else if(this.state==='portal'){
         this.portalMs=Math.max(0,this.portalMs-Math.min(250,Math.max(0,deltaMs)));
         if(this.portalMs===0)this.finishPortal();
+      }
+      else if(this.state==='vendorIntro'){
+        if(!document.hidden)this.vendorIntroMs=Math.max(0,this.vendorIntroMs-Math.min(250,Math.max(0,deltaMs)));
+        if(this.vendorIntroMs===0)this.finishVendorIntro();
       }
       else if(this.state==='chest'){
         if(!document.hidden)this.chestMs=Math.max(0,this.chestMs-Math.min(250,Math.max(0,deltaMs)));
@@ -2884,6 +2939,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Bats wind up their dive so a player can react before they descend.
       for(const e of this.enemies){
         if(e.dead)continue;
+        if(Core.intersectsVendorCorridor(e.x-25,50,this.startX)){e.dead=true;continue;}
         const ahead=e.x-p.x;
         const visibleNow=e.x>p.x+30&&e.x<right-25;
         if(visibleNow){
@@ -2951,6 +3007,7 @@ window.GRIM_CONFIG = Object.freeze({
           }
         }
       }
+      for(const e of this.enemies)if(Core.intersectsVendorCorridor(e.x-25,50,this.startX))e.dead=true;
       // No automatic firing. The crossbow only launches a bolt from FIRE input.
       this.ui.showGunCooldown(this.gunCooldownMs);
       for(const b of this.bullets){
@@ -2979,6 +3036,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       for(const ball of this.fireballs){
         if(ball.dead)continue;
+        if(Core.intersectsVendorCorridor(ball.x-9,18,this.startX)){ball.dead=true;continue;}
         ball.ageMs+=frameMs;
         if(ball.reflected){
           const owner=ball.owner;
@@ -2990,6 +3048,7 @@ window.GRIM_CONFIG = Object.freeze({
           }else ball.x+=520*dt;
         }else {
           ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;
+          if(Core.intersectsVendorCorridor(ball.x-9,18,this.startX)){ball.dead=true;continue;}
           if(Core.overlaps(Core.collisionBox(p.x,p.y,this.lowProfile),
             {x:ball.x-9,y:ball.y-9,width:18,height:18})){
             ball.dead=true;
@@ -3012,7 +3071,7 @@ window.GRIM_CONFIG = Object.freeze({
           break;
         }
       }
-      // Moving threats cannot enter the guaranteed post-vendor safe corridor.
+      // Moving threats cannot enter the sanctuary or post-vendor corridor.
       // Keep only creatures that have genuinely passed the camera, finished
       // the world, or entered a vendor safety corridor. Nothing is created
       // beyond the visible right edge, so legitimate spawns aren't culled.
@@ -3430,6 +3489,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.updateBiomeBackdrops();
       this.updateBackdropGroundVeil();
       this.drawGround();
+      this.vendorArt?.renderWorld();
       this.drawGroundFog();
       this.drawPortals();
       this.drawVendors();
@@ -3444,6 +3504,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.drawForeground();
       if(this.visuals)this.visuals.render();
       this.powerArt?.render();
+      this.vendorArt?.renderCinema();
     }
     groundFogHash(index,salt){
       let h=Math.imul(index^salt,0x45d9f3b);
@@ -3594,30 +3655,7 @@ window.GRIM_CONFIG = Object.freeze({
         const x=this.startX+k*C.vendorEveryMeters*C.pxPerMeter;
         if(Math.abs(x-this.player.x)>this.width*1.4)continue;
         const devil=k>=8,y=this.terrain.groundAt(x)??this.terrain.anchorAt(x);
-        if(glow){
-          const pulse=1+Math.sin(this.elapsed*2.1+k*1.7)*.075;
-          if(devil){
-            glow.fillStyle(0x270820,.17);glow.fillEllipse(x,y-78,192*pulse,181*pulse);
-            glow.fillStyle(0x7a1944,.14);glow.fillEllipse(x,y-76,148*pulse,153*pulse);
-            glow.lineStyle(5,0xad2947,.28);glow.strokeEllipse(x,y-80,130*pulse,141*pulse);
-            for(let n=0;n<8;n++){
-              const t=n*2.4+k*1.7+this.elapsed*.68;
-              glow.fillStyle(n%2?0xe84f37:0xb73572,.32);
-              glow.fillCircle(x+Math.sin(t)*66,y-38-(n*17%105)+Math.sin(t*2)*7,
-                (n%3+2)*pulse);
-            }
-          }else{
-            glow.fillStyle(0xf7e5ab,.10);glow.fillEllipse(x,y-83,207*pulse,188*pulse);
-            glow.fillStyle(0xb5d9ee,.13);glow.fillEllipse(x,y-80,166*pulse,163*pulse);
-            glow.lineStyle(3,0xffe9a8,.31);glow.strokeEllipse(x,y-84,146*pulse,155*pulse);
-            for(let n=0;n<9;n++){
-              const a=n*Math.PI*2/9+this.elapsed*.11;
-              glow.lineStyle(n%2?2:3,0xffeac0,.19);
-              glow.lineBetween(x+Math.cos(a)*73,y-88+Math.sin(a)*73,
-                x+Math.cos(a)*104*pulse,y-88+Math.sin(a)*101*pulse);
-            }
-          }
-        }
+        scope.GRIM_VENDOR_ART?.drawAura(glow,x,y,devil,this.elapsed,1.75);
         const key=devil?'vendor-demon':'vendor-angel';
         if(this.textures?.exists?.(key)&&this.add?.image){
           let sprite=this.vendorSpriteObjects.get(k);
@@ -3625,7 +3663,7 @@ window.GRIM_CONFIG = Object.freeze({
             sprite=this.add.image(x,y+4,key).setOrigin(.5,1).setDepth(10);
             this.vendorSpriteObjects.set(k,sprite);
           }
-          sprite.setTexture(key).setPosition(x,y+4).setDisplaySize(devil?166:160,142)
+          sprite.setTexture(key).setPosition(x,y+4).setDisplaySize((devil?166:160)*1.75,142*1.75)
             .setVisible(true);
           active.add(k);
           continue;

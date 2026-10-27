@@ -15,7 +15,7 @@ s.window=s;vm.createContext(s);
 for(const [,attrs,source] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(source,s,{filename:'index.html'});
 const C=s.GRIM_CONFIG;
-assert.equal(C.version,'0.15.1');
+assert.equal(C.version,'0.15.2');
 assert.ok(html.includes('id="god-teleport-range"'));
 assert.ok(html.includes('step="500"'), '500m increments are explicit');
 function game(seed){

@@ -206,3 +206,11 @@ Only normal Cavern Bats are replaced in this phase. Skeletal Bats, Crawlers, Imp
 - Shrine reach/lift/lower artwork has 24 frames. The feet are registered and per-pose hand coordinates drive the separately rendered relic. Keep hand motion, weapon motion and overhead hold synchronized; preserve the accepted shrine and Reaper design.
 - Surface fog must continue across gaps at a virtual interpolated lip height, while canyon depth and physical gaps stay open. Keep the previous waist-heavy/chest-wisp profile, variation and biome tint.
 - Air-bramble supports must curve, branch, taper and join terrain naturally. Six new PNGs under `assets/obstacles/air-bramble-support-v2/` replace the previous diagonal supports. Keep real terrain above the lower attachment and airborne foreground art above the support.
+
+
+## Merchant sanctuaries — v0.15.2
+
+- Keep the accepted merchants and Reaper identity. Marble columns and ivory/gold tiles frame Angels; dark red hellstone bricks and paired basalt sentinels frame Devils. Architecture belongs at obstacle-support depth .53; floor caps are world anchored on physical level terrain. The decorated area is 25m either side of the merchant.
+- Enlarge vendor sprites and the whole aura by 75%, preserving grounded feet. Vendor introductions should feel imposing through relative scale, restrained breathing/light and the Reaper looking up. Keep the ordinary biome background visible through the cinematic shade.
+- Use twelve registered approach/settle poses for the three-second introduction. Keep the final look-up pose grounded and the world paused. Display reward selection only after the introduction completes or is skipped.
+- Crossbow grip uses actual palms and the weapon stock, with small palm overlays in front. Held width is 70.8% of the previous cinematic size. The overhead pose and weapon remain still for 1.4 seconds, with one soft cyan/ivory glow; avoid persistent wobble or light that washes out the hands.

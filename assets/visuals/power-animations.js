@@ -1,4 +1,4 @@
-/* Grim Run v0.15.0 — illustrated actions, articulated wings and restrained power FX.
+/* Grim Run v0.15.2 — illustrated actions, articulated wings and restrained power FX.
  * This layer never advances physics, changes hitboxes or consumes gameplay RNG.
  * Timers live on the player so the existing rewind snapshots register poses too.
  */
@@ -26,13 +26,14 @@
   }
   function relicMotionAt(t){
     let pose;
-    if(t<.6)pose=0;
-    else if(t<1.3)pose=clamp((t-.6)/.7,0,1)*7;
-    else if(t<2)pose=8+clamp((t-1.3)/.7,0,1)*7;
-    else if(t<4.9)pose=15;
-    else if(t<5.6)pose=16+clamp((t-4.9)/.7,0,1)*7;
+    if(t<.4)pose=0;
+    else if(t<1.2)pose=clamp((t-.4)/.8,0,1)*7;
+    else if(t<2.2)pose=8+clamp((t-1.2),0,1)*7;
+    else if(t<3.6)pose=15;
+    else if(t<4.6)pose=16+clamp((t-3.6),0,1)*7;
     else pose=23;
-    return {pose,frame:Math.round(pose)};
+    const hold=t>=2.2&&t<3.6;
+    return {pose,frame:Math.round(pose),hold,glow:hold?Math.sin((t-2.2)/1.4*Math.PI):0};
   }
   function actionFrame(s){
     const p=s.player;
@@ -87,6 +88,7 @@
         this.ready['power-relic-motion']?0:12)?.setScrollFactor(0)
         .setOrigin(this.ready['power-relic-motion']?.5:288/512,this.ready['power-relic-motion']?456/512:400/512);
       this.cinemaBow=image('power-bone-crossbow',25)?.setScrollFactor(0);
+      this.cinemaHands=image('relic-grip-overlay',25.2,0)?.setScrollFactor(0).setOrigin(0,0);
       this.cinemaFX=scene.add.graphics().setScrollFactor(0).setDepth(25.5);
       this.weapon=image('power-bone-crossbow',14.3);
       this.enabled=true;
@@ -292,9 +294,9 @@
       }
       const active=s.state==='chest';
       this.cinema?.clear();this.cinemaFX?.clear();
-      for(const sprite of [this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow])sprite?.setVisible(false);
+      for(const sprite of [this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow,this.cinemaHands])sprite?.setVisible(false);
       if(!active)return;
-      const w=s.width,h=s.height,t=clamp((SHRINE_MS-s.chestMs)/1000,0,6),reveal=clamp((t-1.5)/1.5,0,1);
+      const w=s.width,h=s.height,t=clamp((SHRINE_MS-s.chestMs)/1000,0,6),motion=relicMotionAt(t),reveal=motion.glow;
       this.cinema.fillStyle(0x030914,.76);this.cinema.fillRect(0,0,w,h);
       this.cinema.fillStyle(0x03101c,.65);this.cinema.fillRect(0,0,w,h*.115);this.cinema.fillRect(0,h*.88,w,h*.12);
       const shrineX=w*.57,ground=h*.82;
@@ -305,7 +307,7 @@
         this.cinemaShrineOpen?.setOrigin(.5,1).setPosition(shrineX,ground+13)
           .setDisplaySize(h*.90,h*.60).setAlpha(open).setVisible(open>0);
       }
-      const motion=relicMotionAt(t),smooth=this.ready['power-relic-motion'];
+      const smooth=this.ready['power-relic-motion'];
       const cinemaScale=h/(smooth?760:950);
       if(this.cinemaReaper&&(smooth||this.ready['power-reaper'])){
         const frame=smooth?motion.frame:t<1.9?12:t<4.9?13:14;
@@ -316,23 +318,31 @@
         this.cloakRoot?.setVisible(false);
       }
       let bx=shrineX-(shrineX-w*.38)*clamp((t-2.7)/.8,0,1),by=ground-h*.18-reveal*h*.27;
-      if(smooth&&scope.GRIM_REVISION_ART?.relicHands){
-        const a=Math.floor(motion.pose),b=Math.min(23,a+1),f=motion.pose-a;
-        const points=scope.GRIM_REVISION_ART.relicHands,hand=[points[a][0]+(points[b][0]-points[a][0])*f,points[a][1]+(points[b][1]-points[a][1])*f];
-        const targetX=w*.37+(hand[0]-256)*cinemaScale,targetY=ground+(hand[1]-456)*cinemaScale-h*.035;
-        let follow=clamp((t-.7)/.6,0,1);follow=follow*follow*(3-2*follow);
+      let angle=0;
+      if(smooth&&scope.GRIM_VENDOR_DATA?.relicGrips){
+        const [hand,front]=scope.GRIM_VENDOR_DATA.relicGrips[motion.frame];
+        const targetX=w*.37+(hand[0]-256)*cinemaScale,targetY=ground+(hand[1]-456)*cinemaScale;
+        angle=Math.atan2(front[1]-hand[1],front[0]-hand[0])-Math.atan2(28,272);
+        let follow=clamp((t-.6)/.6,0,1);follow=follow*follow*(3-2*follow);
         bx=shrineX+(targetX-shrineX)*follow;by=ground-h*.18+(targetY-(ground-h*.18))*follow;
       }
-      const bowAlpha=clamp((t-.7)/.35,0,1);
-      if(this.cinemaBow&&t>.7){
-        this.cinemaBow.setPosition(bx,by).setDisplaySize(h*.24,h*.24)
-          .setRotation(Math.sin(t*1.4)*.025).setAlpha(bowAlpha).setVisible(true);
+      const bowAlpha=clamp((t-.6)/.35,0,1);
+      if(this.cinemaBow&&t>.6){
+        this.cinemaBow.setOrigin(128/512,235/512).setPosition(bx,by).setDisplaySize(h*.17,h*.17)
+          .setRotation(angle).setAlpha(bowAlpha).setVisible(true);
+        if(smooth&&t>=1.2&&scope.GRIM_VENDOR_DATA?.relicGripOffsets){
+          const [ox,oy]=scope.GRIM_VENDOR_DATA.relicGripOffsets[motion.frame];
+          this.cinemaHands?.setFrame(motion.frame).setPosition(w*.37+(ox-256)*cinemaScale,ground+(oy-456)*cinemaScale)
+            .setScale(cinemaScale).setVisible(true);
+        }
       }
       const g=this.cinemaFX;
       if(reveal>0){
+        const centerX=bx+Math.cos(angle)*h*.0425,centerY=by+Math.sin(angle)*h*.0425;
+        for(let i=3;i>=1;i--){g.fillStyle(i%2?0xa8f8e4:0xffe1a5,reveal*.035);g.fillEllipse(centerX,centerY,h*(.12+i*.045),h*(.09+i*.04));}
         for(let i=0;i<7;i++){
-          const a=i*Math.PI*2/7+t*.15,r=h*(.12+.03*Math.sin(t*2));
-          g.lineStyle(2,0xbaf8e5,.14*reveal);g.lineBetween(bx+Math.cos(a)*r*.35,by+Math.sin(a)*r*.35,bx+Math.cos(a)*r,by+Math.sin(a)*r);
+          const a=i*Math.PI*2/7,r=h*.14;
+          g.lineStyle(2,0xbaf8e5,.14*reveal);g.lineBetween(centerX+Math.cos(a)*r*.35,centerY+Math.sin(a)*r*.35,centerX+Math.cos(a)*r,centerY+Math.sin(a)*r);
         }
         for(let i=0;i<16;i++){
           const phase=(t*.22+i*.618)%1,a=i*2.399;
@@ -341,8 +351,8 @@
         }
       }
       const title=scope.document?.getElementById?.('relic-title'),button=scope.document?.getElementById?.('chest-continue-btn');
-      if(title)title.textContent=t<2.1?'THE SUMMIT RELIQUARY':'BONE CROSSBOW ACQUIRED';
-      if(button)button.textContent=t<2.1?'SKIP ▶':'CONTINUE ▶';
+      if(title)title.textContent=t<2.2?'THE SUMMIT RELIQUARY':'BONE CROSSBOW ACQUIRED';
+      if(button)button.textContent=t<2.2?'SKIP ▶':'CONTINUE ▶';
     }
     render(){
       if(!this.enabled||this.disposed)return;
@@ -350,7 +360,7 @@
     }
     destroy(){
       if(this.disposed)return;this.disposed=true;
-      for(const sprite of [this.action,this.weapon,this.shrine,this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow,
+      for(const sprite of [this.action,this.weapon,this.shrine,this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow,this.cinemaHands,
         this.fx,this.cinema,this.cinemaFX,this.cloakRoot,...this.wingSprites,...this.nearWings,...this.bonePool,...this.pool])sprite?.destroy();
       this.bursts=[];this.pool=[];this.wingSprites=[];
     }
