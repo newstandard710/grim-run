@@ -218,7 +218,7 @@ Only normal Cavern Bats are replaced in this phase. Skeletal Bats, Crawlers, Imp
 
 ## Souls & Shadows — v0.15.3
 
-- Coin and Soul silhouettes grow 1.75× in each dimension while their collectible positions and ranges stay fixed. Coins turn in place with antique gold, copper thickness and an ivory highlight. Souls have pearl/ivory cores, muted cyan wisps and a slow, soft holy-light pulse. Keep the two shapes distinguishable without relying on hue.
+- Coin and Soul silhouettes grow 1.75× in each dimension while their collectible positions and ranges stay fixed. Coins turn in place with antique gold, copper thickness and an ivory highlight. Pickups render above the foreground mist so their bodies remain legible. Souls have pearl/ivory cores, muted cyan wisps and a slow, soft holy-light pulse. Keep the two shapes distinguishable without relying on hue.
 - Soul encounter ledges alone are floating: root-bound wood, weathered stone/timber, frosted slate/icicles, cavern rock/bone, crystal-veined rock, charred timber/stone, ember-seamed hellstone brick and gothic stone/bone. Complete finite undersides and registered level top edges are mandatory. Keep all nine existing one-way ledge surfaces unchanged.
 - Round terrain peaks using the same bounded profile for collision and painting; preserve exact gap endpoints, takeoff strips, vendor pads and ledge tops. Surface caps, all ground masks and atmospheric placement sample that curve.
 - The opaque legacy abyss backing at the terrain lip is removed by explicit user direction. Do not reintroduce it. The 34px inset painting, approved crops, deep fog and foreground mist remain.

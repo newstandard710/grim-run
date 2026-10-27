@@ -4,7 +4,7 @@
 
 ## v0.15.3 — Souls, floating ledges and smooth recovery
 
-- All 24 ground-cut skins audited. Five long-rooted trees/thickets receive individual visual insets; grounded cut art samples the terrain at its center so slopes do not leave the base floating. Collision boxes and accepted illustrations remain intact. Audit: `assets/world-polish/v0153/cut-root-audit.json`.
+- All 24 ground-cut skins audited. Five long-rooted trees/thickets receive individual visual insets; grounded cut art samples the terrain at its center so slopes do not leave the base floating. The five changed roots also clip their buried paint against the exact curved surface. Collision boxes and accepted illustrations remain intact. Audit: `assets/world-polish/v0153/cut-root-audit.json`.
 - New 12-drawing gold coin spin and eight-drawing Soul flame. Coin body is 33.25px high (19 × 1.75); Soul body is 40.25px high (23 × 1.75), with a restrained 2.6-second holy-light pulse. Fixed collectible coordinates, counts, values and collection ranges. Visible pickup sprites are allocated only near the viewport.
 - All nine Soul-encounter stepping ledges now have finite, genuinely floating bodies. Eight distinct biome designs are ready; only Tundra and Lava still spawn Soul encounters. Positions, widths, level top surfaces and one-way landing behavior stay unchanged.
 - Ground hills use monotone Hermite curves, including horizontal tangents at extrema and flat plateau transitions. Physics, obstacle/pickup placement, ground texture masks, Tundra composites, surface caps and foreground fog share the same contour. End elevations, gap lips, launch strips, sanctuary pads and ledges stay exact. Render chords sample every four pixels with at least sixteen samples per section.

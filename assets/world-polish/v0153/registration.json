@@ -248,5 +248,17 @@
     30,
     86,
     111
-  ]
+  ],
+  "acceptedIdleReference": {
+    "file": "assets/characters/illustrated-v2/reaper/reaper_idle_v1.png",
+    "eye": [
+      1282,
+      666
+    ],
+    "anchor": [
+      1250,
+      1420
+    ],
+    "scale": 0.10801080108010801
+  }
 }

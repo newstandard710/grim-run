@@ -1470,7 +1470,7 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/visuals/visual-system.js?v=0.13.6-abyss-fog"></script>
+  <script src="assets/visuals/visual-system.js?v=0.15.3"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/visuals/power-animations.js?v=0.15.2"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
@@ -4784,6 +4784,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       image.setOrigin(.5,originY).setPosition(x,y).setDisplaySize(width,height)
         .setRotation(rotation).setVisible(true);
+      this.worldPolish?.maskRoots(image,o,skin);
       if(o.type==='fire')image.setAlpha(.96+.04*Math.sin(this.elapsed*11+o.x*.017));
       else image.setAlpha(1);
       return true;

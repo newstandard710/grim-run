@@ -30,8 +30,8 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.coins=[{x:s.player.x+145,baseY:s.player.y,offset:-45,taken:false}];s.souls=[{x:s.player.x+280,baseY:s.player.y,offset:-74,taken:false}];});
   let min=100,max=0;const faces=new Set(),soulFrames=new Set();let fixed;
   for(let i=0;i<64;i++){
-   const sample=await page.evaluate(i=>{const s=window.grimRun.scene.scenes[0];s.elapsed=i/40;s.drawScene();const c=s.worldPolish.pickups.get(s.coins[0]),a=s.worldPolish.pickups.get(s.souls[0]),m=window.GRIM_WORLD_POLISH.coinMotion(s.elapsed,s.coins[0].x);return {x:c.x,y:c.y,h:m.height,w:m.width,frame:Number(c.frame.name),soulFrame:Number(a.frame.name),soulHeight:a.displayHeight};},i);
-   if(!fixed)fixed=[sample.x,sample.y];assert.deepEqual([sample.x,sample.y],fixed);assert.equal(sample.h,33.25);min=Math.min(min,sample.w);max=Math.max(max,sample.w);faces.add(sample.frame);soulFrames.add(sample.soulFrame);assert(sample.soulHeight>44&&sample.soulHeight<48);
+   const sample=await page.evaluate(i=>{const s=window.grimRun.scene.scenes[0];s.elapsed=i/40;s.drawScene();const c=s.worldPolish.pickups.get(s.coins[0]),a=s.worldPolish.pickups.get(s.souls[0]),m=window.GRIM_WORLD_POLISH.coinMotion(s.elapsed,s.coins[0].x);return {depth:c.depth,x:c.x,y:c.y,h:m.height,w:m.width,frame:Number(c.frame.name),soulFrame:Number(a.frame.name),soulHeight:a.displayHeight};},i);
+   assert(sample.depth>15,'Collectible bodies remain legible above the foreground fog');if(!fixed)fixed=[sample.x,sample.y];assert.deepEqual([sample.x,sample.y],fixed);assert.equal(sample.h,33.25);min=Math.min(min,sample.w);max=Math.max(max,sample.w);faces.add(sample.frame);soulFrames.add(sample.soulFrame);assert(sample.soulHeight>44&&sample.soulHeight<48);
    if([0,16,32,48].includes(i))await shot('pickup-'+i);await page.waitForTimeout(16);
   }
   assert(max/min>6);assert.equal(faces.size,12);assert.equal(soulFrames.size,8);
@@ -67,8 +67,8 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
      let x=s.player.x+105+i*205;for(let j=0;j<120&&s.terrain.groundAt(x+30)===null;j++)x+=6;
      const floor=s.terrain.groundAt(x+30);const ob={type:'bramble',x,y:floor-288,width:60,height:288,variant:i,destroyed:false,reviewSkin:skin};s.obstacles.push(ob);
     }
-    s.drawScene();for(const ob of s.obstacles){const im=s.obstacleSpriteObjects.get(ob);out.push({id:ob.reviewSkin.id,y:im.y,expected:s.terrain.groundAt(ob.x+30)+s.obstacleVisualInset(ob,ob.reviewSkin)});}return out;
-   },biome);for(const v of roots)assert.equal(v.y,v.expected);
+    s.drawScene();for(const ob of s.obstacles){const im=s.obstacleSpriteObjects.get(ob);out.push({id:ob.reviewSkin.id,masked:Boolean(im.mask),shouldMask:Boolean(ob.reviewSkin.buryRoots),y:im.y,expected:s.terrain.groundAt(ob.x+30)+s.obstacleVisualInset(ob,ob.reviewSkin)});}return out;
+   },biome);for(const v of roots){assert.equal(v.y,v.expected);assert.equal(v.masked,v.shouldMask);}
    await page.waitForTimeout(200);await page.evaluate(()=>window.grimRun.scene.scenes[0].drawScene());await shot('cut-roots-'+biome);
   }
   // Compare the same abyss with the legacy backing ablated versus restored.
@@ -115,7 +115,8 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   });assert.equal(entry.state,'respawning');assert.equal(entry.hp,2);
   const respawnFrames=new Set();
   for(let i=0;i<50;i++){
-   const sample=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.update(0,30);return {state:s.state,hp:s.player.hp,x:s.player.x,elapsed:s.elapsed,cooldown:s.gunCooldownMs,invul:s.player.invulMs,rng:s.rng.state,frame:Number(s.worldPolish.respawn[0].frame.name),alpha:s.worldPolish.respawn[0].alpha,body:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible)};});
+   const sample=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.update(0,30);return {scale:s.worldPolish.respawn[0].scaleX,state:s.state,hp:s.player.hp,x:s.player.x,elapsed:s.elapsed,cooldown:s.gunCooldownMs,invul:s.player.invulMs,rng:s.rng.state,frame:Number(s.worldPolish.respawn[0].frame.name),alpha:s.worldPolish.respawn[0].alpha,body:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible)};});
+   if(i<49)assert(Math.abs(sample.scale*254-(1420-666)*120/1111)<.001,'Forming body matches the accepted Reaper eye-to-foot span');
    respawnFrames.add(sample.frame);for(const k of ['hp','x','elapsed','cooldown','invul','rng'])assert.equal(sample[k],entry[k],'Respawn freezes '+k);
    if(i<49)assert.equal(sample.state,'respawning');else assert.equal(sample.state,'playing');
    if(i===3)assert.equal(sample.body,false,'Fallen Reaper remains hidden during smoke gather');

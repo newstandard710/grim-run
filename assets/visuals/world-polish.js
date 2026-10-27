@@ -44,18 +44,37 @@
         scene.add.image(0,0,'polish-fragments',0).setDepth(16.2).setVisible(false));
       if(this.ready['polish-respawn'])for(let i=0;i<2;i++)this.respawn.push(
         scene.add.image(0,0,'polish-respawn',0).setOrigin(224/384,360/384).setDepth(14.9).setVisible(false));
-      this.light=scene.add.graphics().setDepth(4);
+      this.light=scene.add.graphics().setDepth(15.2);
       this.veil=scene.add.graphics().setScrollFactor(0).setDepth(21);
+      this.rootMaskGraphics=scene.make?.graphics?.({x:0,y:0,add:false});
+      this.rootMask=this.rootMaskGraphics?.createGeometryMask();
       scene.events?.once?.('shutdown',()=>this.destroy());
     }
-    beginFrame(){this.activePickups=new Set();this.activePlatforms=new Set();this.light?.clear();}
+    beginFrame(){
+      this.activePickups=new Set();this.activePlatforms=new Set();this.light?.clear();
+      const s=this.scene,g=this.rootMaskGraphics;if(!g)return;
+      g.clear();g.fillStyle(0xffffff,1);
+      // Only the five lowered, long-rooted skins use this mask. Buried paint
+      // disappears under the exact physical surface, including on hills.
+      const top=s.cameraY-s.height*3,left=s.cameraX-300,right=s.cameraX+s.width+300;
+      for(const section of s.terrain.visibleSections(left,right)){
+        const from=Math.max(left,section.start),to=Math.min(right,section.end);if(to<=from)continue;
+        const edge=section.kind==='gap'?[{x:from,y:s.cameraY+s.height*3},{x:to,y:s.cameraY+s.height*3}]
+          :s.terrainContour(section,from,to).map(p=>({x:p.x,y:p.y+2}));
+        g.fillPoints([{x:from,y:top},{x:to,y:top},...edge.reverse()],true);
+      }
+    }
+    maskRoots(image,ob,skin){
+      if(ob.type==='bramble'&&skin.buryRoots&&this.rootMask)image.setMask(this.rootMask);
+      else if(image.mask===this.rootMask)image.clearMask();
+    }
     visible(x,width=0){const s=this.scene;return x+width>=s.cameraX-100&&x<=s.cameraX+s.width+100;}
     drawPickup(item,kind){
       const key='polish-'+kind,s=this.scene;
       if(!this.ready[key])return false;
       if(!this.visible(item.x))return true;
       let image=this.pickups.get(item);
-      if(!image){image=s.add.image(0,0,key,0).setDepth(4.1);this.pickups.set(item,image);}
+      if(!image){image=s.add.image(0,0,key,0).setDepth(15.3);this.pickups.set(item,image);}
       this.activePickups.add(item);
       const x=item.x,y=item.baseY+item.offset,time=s.elapsed||0;
       image.setPosition(x,y).setVisible(true);
@@ -115,6 +134,7 @@
         const image=s.add.image(source.x,source.y,source.texture.key,source.frame.name)
           .setOrigin(source.originX,source.originY).setScale(source.scaleX,source.scaleY)
           .setRotation(source.rotation).setDepth(16.1).setAlpha(.8);
+        if(source.mask)image.setMask(source.mask);
         this.ghosts.push({image,x:source.x,y:source.y,rotation:source.rotation,age:0,material});
       }
     }
@@ -162,9 +182,10 @@
         for(const sprite of visibleBase)sprite.setVisible(reveal>0).setAlpha(reveal);
       }
       const position=clamp((time-140)/1190)*11,frame=Math.floor(position),mix=position-frame;
-      const alpha=ease(time/200)*(1-reveal),scale=120/254;
-      this.respawn[0].setFrame(frame).setScale(scale).setPosition(p.x,p.y).setAlpha(alpha*(1-mix)).setVisible(true);
-      this.respawn[1].setFrame(Math.min(11,frame+1)).setScale(scale).setPosition(p.x,p.y).setAlpha(alpha*mix).setVisible(true);
+      const alpha=ease(time/200)*(1-reveal),data=scope.GRIM_POLISH_DATA;
+      const scale=data.respawnWorldScale,x=p.x+data.respawnWorldEyeX;
+      this.respawn[0].setFrame(frame).setScale(scale).setPosition(x,p.y).setAlpha(alpha*(1-mix)).setVisible(true);
+      this.respawn[1].setFrame(Math.min(11,frame+1)).setScale(scale).setPosition(x,p.y).setAlpha(alpha*mix).setVisible(true);
     }
     endFrame(){
       for(const [item,image]of this.pickups)if(!this.activePickups.has(item)){image.destroy();this.pickups.delete(item);}
@@ -177,7 +198,7 @@
       for(const image of [...this.fragments,...this.respawn])image.setVisible(false);
       this.veil?.clear();this.light?.clear();
     }
-    destroy(){this.reset();for(const image of [...this.pickups.values(),...this.platforms.values(),...this.fragments,...this.respawn])image.destroy();this.pickups.clear();this.platforms.clear();this.light?.destroy();this.veil?.destroy();}
+    destroy(){this.reset();for(const image of [...this.pickups.values(),...this.platforms.values(),...this.fragments,...this.respawn])image.destroy();this.pickups.clear();this.platforms.clear();this.light?.destroy();this.veil?.destroy();this.rootMask?.destroy();this.rootMaskGraphics?.destroy();}
   }
   scope.GRIM_WORLD_POLISH={WorldPolish,preload,coinMotion,soulMotion,materialFor,BIOMES,COIN_HEIGHT,COIN_WIDTH,SOUL_HEIGHT,SOUL_WIDTH,RESPAWN_MS:1500};
 })(typeof window!=='undefined'?window:globalThis);
