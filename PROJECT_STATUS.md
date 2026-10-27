@@ -1,6 +1,16 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.0 — *Gravewing Ascension*.
+**Current build:** v0.19.1 — *Scythe & Stride*.
+
+## v0.19.1 — Carry-sized basic scythe and slower gait
+
+- The standard grounded/aerial cut uses a single weapon scale at 60% of the previous oversized cutting sprite, calibrated against the scythe carried in the accepted run poses. Its size is fixed through windup, active swing and recovery; the original hand rig and rigid rotation are retained.
+- A separate pale spectral swing arc extends beyond the physical blade. It uses the prior full-reach edge geometry, preserving the existing swept damage boxes, maximum reach, 260ms action, 405ms cooldown and 20%–79% damage interval. The weapon is never scaled to fill the hitbox. Special cuts are retained.
+- The accepted 24-pose running art now advances over 752 world pixels rather than 188, reducing cadence by 75% at every movement speed. Movement itself is unchanged. Distance remains the source of phase, including acceleration, time controls, pause and rewind.
+- The movement review uses the same fixed physical weapon scale and separate reach arc. Existing source/runtime artwork is unchanged; no regeneration is needed.
+- Validation adds three actual movement-speed cadence checks, physical-weapon scale checks across the complete action, retained reach checks and phone-scale captures to the existing gameplay/asset and Chromium suites.
+- Rollback base: `af313d437c5881ccb106ec031e9b28b94bdfe495` (v0.19.0).
+
 
 ## v0.19.0 — Proximity plants, deliberate pace and integrated wings
 

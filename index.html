@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.0</title>
+  <title>GRIM RUN — v0.19.1</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -208,13 +208,13 @@ button {cursor:pointer;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
-  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.19.0">
+  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.19.1">
 </head>
 <body>
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.0</div>
+    <div class="home-edition">GRIM RUN · v0.19.1</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
@@ -252,7 +252,7 @@ button {cursor:pointer;}
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.0 · GRAVEWING ASCENSION</div>
+      <div class="mini">v0.19.1 · GRAVEWING ASCENSION</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -360,7 +360,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.0',
+  version: '0.19.1',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 197.4,
@@ -1531,20 +1531,20 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/motion/v0180/animation-data.js?v=0.19.0"></script>
-  <script src="assets/visuals/motion-animations.js?v=0.19.0"></script>
-  <script src="assets/combat/v0170/animation-data.js?v=0.19.0"></script>
-  <script src="assets/visuals/combat-animations.js?v=0.19.0"></script>
-  <script src="assets/ui/v0160/frontispiece.js?v=0.19.0"></script>
-  <script src="assets/visuals/visual-system.js?v=0.19.0"></script>
+  <script src="assets/motion/v0180/animation-data.js?v=0.19.1"></script>
+  <script src="assets/visuals/motion-animations.js?v=0.19.1"></script>
+  <script src="assets/combat/v0170/animation-data.js?v=0.19.1"></script>
+  <script src="assets/visuals/combat-animations.js?v=0.19.1"></script>
+  <script src="assets/ui/v0160/frontispiece.js?v=0.19.1"></script>
+  <script src="assets/visuals/visual-system.js?v=0.19.1"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
-  <script src="assets/encounters/v0190/animation-data.js?v=0.19.0"></script>
-  <script src="assets/visuals/power-animations.js?v=0.19.0"></script>
+  <script src="assets/encounters/v0190/animation-data.js?v=0.19.1"></script>
+  <script src="assets/visuals/power-animations.js?v=0.19.1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.0"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.1"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
-  <script src="assets/visuals/world-polish.js?v=0.19.0"></script>
+  <script src="assets/visuals/world-polish.js?v=0.19.1"></script>
   <script>
 (function(scope) {
   'use strict';

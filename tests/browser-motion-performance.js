@@ -35,10 +35,15 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const [name,vy,age,landing]of [['launch',-610,15,0],['rise',-400,130,0],['apex',0,390,0],['fall',450,650,0],['contact',0,0,175],['compress',0,0,100],['recover',0,0,20]]){
    const value=await page.evaluate(({vy,age,landing})=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=landing>0;p.jumpAgeMs=age;p.velocityY=vy;p.visualLandingMs=landing;p.y=s.terrain.groundAt(p.x)-(p.grounded?0:65);s.drawScene();return s.motionArt.state;},{vy,age,landing});assert.equal(value.name,'reaper-jump');await shot(name);
   }
-  for(const progress of [.10,.20,.35,.50,.65,.79,.92]){
+  const windowScale=await page.evaluate(()=>window.GRIM_MOTION_ART.WEAPON_SCALE);
+  let weaponScale;
+  for(const progress of [0,.10,.20,.35,.50,.65,.79,.92,.999]){
    const value=await page.evaluate(progress=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=true;p.y=s.terrain.groundAt(p.x);p.visualLandingMs=0;p.attackMs=260*(1-progress);s.drawScene();const a=s.motionArt;return {name:a.state?.name,weapon:a.weapon.visible,angle:a.weapon.rotation,scale:[a.weapon.scaleX,a.weapon.scaleY],feet:s.feetY,body:a.body.filter(v=>v.visible).map(v=>v.y)};},progress);
-   assert.equal(value.name,'reaper-cut-body');assert(value.weapon&&value.scale[0]<0&&value.scale[1]>0);assert(value.body.every(y=>y===value.feet));await shot('cut-'+Math.round(progress*100));
+   assert.equal(value.name,'reaper-cut-body');assert(value.weapon&&value.scale[0]<0&&value.scale[1]>0);assert(value.body.every(y=>y===value.feet));weaponScale??=value.scale;assert.deepEqual(value.scale,weaponScale,'The scythe scale stays identical through every phase');assert(Math.abs(value.scale[1]-windowScale)<1e-9);await shot('cut-'+Math.round(progress*100));
   }
+  const cadence=await page.evaluate(()=>{const a=window.GRIM_MOTION_ART;return [197.4,261.45,325.5].map(speed=>({speed,frame:a.runFrame(speed),expected:speed/a.STRIDE_PX*24}));});
+  for(const sample of cadence)assert(Math.abs(sample.frame-sample.expected)<1e-8);
+  const arc=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.attackMs=130;s.drawScene();const r=window.GRIM_MOTION_ART.cutRig(.5),D=window.GRIM_MOTION_DATA,A=window.GRIM_MOTION_ART;const tip=A.weaponPoint(r,D.weapon.tip),edge=A.sweepPoint(r,D.weapon.tip);return {drawn:s.motionArt.trail.commandBuffer.length>0,reach:Math.hypot(edge.x-r.x,edge.y-r.y)/Math.hypot(tip.x-r.x,tip.y-r.y)};});assert(arc.drawn&&Math.abs(arc.reach-1/.6)<1e-8);
   const timers=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],p=s.player;s.motionArt.hide();s.state='playing';p.attackMs=0;p.grounded=true;p.y=s.terrain.groundAt(p.x);p.visualLandingMs=175;s.update(0,16);const remaining=p.visualLandingMs;s.jump();const launched={grounded:p.grounded,landing:p.visualLandingMs};s.state='paused';const x=p.x,phase=s.motionArt.state;s.update(0,100);return {remaining,launched,frozen:p.x===x};
   });assert.equal(timers.remaining,159);assert(!timers.launched.grounded&&timers.launched.landing===0&&timers.frozen);

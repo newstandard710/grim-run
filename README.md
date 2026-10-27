@@ -1,3 +1,15 @@
+# Grim Run — v0.19.1 · Scythe & Stride
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.1)
+
+The basic cut now uses one fixed, carry-matched scythe size through windup, strike and recovery. A separate spectral swing arc supplies the previous attack reach; damage timing and collision geometry are retained. Grounded and aerial basic cuts share the same immutable weapon scale.
+
+The accepted 24-pose run animation is unchanged, with its full sheet advanced over 752 world pixels instead of 188. This reduces playback cadence by 75% at every movement speed while preserving automatic synchronization to actual distance, acceleration, slow time and rewind. The v0.19.0 movement-speed curve is unchanged.
+
+The [motion review](assets/motion/v0180/review.html) uses the same runtime tuning. Rollback base: v0.19.0 (`af313d437c5881ccb106ec031e9b28b94bdfe495`).
+
+---
+
 # Grim Run — v0.19.0 · Gravewing Ascension
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.0)
