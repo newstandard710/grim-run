@@ -1541,10 +1541,12 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=0.19.3"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
-  <script src="assets/visuals/power-animations.js?v=0.19.3"></script>
+  <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.7"></script>
+  <script src="assets/visuals/cutscene-motion.js?v=0.19.7"></script>
+  <script src="assets/visuals/power-animations.js?v=0.19.7"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.3"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.7"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/world-polish.js?v=0.19.3"></script>
   <script>
@@ -3496,7 +3498,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.ui.showPortal(false);
-      this.state='chest';this.chestMs=6000;this.resetRewindHistory();
+      this.state='chest';this.chestMs=window.GRIM_CUTSCENES?.SHRINE_MS||4000;this.resetRewindHistory();
       this.ui.setMode('chest');
       return true;
     }

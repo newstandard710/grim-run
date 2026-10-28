@@ -43,14 +43,14 @@ g.enemies=[{kind:'bat',x:g.player.x,y:g.player.y-40,dead:false}];
 g.fireballs=[{x:g.player.x,y:g.player.y-40,ageMs:0,vx:0,vy:0,dead:false}];
 g.updateCombat(34,.034);assert.equal(g.enemies.length,0);assert.equal(g.fireballs.length,0);assert.equal(g.player.hp,3,'Moving threats are removed before contact damage');
 const visual={};visual.window=visual;vm.createContext(visual);
-for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art-data|vendor-sanctuaries|power-animations)\.js/.test(src))
+for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art-data|cutscene-motion|vendor-sanctuaries|power-animations)\.js/.test(src))
  vm.runInContext(fs.readFileSync(path.join(root,src.split('?')[0]),'utf8'),visual);
 assert(visual.GRIM_VENDOR_ART&&visual.GRIM_VENDOR_DATA,'Game HTML loads sanctuary renderer and registration data');
 const A=visual.GRIM_POWER_ART,frames=new Set();
-for(let ms=0;ms<3000;ms+=10)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
-assert.equal(frames.size,12);assert.equal(visual.GRIM_VENDOR_ART.approachAt(2.8).frame,11);
-for(const t of [2.3,2.6,3,3.4])assert.equal(A.relicMotionAt(t).frame,15,'Body holds the overhead pose');
-assert(A.relicMotionAt(2.9).glow>.99);assert.equal(A.relicMotionAt(4).glow,0);
+for(let ms=0;ms<10000;ms++)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
+assert(frames.size>=240,'Dense walking, settling and planted idle poses are available');
+for(const t of [3,3.25,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168,'Body holds the final overhead pose');
+assert(A.relicMotionAt(3.5).glow>.99);assert.equal(A.relicMotionAt(4).glow,0);
 assert.equal(visual.GRIM_VENDOR_DATA.relicGrips.length,24);
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/vendors/v0152/manifest.json')));
 for(const type of ['sources','runtime'])for(const[file,meta]of Object.entries(manifest[type])){

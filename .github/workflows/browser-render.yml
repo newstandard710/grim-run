@@ -39,6 +39,9 @@ jobs:
       - name: Verify sanctuary grounds, vendor introductions and crossbow grip
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-vendor-sanctuaries.js
+      - name: Review all three fluid cutscenes and exact raised-bow timing
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
+        run: node tests/browser-cutscene-motion.js
       - name: Verify rounded ground, collectible sprites, floating ledges, destruction and smoke respawn
         if: ${{ !cancelled() && matrix.group == 'powers' }}
         run: node tests/browser-world-polish.js
@@ -75,6 +78,7 @@ jobs:
             test-results/combat-animation-preview.webm
             test-results/visual-revision-preview.webm
             test-results/vendor-sanctuary-preview.webm
+            test-results/cutscene-motion-*.webm
             test-results/world-polish-preview.webm
             test-results/beyond-death-preview.webm
           if-no-files-found: ignore
