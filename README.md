@@ -1,3 +1,13 @@
+# Grim Run — v0.19.4 · Through the Mist
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.4)
+
+Ground fog now passes behind and in front of the Reaper, with each layer at **50% of the former opacity**. Four softer painted mist sprites replace the outlined cloud shapes. Offset silhouettes, varied widths, gentle slope alignment and independent drift keep the banks natural while making the Reaper easier to read. Localized wisps stay anchored to terrain as the camera moves. Biome colors, heavier lower fog and continuous coverage across open gaps are retained.
+
+[Source artwork, exact built-in Imagegen prompt and reproducible exports](assets/visuals/ground-fog/README.md). Movement, combat, terrain and collisions are unchanged. Rollback base: v0.19.3 (`557d8b0b22e29d3327eacdb7be6bd80e242c04e0`).
+
+---
+
 # Grim Run — v0.19.3 · The Steady Stride
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.3)
@@ -106,13 +116,13 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.19.3 — The Steady Stride**
+**Current build: v0.19.4 — Through the Mist**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 
 ## v0.14.8 — Ground Fog and Vendors
 
-Four irregular mist paintings form a semi-transparent ground-level fog band in every biome. World-anchored variation changes each bank's silhouette, width, height, position, and opacity; a terrain mask keeps it off the open gaps. Biome colors blend through existing transitions. The fog rises in thin wisps to the Reaper's chest and is strongest below the waist. Foreground obstacle art sits ahead of the fog; the Reaper and vendor sprites sit behind it in separate layers. New Angel and Demon Vendor cutouts replace their procedural silhouettes at the same existing stops. Vendor offers, timing, positions, obstacle collisions, spawns, and all mechanics are unchanged. The earlier abyss fog remains inside the gaps on its original layer.
+Four irregular mist paintings form two semi-transparent ground-level fog layers in every biome, one behind the Reaper and one in front, each at half the former opacity. World-anchored variation changes each bank's silhouette, width, height, position and opacity. Mist follows the terrain and continues across open gaps without filling their collisions. Biome colors blend through existing transitions. Thin upper wisps taper above the heavier lower banks. Foreground obstacle art sits ahead of both fog layers; vendors retain their separate layer. New Angel and Demon Vendor cutouts replace their procedural silhouettes at the same existing stops. Vendor offers, timing, positions, obstacle collisions, spawns, and all mechanics are unchanged. The earlier abyss fog remains inside the gaps on its original layer.
 
 ## v0.14.7 — Slide Backdrops Across All Biomes
 
