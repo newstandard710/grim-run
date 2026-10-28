@@ -30,4 +30,4 @@ for(const seed of [1,7,19,33,42,99]){
   assert.equal(terrain.groundAt(x),null,'Atmospheric surface never fills a real gap');assert.equal(JSON.stringify(gap),before);
  }
 }
-console.log('PASS v0.15.1: revision source/runtime hashes, 24 sequential relic poses, and continuous fog heights across 180 seeded gaps without collision changes.');
+console.log('PASS v0.15.1: revision source/runtime hashes, 169 sequential relic poses, and continuous fog heights across 180 seeded gaps without collision changes.');

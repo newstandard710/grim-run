@@ -18,6 +18,8 @@
     return {pose,frame:Math.round(pose),hold,grabbed:t>=1.65,
       glow:hold?smooth((t-HOLD_START)/.16)*(.90+.10*Math.sin((t-HOLD_START)*Math.PI)):0};
   }
+  const WALK_STRIDE=100/.6;
+  const vendorTravel=h=>2*WALK_STRIDE*.4*h/420;
   function approachAt(t){
     const travel=smooth(t/2.2);
     // Two complete gait cycles end on the exact painting that begins settling.
@@ -67,5 +69,5 @@
     return true;
   }
   scope.GRIM_CUTSCENES={CELL,ANCHOR,BOW_FRAMES,VENDOR_FRAMES,SHRINE_MS,HOLD_START,HOLD_SECONDS,INTRO_MS,
-    preload,relicMotionAt,approachAt,merchantPose,merchantPoint,createMerchantMesh,placeMerchant};
+    vendorTravel,WALK_STRIDE,preload,relicMotionAt,approachAt,merchantPose,merchantPoint,createMerchantMesh,placeMerchant};
 })(typeof window!=='undefined'?window:globalThis);

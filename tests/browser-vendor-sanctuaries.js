@@ -69,8 +69,8 @@ const server=http.createServer((req,res)=>{
     const s=window.grimRun.scene.scenes[0];s.chestMs=4000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
     const a=s.powerArt,b=a.cinemaBow,hand=window.GRIM_CUTSCENE_DATA.bow.hands[168][0],offset=window.GRIM_CUTSCENE_DATA.bow.handOffsets[168],scale=s.height/370;
     return {frame:a.cinemaReaper.frame.name,x:b.x,y:b.y,rotation:b.rotation,width:b.displayWidth,origin:[b.originX,b.originY],hands:a.cinemaHands.visible,
-      overlayError:Math.hypot(a.cinemaHands.x-(s.width*.55-s.height*.062+(offset[0]-136)*scale),a.cinemaHands.y-(s.height*.69+(offset[1]-214)*scale)),
-      gripError:Math.hypot(b.x-(s.width*.55-s.height*.062+(hand[0]-136)*scale),b.y-(s.height*.69+(hand[1]-214)*scale)),glow:window.GRIM_POWER_ART.relicMotionAt(t).glow};
+      overlayError:Math.hypot(a.cinemaHands.x-(s.width*.55-s.height*.062+(offset[0]-136)*scale),a.cinemaHands.y-(s.height*.77+(offset[1]-214)*scale)),
+      gripError:Math.hypot(b.x-(s.width*.55-s.height*.062+(hand[0]-136)*scale),b.y-(s.height*.77+(hand[1]-214)*scale)),glow:window.GRIM_POWER_ART.relicMotionAt(t).glow};
    },t);
    assert.equal(Number(sample.frame),168);assert.equal(sample.width,430*.19);assert(sample.hands);assert(sample.gripError<.001&&sample.overlayError<.001);assert(sample.glow>0);
    assert.deepEqual(sample.origin,[128/512,235/512]);holds.push(sample);
@@ -80,7 +80,7 @@ const server=http.createServer((req,res)=>{
   assert(holds.every(v=>v.x===holds[0].x&&v.y===holds[0].y&&v.rotation===holds[0].rotation),'Raised Reaper and held bow stay completely still throughout glow');
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.finishChest();if(!s.gunUnlocked)throw Error('Shrine reward missing');});
   assert.deepEqual(errors,[]);
-  console.log('PASS actual Chromium: both 600px sanctuary grounds, 1.75x merchants, correctly layered columns/statues, first-only introductions with all 12 poses, freeze/auto/skip/reset, and a smaller hand-anchored crossbow with a still glowing hold.');
+  console.log('PASS actual Chromium: both 600px sanctuary grounds, 1.75x merchants, correctly layered columns/statues, first-only introductions with dense planted poses, freeze/auto/skip/reset, and a smaller hand-anchored crossbow with a still glowing hold.');
  }finally{
   const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'vendor-sanctuary-preview.webm'));
   await browser.close();await new Promise(r=>server.close(r));

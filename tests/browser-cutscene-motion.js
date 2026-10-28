@@ -18,8 +18,8 @@ const server=http.createServer((req,res)=>{
    try{
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
     await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,null,{timeout:90000});
-    await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=function(){};s.state='playing';s.obstacles=[];s.enemies=[];s.fireballs=[];});
+    await page.locator('#home-enter-btn').click({force:true});await page.locator('#start-btn').click({force:true});
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._cutsceneRealUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};s.state='playing';s.obstacles=[];s.enemies=[];s.fireballs=[];});
     for(const [kind,k]of [['angel',1],['devil',8]]){
      const initial=await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.triggerVendor(k);s.drawScene();
       return {x:s.player.x,hp:s.player.hp,coins:s.coinCount,elapsed:s.elapsed,rng:s.rng.state,offers:JSON.stringify(s.pendingOffers)};},k);
@@ -39,11 +39,11 @@ const server=http.createServer((req,res)=>{
     }
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.hasTeleported=false;s.shrineClaimed=false;s.gunUnlocked=false;s.state='playing';s.startChest();});
     const poses=new Set();
-    for(let i=0;i<400;i++){
+    for(let i=0;i<800;i++){
      const info=await page.evaluate(t=>{const s=window.grimRun.scene.scenes[0];s.chestMs=4000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
-      const a=s.powerArt,m=window.GRIM_CUTSCENES.relicMotionAt(t);return {frame:Number(a.cinemaReaper.frame.name),bow:a.cinemaBow.visible,glow:m.glow,key:a.cinemaReaper.texture.key};},i/100);
-     poses.add(info.frame);assert.equal(info.key,'cutscene-bow');assert.equal(info.bow,i>=165);if(i<300)assert.equal(info.glow,0);
-     if([0,80,150,175,225,260,300,350,399].includes(i))await page.screenshot({path:path.join(dir,`cutscene-bow-${width}-${i}.png`)});
+      const a=s.powerArt,m=window.GRIM_CUTSCENES.relicMotionAt(t);return {frame:Number(a.cinemaReaper.frame.name),bow:a.cinemaBow.visible,glow:m.glow,key:a.cinemaReaper.texture.key};},i/200);
+     poses.add(info.frame);assert.equal(info.key,'cutscene-bow');assert.equal(info.bow,i>=330);if(i<600)assert.equal(info.glow,0);
+     if([0,160,300,350,450,520,600,700,799].includes(i))await page.screenshot({path:path.join(dir,`cutscene-bow-${width}-${i}.png`)});
      await page.waitForTimeout(6);
     }
     assert.equal(poses.size,169);
@@ -55,6 +55,23 @@ const server=http.createServer((req,res)=>{
      if(s.state!=='chest'||s.chestMs!==4)throw Error('Hold ended early');s.update(0,4);
      if(s.state!=='playing'||!s.gunUnlocked||!s.shrineClaimed)throw Error('Hold did not end with exactly one reward');
      s.finishChest();s.drawScene();if(s.powerArt.cinemaReaper.visible||s.powerArt.cinemaHands.visible||s.powerArt.cinemaChestFront.visible)throw Error('Cinematic sprites leaked');});
+    if(width===950){
+     // Real engine clock: review complete normal-speed playback, rather than
+     // inferring timing from manually sampled stills alone.
+     const marks=[];
+     for(const k of [1,8]){
+      await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=s._cutsceneRealUpdate;s.startRun();s.state='playing';s.triggerVendor(k);},k);
+      const start=Date.now();await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{timeout:16000});
+      marks.push({scene:k===1?'angel':'devil',ms:Date.now()-start});
+      assert(marks.at(-1).ms>=9800&&marks.at(-1).ms<14000);
+      await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.leaveVendor();s.state='paused';});
+     }
+     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.hasTeleported=false;s.shrineClaimed=false;s.state='playing';s.startChest();});
+     const start=Date.now();await page.waitForFunction(()=>window.grimRun.scene.scenes[0].gunUnlocked&&window.grimRun.scene.scenes[0].state!=='chest',null,{timeout:10000});
+     marks.push({scene:'bow',ms:Date.now()-start});assert(marks.at(-1).ms>=3900&&marks.at(-1).ms<6500);
+     await page.evaluate(()=>{window.grimRun.scene.scenes[0].state='paused';});
+     fs.writeFileSync(path.join(dir,'cutscene-realtime.json'),JSON.stringify(marks,null,2));
+    }
     assert.deepEqual(errors,[]);
    }finally{
     const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,`cutscene-motion-${width}.webm`));

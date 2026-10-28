@@ -83,7 +83,7 @@
       const elapsed=clamp((INTRO_MS-s.vendorIntroMs)/1000,0,10);
       const t=elapsed,motion=approachAt(t);
       const w=s.width,h=s.height,devil=s.vendorType==='devil',kind=devil?'devil':'angel';
-      const ground=h*.84,vx=w*.66,rx=w*(.12+.24*motion.travel);
+      const ground=h*.84,vx=w*.66,rx=w*.36-scope.GRIM_CUTSCENES.vendorTravel(h)*(1-motion.travel);
       const push=0;
       this.shade.fillStyle(devil?0x120811:0x071321,.88);this.shade.fillRect(0,0,w,h);
       this.shade.fillStyle(0x020710,.7);this.shade.fillRect(0,0,w,h*.11);this.shade.fillRect(0,h*.91,w,h*.09);

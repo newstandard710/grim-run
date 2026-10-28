@@ -321,7 +321,7 @@
       const w=s.width,h=s.height,t=clamp((SHRINE_MS-s.chestMs)/1000,0,4),motion=relicMotionAt(t),reveal=motion.glow;
       this.cinema.fillStyle(0x030914,.76);this.cinema.fillRect(0,0,w,h);
       this.cinema.fillStyle(0x03101c,.65);this.cinema.fillRect(0,0,w,h*.115);this.cinema.fillRect(0,h*.88,w,h*.12);
-      const shrineX=w*.55,ground=h*.82,reaperX=shrineX-h*.062,reaperY=ground-h*.13;
+      const shrineX=w*.55,ground=h*.82,reaperX=shrineX-h*.062,reaperY=ground-h*.05;
       if(this.cinemaShrine){
         const open=this.cinemaShrineOpen?clamp((t-.12)/.45,0,1):0;
         this.cinemaShrine.setOrigin(.5,1).setPosition(shrineX,ground+13)

@@ -138,12 +138,12 @@ const server=http.createServer((req,res)=>{
     // the same rendered time so screenshots have reproducible acquisition poses.
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._powerUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};});
     const relicFrames=new Set();
-    for(let i=0;i<400;i++){
+    for(let i=0;i<800;i++){
       const sample=await page.evaluate(i=>{
-        const s=window.grimRun.scene.scenes[0];s.chestMs=4000-i*10;s.drawScene();window.grimRun.step(performance.now(),0);
+        const s=window.grimRun.scene.scenes[0];s.chestMs=4000-i*5;s.drawScene();window.grimRun.step(performance.now(),0);
         return {frame:s.powerArt.cinemaReaper.frame.name,chestMs:s.chestMs};
-      },i);assert.equal(sample.chestMs,4000-i*10,'Phaser fixture clock stays at the requested phase');relicFrames.add(Number(sample.frame));
-      if([80,150,250,350].includes(i))await page.screenshot({path:path.join(dir,'revision-shrine-'+i+'.png')});
+      },i);assert.equal(sample.chestMs,4000-i*5,'Phaser fixture clock stays at the requested phase');relicFrames.add(Number(sample.frame));
+      if([160,300,500,700].includes(i))await page.screenshot({path:path.join(dir,'revision-shrine-'+i+'.png')});
       await page.waitForTimeout(5);
     }
     assert.equal(relicFrames.size,169,'Actual renderer uses all 169 acquisition poses');

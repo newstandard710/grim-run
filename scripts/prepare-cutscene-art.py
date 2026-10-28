@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 from PIL import Image
 from scipy.ndimage import label, distance_transform_edt
+from cutscene_walk_rig import make_walk
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'assets/cutscenes/v0197'
@@ -105,8 +106,12 @@ def segment(a, b):
 def build(kind):
     name = 'reaper-' + kind + '-keyposes.png'
     poses, hands, registration = register(name)
-    links = [(i, i+1) for i in range(7)] if kind == 'bow' else [(0,1),(1,2),(2,3),(3,0),(0,4),(4,5),(5,6),(6,7)]
+    links = [(i, i+1) for i in range(7)] if kind == 'bow' else [(0,4),(4,5),(5,6),(6,7)]
     frames, grips = [], []
+    if kind == 'vendor':
+        frames = make_walk(np.uint8(poses[0]*255+.5))
+        grips = [hands[0].tolist() for _ in frames]
+        poses[0] = np.array(frames[0]).astype(np.float32)/255
     for a, b in links:
         for k, tile in enumerate(segment(poses[a], poses[b])):
             frames.append(Image.fromarray(tile))
@@ -132,6 +137,9 @@ def build(kind):
     overlay = Image.new('RGBA', (COLS * 64, ((len(frames)+COLS-1)//COLS) * 64))
     offsets, bounds = [], []
     for i, tile in enumerate(frames):
+        pixels = np.array(tile)
+        pixels[pixels[:,:,3] == 0] = 0
+        tile = Image.fromarray(pixels)
         box = tile.getbbox()
         assert box and box[0] >= 2 and box[1] >= 2 and box[2] < CELL-1 and box[3] < CELL-1, (kind, i, box)
         bounds.append(box)
@@ -139,7 +147,18 @@ def build(kind):
         center = np.mean(grips[i], axis=0)
         offset = [int(round(center[0])) - 32, int(round(center[1])) - 28]
         offsets.append(offset)
-        overlay.paste(tile.crop((offset[0], offset[1], offset[0]+64, offset[1]+64)), (i % COLS * 64, i // COLS * 64))
+        palm = np.array(tile.crop((offset[0], offset[1], offset[0]+64, offset[1]+64)))
+        py, px = np.mgrid[:64, :64]
+        palm_mask = np.zeros((64,64), dtype=float)
+        for hand in grips[i]:
+            # Only the closed fingers cover the weapon. Copying the whole
+            # rectangle would repaint the hood/cloak over the held crossbow.
+            hx, hy = hand[0]-offset[0], hand[1]-offset[1]-1.6
+            radius = ((px-hx)/5.6)**2 + ((py-hy)/6.4)**2
+            palm_mask = np.maximum(palm_mask, np.clip((1-radius)*4, 0, 1))
+        palm[:,:,3] = np.uint8(palm[:,:,3]*palm_mask)
+        palm[palm[:,:,3] == 0] = 0
+        overlay.paste(Image.fromarray(palm), (i % COLS * 64, i // COLS * 64))
     file = OUT / ('reaper-' + kind + '.png')
     sheet.save(file, optimize=True)
     meta = {**digest(file), 'size': sheet.size, 'frames': len(frames), 'cell': [CELL,CELL], 'anchor': ANCHOR.tolist(), 'bounds': bounds}
