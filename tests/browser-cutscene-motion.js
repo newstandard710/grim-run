@@ -34,9 +34,9 @@ const server=http.createServer((req,res)=>{
      });
     });
     assert(eyes.every(e=>(e.n>0||e.occluded)&&e.far<6),'Every decoded pose has one registered head; only modeled arm occlusion may cover its eye, with no stray second eye');
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._cutsceneRealUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};s.state='playing';s.obstacles=[];s.enemies=[];s.fireballs=[];});
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._cutsceneRealUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};clearInterval(s.loopWatchdogId);window.grimRun.loop.sleep();s.state='playing';s.obstacles=[];s.enemies=[];s.fireballs=[];});
     for(const [kind,k]of [['angel',1],['devil',8]]){
-     const initial=await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.triggerVendor(k);s.drawScene();
+     const initial=await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.triggerVendor(k);window.grimRun.loop.sleep();s.drawScene();
       return {x:s.player.x,hp:s.player.hp,coins:s.coinCount,elapsed:s.elapsed,rng:s.rng.state,offers:JSON.stringify(s.pendingOffers)};},k);
      const used=new Set();
      for(let i=0;i<=200;i++){
@@ -52,7 +52,7 @@ const server=http.createServer((req,res)=>{
      assert.deepEqual(after,initial,'Cinema freezes gameplay and selected offers');
      await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=1;s.update(0,1);if(s.state!=='upgrade')throw Error('Vendor failed to complete');s.leaveVendor();});
     }
-    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.hasTeleported=false;s.shrineClaimed=false;s.gunUnlocked=false;s.state='playing';s.startChest();});
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.hasTeleported=false;s.shrineClaimed=false;s.gunUnlocked=false;s.state='playing';s.startChest();window.grimRun.loop.sleep();});
     const poses=new Set();
     for(let i=0;i<800;i++){
      const info=await page.evaluate(t=>{const s=window.grimRun.scene.scenes[0];s.chestMs=4000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
