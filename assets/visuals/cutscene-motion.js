@@ -1,4 +1,4 @@
-/* v0.19.7 — shared presentation time, dense solid poses and articulated merchants. */
+/* v0.19.8 — shared presentation time, dense solid poses and articulated merchants. */
 (function(scope){
   'use strict';
   const CELL=224,ANCHOR=[136,214],BOW_FRAMES=169,VENDOR_FRAMES=241;
@@ -9,7 +9,7 @@
   function preload(s){
     for(const [key,file,cell,count] of [['cutscene-bow','reaper-bow.png',CELL,BOW_FRAMES],
       ['cutscene-vendor','reaper-vendor.png',CELL,VENDOR_FRAMES],['cutscene-hands','bow-hands.png',64,BOW_FRAMES]])
-      s.load.spritesheet(key,ROOT+file+'?v=0.19.7',{frameWidth:cell,frameHeight:cell,endFrame:count-1});
+      s.load.spritesheet(key,ROOT+file+'?v='+(key==='cutscene-vendor'?'0.19.7':'0.19.8'),{frameWidth:cell,frameHeight:cell,endFrame:count-1});
   }
   function relicMotionAt(t){
     t=Math.max(0,t);

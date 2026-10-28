@@ -1,8 +1,12 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto');
 const root=path.resolve(__dirname,'..'),w={};w.window=w;vm.createContext(w);
-for(const p of ['assets/visuals/cutscene-motion.js','assets/cutscenes/v0197/animation-data.js'])vm.runInContext(fs.readFileSync(path.join(root,p),'utf8'),w);
+for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-data.js','assets/cutscenes/v0197/animation-data.js'])vm.runInContext(fs.readFileSync(path.join(root,p),'utf8'),w);
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+for(const file of ['assets/cutscenes/v0197/animation-data.js','assets/visuals/cutscene-motion.js','assets/visuals/power-animations.js'])assert(html.includes(file+'?v='+D.version),'The browser must fetch matching repaired metadata/renderer cache versions');
+const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
+assert(loaded.filter(([key])=>key!=='cutscene-vendor').every(([,url])=>url.endsWith('?v='+D.version)));
 assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.INTRO_MS,10000);
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){
@@ -12,14 +16,24 @@ for(let ms=0;ms<4000;ms++){
 assert.equal(frames.size,169);
 for(const t of [3,3.1,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168);
 assert.equal(A.relicMotionAt(4).hold,false);assert.equal(A.relicMotionAt(1.649).grabbed,false);assert(A.relicMotionAt(1.65).grabbed);
-const low=D.bow.hands[72][0],high=D.bow.hands[168][0];assert(high[1]<low[1]-130,'The bow is physically lifted from the low chest reach to overhead');
+const low=D.bow.hands[72][0],high=D.bow.hands[168][0];
+assert(low[1]>D.bow.rig[72].eye[1]+35&&high[1]<D.bow.rig[168].eye[1]-20&&low[1]-high[1]>100,'Palms move from below the bent head to above the upright head');
+const grip=w.GRIM_VENDOR_DATA,span=grip.bowForwardGrip.map((v,j)=>(v-grip.bowStockGrip[j])*370*.19),dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 assert.equal(D.bow.rig.length,169);
 for(let i=0;i<169;i++){
  const p=D.bow.rig[i];assert(p.eye.every(Number.isFinite));
  if(i){const a=D.bow.rig[i-1].eye;assert(Math.hypot(p.eye[0]-a[0],p.eye[1]-a[1])<2,'One rigid painted head follows a continuous body hinge');}
  for(let j=0;j<2;j++){
-  const length=Math.hypot(p.elbows[j][0]-p.shoulders[j][0],p.elbows[j][1]-p.shoulders[j][1]);
-  assert(Math.abs(length-(j?30:32))<.001,'Upper arms retain fixed lengths');
+  const shoulder=p.shoulders[j],elbow=p.elbows[j],hand=D.bow.hands[i][j];
+  assert(Math.abs(dist(elbow,shoulder)-25)<.001&&Math.abs(dist(hand,elbow)-30)<.001,'Both painted arm segments retain fixed lengths');
+  const cross=(hand[0]-shoulder[0])*(elbow[1]-shoulder[1])-(hand[1]-shoulder[1])*(elbow[0]-shoulder[0]);
+  assert(j?cross>0:cross<0,'Each elbow keeps the same bend side through the complete lift');
+  const quality=p.paint[j];assert(quality.connected>.97&&quality.upperWidth>=7&&quality.upperWidth<=20&&quality.foreWidth>=7&&quality.foreWidth<=20&&quality.elbowAlpha>240&&quality.handAlpha>240,'Rasterized arms retain connected, substantial opaque paint at sleeves, bracers, elbows and fists');
+  if(i)assert(dist(elbow,D.bow.rig[i-1].elbows[j])<3&&dist(hand,D.bow.hands[i-1][j])<3,'No elbow flip or hand jump between poses');
+ }
+ if(i>=72){
+  const a=p.bowAngle,c=Math.cos(a),s=Math.sin(a),actual=D.bow.hands[i][1].map((v,j)=>v-D.bow.hands[i][0][j]);
+  assert(dist(actual,[span[0]*c-span[1]*s,span[0]*s+span[1]*c])<.001,'Both hands match the actual rear stock and forward support artwork throughout retrieval/lift');
  }
 }
 for(const devil of [false,true]){
@@ -39,4 +53,4 @@ for(const [kind,entries]of Object.entries(m).filter(([k])=>['sources','runtime']
  if(meta.bounds)assert(meta.bounds.every(([l,t,r,b])=>l>=2&&t>=2&&r<223&&b<223),'Every interpolated silhouette stays within its cell');
 }
 assert.equal(m.runtime['reaper-bow.png'].frames,A.BOW_FRAMES);assert.equal(m.runtime['reaper-vendor.png'].frames,A.VENDOR_FRAMES);
-console.log('PASS cutscenes: complete source/runtime hashes, 169 solid bow poses, 241 vendor poses, physical reach/lift, exact one-second final hold, continuous downward gaze and planted merchant feet.');
+console.log('PASS cutscenes: source/runtime hashes, 169 connected painted bow poses, stable elbow bend/segment lengths, actual two-hand stock span, physical reach/lift, exact one-second hold, 241 unchanged vendor poses and planted merchant feet.');

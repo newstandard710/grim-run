@@ -1,6 +1,14 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.7 — *Relics & Reckonings*.
+**Current build:** v0.19.8 — *Steady Hands*.
+
+## v0.19.8 — Crossbow retrieval arm repair
+
+- Correct native arm proportions: uniformly transformed high-resolution painted components, cloth-fold elbow pivots, 25px upper arms/30px forearms and covered joints. Premultiplied 4× supersampling retains opaque sleeves, armored bracers and closed fists without skinny horizontal compression.
+- One continuous, reachable wrist trajectory with fixed elbow bend sides. Shoulder pivots follow the painted torso armor. Rear and forward palms match the actual crossbow grip separation and rotation throughout the lift; the glow follows the weapon center.
+- Retain all 169 poses, chest reach/grip, chest-front clipping, four-second total and final one-second still glowing hold. The accepted vendor atlas is retained byte-for-byte using `--bow-only`.
+- Verification covers fixed bone lengths, elbow continuity, actual stock span, per-pose raster width/connectivity/opaque joints, runtime hashes, complete phone-size Chromium sequences, both rendered grip points, normal-speed timing, reward/skip/cleanup and existing regressions.
+- Rollback base: v0.19.7 (`1b1408081316ddd13555c50d298933f6cb0c5bac`).
 
 ## v0.19.7 — Fluid merchant encounters and physical relic retrieval
 

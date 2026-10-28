@@ -1,3 +1,13 @@
+# Grim Run — v0.19.8 · Steady Hands
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/index.html?release=0.19.8)
+
+The summit retrieval corrects compressed arm artwork, an elbow bend reversal during the lift, and hands bunched onto the rear stock. Uniformly scaled painted sleeves and bracers now pivot at the cloth elbow, follow one continuous bend, and meet the actual rear and forward crossbow grips. Shoulder pivots stay attached to the torso armor.
+
+The complete 169-pose sequence retains the deep chest reach, rise, and exact one-second glowing overhead hold before ending at four seconds. [Rig calibration, timing and review](assets/cutscenes/v0197/README.md). Rollback base: v0.19.7 (`1b1408081316ddd13555c50d298933f6cb0c5bac`).
+
+---
+
 # Grim Run — v0.19.7 · Relics & Reckonings
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?release=0.19.7)
@@ -148,7 +158,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.19.7 — Relics & Reckonings**
+**Current build: v0.19.8 — Steady Hands**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 
