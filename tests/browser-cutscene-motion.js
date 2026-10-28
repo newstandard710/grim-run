@@ -56,9 +56,15 @@ const server=http.createServer((req,res)=>{
     const poses=new Set();
     for(let i=0;i<800;i++){
      const info=await page.evaluate(t=>{const s=window.grimRun.scene.scenes[0];s.chestMs=4000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
-      const a=s.powerArt,m=window.GRIM_CUTSCENES.relicMotionAt(t);return {frame:Number(a.cinemaReaper.frame.name),bow:a.cinemaBow.visible,glow:m.glow,key:a.cinemaReaper.texture.key};},i/200);
+      const a=s.powerArt,m=window.GRIM_CUTSCENES.relicMotionAt(t),b=a.cinemaBow,grips=window.GRIM_CUTSCENE_DATA.bow.hands[m.frame],scale=s.height/370;
+      const stock=window.GRIM_VENDOR_DATA.bowStockGrip,forward=window.GRIM_VENDOR_DATA.bowForwardGrip;
+      const dx=(forward[0]-stock[0])*b.displayWidth,dy=(forward[1]-stock[1])*b.displayHeight,c=Math.cos(b.rotation),sn=Math.sin(b.rotation);
+      const expected=grips.map(p=>[a.cinemaReaper.x+(p[0]-136)*scale,a.cinemaReaper.y+(p[1]-214)*scale]);
+      return {frame:Number(a.cinemaReaper.frame.name),bow:b.visible,glow:m.glow,key:a.cinemaReaper.texture.key,
+       rearError:Math.hypot(b.x-expected[0][0],b.y-expected[0][1]),frontError:Math.hypot(b.x+c*dx-sn*dy-expected[1][0],b.y+sn*dx+c*dy-expected[1][1])};},i/200);
      poses.add(info.frame);assert.equal(info.key,'cutscene-bow');assert.equal(info.bow,i>=330);if(i<600)assert.equal(info.glow,0);
-     if([0,160,300,350,450,520,600,700,799].includes(i))await page.screenshot({path:path.join(dir,`cutscene-bow-${width}-${i}.png`)});
+     if(info.bow)assert(info.rearError<.001&&info.frontError<.001,'Both physical crossbow grip points remain in the corresponding palms throughout the lift');
+     if([0,80,160,220,300,330,360,420,450,480,520,550,580,600,700,799].includes(i))await page.screenshot({path:path.join(dir,`cutscene-bow-${width}-${i}.png`)});
      await page.waitForTimeout(6);
     }
     assert.equal(poses.size,169);

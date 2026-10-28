@@ -1,4 +1,4 @@
-# v0.19.7 — Relics & Reckonings
+# Cutscene art — v0.19.8 arm repair, v0.19.7 vendor motion
 
 The first Angel and Devil introductions retain their ten-second presentation
 clock and existing skip/offer rules. A new scythe-gripping Reaper has 96 dense
@@ -18,7 +18,11 @@ The summit acquisition uses one matching painted body/hood/scythe layer and
 separate painted arm components. A continuous body hinge, knee/hip bend and
 cloak follow-through preserve the character's features, while two-link arm IK
 keeps the hands connected. The wrist path arcs around the face before arriving
-overhead. All 169 poses are baked as one solid drawing each, with no full-body
+overhead. The v0.19.8 repair places pivots in the cloth elbow folds, keeps
+25px upper arms and 30px forearms, and transforms native-resolution paint with
+uniform scaling and premultiplied 4× supersampling. Neither elbow switches bend
+side. Shoulder pivots follow the armor; the two palms match the actual stock
+and forward support grips (source pixels 128,235 and 400,263). All 169 poses are baked as one solid drawing each, with no full-body
 crossfade or optical-flow calculation. Closed fingers overlap the Bone Crossbow,
 and the chest front plus a rim mask hide the relic while it is inside the chest.
 
@@ -43,7 +47,9 @@ The raw PNGs in `source/` were produced with the built-in Imagegen tool.
 reference is frame zero of `assets/vendors/v0152/reaper-approach.png`, preserved
 in the repository. Existing merchant and Bone Crossbow textures are reused.
 
-Run `python scripts/prepare-cutscene-art.py` with Pillow, NumPy, SciPy and
+Run `python scripts/prepare-cutscene-art.py --bow-only` to rebuild the repaired
+summit poses while retaining the accepted vendor PNG and metadata byte-for-byte.
+The complete original build uses `python scripts/prepare-cutscene-art.py`, with Pillow, NumPy, SciPy and
 opencv-python-headless 4.12.0.88. The script assigns connected silhouettes to
 their poses before cropping (one leading boot crosses a source grid line),
 registers feet/eyes at a fixed scale, restores opaque paint, builds the vendor's
@@ -61,11 +67,15 @@ and hand overlays are pooled by the existing scene lifecycle.
 ## Review
 
 `tests/cutscene-motion.cjs` checks hashes, registration, motion continuity,
-downward gaze, grounded mesh feet and the exact final second.
+downward gaze, grounded mesh feet and the exact final second. Arm assertions
+cover both segment lengths, fixed elbow bend sides, adjacent pose continuity,
+actual crossbow grip span, and rasterized sleeve/bracer width, connected paint
+and opaque elbows/fists in all 169 drawings.
 `tests/browser-cutscene-motion.js` renders both vendors and the complete shrine
 at 950×430 and 740×360, captures critical phases and videos, and verifies the
-frozen world, dense poses, still raised grip, automatic reward and cleanup.
+frozen world, dense poses, both actual weapon grips throughout the lift, still
+raised grip, automatic reward and cleanup.
 Existing vendor, power, terrain, combat, movement and interface checks remain
 release requirements. Real Android appearance/performance remains a playtest.
 
-Rollback base: v0.19.6, `07c002ba618948228563f15d956a7a32b31b0ef6`.
+Arm-repair rollback base: v0.19.7, `1b1408081316ddd13555c50d298933f6cb0c5bac`.

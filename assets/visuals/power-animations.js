@@ -350,7 +350,7 @@
       const grips=dense?data?.bow.hands[motion.frame]:scope.GRIM_VENDOR_DATA?.relicGrips[Math.min(15,Math.round(motion.pose/168*15))];
       const hand=grips?.[0]||[156,130],front=grips?.[1]||[173,130];
       const bx=reaperX+(hand[0]-anchor[0])*cinemaScale,by=reaperY+(hand[1]-anchor[1])*cinemaScale;
-      const angle=Math.atan2(front[1]-hand[1],front[0]-hand[0])-Math.atan2(6,112);
+      const angle=Math.atan2(front[1]-hand[1],front[0]-hand[0])-Math.atan2(28,272);
       if(this.cinemaBow&&motion.grabbed){
         this.cinemaBow.setOrigin(128/512,235/512).setPosition(bx,by).setDisplaySize(h*.19,h*.19)
           .setRotation(angle).setAlpha(1).setVisible(true);
@@ -361,7 +361,8 @@
       }
       const g=this.cinemaFX;
       if(reveal>0){
-        const centerX=bx+Math.cos(angle)*h*.0425,centerY=by+Math.sin(angle)*h*.0425;
+        const dx=h*.19*.25,dy=h*.19*(.5-235/512);
+        const centerX=bx+Math.cos(angle)*dx-Math.sin(angle)*dy,centerY=by+Math.sin(angle)*dx+Math.cos(angle)*dy;
         for(let i=3;i>=1;i--){g.fillStyle(i%2?0xa8f8e4:0xffe1a5,reveal*.035);g.fillEllipse(centerX,centerY,h*(.12+i*.045),h*(.09+i*.04));}
         for(let i=0;i<7;i++){
           const a=i*Math.PI*2/7,r=h*.14;
