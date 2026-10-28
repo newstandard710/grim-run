@@ -15,7 +15,9 @@
     t=Math.max(0,t);
     const pose=t<.4?0:t<1.5?72*smooth((t-.4)/1.1):t<1.8?72:t<3?72+96*smooth((t-1.8)/1.2):168;
     const hold=t>=HOLD_START&&t<HOLD_START+HOLD_SECONDS;
-    return {pose,frame:Math.round(pose),hold,grabbed:t>=1.65,
+    // Quantization must not select the final painting early: the raised
+    // drawing, glow clock and one-second exit all begin on the same boundary.
+    return {pose,frame:t<HOLD_START?Math.min(167,Math.round(pose)):168,hold,grabbed:t>=1.65,
       glow:hold?smooth((t-HOLD_START)/.16)*(.90+.10*Math.sin((t-HOLD_START)*Math.PI)):0};
   }
   const WALK_STRIDE=100/.6;

@@ -7,7 +7,7 @@ assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOL
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){
  const p=A.relicMotionAt(ms/1000);frames.add(p.frame);assert(p.frame>=last&&p.frame-last<=1);last=p.frame;
- assert.equal(p.hold,ms>=3000);if(ms<3000)assert.equal(p.glow,0);
+ assert.equal(p.hold,ms>=3000);if(ms<3000){assert.equal(p.glow,0);assert(p.frame<168,'The final raised drawing cannot be selected before the hold starts');}
 }
 assert.equal(frames.size,169);
 for(const t of [3,3.1,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168);
