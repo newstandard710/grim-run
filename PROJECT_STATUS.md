@@ -1,6 +1,15 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.3 — *The Steady Stride*.
+**Current build:** v0.19.4 — *Through the Mist*.
+
+## v0.19.4 — Reaper inside the fog
+
+- Two deterministic mist layers at depths 11.4 and 15 enclose all Reaper renderers. Both use precisely half the original biome/variation alpha, including localized banks. Obstacle fronts stay at depth 16 and deep abyss fog retains its layer.
+- Four softer transparent painted mist banks replace the solid outlined cloud shapes. The rear layer has independent variants, dimensions, flips, a 0.47-stride offset and slower drift. Banks gently align to terrain slopes; the original chest-height mask, heavier lower mist, biome tints and gap continuity remain.
+- Localized wisps use complete world-space section midpoints instead of camera-clipped section midpoints, eliminating camera-dependent drift. Pools remain limited to the viewport and are pruned offscreen. No gameplay randomness is consumed.
+- Accepted character/environment artwork, movement, powers, terrain generation, collision and route logic remain unchanged. Source PNG, exact built-in Imagegen prompt, lossless runtime exports and hashes: `assets/visuals/ground-fog/`; builder: `scripts/prepare-ground-fog.py`.
+- Validation includes the opacity contract, camera anchoring, sprite reuse and open gaps, plus actual Chromium comparisons across eight biomes, both vendors and run/jump/slide/grounded-cut/air-cut. Existing gameplay, terrain, movement and continuous-gap checks remain required. Physical Android performance and appearance remain a device playtest.
+- Rollback base: `557d8b0b22e29d3327eacdb7be6bd80e242c04e0` (v0.19.3).
 
 ## v0.19.3 — Solid, distance-synchronized Reaper running
 

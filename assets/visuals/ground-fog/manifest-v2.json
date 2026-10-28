@@ -1,0 +1,62 @@
+{
+  "source": "assets/visuals/ground-fog/source/mist-atlas-v2.png",
+  "source_sha256": "14cd3f67732edd6fb2883b14c234071ae85ac7cd77cb1e412707729174182707",
+  "runtime": {
+    "assets/visuals/ground-fog/mist-drift-v2.webp": {
+      "crop": [
+        0,
+        0,
+        1983,
+        266
+      ],
+      "size": [
+        900,
+        300
+      ],
+      "sha256": "f4569fbab943239b2c2cfe7d8df3718bfbb85e009bf125adbedf71041de24a26",
+      "bytes": 178540
+    },
+    "assets/visuals/ground-fog/mist-curl-v2.webp": {
+      "crop": [
+        0,
+        266,
+        1983,
+        474
+      ],
+      "size": [
+        900,
+        300
+      ],
+      "sha256": "428706de8e8b596c8046f83b131d323d8cc40373e2ed5df5061275643ca3ef1b",
+      "bytes": 218462
+    },
+    "assets/visuals/ground-fog/mist-veil-v2.webp": {
+      "crop": [
+        0,
+        474,
+        1983,
+        615
+      ],
+      "size": [
+        900,
+        300
+      ],
+      "sha256": "1fc82f64169425de7cb0e1033c8d85e4aa99620e6f5c32d1872af8a78f9ffe96",
+      "bytes": 183840
+    },
+    "assets/visuals/ground-fog/mist-shreds-v2.webp": {
+      "crop": [
+        0,
+        615,
+        1983,
+        793
+      ],
+      "size": [
+        900,
+        300
+      ],
+      "sha256": "0edb1391552fadefa84781733c54441e74d76df286b28d5d24be31d4a27e30b4",
+      "bytes": 206678
+    }
+  }
+}
