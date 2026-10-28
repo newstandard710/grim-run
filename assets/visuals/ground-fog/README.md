@@ -1,8 +1,18 @@
-# Ground mist — v0.19.5
+# Ground mist — v0.19.6
 
-The four accepted painted fog banks pass behind and in front of the Reaper.
-Each layer retains exactly 0.5 times the original biome/variation opacity;
-biome tint, drift seeds, widths, world placement and layer order are unchanged.
+The accepted painted mist banks pass behind and in front of the Reaper.
+Both layers use the same opacity correction: `1 - sqrt(1 - originalAlpha)`.
+For two equal full-coverage layers, `1 - (1 - alpha)^2` recovers the original
+single-layer opacity. A 50% original bank uses approximately 29.29% on each
+layer. Texture transparency and independent drifting silhouettes retain their
+natural local variation.
+
+Every bank is scaled 1.5× in both dimensions, with world stride and position
+jitter also scaled 1.5× to retain the overlap ratio. This raises the airy mist
+toward the Reaper's hips without stretching its painted shapes. The projected
+base stays inset 4px against the terrain, including hills and open gaps.
+Expected geometry is roughly 30–85px high, depending on the painting and width.
+The v3 texture bytes, biome tints and front/rear depth order are retained.
 
 ## Height and ground-contact correction
 
@@ -15,9 +25,10 @@ bank tilted by at most 0.16 radians could not follow rounded hills.
 The new exporter registers the visible alpha bounds with a two-source-pixel
 margin, retains the generated alpha and scales both axes uniformly. Runtime
 height follows each texture's own aspect ratio, giving approximately 20–57px
-banks at the existing widths, below the Reaper's chest.
+banks before the uniform v0.19.6 scale increase.
 
-WebGL draws each bank with a 32-column textured strip. Every column follows the
+WebGL draws each bank with a sampled textured strip (48 columns after the
+1.5× increase, retaining the original sampling distance). Every column follows the
 same curved terrain profile or virtual gap surface used by the fog mask. The
 visible lower edge overlaps the surface by 4px; vertical floating is removed.
 Horizontal drift re-samples the surface, so it cannot lift the fog off hills.
@@ -33,7 +44,7 @@ No new artwork was generated for this correction. Rebuild with
 [Source bounds, natural sizes, and exact export hashes](manifest-v3.json).
 The old v1/v2 textures remain available for rollback.
 
-Validation: `tests/ground-fog.cjs` checks exact retained alpha, world anchoring,
+Validation: `tests/ground-fog.cjs` checks equally restored composite alpha, world anchoring,
 bounded reuse, open gaps and export ratios/hashes.
 `tests/browser-ground-fog-vendors.js` checks actual projected vertices, pixel
 coverage at the floor, upper height, natural proportions, eight biomes, vendors

@@ -23,14 +23,23 @@ Object.assign(s,{startX:200,state:'paused',width:950,cameraX:0,elapsed:5,
  groundFogMaskGraphics:{clear(){},fillStyle(){},fillPoints(){}},
  terrain:w.GRIM_TERRAIN.makeTerrain(33,339,200,12)});
 s.terrainBiomeWeights=()=>({forest:1});s.drawGroundFog();
-// Captured alpha values of the original v0.19.3 forest banks. Each new
-// depth receives exactly half, independently of texture/position changes.
+// Captured alpha values of the original v0.19.3 forest banks. Two equal
+// new layers must nominally composite back to these original opacities.
 for(const [index,original]of [0.4004,0.5408,0.4056,0.4212].entries()){
  for(const layer of ['rear','front']){
   const bank=s.groundFogViews.get(layer+':bank:'+index);assert(bank);
-  assert(Math.abs(bank.alpha-original/2)<1e-10);
+  assert(bank.alpha>original/2,'Both layers increase equally from the previous half-opacity value');
+  assert(Math.abs(1-(1-bank.alpha)**2-original)<1e-10);
  }
+ assert.equal(s.groundFogViews.get('rear:bank:'+index).alpha,
+  s.groundFogViews.get('front:bank:'+index).alpha);
 }
+assert(Math.abs(s.groundFogLayerAlpha(.5)-.2928932188134524)<1e-12);
+for(let i=0;i<=100;i++){
+ const alpha=s.groundFogLayerAlpha(i/100);
+ assert(Math.abs(1-(1-alpha)**2-i/100)<1e-12);
+}
+assert.equal(s.groundFogLayerAlpha(-1),0);assert.equal(s.groundFogLayerAlpha(2),1);
 const rear=s.groundFogViews.get('rear:bank:1'),front=s.groundFogViews.get('front:bank:1');
 assert(rear.depth<11.5&&front.depth>14.9&&front.depth<16,'All character/action renderers fit between mist and obstacles');
 assert(Math.abs(rear.x-front.x)>50,'The two banks have distinct world positions');
@@ -68,4 +77,4 @@ for(const [file,m]of Object.entries(manifest.runtime)){
  assert(Math.abs(m.size[1]-m.source_size[1]*m.size[0]/m.source_size[0])<=.5,'Export preserves original aspect ratio');
  assert.equal(bytes.subarray(0,4).toString(),'RIFF');assert.equal(bytes.subarray(8,12).toString(),'WEBP');
 }
-console.log('PASS two half-opacity fog layers, stable world placement, independent banks, bounded reuse, open gaps and asset hashes.');
+console.log('PASS equally corrected fog opacity, stable world placement, independent banks, bounded reuse, open gaps and asset hashes.');

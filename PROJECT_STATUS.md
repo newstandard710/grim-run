@@ -1,6 +1,14 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.5 — *Grounded Mist*.
+**Current build:** v0.19.6 — *Deepening Mist*.
+
+## v0.19.6 — Hip-height scale and equally restored density
+
+- Apply a uniform 1.5× scale to both dimensions of every bank. Scale the world stride and placement jitter by the same amount to retain the original overlap ratio. Actual projected ground contact, source aspect ratios and the 4px base inset are preserved.
+- Replace half opacity with `1 - sqrt(1 - originalAlpha)` for both rear/front banks and localized wisps. Two equal full-coverage layers nominally composite to the original single-layer alpha; biome/variation inputs, tints and depth order stay intact. A 50% original bank becomes approximately 29.29% on each layer.
+- Reuse the approved v3 textures; no new art, height-only stretch, terrain, collision or gameplay changes. Expected bank bounds are approximately 30–85px, with varied airy silhouettes reaching toward hip height in gameplay.
+- Unit coverage verifies equal increases and reconstructed opacity across the full 0–1 range. Actual Chromium retains natural-ratio, projected and pixel-level ground-contact, upper-silhouette, eight-biome, action, viewport and gap checks. Existing gameplay and movement/performance suites remain required.
+- Rollback base: `08ee4ea6f390c15f3502b2d620dcccba4196e97c` (v0.19.5).
 
 ## v0.19.5 — Natural fog height and grounded lower edge
 
