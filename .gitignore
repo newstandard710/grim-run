@@ -6,3 +6,5 @@ node_modules/
 /assets/motion/v0180/*.tmp
 
 /assets/encounters/v0190/*.tmp
+
+__pycache__/

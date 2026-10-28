@@ -1,3 +1,15 @@
+# Grim Run — v0.19.7 · Relics & Reckonings
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?release=0.19.7)
+
+Both first-vendor introductions now give the Reaper a gripped scythe, a planted walking/settling sequence and quiet breathing. The accepted Angel and Devil paintings articulate their shoulders, cloak and hood, turning a menacing gaze down toward the Reaper near the end of the ten-second encounter.
+
+The summit scene bends physically into the chest, grips and raises the Bone Crossbow, then ends after exactly one second overhead with a restrained glow. Dense solid poses, registered palms and a foreground chest rim keep the retrieval connected to the character and chest.
+
+[Artwork, timing, production prompts and review](assets/cutscenes/v0197/README.md). Rollback base: v0.19.6 (`07c002ba618948228563f15d956a7a32b31b0ef6`).
+
+---
+
 # Grim Run — v0.19.6 · Deepening Mist
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.6)
@@ -136,7 +148,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.19.6 — Deepening Mist**
+**Current build: v0.19.7 — Relics & Reckonings**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 

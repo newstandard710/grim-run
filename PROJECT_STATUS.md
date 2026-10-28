@@ -1,6 +1,17 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.6 — *Deepening Mist*.
+**Current build:** v0.19.7 — *Relics & Reckonings*.
+
+## v0.19.7 — Fluid merchant encounters and physical relic retrieval
+
+- Both ten-second, first-per-type vendor introductions retain their triggers, offers and skip behavior. The Reaper grips his scythe, walks with planted boots, settles and looks upward. Ninety-six rigged walk poses, ninety-seven settle poses and forty-eight planted idle poses use a single solid frame each; travel and stance follow the same phase.
+- The accepted merchant paintings use continuous shoulder/cloth movement and a separate head/hood turn down toward the Reaper from 7–9.25 seconds. Bottom vertices stay fixed; whole-body breathing scale pulses are removed.
+- A matching body/hood/scythe painting and separate arms yield 169 solid rigged playback frames. Knees and hips bend into the chest, two-link arm IK keeps the palms attached, with grip at 1.65 seconds, and the body stands/lifts until 3 seconds. Only the closed fingers overlap the Bone Crossbow; the chest front masks the deep reach.
+- A still raised pose glows from 3–4 seconds. The scene ends at 4 seconds, exactly one second after reaching overhead, with no lowering tail. Real presentation timestamps retain timing under slow rendering. Existing rewards, skip, hidden-page freeze, 4,900m placement and 5,000m portal behavior are retained.
+- Raw source PNGs, exact built-in Imagegen prompts, atlases, hand registration, hashes and review notes: `assets/cutscenes/v0197/`. Builders: `scripts/prepare-cutscene-art.py` `scripts/cutscene_walk_rig.py` and `scripts/bow_rig.py`; shared timing/merchant rig: `assets/visuals/cutscene-motion.js`.
+- Validation includes the existing gameplay/art/browser/interface suites, new motion/hash/hold tests, phone-sized captures at 950×430 and 740×360, and complete playback using the real engine clock. Physical Android appearance and performance remain a playtest.
+- Rollback base: `07c002ba618948228563f15d956a7a32b31b0ef6` (v0.19.6).
+
 
 ## v0.19.6 — Hip-height scale and equally restored density
 

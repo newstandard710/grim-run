@@ -10,10 +10,10 @@ for(const [kind,entries] of Object.entries(manifest).filter(([k])=>k==='sources'
   if(meta.size)assert.deepEqual([bytes.readUInt32BE(16),bytes.readUInt32BE(20)],meta.size);
 }
 const scope={GRIM_CONFIG:{attackDurationMs:260}};scope.window=scope;vm.createContext(scope);
-for(const file of ['revision-art.js','power-animations.js'])vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals',file),'utf8'),scope);
+for(const file of ['revision-art.js','cutscene-motion.js','power-animations.js'])vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals',file),'utf8'),scope);
 const A=scope.GRIM_POWER_ART,frames=new Set();let last=0;
-for(let ms=0;ms<=6000;ms+=5){const frame=A.relicMotionAt(ms/1000).frame;frames.add(frame);assert(frame>=0&&frame<24);assert(frame>=last&&frame-last<=1,'Acquisition advances continuously without skipping poses');last=frame;}
-assert.equal(frames.size,24);assert.equal(A.relicMotionAt(3).frame,15,'Overhead reveal holds');
+for(let ms=0;ms<=4000;ms+=1){const frame=A.relicMotionAt(ms/1000).frame;frames.add(frame);assert(frame>=0&&frame<169);assert(frame>=last&&frame-last<=1,'Acquisition advances continuously without skipping poses');last=frame;}
+assert.equal(frames.size,169);assert.equal(A.relicMotionAt(3).frame,168,'Overhead reveal holds');
 assert.equal(scope.GRIM_REVISION_ART.relicHands.length,24);
 assert.deepEqual(Array.from(scope.GRIM_REVISION_ART.relicAnchor),[256,456]);
 // Load the actual scene method and seeded terrain without creating a renderer.
@@ -30,4 +30,4 @@ for(const seed of [1,7,19,33,42,99]){
   assert.equal(terrain.groundAt(x),null,'Atmospheric surface never fills a real gap');assert.equal(JSON.stringify(gap),before);
  }
 }
-console.log('PASS v0.15.1: revision source/runtime hashes, 24 sequential relic poses, and continuous fog heights across 180 seeded gaps without collision changes.');
+console.log('PASS v0.15.1: revision source/runtime hashes, 169 sequential relic poses, and continuous fog heights across 180 seeded gaps without collision changes.');

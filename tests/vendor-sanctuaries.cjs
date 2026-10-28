@@ -43,14 +43,25 @@ g.enemies=[{kind:'bat',x:g.player.x,y:g.player.y-40,dead:false}];
 g.fireballs=[{x:g.player.x,y:g.player.y-40,ageMs:0,vx:0,vy:0,dead:false}];
 g.updateCombat(34,.034);assert.equal(g.enemies.length,0);assert.equal(g.fireballs.length,0);assert.equal(g.player.hp,3,'Moving threats are removed before contact damage');
 const visual={};visual.window=visual;vm.createContext(visual);
-for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art-data|vendor-sanctuaries|power-animations)\.js/.test(src))
+for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art-data|cutscene-motion|vendor-sanctuaries|power-animations)\.js/.test(src))
  vm.runInContext(fs.readFileSync(path.join(root,src.split('?')[0]),'utf8'),visual);
 assert(visual.GRIM_VENDOR_ART&&visual.GRIM_VENDOR_DATA,'Game HTML loads sanctuary renderer and registration data');
 const A=visual.GRIM_POWER_ART,frames=new Set();
-for(let ms=0;ms<3000;ms+=10)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
-assert.equal(frames.size,12);assert.equal(visual.GRIM_VENDOR_ART.approachAt(2.8).frame,11);
-for(const t of [2.3,2.6,3,3.4])assert.equal(A.relicMotionAt(t).frame,15,'Body holds the overhead pose');
-assert(A.relicMotionAt(2.9).glow>.99);assert.equal(A.relicMotionAt(4).glow,0);
+// Presentation time follows real frame timestamps even if Phaser's simulation
+// delta is smoothed or very slow. Hidden-page time is explicitly excluded.
+const clock=game();clock.triggerVendor(1);clock.cutsceneLastAt=1000;
+clock.update(4250,16);assert.equal(clock.vendorIntroMs,6750);
+w.document.hidden=true;clock.update(100000,16);assert.equal(clock.vendorIntroMs,6750);
+w.document.hidden=false;clock.update(200000,16);assert.equal(clock.vendorIntroMs,6750);
+clock.update(206750,16);assert.equal(clock.state,'upgrade');
+clock.startRun();clock.startChest();clock.cutsceneLastAt=1000;
+clock.update(4000,16);assert.equal(clock.chestMs,1000);
+clock.update(4999,16);assert.equal(clock.state,'chest');assert.equal(clock.chestMs,1);
+clock.update(5000,16);assert.equal(clock.state,'playing');assert(clock.gunUnlocked);
+for(let ms=0;ms<10000;ms++)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
+assert(frames.size>=240,'Dense walking, settling and planted idle poses are available');
+for(const t of [3,3.25,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168,'Body holds the final overhead pose');
+assert(A.relicMotionAt(3.5).glow>.99);assert.equal(A.relicMotionAt(4).glow,0);
 assert.equal(visual.GRIM_VENDOR_DATA.relicGrips.length,24);
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/vendors/v0152/manifest.json')));
 for(const type of ['sources','runtime'])for(const[file,meta]of Object.entries(manifest[type])){

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.6</title>
+  <title>GRIM RUN — v0.19.7</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -214,7 +214,7 @@ button {cursor:pointer;}
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.6</div>
+    <div class="home-edition">GRIM RUN · v0.19.7</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
@@ -252,7 +252,7 @@ button {cursor:pointer;}
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.6 · DEEPENING MIST</div>
+      <div class="mini">v0.19.7 · RELICS & RECKONINGS</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -360,7 +360,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.6',
+  version: '0.19.7',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -1541,10 +1541,12 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=0.19.3"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
-  <script src="assets/visuals/power-animations.js?v=0.19.3"></script>
+  <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.7"></script>
+  <script src="assets/visuals/cutscene-motion.js?v=0.19.7"></script>
+  <script src="assets/visuals/power-animations.js?v=0.19.7"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.3"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.7"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/world-polish.js?v=0.19.3"></script>
   <script>
@@ -2187,6 +2189,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     installLoopRecovery(){
       const recover=()=>{
+        this.cutsceneLastAt=null;
         if(document.hidden)return;
         this.lastUpdateHeartbeatAt=Date.now();
         this.wakeGameLoop();
@@ -2506,7 +2509,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorIntroSeen??={angel:false,devil:false};
       if(!this.vendorIntroSeen[this.vendorType]){
         this.vendorIntroSeen[this.vendorType]=true;
-        this.vendorIntroMs=C.vendorIntroDurationMs;this.state='vendorIntro';
+        this.vendorIntroMs=C.vendorIntroDurationMs;this.state='vendorIntro';this.cutsceneLastAt=scope.performance?.now?.()??null;
         const floor=this.terrain?.groundAt(p.x);
         if(Number.isFinite(floor)){p.y=floor;p.grounded=true;p.velocityY=0;p.jumpsUsed=0;p.onSoulPlatform=false;}
         this.ui.setMode('vendorIntro');
@@ -2898,6 +2901,14 @@ window.GRIM_CONFIG = Object.freeze({
         this.tips.push({label,atX:x,baseY:y});
       }
     }
+    cutsceneDelta(time,deltaMs){
+      if(document.hidden){this.cutsceneLastAt=null;return 0;}
+      // Direct deterministic updates keep their supplied delta. Real Phaser
+      // frames use presentation time, independent of its smoothed game delta.
+      if(!Number.isFinite(time)||time<=0)return Math.min(250,Math.max(0,deltaMs));
+      const previous=this.cutsceneLastAt;this.cutsceneLastAt=time;
+      return previous==null?0:Math.max(0,time-previous);
+    }
     update(_,deltaMs) {
       this.lastUpdateHeartbeatAt=Date.now();
       if(['playing','rewinding'].includes(this.state)&&this.practiceScale()===0){this.drawScene();return;}
@@ -2916,11 +2927,11 @@ window.GRIM_CONFIG = Object.freeze({
         this.drawScene();return;
       }
       else if(this.state==='vendorIntro'){
-        if(!document.hidden)this.vendorIntroMs=Math.max(0,this.vendorIntroMs-Math.min(250,Math.max(0,deltaMs)));
+        this.vendorIntroMs=Math.max(0,this.vendorIntroMs-this.cutsceneDelta(_,deltaMs));
         if(this.vendorIntroMs===0)this.finishVendorIntro();
       }
       else if(this.state==='chest'){
-        if(!document.hidden)this.chestMs=Math.max(0,this.chestMs-Math.min(250,Math.max(0,deltaMs)));
+        this.chestMs=Math.max(0,this.chestMs-this.cutsceneDelta(_,deltaMs));
         if(this.chestMs===0)this.finishChest();
       }
       else if(this.state==='respawning'){
@@ -3496,7 +3507,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.ui.showPortal(false);
-      this.state='chest';this.chestMs=6000;this.resetRewindHistory();
+      this.state='chest';this.chestMs=window.GRIM_CUTSCENES?.SHRINE_MS||4000;this.cutsceneLastAt=scope.performance?.now?.()??null;this.resetRewindHistory();
       this.ui.setMode('chest');
       return true;
     }

@@ -24,6 +24,19 @@ jobs:
         run: |
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
+      - name: Review all three fluid cutscenes and exact raised-bow timing
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
+        run: node tests/browser-cutscene-motion.js
+      - name: Save cutscene movement review
+        if: ${{ always() && matrix.group == 'movement' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cutscene-motion-review
+          path: |
+            test-results/cutscene-*.png
+            test-results/cutscene-motion-*.webm
+            test-results/cutscene-realtime.json
+          if-no-files-found: ignore
       - name: Verify proximity plants, named wings, touch time controls and vendor timing
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-gravewing-build.js
@@ -75,6 +88,8 @@ jobs:
             test-results/combat-animation-preview.webm
             test-results/visual-revision-preview.webm
             test-results/vendor-sanctuary-preview.webm
+            test-results/cutscene-motion-*.webm
+            test-results/cutscene-realtime.json
             test-results/world-polish-preview.webm
             test-results/beyond-death-preview.webm
           if-no-files-found: ignore

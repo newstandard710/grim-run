@@ -41,7 +41,7 @@ const server=http.createServer((req,res)=>{
    assert.equal(entry.state,'vendorIntro');assert.equal(entry.ms,10000);
    assert(await page.locator('#upgrade-screen').evaluate(e=>e.classList.contains('hidden')),'Choices stay hidden during introduction');
    const frames=new Set();
-   for(let i=0;i<60;i++){
+   for(let i=0;i<200;i++){
     const sample=await page.evaluate(i=>{
      const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=10000-i*50;s.drawScene();window.grimRun.step(performance.now(),0);
      return {frame:s.vendorArt.reaper.frame.name,x:s.vendorArt.reaper.x,y:s.vendorArt.reaper.y,ms:s.vendorIntroMs,merchant:s.vendorArt.merchant.displayHeight};
@@ -49,7 +49,7 @@ const server=http.createServer((req,res)=>{
     if([12,32,50].includes(i))await page.screenshot({path:path.join(dir,'vendor-intro-'+kind+'-'+i+'.png')});
     await page.waitForTimeout(30);
    }
-   assert.equal(frames.size,12,'All twelve approach/settle poses actually render');
+   assert(frames.size>85,'Dense approach, settle and idle poses actually render');
    const frozen=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return {hp:s.player.hp,coins:s.coinCount,rng:s.rng.state,offers:JSON.stringify(s.pendingOffers),x:s.player.x,elapsed:s.elapsed};});
    for(const key of Object.keys(frozen))assert.equal(frozen[key],entry[key],kind+' intro preserves '+key);
    if(kind==='angel')await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=50;s.update(0,50);});
@@ -64,23 +64,23 @@ const server=http.createServer((req,res)=>{
    s.state='playing';s.startChest();
   });
   const holds=[];
-  for(const t of [2.3,2.65,2.9,3.2,3.5]){
+  for(const t of [3.05,3.25,3.5,3.75,3.99]){
    const sample=await page.evaluate(t=>{
-    const s=window.grimRun.scene.scenes[0];s.chestMs=6000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
-    const a=s.powerArt,b=a.cinemaBow,hand=window.GRIM_VENDOR_DATA.relicGrips[15][0],offset=window.GRIM_VENDOR_DATA.relicGripOffsets[15],scale=s.height/760;
+    const s=window.grimRun.scene.scenes[0];s.chestMs=4000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
+    const a=s.powerArt,b=a.cinemaBow,hand=window.GRIM_CUTSCENE_DATA.bow.hands[168][0],offset=window.GRIM_CUTSCENE_DATA.bow.handOffsets[168],scale=s.height/370;
     return {frame:a.cinemaReaper.frame.name,x:b.x,y:b.y,rotation:b.rotation,width:b.displayWidth,origin:[b.originX,b.originY],hands:a.cinemaHands.visible,
-      overlayError:Math.hypot(a.cinemaHands.x-(s.width*.37+(offset[0]-256)*scale),a.cinemaHands.y-(s.height*.82+(offset[1]-456)*scale)),
-      gripError:Math.hypot(b.x-(s.width*.37+(hand[0]-256)*scale),b.y-(s.height*.82+(hand[1]-456)*scale)),glow:window.GRIM_POWER_ART.relicMotionAt(t).glow};
+      overlayError:Math.hypot(a.cinemaHands.x-(s.width*.55-s.height*.135+(offset[0]-136)*scale),a.cinemaHands.y-(s.height*.77+(offset[1]-214)*scale)),
+      gripError:Math.hypot(b.x-(s.width*.55-s.height*.135+(hand[0]-136)*scale),b.y-(s.height*.77+(hand[1]-214)*scale)),glow:window.GRIM_POWER_ART.relicMotionAt(t).glow};
    },t);
-   assert.equal(Number(sample.frame),15);assert.equal(sample.width,430*.17);assert(sample.hands);assert(sample.gripError<.001&&sample.overlayError<.001);assert(sample.glow>0);
+   assert.equal(Number(sample.frame),168);assert.equal(sample.width,430*.19);assert(sample.hands);assert(sample.gripError<.001&&sample.overlayError<.001);assert(sample.glow>0);
    assert.deepEqual(sample.origin,[128/512,235/512]);holds.push(sample);
-   if(t===2.9)await page.screenshot({path:path.join(dir,'vendor-shrine-grip-hold.png')});
+   if(t===3.5)await page.screenshot({path:path.join(dir,'vendor-shrine-grip-hold.png')});
    await page.waitForTimeout(180);
   }
   assert(holds.every(v=>v.x===holds[0].x&&v.y===holds[0].y&&v.rotation===holds[0].rotation),'Raised Reaper and held bow stay completely still throughout glow');
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.finishChest();if(!s.gunUnlocked)throw Error('Shrine reward missing');});
   assert.deepEqual(errors,[]);
-  console.log('PASS actual Chromium: both 600px sanctuary grounds, 1.75x merchants, correctly layered columns/statues, first-only introductions with all 12 poses, freeze/auto/skip/reset, and a smaller hand-anchored crossbow with a still glowing hold.');
+  console.log('PASS actual Chromium: both 600px sanctuary grounds, 1.75x merchants, correctly layered columns/statues, first-only introductions with dense planted poses, freeze/auto/skip/reset, and a smaller hand-anchored crossbow with a still glowing hold.');
  }finally{
   const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'vendor-sanctuary-preview.webm'));
   await browser.close();await new Promise(r=>server.close(r));

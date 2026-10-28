@@ -17,7 +17,7 @@ for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 }
 const M=w.GRIM_META,C=w.GRIM_CONFIG,Combat=w.GRIM_COMBAT;
-assert.equal(C.version,'0.19.6');
+assert.equal(C.version,'0.19.7');
 const wallet=M.load();assert.equal(wallet.souls,60);
 assert.equal(wallet.levels.graveGlide,0);
 for(const [lvl,cost] of [[1,5],[2,10],[3,25]]){
@@ -92,9 +92,9 @@ assert.equal(allNew.lastRevivePayment.priorRuns,0);
 assert.equal(allNew.meta.souls,0);
 const auto=game(28);auto.player.x=auto.startX+4900*C.pxPerMeter;auto.distance=4900;
 auto.nextVendorNumber=8;auto.lastVendorNumber=7;auto.startChest();
-w.document.hidden=true;tick(auto,8,250);assert.equal(auto.chestMs,6000,'Hidden page cannot silently complete the scene');
+w.document.hidden=true;tick(auto,8,250);assert.equal(auto.chestMs,4000,'Hidden page cannot silently complete the scene');
 w.document.hidden=false;
-tick(auto,24,250);
+tick(auto,16,250);
 assert.equal(auto.state,'playing','Shrine must auto-continue after its animation');
 assert.equal(auto.gunUnlocked,true);
 const poor=game(24);poor.meta.souls=2;poor.player.hp=1;poor.takeDamage(1,'rock');

@@ -15,13 +15,7 @@
     s.load.spritesheet('relic-grip-overlay','assets/vendors/v0152/relic-grip-overlay.png?v=0.15.2',
       {frameWidth:128,frameHeight:96,endFrame:23});
   }
-  function approachAt(t){
-    const travel=clamp((t-.12)/1.48,0,1);
-    // A moving gait gives way to four increasingly settled looking-up poses.
-    const frame=t<1.6?Math.floor(clamp((t-.12)/1.48,0,.99999)*16)%8:
-      t<2.15?8+Math.min(3,Math.floor((t-1.6)/.55*4)):11;
-    return {frame,travel:smooth(travel),presence:smooth((t-1.9)/.5)};
-  }
+  function approachAt(t){return scope.GRIM_CUTSCENES.approachAt(t);}
   function drawAura(g,x,y,devil,t,scale=1){
     if(!g)return;
     const pulse=1+Math.sin(t*2.1)*.075,s=scale;
@@ -56,8 +50,9 @@
       this.floor=image('sanctuary-angel-floor',27);
       this.columns=[image('sanctuary-angel-architecture',26.3,0),image('sanctuary-angel-architecture',26.3,1)];
       this.merchant=image('vendor-angel',28);
-      this.approachReady=scene.textures.exists('vendor-reaper-approach');
-      this.reaper=image(this.approachReady?'vendor-reaper-approach':'power-reaper',29,this.approachReady?0:12);
+      this.merchantMesh=scope.GRIM_CUTSCENES?.createMerchantMesh(scene,'vendor-angel',28);
+      this.approachReady=scene.textures.exists('cutscene-vendor');
+      this.reaper=image(this.approachReady?'cutscene-vendor':'vendor-reaper-approach',29,0);
       this.light=scene.add.graphics().setScrollFactor(0).setDepth(29.2);
       scene.events.once('shutdown',()=>this.destroy());
     }
@@ -83,13 +78,13 @@
     renderCinema(){
       const s=this.scene;this.shade.clear();this.back.clear();this.light.clear();
       this.cinema.forEach(v=>v.setVisible(false));
+      this.merchantMesh?.setVisible(false);
       if(s.state!=='vendorIntro')return;
       const elapsed=clamp((INTRO_MS-s.vendorIntroMs)/1000,0,10);
-      const t=elapsed<2.3?elapsed:elapsed<9.3?2.3:2.3+(elapsed-9.3),motion=approachAt(t);
+      const t=elapsed,motion=approachAt(t);
       const w=s.width,h=s.height,devil=s.vendorType==='devil',kind=devil?'devil':'angel';
-      const ground=h*.84,vx=w*.66,rx=w*(.12+.24*motion.travel);
-      // Small framing motion is shared by every staged element.
-      const push=smooth(t/3)*h*.016;
+      const ground=h*.84,vx=w*.66,rx=w*.36-scope.GRIM_CUTSCENES.vendorTravel(h)*(1-motion.travel);
+      const push=0;
       this.shade.fillStyle(devil?0x120811:0x071321,.88);this.shade.fillRect(0,0,w,h);
       this.shade.fillStyle(0x020710,.7);this.shade.fillRect(0,0,w,h*.11);this.shade.fillRect(0,h*.91,w,h*.09);
       drawAura(this.back,vx,ground,devil,elapsed,h*.72/142*(1+motion.presence*.05));
@@ -97,12 +92,15 @@
         .setDisplaySize(w*.94+push,h*.19).setVisible(true);
       this.columns.forEach((v,i)=>v?.setTexture('sanctuary-'+kind+'-architecture',i).setOrigin(.5,740/768)
         .setPosition(vx+(i?1:-1)*w*.20,ground+9).setDisplaySize(w*.21+push,h*.82+push).setVisible(true));
-      const breath=1+Math.sin(elapsed*2.3)*.006;
       this.merchant?.setTexture(devil?'vendor-demon':'vendor-angel').setOrigin(.5,1).setPosition(vx,ground+5)
-        .setDisplaySize(h*(devil?.88:.85)*breath+push,h*.72*breath+push).setVisible(true);
-      this.reaper?.setFrame(this.approachReady?motion.frame:12)
-        .setOrigin(this.approachReady?300/512:288/512,this.approachReady?480/512:400/512).setPosition(rx,ground)
-        .setScale(h/(this.approachReady?800:950)).setVisible(true);
+        .setDisplaySize(h*(devil?.88:.85),h*.72).setVisible(true);
+      if(scope.GRIM_CUTSCENES?.placeMerchant(this.merchantMesh,s,devil?'vendor-demon':'vendor-angel',
+        vx,ground+5,h*(devil?.88:.85),h*.72,t,devil))this.merchant?.setVisible(false);
+      this.reaper?.setFrame(this.approachReady?motion.frame:Math.min(11,Math.floor(t*4)))
+        .setOrigin(this.approachReady?136/224:300/512,this.approachReady?214/224:480/512).setPosition(rx,ground)
+        .setScale(h/(this.approachReady?420:800)).setVisible(true);
+      // The baked idle articulates hood/shoulders/cloth around planted feet.
+      this.reaper?.setRotation(0);
       const beat=Math.sin(clamp((t-2)/.9,0,1)*Math.PI)*motion.presence;
       for(let i=0;i<4;i++){
         this.light.fillStyle(devil?0xc54631:0xffe2a1,beat*.035*(4-i));
@@ -118,7 +116,7 @@
       if(caption)caption.textContent=devil?'A PRICE FOR POWER':'A MOMENT OF SANCTUARY';
     }
     destroy(){for(const view of this.views.values()){view.floor.destroy();view.columns.forEach(v=>v.destroy());}
-      this.views.clear();[...this.cinema,this.shade,this.back,this.light].forEach(v=>v?.destroy());this.cinema=[];}
+      this.views.clear();[...this.cinema,this.merchantMesh,this.shade,this.back,this.light].forEach(v=>v?.destroy());this.cinema=[];}
   }
   scope.GRIM_VENDOR_ART={preload,VendorSanctuaries,drawAura,approachAt,INTRO_MS,HALF_METERS,VENDOR_SCALE};
 })(typeof window!=='undefined'?window:globalThis);
