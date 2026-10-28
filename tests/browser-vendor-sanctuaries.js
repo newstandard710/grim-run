@@ -69,8 +69,8 @@ const server=http.createServer((req,res)=>{
     const s=window.grimRun.scene.scenes[0];s.chestMs=4000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
     const a=s.powerArt,b=a.cinemaBow,hand=window.GRIM_CUTSCENE_DATA.bow.hands[168][0],offset=window.GRIM_CUTSCENE_DATA.bow.handOffsets[168],scale=s.height/370;
     return {frame:a.cinemaReaper.frame.name,x:b.x,y:b.y,rotation:b.rotation,width:b.displayWidth,origin:[b.originX,b.originY],hands:a.cinemaHands.visible,
-      overlayError:Math.hypot(a.cinemaHands.x-(s.width*.55-s.height*.062+(offset[0]-136)*scale),a.cinemaHands.y-(s.height*.77+(offset[1]-214)*scale)),
-      gripError:Math.hypot(b.x-(s.width*.55-s.height*.062+(hand[0]-136)*scale),b.y-(s.height*.77+(hand[1]-214)*scale)),glow:window.GRIM_POWER_ART.relicMotionAt(t).glow};
+      overlayError:Math.hypot(a.cinemaHands.x-(s.width*.55-s.height*.135+(offset[0]-136)*scale),a.cinemaHands.y-(s.height*.77+(offset[1]-214)*scale)),
+      gripError:Math.hypot(b.x-(s.width*.55-s.height*.135+(hand[0]-136)*scale),b.y-(s.height*.77+(hand[1]-214)*scale)),glow:window.GRIM_POWER_ART.relicMotionAt(t).glow};
    },t);
    assert.equal(Number(sample.frame),168);assert.equal(sample.width,430*.19);assert(sample.hands);assert(sample.gripError<.001&&sample.overlayError<.001);assert(sample.glow>0);
    assert.deepEqual(sample.origin,[128/512,235/512]);holds.push(sample);

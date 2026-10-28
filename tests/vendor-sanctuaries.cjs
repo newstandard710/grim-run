@@ -47,6 +47,17 @@ for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art
  vm.runInContext(fs.readFileSync(path.join(root,src.split('?')[0]),'utf8'),visual);
 assert(visual.GRIM_VENDOR_ART&&visual.GRIM_VENDOR_DATA,'Game HTML loads sanctuary renderer and registration data');
 const A=visual.GRIM_POWER_ART,frames=new Set();
+// Presentation time follows real frame timestamps even if Phaser's simulation
+// delta is smoothed or very slow. Hidden-page time is explicitly excluded.
+const clock=game();clock.triggerVendor(1);clock.cutsceneLastAt=1000;
+clock.update(4250,16);assert.equal(clock.vendorIntroMs,6750);
+w.document.hidden=true;clock.update(100000,16);assert.equal(clock.vendorIntroMs,6750);
+w.document.hidden=false;clock.update(200000,16);assert.equal(clock.vendorIntroMs,6750);
+clock.update(206750,16);assert.equal(clock.state,'upgrade');
+clock.startRun();clock.startChest();clock.cutsceneLastAt=1000;
+clock.update(4000,16);assert.equal(clock.chestMs,1000);
+clock.update(4999,16);assert.equal(clock.state,'chest');assert.equal(clock.chestMs,1);
+clock.update(5000,16);assert.equal(clock.state,'playing');assert(clock.gunUnlocked);
 for(let ms=0;ms<10000;ms++)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
 assert(frames.size>=240,'Dense walking, settling and planted idle poses are available');
 for(const t of [3,3.25,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168,'Body holds the final overhead pose');

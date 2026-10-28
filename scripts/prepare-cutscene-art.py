@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 from scipy.ndimage import label, distance_transform_edt
 from cutscene_walk_rig import make_walk
+from bow_rig import build as build_bow
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'assets/cutscenes/v0197'
@@ -106,18 +107,20 @@ def segment(a, b):
 def build(kind):
     name = 'reaper-' + kind + '-keyposes.png'
     poses, hands, registration = register(name)
-    links = [(i, i+1) for i in range(7)] if kind == 'bow' else [(0,4),(4,5),(5,6),(6,7)]
     frames, grips = [], []
-    if kind == 'vendor':
+    rig = None
+    if kind == 'bow':
+        frames, grips, rig = build_bow(OUT/'source/reaper-rig-body.png', np.uint8(poses[7]*255+.5))
+    else:
         frames = make_walk(np.uint8(poses[0]*255+.5))
         grips = [hands[0].tolist() for _ in frames]
         poses[0] = np.array(frames[0]).astype(np.float32)/255
-    for a, b in links:
-        for k, tile in enumerate(segment(poses[a], poses[b])):
-            frames.append(Image.fromarray(tile))
-            grips.append((hands[a] * (1-k/SUB) + hands[b] * (k/SUB)).tolist())
-    frames.append(Image.fromarray(np.uint8(poses[7] * 255 + .5)))
-    grips.append(hands[7].tolist())
+        for a, b in [(0,4),(4,5),(5,6),(6,7)]:
+            for k, tile in enumerate(segment(poses[a], poses[b])):
+                frames.append(Image.fromarray(tile))
+                grips.append((hands[a] * (1-k/SUB) + hands[b] * (k/SUB)).tolist())
+        frames.append(Image.fromarray(np.uint8(poses[7] * 255 + .5)))
+        grips.append(hands[7].tolist())
     if kind == 'vendor':
         # Quiet planted breathing from the final painting. Exclude the gripped
         # staff and boots; the body/hood/cloth move rather than the whole sprite.
@@ -138,6 +141,7 @@ def build(kind):
     offsets, bounds = [], []
     for i, tile in enumerate(frames):
         pixels = np.array(tile)
+        pixels[pixels[:,:,3]<8] = 0
         pixels[pixels[:,:,3] == 0] = 0
         tile = Image.fromarray(pixels)
         box = tile.getbbox()
@@ -168,7 +172,7 @@ def build(kind):
         hand_meta = {**digest(file), 'size': overlay.size, 'frames': len(frames), 'cell': [64,64]}
     else:
         hand_meta = None
-    return meta, hand_meta, {'hands': grips, 'handOffsets': offsets, 'registration': registration}
+    return meta, hand_meta, {'hands': grips, 'handOffsets': offsets, 'registration': registration, 'rig':rig}
 
 bow, overlay, bow_data = build('bow')
 vendor, _, vendor_data = build('vendor')

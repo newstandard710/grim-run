@@ -19,6 +19,21 @@ const server=http.createServer((req,res)=>{
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
     await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,null,{timeout:90000});
     await page.locator('#home-enter-btn').click({force:true});await page.locator('#start-btn').click({force:true});
+    const eyes=await page.evaluate(()=>{
+     const s=window.grimRun.scene.scenes[0],texture=s.textures.get('cutscene-bow');
+     const canvas=document.createElement('canvas');canvas.width=224;canvas.height=224;const ctx=canvas.getContext('2d');
+     return window.GRIM_CUTSCENE_DATA.bow.rig.map((rig,i)=>{
+      const f=texture.get(i);ctx.clearRect(0,0,224,224);ctx.drawImage(f.source.image,f.cutX,f.cutY,224,224,0,0,224,224);
+      const p=ctx.getImageData(0,0,224,224).data;let n=0,far=0;
+      for(let y=0;y<224;y++)for(let x=0;x<224;x++){const at=(y*224+x)*4;
+       if(p[at]<130&&p[at+1]>140&&p[at+2]>100&&p[at+3]>180){n++;far=Math.max(far,Math.hypot(x-rig.eye[0],y-rig.eye[1]));}}
+      const point=rig.eye,distance=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],u=Math.max(0,Math.min(1,((point[0]-a[0])*dx+(point[1]-a[1])*dy)/(dx*dx+dy*dy)));return Math.hypot(point[0]-a[0]-u*dx,point[1]-a[1]-u*dy);};
+      const hands=window.GRIM_CUTSCENE_DATA.bow.hands[i];
+      const occluded=[0,1].some(j=>distance(rig.shoulders[j],rig.elbows[j])<8||distance(rig.elbows[j],hands[j])<8);
+      return {n,far,occluded};
+     });
+    });
+    assert(eyes.every(e=>(e.n>0||e.occluded)&&e.far<6),'Every decoded pose has one registered head; only modeled arm occlusion may cover its eye, with no stray second eye');
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._cutsceneRealUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};s.state='playing';s.obstacles=[];s.enemies=[];s.fireballs=[];});
     for(const [kind,k]of [['angel',1],['devil',8]]){
      const initial=await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.triggerVendor(k);s.drawScene();

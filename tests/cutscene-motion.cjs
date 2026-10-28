@@ -13,6 +13,15 @@ assert.equal(frames.size,169);
 for(const t of [3,3.1,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168);
 assert.equal(A.relicMotionAt(4).hold,false);assert.equal(A.relicMotionAt(1.649).grabbed,false);assert(A.relicMotionAt(1.65).grabbed);
 const low=D.bow.hands[72][0],high=D.bow.hands[168][0];assert(high[1]<low[1]-130,'The bow is physically lifted from the low chest reach to overhead');
+assert.equal(D.bow.rig.length,169);
+for(let i=0;i<169;i++){
+ const p=D.bow.rig[i];assert(p.eye.every(Number.isFinite));
+ if(i){const a=D.bow.rig[i-1].eye;assert(Math.hypot(p.eye[0]-a[0],p.eye[1]-a[1])<2,'One rigid painted head follows a continuous body hinge');}
+ for(let j=0;j<2;j++){
+  const length=Math.hypot(p.elbows[j][0]-p.shoulders[j][0],p.elbows[j][1]-p.shoulders[j][1]);
+  assert(Math.abs(length-(j?30:32))<.001,'Upper arms retain fixed lengths');
+ }
+}
 for(const devil of [false,true]){
  const before=A.merchantPoint(.47,.20,6,devil),after=A.merchantPoint(.47,.20,9.5,devil);
  assert(after.x<before.x&&after.y>before.y,'Face turns down and toward the Reaper');

@@ -14,11 +14,13 @@ holds through the end, with the head turning toward the smaller Reaper.
 Mesh updates use presentation time and contain no image readback or gameplay
 randomness. Fixed bottom vertices retain planted feet.
 
-The summit acquisition uses eight newly authored bend/reach/grip/lift/overhead
-key poses of the accepted Reaper identity. Optical-flow registration bakes 169
-solid drawings, rather than overlapping full-character fades. The palms and
-Bone Crossbow follow per-frame grip metadata. A cropped existing chest front
-occludes the low reach so the relic emerges from inside the chest.
+The summit acquisition uses one matching painted body/hood/scythe layer and
+separate painted arm components. A continuous body hinge, knee/hip bend and
+cloak follow-through preserve the character's features, while two-link arm IK
+keeps the hands connected. The wrist path arcs around the face before arriving
+overhead. All 169 poses are baked as one solid drawing each, with no full-body
+crossfade or optical-flow calculation. Closed fingers overlap the Bone Crossbow,
+and the chest front plus a rim mask hide the relic while it is inside the chest.
 
 | Seconds | Action |
 | --- | --- |
@@ -36,7 +38,7 @@ change its timing.
 
 ## Production and reproducibility
 
-The two raw PNGs in `source/` were produced with the built-in Imagegen tool.
+The raw PNGs in `source/` were produced with the built-in Imagegen tool.
 `production-prompts.json` records the exact prompts and reference role. The
 reference is frame zero of `assets/vendors/v0152/reaper-approach.png`, preserved
 in the repository. Existing merchant and Bone Crossbow textures are reused.
@@ -44,9 +46,12 @@ in the repository. Existing merchant and Bone Crossbow textures are reused.
 Run `python scripts/prepare-cutscene-art.py` with Pillow, NumPy, SciPy and
 opencv-python-headless 4.12.0.88. The script assigns connected silhouettes to
 their poses before cropping (one leading boot crosses a source grid line),
-registers each foot baseline with one fixed scale, restores opaque source
-interiors, computes bidirectional flow and interpolates moving alpha boundaries.
-No source PNG is modified. The game samples one solid atlas frame.
+registers feet/eyes at a fixed scale, restores opaque paint, builds the vendor's
+leg rig and in-betweens, and bakes the summit body/arm rig from
+`scripts/bow_rig.py`. No source PNG is modified. The game samples one solid
+atlas frame. Presentation uses real visible frame timestamps, so smoothed
+simulation deltas cannot stretch the 10s/4s scenes; visibility changes reset the
+timestamp baseline without consuming hidden-page time.
 
 `manifest.json` records exact raw/runtime SHA-256, dimensions and every frame's
 bounds. `animation-data.js` records palms, overlay offsets and registration.

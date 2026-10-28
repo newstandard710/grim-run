@@ -2189,6 +2189,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     installLoopRecovery(){
       const recover=()=>{
+        this.cutsceneLastAt=null;
         if(document.hidden)return;
         this.lastUpdateHeartbeatAt=Date.now();
         this.wakeGameLoop();
@@ -2508,7 +2509,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorIntroSeen??={angel:false,devil:false};
       if(!this.vendorIntroSeen[this.vendorType]){
         this.vendorIntroSeen[this.vendorType]=true;
-        this.vendorIntroMs=C.vendorIntroDurationMs;this.state='vendorIntro';
+        this.vendorIntroMs=C.vendorIntroDurationMs;this.state='vendorIntro';this.cutsceneLastAt=scope.performance?.now?.()??null;
         const floor=this.terrain?.groundAt(p.x);
         if(Number.isFinite(floor)){p.y=floor;p.grounded=true;p.velocityY=0;p.jumpsUsed=0;p.onSoulPlatform=false;}
         this.ui.setMode('vendorIntro');
@@ -2900,6 +2901,14 @@ window.GRIM_CONFIG = Object.freeze({
         this.tips.push({label,atX:x,baseY:y});
       }
     }
+    cutsceneDelta(time,deltaMs){
+      if(document.hidden){this.cutsceneLastAt=null;return 0;}
+      // Direct deterministic updates keep their supplied delta. Real Phaser
+      // frames use presentation time, independent of its smoothed game delta.
+      if(!Number.isFinite(time)||time<=0)return Math.min(250,Math.max(0,deltaMs));
+      const previous=this.cutsceneLastAt;this.cutsceneLastAt=time;
+      return previous==null?0:Math.max(0,time-previous);
+    }
     update(_,deltaMs) {
       this.lastUpdateHeartbeatAt=Date.now();
       if(['playing','rewinding'].includes(this.state)&&this.practiceScale()===0){this.drawScene();return;}
@@ -2918,11 +2927,11 @@ window.GRIM_CONFIG = Object.freeze({
         this.drawScene();return;
       }
       else if(this.state==='vendorIntro'){
-        if(!document.hidden)this.vendorIntroMs=Math.max(0,this.vendorIntroMs-Math.min(250,Math.max(0,deltaMs)));
+        this.vendorIntroMs=Math.max(0,this.vendorIntroMs-this.cutsceneDelta(_,deltaMs));
         if(this.vendorIntroMs===0)this.finishVendorIntro();
       }
       else if(this.state==='chest'){
-        if(!document.hidden)this.chestMs=Math.max(0,this.chestMs-Math.min(250,Math.max(0,deltaMs)));
+        this.chestMs=Math.max(0,this.chestMs-this.cutsceneDelta(_,deltaMs));
         if(this.chestMs===0)this.finishChest();
       }
       else if(this.state==='respawning'){
@@ -3498,7 +3507,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.ui.showPortal(false);
-      this.state='chest';this.chestMs=window.GRIM_CUTSCENES?.SHRINE_MS||4000;this.resetRewindHistory();
+      this.state='chest';this.chestMs=window.GRIM_CUTSCENES?.SHRINE_MS||4000;this.cutsceneLastAt=scope.performance?.now?.()??null;this.resetRewindHistory();
       this.ui.setMode('chest');
       return true;
     }

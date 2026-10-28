@@ -83,6 +83,9 @@
       this.cinemaReaper=image(this.cutsceneReady?'cutscene-bow':'power-relic-motion',24,0)?.setScrollFactor(0)
         .setOrigin(this.cutsceneReady?136/224:.5,this.cutsceneReady?214/224:456/512);
       this.cinemaBow=image('power-bone-crossbow',25)?.setScrollFactor(0);
+      this.cinemaBowMask=scene.add.graphics().setScrollFactor(0).setVisible(false);
+      this.cinemaBowClip=this.cinemaBowMask.createGeometryMask();
+      this.cinemaBow?.setMask(this.cinemaBowClip);
       this.cinemaChestFront=image('power-summit-shrine',25.3)?.setScrollFactor(0);
       if(this.cinemaChestFront){const im=scene.textures.get('power-summit-shrine').getSourceImage();
         this.cinemaChestFront.setCrop(im.width*.37,im.height*.705,im.width*.26,im.height*.125);}
@@ -321,7 +324,10 @@
       const w=s.width,h=s.height,t=clamp((SHRINE_MS-s.chestMs)/1000,0,4),motion=relicMotionAt(t),reveal=motion.glow;
       this.cinema.fillStyle(0x030914,.76);this.cinema.fillRect(0,0,w,h);
       this.cinema.fillStyle(0x03101c,.65);this.cinema.fillRect(0,0,w,h*.115);this.cinema.fillRect(0,h*.88,w,h*.12);
-      const shrineX=w*.55,ground=h*.82,reaperX=shrineX-h*.062,reaperY=ground-h*.05;
+      const shrineX=w*.55,ground=h*.82,reaperX=shrineX-h*.135,reaperY=ground-h*.05;
+      // The relic is inside the chest until it rises through the rim. Keep
+      // its lower crescent from drawing through the front or below the floor.
+      this.cinemaBowMask.clear().fillStyle(0xffffff).fillRect(0,0,w,ground+15-h*.177);
       if(this.cinemaShrine){
         const open=this.cinemaShrineOpen?clamp((t-.12)/.45,0,1):0;
         this.cinemaShrine.setOrigin(.5,1).setPosition(shrineX,ground+13)
@@ -377,8 +383,9 @@
     }
     destroy(){
       if(this.disposed)return;this.disposed=true;
+      this.cinemaBowClip?.destroy();
       for(const sprite of [this.action,this.weapon,this.shrine,this.cinemaShrine,this.cinemaShrineOpen,this.cinemaReaper,this.cinemaBow,this.cinemaHands,this.cinemaChestFront,
-        this.fx,this.cinema,this.cinemaFX,this.cloakRoot,...this.wingSprites,...this.nearWings,...this.bonePool,...this.pool])sprite?.destroy();
+        this.fx,this.cinema,this.cinemaFX,this.cinemaBowMask,this.cloakRoot,...this.wingSprites,...this.nearWings,...this.bonePool,...this.pool])sprite?.destroy();
       this.bursts=[];this.pool=[];this.wingSprites=[];
     }
   }
