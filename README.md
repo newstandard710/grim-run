@@ -1,3 +1,13 @@
+# Grim Run — v0.19.6 · Deepening Mist
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.6)
+
+Mist banks are 50% larger in both dimensions, bringing their airy upper edges toward the Reaper's hips while keeping the painted proportions and grounded base. Spacing grows with the artwork to preserve the bank overlap pattern. Both layers receive the same opacity correction, targeting the original single-layer density through standard alpha blending.
+
+[Rendering and opacity calibration](assets/visuals/ground-fog/README.md). Gameplay, terrain and accepted source artwork are unchanged. Rollback base: v0.19.5 (`08ee4ea6f390c15f3502b2d620dcccba4196e97c`).
+
+---
+
 # Grim Run — v0.19.5 · Grounded Mist
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.5)
@@ -126,7 +136,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.19.5 — Grounded Mist**
+**Current build: v0.19.6 — Deepening Mist**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 

@@ -108,8 +108,8 @@ const server=http.createServer((req,res)=>{
       assert(result.onscreenFog>0,name+' has a mist bank on the visible ground');
       assert(result.mask,name+' fog has a solid-terrain mask');
       assert(result.rear>0&&result.front>0,name+' has two populated fog layers');
-      assert(result.maxAlpha<=.2860001,name+' every mist bank is at half the former maximum alpha');
-      assert(result.maxHeight<60,name+' natural-height fog stays below the Reaper chest');
+      assert(1-(1-result.maxAlpha)**2<=.5720001,name+' equal-layer opacity is calibrated to the original fog maximum');
+      assert(result.maxHeight<86,name+' enlarged mist retains low banks and airy hip-height wisps');
       assert(result.maxGroundError<.01,name+' actual projected vertices follow the curved ground within .01px');
       for(const depth of [result.reaperDepth,result.actorDepth,result.motionDepth].filter(Number.isFinite))
         assert(result.rearDepth<depth&&depth<result.frontDepth,name+' both mist layers enclose the Reaper');
@@ -144,12 +144,12 @@ const server=http.createServer((req,res)=>{
           const offset=((p.y+dy)*pixels.width+p.x+dx)*4;
           foot=Math.max(foot,...pixels.data.subarray(offset,offset+3));
         }
-        for(let dy=-80;dy<=-72;dy++){
+        for(let dy=-100;dy<=-92;dy++){
           const offset=((p.y+dy)*pixels.width+p.x)*4;
           high=Math.max(high,...pixels.data.subarray(offset,offset+3));
         }
         if(foot>6)floorHits++;
-        assert(high<3,name+' fog never reaches 72px above the surface at its bank center');
+        assert(high<3,name+' low fog stays clear of the upper Reaper silhouette');
       }
       assert(probes.length>0&&floorHits===probes.length,name+' visible painted fog reaches every tested bank floor');
       await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];
@@ -195,6 +195,6 @@ const server=http.createServer((req,res)=>{
       assert(error<.01,'Resizing keeps fog grounded in world pixels at '+viewport.width+'×'+viewport.height);
     }
     assert.deepEqual(errors,[],'fog actions produce no browser errors');
-    console.log('PASS actual Chromium: eight biomes, both half-opacity layers, five Reaper actions and vendor layering.');
+    console.log('PASS actual Chromium: eight biomes, equally corrected opacity, hip-height scaled mist, five Reaper actions and vendor layering.');
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

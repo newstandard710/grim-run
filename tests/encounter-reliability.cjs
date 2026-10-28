@@ -31,7 +31,7 @@ for(const [,attributes,source] of scripts){
 }
 const C=sandbox.GRIM_CONFIG,Core=sandbox.GRIM_CORE,Terrain=sandbox.GRIM_TERRAIN;
 const Powers=sandbox.GRIM_POWERS,Combat=sandbox.GRIM_COMBAT,GameScene=sandbox.GrimGameScene;
-assert.equal(C.version,'0.19.5');
+assert.equal(C.version,'0.19.6');
 
 for(let k=1;k<=14;k++){
   const x=200+k*666*C.pxPerMeter;
