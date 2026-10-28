@@ -1,3 +1,13 @@
+# Grim Run — v0.19.5 · Grounded Mist
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.5)
+
+Fog now keeps the painting's natural wide proportions and rests against the ground. Correct alpha bounds remove the transparent gutter beneath each bank; a textured strip follows rounded hills and the continuous virtual surface over gaps. The approved opacity, two-layer order, biome colors and gameplay remain unchanged.
+
+[Cause, correction, exports and validation](assets/visuals/ground-fog/README.md). Rollback base: v0.19.4 (`3366484519393974b03ce857ebb9a1b584a784ce`).
+
+---
+
 # Grim Run — v0.19.4 · Through the Mist
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?v=0.19.4)
@@ -116,7 +126,7 @@ The Bone Crossbow now comes from a snowy mountain shrine at **4,900m** in a six-
 
 A landscape, mobile-first side-scrolling action roguelike starring the Grim Reaper.
 
-**Current build: v0.19.4 — Through the Mist**
+**Current build: v0.19.5 — Grounded Mist**
 
 The jump-plus-attack brambles draw larger and have six dedicated biome sprites, including new Tundra, Caverns, and Ashlands variants. Each has a unique darkened cliff tether behind the ground. Both rare jump-plus-tuck gates draw larger, with their actual lower artwork aligned to the original ducking line and distinct ceiling-chain mounts behind the terrain. Angel and Demon Vendors have softly pulsing holy and sinister auras behind their figures. Collision geometry, clearance, obstacle and vendor placements, spawn rates, and mechanics remain unchanged. [Play on Android](https://newstandard710.github.io/grim-run/).
 

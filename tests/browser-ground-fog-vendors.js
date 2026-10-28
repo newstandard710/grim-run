@@ -4,6 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const http=require('node:http');
 const {chromium}=require('playwright');
+const {PNG}=require('pngjs');
 
 const root=path.resolve(__dirname,'..');
 const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.ttf':'font/ttf','.png':'image/png',
@@ -39,15 +40,15 @@ const server=http.createServer((req,res)=>{
       const s=window.grimRun.scene.scenes[0];
       return ['drift','curl','veil','shreds'].map(name=>{
         const source=s.textures.get('ground-fog-'+name).getSourceImage();
-        const c=document.createElement('canvas');c.width=900;c.height=300;
+        const c=document.createElement('canvas');c.width=source.width;c.height=source.height;
         const g=c.getContext('2d');g.drawImage(source,0,0);
-        const bytes=g.getImageData(0,0,900,300).data;
-        const mean=(from,to)=>{let sum=0;for(let y=from;y<to;y++)for(let x=0;x<900;x++)sum+=bytes[(y*900+x)*4+3];return sum/((to-from)*900);};
-        return {name,width:source.width,height:source.height,upper:mean(15,105),lower:mean(195,270),edge:mean(0,5)};
+        const bytes=g.getImageData(0,0,c.width,c.height).data;
+        const mean=(from,to)=>{from=Math.floor(from*c.height);to=Math.max(from+1,Math.floor(to*c.height));let sum=0;for(let y=from;y<to;y++)for(let x=0;x<c.width;x++)sum+=bytes[(y*c.width+x)*4+3];return sum/((to-from)*c.width);};
+        return {name,width:source.width,height:source.height,upper:mean(.05,.35),lower:mean(.65,.90),edge:mean(0,.02)};
       });
     });
     for(const bank of mistAlpha){
-      assert.equal(bank.width,900);assert.equal(bank.height,300);
+      assert.equal(bank.width,900);assert(bank.height>=50&&bank.height<=96,'Natural short mist aspect ratio');
       assert(bank.lower>bank.upper*1.8,bank.name+' has airy upper wisps and denser low fog');
       assert(bank.edge<15,bank.name+' has a transparent upper margin');
     }
@@ -80,12 +81,23 @@ const server=http.createServer((req,res)=>{
         const fog=[...s.groundFogViews.values()].filter(v=>v.visible);
         const vendor=[...s.vendorSpriteObjects.values()].filter(v=>v.visible);
         const rear=fog.filter(v=>v.depth<12),front=fog.filter(v=>v.depth>14);
+        const errors=[];
+        for(const bank of fog){
+          const source=s.textures.get(bank.texture.key).getSourceImage();
+          errors.push(Math.abs(bank.fogHeight/bank.fogWidth-source.height/source.width));
+          if(!bank.fogPoints)throw Error('WebGL terrain mist must use its curved strip');
+          for(let i=0;i<bank.vertices.length;i++)if(bank.fogPoints[i].bottom){
+            const v=bank.vertices[i],surface=s.groundFogSurfaceAt(bank.x+v.vx);
+            if(Number.isFinite(surface))errors.push(Math.abs(bank.y+v.vy-surface-4));
+          }
+        }
         return {fog:fog.length,onscreenFog:fog.filter(v=>
             v.x>=s.cameraX&&v.x<=s.cameraX+s.width).length,
           colors:[...new Set(fog.map(v=>v.tintTopLeft))],
           rearDepth:rear[0]?.depth,frontDepth:front[0]?.depth,
           rear:rear.length,front:front.length,mask:fog.every(v=>!!v.mask),
           maxAlpha:Math.max(...fog.map(v=>v.alpha)),
+          maxHeight:Math.max(...fog.map(v=>v.fogHeight)),maxGroundError:Math.max(...errors),
           motionDepth:s.motionArt?.body.find(v=>v.visible)?.depth,
           reaperDepth:s.visuals?.reaper?.depth,actorDepth:s.actor.depth,
           vendor:vendor.map(v=>({key:v.texture.key,depth:v.depth,height:v.displayHeight})),
@@ -97,6 +109,8 @@ const server=http.createServer((req,res)=>{
       assert(result.mask,name+' fog has a solid-terrain mask');
       assert(result.rear>0&&result.front>0,name+' has two populated fog layers');
       assert(result.maxAlpha<=.2860001,name+' every mist bank is at half the former maximum alpha');
+      assert(result.maxHeight<60,name+' natural-height fog stays below the Reaper chest');
+      assert(result.maxGroundError<.01,name+' actual projected vertices follow the curved ground within .01px');
       for(const depth of [result.reaperDepth,result.actorDepth,result.motionDepth].filter(Number.isFinite))
         assert(result.rearDepth<depth&&depth<result.frontDepth,name+' both mist layers enclose the Reaper');
       assert(result.obstacleDepth>result.frontDepth,name+' obstacles stay ahead of fog');
@@ -109,6 +123,39 @@ const server=http.createServer((req,res)=>{
       await page.waitForTimeout(80);
       await page.locator('#game canvas').screenshot({path:path.join(dir,
         'ground-fog-'+name+'-phone.png')});
+      // Inspect actual rasterized mist at the floor, rather than accepting
+      // valid metadata while the visible painting still floats above it.
+      const probes=await page.evaluate(()=>{
+        const s=window.grimRun.scene.scenes[0];
+        s._fogVisibility=s.children.list.map(v=>[v,v.visible]);
+        for(const [v]of s._fogVisibility)v.setVisible?.(false);
+        const banks=[...s.groundFogViews.values()];for(const v of banks)v.setVisible(true);
+        s._fogBackground=s.cameras.main.backgroundColor.rgba;
+        s.cameras.main.setBackgroundColor('#000000');
+        return banks.filter(v=>v.x-s.cameraX>150&&v.x-s.cameraX<s.width-150).map(v=>({
+          x:Math.round(v.x-s.cameraX),y:Math.round(s.groundFogSurfaceAt(v.x)-s.cameraY)}));
+      });
+      await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+      const pixels=PNG.sync.read(await page.locator('#game canvas').screenshot());
+      let floorHits=0;
+      for(const p of probes){
+        let foot=0,high=0;
+        for(let dx=-3;dx<=3;dx++)for(let dy=-3;dy<=1;dy++){
+          const offset=((p.y+dy)*pixels.width+p.x+dx)*4;
+          foot=Math.max(foot,...pixels.data.subarray(offset,offset+3));
+        }
+        for(let dy=-80;dy<=-72;dy++){
+          const offset=((p.y+dy)*pixels.width+p.x)*4;
+          high=Math.max(high,...pixels.data.subarray(offset,offset+3));
+        }
+        if(foot>6)floorHits++;
+        assert(high<3,name+' fog never reaches 72px above the surface at its bank center');
+      }
+      assert(probes.length>0&&floorHits===probes.length,name+' visible painted fog reaches every tested bank floor');
+      await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];
+        for(const [v,visible]of s._fogVisibility)v.setVisible?.(visible);
+        s.cameras.main.setBackgroundColor(s._fogBackground);s.drawScene();
+      });
     }
     assert.deepEqual(errors,[],'fog and vendor renders produce no browser errors');
     // Verify the actual action renderers stay between the banks, including
@@ -133,6 +180,19 @@ const server=http.createServer((req,res)=>{
       assert(result.wingDepth>result.rear,action+' rear fog also stays behind the equipped-wing layer');
       assert(Math.max(...result.alpha)>.9,action+' retains an opaque body drawing');
       await page.locator('#game canvas').screenshot({path:path.join(dir,'ground-fog-action-'+action+'.png')});
+    }
+    for(const viewport of [{width:667,height:375},{width:390,height:844},{width:950,height:430}]){
+      await page.setViewportSize(viewport);await page.waitForTimeout(80);
+      const error=await page.evaluate(()=>{
+        const s=window.grimRun.scene.scenes[0];s.drawScene();let error=0;
+        for(const bank of s.groundFogViews.values())for(let i=0;i<bank.vertices.length;i++){
+          if(!bank.fogPoints[i].bottom)continue;
+          const v=bank.vertices[i],surface=s.groundFogSurfaceAt(bank.x+v.vx);
+          if(Number.isFinite(surface))error=Math.max(error,Math.abs(bank.y+v.vy-surface-4));
+        }
+        return error;
+      });
+      assert(error<.01,'Resizing keeps fog grounded in world pixels at '+viewport.width+'×'+viewport.height);
     }
     assert.deepEqual(errors,[],'fog actions produce no browser errors');
     console.log('PASS actual Chromium: eight biomes, both half-opacity layers, five Reaper actions and vendor layering.');

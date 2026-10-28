@@ -1,6 +1,14 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.4 — *Through the Mist*.
+**Current build:** v0.19.5 — *Grounded Mist*.
+
+## v0.19.5 — Natural fog height and grounded lower edge
+
+- Cause verified in actual game captures: nonuniform row export plus fixed display heights stretched the four mist paintings 2.48–4.69× vertically. Transparent lower gutters created a 4–12px clearance at normal width; a rigid, tilt-limited plane also floated over curved ground.
+- Register visible source-alpha bounds, retain alpha, and resize uniformly. Runtime uses each texture's natural aspect ratio rather than a shared height. The original paintings and the approved half-opacity formula, depth order, tint and width/placement seeds remain unchanged.
+- A pooled, 32-column WebGL strip follows the exact terrain or virtual gap surface, with the painted base inset 4px and no vertical bob. Texture swaps/resize retain pixel-exact projection. The image fallback retains natural proportions and lower-edge registration. No terrain geometry, collisions or gameplay state are changed.
+- Regression now checks native export ratios, actual projected ground contact and rasterized fog pixels at the floor, plus below-chest height, all eight biomes, actions, vendors and existing gap/movement/performance suites. Documentation and source/runtime hashes: `assets/visuals/ground-fog/`; builder: `scripts/prepare-ground-fog.py`.
+- Rollback base: `3366484519393974b03ce857ebb9a1b584a784ce` (v0.19.4).
 
 ## v0.19.4 — Reaper inside the fog
 

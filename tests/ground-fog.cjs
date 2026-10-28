@@ -61,10 +61,11 @@ for(const gap of s.terrain.segments.filter(v=>v.kind==='gap').slice(0,20)){
  const x=(gap.start+gap.end)/2;assert.equal(s.terrain.groundAt(x),null);
  assert(Number.isFinite(s.groundFogSurfaceAt(x)));assert.equal(s.terrain.groundAt(x),null);
 }
-const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/visuals/ground-fog/manifest-v2.json')));
+const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/visuals/ground-fog/manifest-v3.json')));
 for(const [file,m]of Object.entries(manifest.runtime)){
  const bytes=fs.readFileSync(path.join(root,file));assert.equal(bytes.length,m.bytes);
  assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),m.sha256);
+ assert(Math.abs(m.size[1]-m.source_size[1]*m.size[0]/m.source_size[0])<=.5,'Export preserves original aspect ratio');
  assert.equal(bytes.subarray(0,4).toString(),'RIFF');assert.equal(bytes.subarray(8,12).toString(),'WEBP');
 }
 console.log('PASS two half-opacity fog layers, stable world placement, independent banks, bounded reuse, open gaps and asset hashes.');
