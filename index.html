@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.4</title>
+  <title>GRIM RUN — v0.19.5</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -214,7 +214,7 @@ button {cursor:pointer;}
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.4</div>
+    <div class="home-edition">GRIM RUN · v0.19.5</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="hud" class="hidden">
@@ -252,7 +252,7 @@ button {cursor:pointer;}
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.4 · THROUGH THE MIST</div>
+      <div class="mini">v0.19.5 · GROUNDED MIST</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -360,7 +360,7 @@ button {cursor:pointer;}
   </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.4',
+  version: '0.19.5',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -1639,7 +1639,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog');
       for(const name of ['drift','curl','veil','shreds'])
         this.load.image('ground-fog-'+name,
-          'assets/visuals/ground-fog/mist-'+name+'-v2.webp?v=0.19.4');
+          'assets/visuals/ground-fog/mist-'+name+'-v3.webp?v=0.19.5');
       for(const type of ['angel','demon'])
         this.load.image('vendor-'+type,
           'assets/characters/vendors/'+type+'-vendor-v1.webp?v=0.14.8');
@@ -3842,6 +3842,68 @@ window.GRIM_CONFIG = Object.freeze({
       if(!gap||!Number.isFinite(gap.y0)||!Number.isFinite(gap.y1))return null;
       return gap.y0+(gap.y1-gap.y0)*clamp((x-gap.start)/(gap.end-gap.start),0,1);
     }
+    groundFogView(id,key,layer){
+      let view=this.groundFogViews.get(id);
+      if(view)return view;
+      if(this.add.mesh&&this.sys?.game?.renderer?.type===Phaser.WEBGL){
+        view=this.add.mesh(0,0,key);
+        view.hideCCW=false;
+        view.setOrtho(view.width,view.height);
+        // A small textured strip follows the complete curved surface. Mesh
+        // faces share the normal sprite batch and need no canvas readbacks.
+        const vertices=[],uvs=[],indices=[];
+        for(let column=0;column<=32;column++){
+          const u=column/32;
+          vertices.push(u,1,u,0);uvs.push(u,0,u,1);
+          if(column<32){const i=column*2;indices.push(i,i+1,i+2,i+1,i+3,i+2);}
+        }
+        view.addVertices(vertices,uvs,indices);
+        // Indexed Mesh input expands vertices per triangle. Retain the
+        // logical column/edge separately so UV flips cannot move geometry.
+        view.fogPoints=view.vertices.map(v=>({u:v.u,column:Math.round(v.u*32),bottom:v.v===1}));
+        view.fogSamples=new Float64Array(33);
+      }else view=this.add.image(0,0,key).setOrigin(.5,1);
+      view.setDepth(layer.depth).setMask(this.groundFogMask);
+      this.groundFogViews.set(id,view);
+      return view;
+    }
+    placeGroundFog(view,key,x,width,flip,shade,alpha){
+      if(view.texture?.key!==key)view.setTexture(key);
+      const image=this.textures.get?.(key)?.getSourceImage?.();
+      // Preserve each painting's own aspect ratio at export AND runtime.
+      const height=width*(image?image.height/image.width:.1);
+      const ground=this.groundFogSurfaceAt(x);
+      const inset=4;
+      view.fogWidth=width;view.fogHeight=height;
+      if(view.fogPoints){
+        // Texture.setFrame resets Mesh's size to the image dimensions.
+        // Keep the orthographic projection in world pixels after a swap or
+        // viewport resize, independent of each mist painting's dimensions.
+        if(view.width!==this.width||view.height!==this.height){
+          view.setSize(this.width,this.height);view.setOrtho(this.width,this.height);
+        }
+        view.setPosition(x,ground);
+        for(let column=0;column<=32;column++)
+          view.fogSamples[column]=this.groundFogSurfaceAt(x+(column/32-.5)*width)??ground;
+        for(let i=0;i<view.vertices.length;i++){
+          const point=view.fogPoints[i],v=view.vertices[i];
+          const dx=(point.u-.5)*width;
+          const surface=view.fogSamples[point.column];
+          v.x=dx;v.y=ground-surface-inset+(point.bottom?0:height);
+          v.setUVs(flip?1-point.u:point.u,point.bottom?1:0);
+        }
+        view.dirtyCache[9]=-1;
+        // drawScene can run while simulation is frozen (pause/teleport).
+        // Update projection now, rather than waiting for the next game tick.
+        view.preUpdate();
+      }else{
+        const y0=this.groundFogSurfaceAt(x-width*.25),y1=this.groundFogSurfaceAt(x+width*.25);
+        const slope=Number.isFinite(y0)&&Number.isFinite(y1)?Math.atan2(y1-y0,width*.5):0;
+        view.setPosition(x,ground+inset).setRotation(slope)
+          .setDisplaySize(width,height).setFlipX(flip);
+      }
+      view.setTint(shade.tint).setAlpha(alpha).setVisible(true);
+    }
     drawGroundFog(){
       const views=this.groundFogViews,mask=this.groundFogMaskGraphics;
       if(!views||!mask||!this.groundFogMask||!this.add?.image||
@@ -3884,25 +3946,13 @@ window.GRIM_CONFIG = Object.freeze({
           const ground=this.groundFogSurfaceAt(x);
           if(!Number.isFinite(ground))continue;
           const width=350+this.groundFogHash(index,131+layer.salt)%180;
-          const height=139+this.groundFogHash(index,167+layer.salt)%21;
           const shade=this.groundFogColorAt(x);
           const alpha=shade.opacity*(.68+(this.groundFogHash(index,211)%43)/100)*GROUND_FOG_LAYER_ALPHA;
           const id=layer.id+':bank:'+index;
-          let sprite=views.get(id);
-          if(!sprite){
-            sprite=this.add.image(x,ground+3,key).setOrigin(.5,1)
-              .setDepth(layer.depth).setMask(this.groundFogMask);
-            views.set(id,sprite);
-          }
+          const sprite=this.groundFogView(id,key,layer);
           const drift=Math.sin(this.elapsed*layer.rate+index*1.83+layer.salt)*6;
-          const y0=this.groundFogSurfaceAt(x-width*.25),y1=this.groundFogSurfaceAt(x+width*.25);
-          const slope=Number.isFinite(y0)&&Number.isFinite(y1)
-            ?clamp(Math.atan2(y1-y0,width*.5),-.16,.16):0;
-          sprite.setTexture(key).setPosition(x+drift,ground+8+
-            Math.sin(this.elapsed*.18+index*.77+layer.salt)*2)
-            .setRotation(slope).setDisplaySize(width,height)
-            .setFlipX(Boolean(this.groundFogHash(index,251+layer.salt)&1))
-            .setTint(shade.tint).setAlpha(alpha).setVisible(true);
+          this.placeGroundFog(sprite,key,x+drift,width,
+            Boolean(this.groundFogHash(index,251+layer.salt)&1),shade,alpha);
           active.add(id);
           placedCenters.push(x);
         }
@@ -3920,18 +3970,10 @@ window.GRIM_CONFIG = Object.freeze({
           if(!this.textures?.exists?.(key))continue;
           const id=layer.id+':section:'+section.start+':'+section.end;
           const shade=this.groundFogColorAt(x);
-          let sprite=views.get(id);
-          if(!sprite){
-            sprite=this.add.image(x,ground+3,key).setOrigin(.5,1)
-              .setDepth(layer.depth).setMask(this.groundFogMask);
-            views.set(id,sprite);
-          }
-          sprite.setTexture(key).setPosition(x+
-            Math.sin(this.elapsed*layer.rate+seed*.017+layer.salt)*3,ground+8)
-            .setDisplaySize(Math.min(430,Math.max(200,to-from+50)),
-              136+this.groundFogHash(seed,479+layer.salt)%19)
-            .setFlipX(Boolean(this.groundFogHash(seed,503+layer.salt)&1))
-            .setTint(shade.tint).setAlpha(shade.opacity*.70*GROUND_FOG_LAYER_ALPHA).setVisible(true);
+          const sprite=this.groundFogView(id,key,layer);
+          this.placeGroundFog(sprite,key,x+Math.sin(this.elapsed*layer.rate+seed*.017+layer.salt)*3,
+            Math.min(430,Math.max(200,to-from+50)),Boolean(this.groundFogHash(seed,503+layer.salt)&1),
+            shade,shade.opacity*.70*GROUND_FOG_LAYER_ALPHA);
           active.add(id);
         }
       }

@@ -85,7 +85,9 @@ const server=http.createServer((req,res)=>{
    const without=PNG.sync.read(await page.locator('#game canvas').screenshot());
    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.drawGroundFog=s._fog;s.drawScene();});
    let changed=0;
-   for(let y=Math.round(geo.y)-100;y<Math.round(geo.y)-20;y++)for(let x=geo.x-25;x<geo.x+25;x++){
+   // Mist is now naturally low and grounded. Inspect the air down to the
+   // virtual surface; the old -100..-20 window excluded its dense base.
+   for(let y=Math.round(geo.y)-60;y<Math.round(geo.y)+2;y++)for(let x=geo.x-25;x<geo.x+25;x++){
     const index=(y*withFog.width+x)*4;const delta=Math.abs(withFog.data[index]-without.data[index])+Math.abs(withFog.data[index+1]-without.data[index+1])+Math.abs(withFog.data[index+2]-without.data[index+2]);
     if(delta>12)changed++;
    }
