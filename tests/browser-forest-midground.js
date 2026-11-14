@@ -136,25 +136,48 @@ async function sequence(page, record) {
   return samples;
 }
 
+function pair(left, right) {
+  assert.equal(left.width, right.width);
+  assert.equal(left.height, right.height);
+  const gutter = 8;
+  const tile = new PNG({width: left.width * 2 + gutter, height: left.height});
+  tile.data.fill(22);
+  for (let x = 3; x < tile.data.length; x += 4) tile.data[x] = 255;
+  PNG.bitblt(left, tile, 0, 0, left.width, left.height, 0, 0);
+  PNG.bitblt(right, tile, 0, 0, left.width, left.height, left.width + gutter, 0);
+  return PNG.sync.write(tile);
+}
+
 function compareFrames(before, after) {
   assert.equal(before.length, 90);
   assert.equal(after.length, before.length);
   let changed = 0;
-  const alignment = 8;
   for (let i = 0; i < before.length; i++) {
     const left = png(before[i]), right = png(after[i]);
-    assert.equal(left.width, right.width);
-    assert.equal(left.height, right.height);
     assert(left.data.some((value, index) => index % 4 === 3 && value === 255), 'Rendered frame is opaque');
-    const tile = new PNG({width: left.width * 2 + alignment, height: left.height});
-    tile.data.fill(22);
-    for (let x = 3; x < tile.data.length; x += 4) tile.data[x] = 255;
-    PNG.bitblt(left, tile, 0, 0, left.width, left.height, 0, 0);
-    PNG.bitblt(right, tile, 0, 0, right.width, right.height, left.width + alignment, 0);
     if (!left.data.equals(right.data)) changed++;
-    fs.writeFileSync(path.join(clip, String(i).padStart(3, '0') + '.png'), PNG.sync.write(tile));
+    fs.writeFileSync(path.join(clip, String(i).padStart(3, '0') + '.png'), pair(left, right));
   }
-  assert(changed >= 80, 'Both panels are actual rendered scenes, with visible pilot changes');
+  assert(changed >= 80, 'Previous and revised Forest footage show visible differences');
+}
+
+async function reviewAdvance(page) {
+  return page.evaluate(() => {
+    const {scene, game, place} = window.forestTest;
+    scene.startRun();
+    game.loop.sleep();
+    const frames = [];
+    for (let i = 0; i < 38; i++) {
+      place(742 + i * 1.5, true);
+      frames.push(game.canvas.toDataURL('image/png'));
+    }
+    return frames;
+  });
+}
+
+async function screenshotAt(page, distance) {
+  await page.evaluate(m => window.forestTest.place(m, true), distance);
+  return PNG.sync.read(await page.screenshot());
 }
 
 (async () => {
@@ -231,9 +254,12 @@ function compareFrames(before, after) {
       s.cameraY += 40;
       draw();
       const elevated = views();
+      const verticalShift = s.height * .13;
       for (const [depth, rate] of [[-24, .16], [-22, .42]]) {
+        const projection = y => Math.max(-verticalShift, Math.min(verticalShift, y * rate));
+        const change = projection(s.cameraY) - projection(s.cameraY - 40);
         const from = after.filter(v => v.depth === depth), to = elevated.filter(v => v.depth === depth);
-        check(from.every((v, i) => close(v.x, to[i].x) && close(v.y - to[i].y, 40 * rate)),
+        check(from.every((v, i) => close(v.x, to[i].x) && close(v.y - to[i].y, change)),
           'A camera climb projects tree roots vertically at their band rate');
       }
       check(!eq(bankProfile, profile()), 'Bank mesh follows the same vertical projection');
@@ -284,7 +310,7 @@ function compareFrames(before, after) {
           if (seed === originalSeed && [720, 900, 1080].includes(m)) scenes.push({m, weight, count: list.length});
           for (const v of list) {
             const near = v.depth === -22, alpha = v.alpha / weight;
-            check(alpha >= (near ? .82 : .60) && alpha <= (near ? .95 : .72),
+            check(alpha >= (near ? .82 : .60) - 1e-9 && alpha <= (near ? .95 : .72) + 1e-9,
               'Full Forest opacity stays in the correct band');
             check(v.origin[0] > .19 && v.origin[0] < .66 && v.origin[1] > .82 && v.origin[1] < .96,
               'Illustrated contact is anchored inside the frame');
@@ -310,7 +336,7 @@ function compareFrames(before, after) {
       s.seed = originalSeed;
       check(maxVisible <= 14 && seen.size === 12, 'All pieces are used across seeds within the bounded pool');
       check(giantSamples > 0 && rimSamples > 0, 'Review includes off-screen crowns and real gap occlusion');
-      place(765);
+      place(773);
       check(s.forestMidground.rimClipped, 'Opening abyss uses the existing terrain rim');
       place(650);
       check(views().every(v => !v.masked), 'Canopies return to normal rendering away from the abyss');

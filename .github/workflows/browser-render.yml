@@ -28,7 +28,7 @@ jobs:
         if: matrix.group == 'forest'
         run: |
           revision=32fd050ea83b3ccfec8f235d3c044ba1f320af20
-          git cat-file -e "$revision^{commit}" || git fetch --depth 1 origin "$revision"
+          git cat-file -e "$revision^{commit}" 2>/dev/null || git fetch --depth 1 origin "$revision"
       - name: Check Forest parallax and compare with the previous live build
         if: ${{ success() && matrix.group == 'forest' }}
         run: node tests/browser-forest-midground.js
