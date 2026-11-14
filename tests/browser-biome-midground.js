@@ -180,62 +180,50 @@ async function parity(browser) {
       await session.page.close();
     }
   };
-    const forest = async page => page.evaluate(() => {
-      const b = window.biomeReview;
-      b.place(300);
-      return Array.from({length: 10}, () => {
-        for (let j = 0; j < 7; j++) b.scene.update(0, 1000 / 60);
-        return b.frame();
-      });
+  const forest = async page => page.evaluate(() => {
+    const b = window.biomeReview;
+    b.place(300);
+    return Array.from({length: 10}, () => {
+      for (let j = 0; j < 7; j++) b.scene.update(0, 1000 / 60);
+      return b.frame();
     });
-    const first = await use({}, forest), old = await use({baseline: true}, forest);
-    for (const [i, frame] of first.entries()) {
-      writeFrame(path.join(outputs, 'forest-current-' + i + '.png'), frame);
-      writeFrame(path.join(outputs, 'forest-baseline-' + i + '.png'), old[i]);
-    }
-    const hashes = frames => frames.map(frame => createHash('sha256').update(frame).digest('hex'));
-    assert.deepEqual(hashes(first), hashes(old), 'Forest render differs from the accepted commit');
+  });
+  const first = await use({}, forest), old = await use({baseline: true}, forest);
+  for (const [i, frame] of first.entries()) {
+    writeFrame(path.join(outputs, 'forest-current-' + i + '.png'), frame);
+    writeFrame(path.join(outputs, 'forest-baseline-' + i + '.png'), old[i]);
+  }
+  const hashes = frames => frames.map(frame => createHash('sha256').update(frame).digest('hex'));
+  assert.deepEqual(hashes(first), hashes(old), 'Forest render differs from the accepted commit');
 
-    const run = async (page, on) => {
-      const samples = [];
-      for (const [id, distance] of native) {
-        samples.push(await page.evaluate(() => {
-          const b = window.biomeReview;
-          // Begin each sample from the same initialized gameplay state.
-          b.scene.startRun();
-          b.scene.setGodMode(true);
-          b.game.loop.sleep();
-          return b.snapshot();
-        }));
+  const run = async on => {
+    const samples = [];
+    for (const [id, distance] of native) {
+      samples.push(await use({off: !on}, async page => {
         await page.evaluate(distance => window.biomeReview.teleport(distance), distance);
         await page.waitForFunction(({id, on}) => {
           const b = window.biomeReview;
           return b.scene.biomeBackdrops[id] && (!on || b.art().loaded.includes(id));
-        }, {id, on}, {polling: 100, timeout: 20000}).catch(async error => {
-          const status = await page.evaluate(() => {
-            const b = window.biomeReview;
-            return {distance: b.scene.distance, state: b.scene.state, underworld: b.scene.hasTeleported,
-              art: b.art(), failed: [...(b.scene.biomeMidground?.stream.failed || [])]};
-          });
-          throw Error(id + ' did not load after teleport: ' + JSON.stringify(status), {cause: error});
-        });
-        samples.push(await page.evaluate(() => {
+        }, {id, on}, {polling: 100, timeout: 20000});
+        return page.evaluate(() => {
           const b = window.biomeReview;
-          const states = [];
+          const states = [b.snapshot()];
           for (let i = 0; i < 180; i++) {
             b.tick(i);
             if (i % 15 === 0) states.push(b.snapshot());
           }
           return states;
-        }));
-        console.log('PASS gameplay sample', id, on ? 'on' : 'off');
-      }
-      return samples;
-    };
-    const onStates = await use({}, page => run(page, true));
-    const offStates = await use({off: true}, page => run(page, false));
-    assert.deepEqual(onStates, offStates, 'gameplay and RNG traces differ');
-    return {forestFrames: old.length, simulationSteps: native.length * 180, sampledStates: native.length * 12};
+        });
+      }));
+      console.log('PASS gameplay sample', id, on ? 'on' : 'off');
+    }
+    return samples;
+  };
+  const onStates = await run(true), offStates = await run(false);
+  for (const [i, states] of onStates.entries()) {
+    assert(states.every((state, j) => state === offStates[i][j]), native[i][0] + ' gameplay or RNG differs');
+  }
+  return {forestFrames: old.length, simulationSteps: native.length * 180, sampledStates: native.length * 13};
 }
 
 async function faultReview(browser) {
@@ -299,17 +287,18 @@ async function lifecycle(page) {
     s.update(0, 32);
     const paused = s.state === 'paused' && s.distance === p;
     s.resume();
-    // Extend the reversible snapshot history without hitting an irreversible
-    // vendor or portal checkpoint before the eight-second rewind window.
-    s.player.invulMs = 10000;
-    for (let i = 0; i < 500; i++) {
-      s.speed = 0;
-      s.update(0, 1000 / 60);
+    // Populate the real rewind buffer using actual captures over a short safe
+    // route, so this check does not depend on avoiding eight seconds of hazards.
+    s.resetRewindHistory();
+    for (let second = 0; second <= 8; second++) {
+      s.rewindClockMs = second * 1000;
+      b.place(4000 + second * 2);
+      s.captureRewind();
     }
     const beforeRewind = s.distance;
     const rewinding = s.rewind();
     for (let i = 0; i < 155; i++) s.update(0, 1000 / 60);
-    const rewound = s.distance < beforeRewind;
+    const rewound = s.distance < beforeRewind && (s.state === 'playing' || s.state === 'rewinding');
     s.startRun(); s.setGodMode(true); b.game.loop.sleep();
     b.place(4999);
     s.enterUnderworld();
@@ -332,7 +321,7 @@ async function lifecycle(page) {
     return {paused, rewinding, rewound, portal, afterPortal, finish, boss, death, restart};
   });
   assert(checks.paused);
-  assert(checks.rewinding && checks.rewound);
+  assert(checks.rewinding && checks.rewound, JSON.stringify(checks));
   assert.equal(checks.portal[0], 'portal');
   assert.equal(checks.portal[1], true);
   assert(checks.portal[2] >= 5000);
@@ -352,16 +341,19 @@ async function main() {
   const metrics = {};
   try {
     const mode = process.env.GRIM_BIOME_MODE;
-    if (mode !== 'captures') {
+    if (!mode || ['checks', 'parity'].includes(mode)) {
       metrics.parity = await parity(browser);
+      console.log('PASS Forest pixel parity and gameplay/RNG parity');
+    }
+    if (!mode || ['checks', 'lifecycle'].includes(mode)) {
       metrics.faults = await faultReview(browser);
       const life = await setup(browser, {width: 740, height: 360});
       metrics.lifecycle = await lifecycle(life.page);
       assert.deepEqual(life.errors, []);
       await life.page.close();
-      console.log('PASS Forest pixel parity, gameplay/RNG parity, real delayed/missing assets and lifecycle');
+      console.log('PASS real delayed/missing assets, rapid teleports, disposal and lifecycle');
     }
-    if (mode !== 'checks') {
+    if (!mode || mode === 'captures') {
       const phone = await setup(browser, {width: 740, height: 360});
       for (const [id, meters] of native) {
         metrics[id] = await capture(phone.page, id, meters, 30, [id]);
@@ -374,6 +366,8 @@ async function main() {
       metrics.portal = await capture(phone.page, 'portal-exit', 5026, 15, ['caves']);
       assert.deepEqual(phone.errors, []);
       await phone.page.close();
+    }
+    if (!mode || ['captures', 'desktop'].includes(mode)) {
       const desktop = await setup(browser, {width: 950, height: 430});
       for (const [id, meters] of native) {
         metrics[id + '-desktop'] = await capture(desktop.page, id + '-desktop', meters, 9, [id]);
