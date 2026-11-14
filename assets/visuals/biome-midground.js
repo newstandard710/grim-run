@@ -53,10 +53,11 @@
     if (last && STYLES[next?.id] && distance >= nextStart - PREFETCH_METERS) wanted.push(next.id);
     if (practiceArrival && active.length === 1 && wanted.length === 1) {
       const index = region.findIndex(biome => biome.id === last);
-      const neighbors = [region[index - 1], region[index + 1]]
-        .filter(biome => STYLES[biome?.id])
-        .sort((a, b) => Math.abs(a.start - distance) - Math.abs(b.start - distance));
-      if (neighbors.length) wanted.push(neighbors[0].id);
+      const previous = region[index - 1], forward = region[index + 1];
+      const backDistance = STYLES[previous?.id] ? distance - region[index].start : Infinity;
+      const forwardDistance = STYLES[forward?.id] ? forward.start - distance : Infinity;
+      const neighbor = forwardDistance <= backDistance ? forward : previous;
+      if (STYLES[neighbor?.id]) wanted.push(neighbor.id);
     }
     return {active: active.filter(([id]) => STYLES[id]), wanted};
   }
@@ -65,10 +66,20 @@
     const response = await scope.fetch(ROOT + id + '.json', {signal});
     if (!response.ok) throw new Error('Scenery metadata unavailable');
     const data = await response.json();
+    const {w, h} = data.meta.size;
+    const normalizedPoint = point => Array.isArray(point) && point.length === 2 &&
+      point.every(value => Number.isFinite(value) && value >= 0 && value <= 1);
     const bands = [[], []];
     for (const [name, frame] of Object.entries(data.frames)) {
       const band = BANDS.findIndex(spec => spec.name === frame.band);
-      if (band < 0 || !frame.contact || !frame.support?.points?.length)
+      const rect = frame.frame;
+      const {kind, points} = frame.support;
+      if (band < 0 || !normalizedPoint(frame.contact) ||
+          !['floor', 'root', 'ceiling', 'arch'].includes(kind) ||
+          points.length !== (kind === 'arch' ? 2 : 1) || !points.every(normalizedPoint) ||
+          ![rect.x, rect.y, rect.w, rect.h].every(Number.isInteger) ||
+          rect.x < 0 || rect.y < 0 || rect.w <= 0 || rect.h <= 0 ||
+          rect.x + rect.w > w || rect.y + rect.h > h)
         throw new Error('Invalid scenery metadata');
       bands[band].push({name, ...frame});
     }
@@ -100,7 +111,7 @@
     } finally {
       scope.URL.revokeObjectURL(url);
     }
-    if (image.naturalWidth !== data.meta.size.w || image.naturalHeight !== data.meta.size.h)
+    if (image.naturalWidth !== w || image.naturalHeight !== h)
       throw new Error('Scenery texture dimensions disagree');
     return {data, bands, image};
   }
@@ -192,7 +203,7 @@
     const density = visualHash(seed, group, salt + 1);
     if (density < .12 || visualHash(seed, cell, salt + 2) < mix(.62, .12, density)) return null;
 
-    const bucket = cell & 1;
+    const bucket = frames.length > 1 ? cell & 1 : 0;
     const count = Math.ceil((frames.length - bucket) / 2);
     const frame = frames[bucket + 2 * Math.floor(visualHash(seed, cell, salt + 3) * count)];
     const [minSize, maxSize, minAlpha, maxAlpha] = tuning;
