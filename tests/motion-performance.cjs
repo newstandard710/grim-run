@@ -49,7 +49,15 @@ for(const speed of [300,362.5,425])for(const hz of [30,60,120]){
 assert.equal(A.runAtlasFrame(A.STRIDE_PX),0);assert.equal(A.runAtlasFrame(-A.STRIDE_PX/192),191);
 assert.equal(A.jumpFrame({grounded:true,visualLandingMs:A.LAND_MS}),18);
 assert.equal(A.jumpFrame({grounded:true,visualLandingMs:0}),23);
-assert.equal(A.jumpFrame({hovering:true}),10.5);
+assert.equal(A.jumpFrame({hovering:true}),11.5);
+const shortHop=p=>A.jumpFrame({visualLaunchVelocity:610,...p});
+assert(Math.abs(shortHop({jumpAgeMs:54.99,velocityY:-260})-
+  shortHop({jumpAgeMs:55.01,velocityY:-260}))<.01,'Early release preserves launch/rise continuity');
+assert(Math.abs(shortHop({jumpAgeMs:250,velocityY:-.01})-
+  shortHop({jumpAgeMs:250,velocityY:.01}))<.01,'Ascent, fall and hover meet at a common apex');
+assert.equal(shortHop({jumpAgeMs:0,velocityY:0}),11.5,'Walking off a lip starts a fall');
+assert.equal(shortHop({jumpAgeMs:0,velocityY:-420,airJumpUsed:true}),5,'Air jump begins in an airborne pose');
+assert.equal(shortHop({jumpAgeMs:420,velocityY:370}),17,'Landing pose is only displayed after contact');
 const frameSet=new Set();for(let t=0;t<=1;t+=.001)frameSet.add(Math.round(A.cutFrame(t)));assert.equal(frameSet.size,24);
 // The physical weapon is rigid and carry-sized; a separate spectral arc owns the unchanged damage reach.
 // Its pointed end must stay ahead of its socket along the entire active stroke.
