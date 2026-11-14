@@ -11,4 +11,9 @@ The full-depth foreground body and texture share a deterministic profile. The se
 
 [Motion reel](https://chatgpt.com/library?file_id=libfile_fde3_f-b596a53acbb081919430b60a20dca9bc_341adfe3367c819190414eee62b400ed&account_id=personal) · [Validation metrics](https://chatgpt.com/library?file_id=libfile_fde3_f-cf1ad0bff0c48191b42ce46d228b70b7_341adfe3367c819190414eee62b400ed&account_id=personal)
 
-Release gate is relevant CI, merge, Pages deployment, byte comparisons and public playable smoke.
+## Live release
+
+- Tested PR head `912632b012b075d560aa9d94af04343ee247904c`. [Regression](https://github.com/newstandard710/grim-run/actions/runs/43633505585), [Interface](https://github.com/newstandard710/grim-run/actions/runs/43633505616) and [all five Chromium groups](https://github.com/newstandard710/grim-run/actions/runs/43633505596) passed. The approved timing exception was unused.
+- PR #81 merged as `19df4a68870bc5c87c07c1d9500ca714a08768c9`. Its tree matches the tested head. [Pages build and deployment](https://github.com/newstandard710/grim-run/actions/runs/43634750480) passed.
+- Public HTML, both scenery renderers and 37 metadata or texture files matched the merge commit byte for byte (4,289,913 bytes total). Public Chromium started the game, ran and jumped from input, loaded Forest and all seven native scenery sets, crossed the 5,000 m portal, reached the 9,999 m finish and drew Boss at 19,500 m. An actual cave gap confirmed the exact rim anchor, jagged deep wall, null ground and ground fog at gap center, and separate inset mist.
+- [Verified live game](https://newstandard710.github.io/grim-run/index.html?release=19df4a68870bc5c87c07c1d9500ca714a08768c9).
