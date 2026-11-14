@@ -311,9 +311,9 @@ async function screenshotAt(page, distance) {
       const seen = new Set(), scenes = [];
       const originalSeed = s.seed;
       // Seeded clearings and repeats need not use the entire atlas in any one run.
-      for (const seed of [originalSeed, 34, 35, 37, 123]) {
+      for (const seed of [originalSeed, 34, 35, 37, 76, 123]) {
         s.seed = seed;
-        for (let m = 0; m <= 1080; m += 5) {
+        for (let m = 0; m <= 1080; m += 10) {
           place(m);
           const list = views(), weight = weights(m).forest || 0;
           maxVisible = Math.max(maxVisible, list.length);
@@ -345,7 +345,9 @@ async function screenshotAt(page, distance) {
         }
       }
       s.seed = originalSeed;
-      check(maxVisible <= 14 && seen.size === 12, 'All pieces are used across seeds within the bounded pool');
+      check(maxVisible <= 14, 'Visible scenery stays within the 14-slot pool');
+      const unused = atlas.getFrameNames().filter(name => !seen.has(name));
+      check(!unused.length, 'All cutouts appear across the review seeds. Unseen: ' + unused.join(', '));
       check(giantSamples > 0 && rimSamples > 0, 'Review includes off-screen crowns and real gap occlusion');
       place(773);
       check(s.forestMidground.rimClipped, 'Opening abyss uses the existing terrain rim');

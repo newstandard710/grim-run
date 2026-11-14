@@ -6,7 +6,7 @@
   const ROOT = 'assets/visuals/forest-midground/v1/forest-midground';
   const BANDS = [
     {
-      depth: -24, rate: .16, stride: 440, base: .77, color: 0x273945, tint: 0xd1dee8, salt: 0x519,
+      depth: -24, rate: .16, stride: 440, base: .77, color: 0x273945, tint: 0xd1dee8, coverCutoff: [.26, .25], salt: 0x519,
       opacity: [.60, .72], treeHeight: [.52, .70],
       // Normalized contact points identify the painted roots, including flared and leaning trunks.
       trees: [
@@ -16,7 +16,7 @@
       cover: [['far-low-canopy', .46, .89, .27], ['far-wooded-bank', .52, .85, .32]]
     },
     {
-      depth: -22, rate: .42, stride: 690, base: .87, color: 0x212a2d, salt: 0x776,
+      depth: -22, rate: .42, stride: 690, base: .87, color: 0x212a2d, coverCutoff: [.19, .19], salt: 0x776,
       opacity: [.82, .95], treeHeight: [.75, .95],
       trees: [
         ['near-curved-oak', .34, .89], ['near-split-trunk', .34, .92],
@@ -66,7 +66,7 @@
         this.banks.push(scene.add.graphics().setScrollFactor(0).setDepth(band.depth - .1).setVisible(false));
         for (let k = 0; k < POOL_PER_BAND; k++) {
           this.pools[i].push(scene.add.image(0, 0, ATLAS, band.trees[0][0])
-            .setScrollFactor(0).setDepth(band.depth).setVisible(false));
+            .setScrollFactor(0).setDepth(band.depth).setTint(band.tint ?? 0xffffff).setVisible(false));
         }
       }
       scene.events?.once?.('shutdown', () => this.destroy());
@@ -144,7 +144,8 @@
         // Give the Forest entrance one large oak before the seeded clearings.
         const entranceTree = band.giants && cell === 0;
         if (!entranceTree && kind < .08 + .21 * density) continue;
-        const isCover = !entranceTree && kind < .19 + .19 * density;
+        const [minimumCover, extraCover] = band.coverCutoff;
+        const isCover = !entranceTree && kind < minimumCover + extraCover * density;
         const pieces = isCover ? band.cover : band.trees;
         const selection = Math.floor(variation(seed, cell, salt + 1) * pieces.length);
         const previous = Math.floor(variation(seed, cell - 1, salt + 1) * pieces.length);
@@ -165,7 +166,7 @@
         const image = pool[used++];
         if (image.frame.name !== key) image.setFrame(key);
         image.setOrigin(rootX, rootY).setPosition(x, y).setScale(flip ? -scale : scale, scale)
-          .setTint(band.tint ?? 0xffffff).setAlpha(weight * mix(...band.opacity, variation(seed, cell, salt + 6))).setVisible(true);
+          .setAlpha(weight * mix(...band.opacity, variation(seed, cell, salt + 6))).setVisible(true);
         this.drawBank(bank, band, ground, worldX, x, scaleHeight, Math.min(frame.width * scale * .54, band.stride * .32));
       }
       for (; used < pool.length; used++) pool[used].setVisible(false);
