@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [movement, powers, world]
+        group: [movement, powers, world, forest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,14 +25,14 @@ jobs:
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
       - name: Check Forest parallax and capture the same run with and without scenery
-        if: ${{ !cancelled() && matrix.group == 'world' }}
+        if: ${{ success() && matrix.group == 'forest' }}
         run: |
           node tests/browser-forest-midground.js
           ffmpeg -hide_banner -loglevel error -framerate 15 -i test-results/forest-comparison-frames/%03d.png \
             -vf "pad=iw:ih+36:0:36:color=0x101922,drawtext=text='V0.19.8 VIEW':x=20:y=9:fontsize=18:fontcolor=white,drawtext=text='FOREST PILOT':x=w/2+20:y=9:fontsize=18:fontcolor=white" \
             -c:v libx264 -pix_fmt yuv420p -movflags +faststart test-results/forest-comparison.mp4
       - name: Save Forest pilot review
-        if: ${{ always() && matrix.group == 'world' }}
+        if: ${{ always() && matrix.group == 'forest' }}
         uses: actions/upload-artifact@v4
         with:
           name: forest-pilot-review
@@ -91,7 +91,7 @@ jobs:
         if: ${{ !cancelled() && matrix.group == 'world' }}
         run: node tests/browser-ground-fog-vendors.js
       - name: Save mobile-size render evidence
-        if: always()
+        if: ${{ always() && matrix.group != 'forest' }}
         uses: actions/upload-artifact@v4
         with:
           name: grim-run-mobile-renders-${{ matrix.group }}

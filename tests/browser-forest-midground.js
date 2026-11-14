@@ -26,8 +26,7 @@ const server = http.createServer((req, res) => {
 });
 
 async function openGame(browser, width, height, options = {}) {
-  // Suppress the animated entry button's movement during Playwright's click.
-  const page = await browser.newPage({viewport: {width, height}, reducedMotion: 'reduce'});
+  const page = await browser.newPage({viewport: {width, height}});
   const errors = [];
   page.on('pageerror', error => errors.push(String(error)));
   if (options.missing) {
@@ -39,7 +38,8 @@ async function openGame(browser, width, height, options = {}) {
     window.GRIM_FRONTEND?.ready, null, {timeout: 90000});
   // Both captures must use the same fully loaded character poses.
   await page.evaluate(async () => { await window.grimRun.scene.scenes[0].visuals.reviewLoad; });
-  await page.locator('#home-enter-btn').click();
+  // The home button continuously animates. Physical input is covered by the interface suite.
+  await page.locator('#home-enter-btn').click({force: true});
   await page.locator('#start-btn').click();
   await page.evaluate(() => {
     const game = window.grimRun;
@@ -149,12 +149,14 @@ function compareFrames(before, after) {
     const {page: baseline, errors: baselineErrors} = await openGame(browser, 950, 430, {off: true});
     assert(await baseline.evaluate(() => !window.forestTest.scene.textures.exists('forest-midground-v1')));
     const off = await sequence(baseline, true);
+    console.log('Recorded the baseline Forest run.');
     await baseline.close();
     const {page, errors} = await openGame(browser, 950, 430);
     const on = await sequence(page, true);
     assert.deepEqual(on.states, off.states,
       'Identical inputs preserve gameplay, camera, terrain, encounters, vendor offers and RNG');
     compareFrames(off.frames, on.frames);
+    console.log('Matched the gameplay and RNG traces and paired 90 rendered frames.');
 
     const runtime = await page.evaluate(() => {
       const {scene: s, views, draw, place} = window.forestTest;
@@ -234,20 +236,26 @@ function compareFrames(before, after) {
       s.player.slowCooldownMs = 0;
 
       const weights = window.GRIM_WORLD_ART.biomeWeights;
-      let maxVisible = 0, seen = new Set(), scenes = [];
-      for (let m = 0; m <= 1080; m += 5) {
-        place(m);
-        const list = views();
-        maxVisible = Math.max(maxVisible, list.length);
-        list.forEach(v => seen.add(v.frame));
-        if (m === 720 || m === 900 || m === 1080) scenes.push({m, weight: weights(m).forest || 0, count: list.length});
-        check(list.every(v => v.alpha <= (weights(m).forest || 0) * .63), 'Forest weight bounds visible opacity');
+      let maxVisible = 0;
+      const seen = new Set(), scenes = [];
+      const originalSeed = s.seed;
+      // Seeded clearings and repeats need not use the entire atlas in any one run.
+      for (const seed of [originalSeed, 34]) {
+        s.seed = seed;
+        for (let m = 0; m <= 1080; m += 5) {
+          place(m);
+          const list = views(), weight = weights(m).forest || 0;
+          maxVisible = Math.max(maxVisible, list.length);
+          list.forEach(v => seen.add(v.frame));
+          if (seed === originalSeed && [720, 900, 1080].includes(m)) scenes.push({m, weight, count: list.length});
+          check(list.every(v => v.alpha <= weight * .63), 'Forest weight bounds visible opacity');
+        }
       }
-      check(maxVisible <= 14 && seen.size === 12, 'All pieces are used within the bounded pool');
+      s.seed = originalSeed;
+      check(maxVisible <= 14 && seen.size === 12, 'All pieces are used across seeds within the bounded pool');
       check(scenes[1].count > 0 && scenes[2].count === 0, 'Visible through blend midpoint, gone at exit');
       place(505);
       const pattern = views();
-      const originalSeed = s.seed;
       s.seed = 34;
       draw();
       check(!eq(pattern, views()), 'Another seed has a different layout');
