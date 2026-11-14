@@ -70,7 +70,11 @@ async function openGame(browser, width, height, options = {}) {
         Object.assign(scene, {distance: meters, speed: window.GRIM_CORE.runSpeed(meters), cameraX: x - scene.width * .32,
           cameraY: y - scene.groundY});
         draw();
-        if (render) game.step(performance.now(), 0);
+        if (render) {
+          scene.ui.setMode('playing');
+          scene.refreshHud();
+          game.step(performance.now(), 0);
+        }
       },
       signature() {
         return JSON.stringify({
@@ -300,7 +304,7 @@ function compareFrames(before, after) {
       return {maxVisible, variants: seen.size, blends: scenes, renderer: s.game.renderer.type};
     });
 
-    for (const distance of [55, 665, 900, 1080]) {
+    for (const distance of [55, 600, 900, 1080]) {
       await page.evaluate(m => window.forestTest.place(m, true), distance);
       await page.screenshot({path: path.join(out, 'forest-pilot-950-' + distance + '.png')});
     }
