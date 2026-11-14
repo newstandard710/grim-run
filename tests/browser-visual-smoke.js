@@ -836,7 +836,7 @@ const server=http.createServer((req,res)=>{
       scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
       scene.drawScene();game.step(performance.now(),0);
       const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,scene.cameraX+scene.width+170);
-      const gapKey=[gap.start,gap.end,scene.height].join(':');
+      const gapKey=[gap.start,gap.end,gap.y0,gap.y1,scene.height].join(':');
       const shape=scene.abyssGeometryCache.get(gapKey);
       const prefix=[gap.start,gap.end].join(':')+':';
       const textureView=[...scene.abyssBackdropViews.entries()].find(([key,view])=>
@@ -868,13 +868,10 @@ const server=http.createServer((req,res)=>{
           return [image?.width,image?.height];
         })(),
         fogView:fogView?{key:fogView.sprite.texture.key,type:fogView.sprite.type,
-          depth:fogView.sprite.depth,alpha:fogView.sprite.alpha,tint:fogView.tint,
-          biome:fogView.biome,artTopInsetPx:fogView.artTopInsetPx,
-          textureOffsetRatioY:fogView.textureOffsetRatioY,
-          sameMaskGeometry:fogView.geometrySignature===textureView?.geometrySignature,
-          anchorCenterError:Math.abs(fogView.artAnchorX-textureView?.sprite.x),
-          anchorYError:Math.abs(fogView.artAnchorY-textureView?.sprite.y),
-          driftMagnitude:Math.hypot(fogView.driftX,fogView.driftY)}:null,
+          depth:fogView.sprite.depth,alpha:fogView.sprite.alpha,tint:fogView.sprite.tintTopLeft,
+          biome:fogView.biome,bounds:fogView.sprite.abyssFogBounds.points,
+          centerError:Math.abs(fogView.sprite.x-(gap.start+gap.end)/2),
+          headroom:fogView.sprite.y-(gap.y0+gap.y1)/2}:null,
         visibleViews,view:textureView?{key:textureView.sprite.texture.key,
           type:textureView.sprite.type,depth:textureView.sprite.depth,
           backgroundLeft:textureView.backgroundLeft,backgroundRight:textureView.backgroundRight,
@@ -901,23 +898,19 @@ const server=http.createServer((req,res)=>{
     assert.equal(location.fogTextureLoaded,true,'Shared transparent abyss fog texture loads');
     assert.deepEqual(location.fogTextureSize,[768,1152],'Fog texture is phone-scale and downsampled');
     assert.ok(location.fogView,target.name+' has a visible biome-tinted fog layer');
-    assert.equal(location.fogView.key,'abyss-fog');
+    assert.equal(location.fogView.key,'abyss-fog-feathered');
     assert.equal(location.fogView.type,'Image');
     assert.equal(location.fogView.biome,target.biomeId);
     assert.equal(location.fogView.tint,abyssFogTints[target.biomeId],
       target.name+' fog tint matches its biome');
-    assert.ok(location.fogView.alpha>0&&location.fogView.alpha<=.34,
+    assert.ok(location.fogView.alpha>0&&location.fogView.alpha<=.24,
       target.name+' fog remains translucent over the ravine painting');
-    assert.ok(Math.abs(location.fogView.textureOffsetRatioY+.40)<.001,
-      target.name+' mist band is visible near the top of the phone-sized opening');
-    assert.equal(location.fogView.artTopInsetPx,34,
-      target.name+' fog begins below the terrain lip');
-    assert.equal(location.fogView.sameMaskGeometry,true,
-      target.name+' fog follows the same sloped, jagged opening mask as the canyon');
-    assert.ok(location.fogView.anchorCenterError<.1&&location.fogView.anchorYError<.1,
-      target.name+' fog stays anchored to the canyon painting');
-    assert.ok(location.fogView.driftMagnitude<=4,
-      target.name+' fog drift remains subtle and clipped inside the ravine');
+    assert.equal(location.fogView.bounds[0].y-location.gap.y0,68,
+      target.name+' mist feather begins below the left rim');
+    assert.equal(location.fogView.bounds[1].y-location.gap.y1,68,
+      target.name+' mist feather follows the right rim');
+    assert.ok(location.fogView.centerError<=2.5&&location.fogView.headroom>=73&&location.fogView.headroom<=77,
+      target.name+' mist drifts subtly inside its separate depth envelope');
     assert.ok(location.view&&location.view.depth<location.fogView.depth&&
       location.fogView.depth<location.terrainDepth,
       target.name+' render order places fog over the canyon and beneath the ground');

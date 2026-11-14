@@ -272,6 +272,40 @@ async function abyssReview(browser){
   }
 }
 
+async function measureDraw(browser){
+  const results={};
+  for(const baseline of [true,false]){
+    const {page}=await setup(browser,{width:740,height:360},{baseline});
+    const samples=[];
+    try{
+      for(const distance of [766,1800,3500,5500,6500,7500,8500,19500]){
+        await page.evaluate(distance=>window.biomeReview.stageGap(distance),distance);
+        await page.waitForFunction(()=>{
+          const {scene:s}=window.biomeReview;
+          s.drawScene();
+          return !s.load.isLoading()&&!s.terrainMaterialLoading.size;
+        },null,{polling:100,timeout:20000});
+        samples.push(...await page.evaluate(()=>{
+          const {scene:s}=window.biomeReview,times=[];
+          for(let i=0;i<70;i++){
+            s.cameraX+=2;s.elapsed+=1/60;
+            s.cameras.main.setScroll(s.cameraX,s.cameraY);
+            const start=performance.now();
+            s.drawScene();
+            if(i>=10)times.push(performance.now()-start);
+          }
+          return times;
+        }));
+      }
+    }finally{await page.close();}
+    samples.sort((a,b)=>a-b);
+    results[baseline?'baseline':'new']={frames:samples.length,medianMs:samples[Math.floor(samples.length*.5)],
+      p95Ms:samples[Math.floor(samples.length*.95)]};
+  }
+  fs.writeFileSync(path.join(outputs,'comparison.json'),JSON.stringify(results,null,2));
+  console.log('Chromium CPU drawScene comparison',results);
+}
+
 async function main(){
   fs.mkdirSync(outputs,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -279,7 +313,8 @@ async function main(){
   const browser=await chromium.launch({headless:true,args:['--no-sandbox',
     canvas?'--disable-webgl':'--use-angle=swiftshader']});
   try{
-    if(process.env.GRIM_ABYSS_PIXELS==='1'){
+    if(process.env.GRIM_ABYSS_PERF==='1')await measureDraw(browser);
+    else if(process.env.GRIM_ABYSS_PIXELS==='1'){
       const session=await setup(browser,{width:740,height:360});
       try{
         const result=await isolatedFog(session.page);
