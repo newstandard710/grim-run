@@ -81,15 +81,37 @@ const server=http.createServer((req,res)=>{
      // inferring timing from manually sampled stills alone.
      const marks=[];
      for(const k of [1,8]){
-      await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=s._cutsceneRealUpdate;s.startRun();s.state='playing';s.triggerVendor(k);},k);
-      const start=Date.now();await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{timeout:16000});
-      marks.push({scene:k===1?'angel':'devil',ms:Date.now()-start});
-      assert(marks.at(-1).ms>=9800&&marks.at(-1).ms<14000);
+      await page.evaluate(k=>{
+       const s=window.grimRun.scene.scenes[0],finish=s.finishVendorIntro;
+       s.sys.sceneUpdate=s._cutsceneRealUpdate;s.startRun();s.state='playing';s.triggerVendor(k);
+       const start=s.cutsceneLastAt;
+       s.cutsceneTestDuration=null;
+       s.finishVendorIntro=function(){
+        this.cutsceneTestDuration=performance.now()-start;
+        this.finishVendorIntro=finish;
+        return finish.call(this);
+       };
+      },k);
+      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{timeout:16000});
+      const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
+      const scene=k===1?'angel':'devil';marks.push({scene,ms});
+      assert(ms>=9800&&ms<14000,`${scene} real-time intro: ${ms} ms`);
       await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.leaveVendor();s.state='paused';});
      }
-     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.hasTeleported=false;s.shrineClaimed=false;s.state='playing';s.startChest();});
-     const start=Date.now();await page.waitForFunction(()=>window.grimRun.scene.scenes[0].gunUnlocked&&window.grimRun.scene.scenes[0].state!=='chest',null,{timeout:10000});
-     marks.push({scene:'bow',ms:Date.now()-start});assert(marks.at(-1).ms>=3900&&marks.at(-1).ms<6500);
+     await page.evaluate(()=>{
+      const s=window.grimRun.scene.scenes[0],finish=s.finishChest;
+      s.hasTeleported=false;s.shrineClaimed=false;s.state='playing';s.startChest();
+      const start=s.cutsceneLastAt;
+      s.cutsceneTestDuration=null;
+      s.finishChest=function(){
+       this.cutsceneTestDuration=performance.now()-start;
+       this.finishChest=finish;
+       return finish.call(this);
+      };
+     });
+     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].gunUnlocked&&window.grimRun.scene.scenes[0].state!=='chest',null,{timeout:10000});
+     const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
+     marks.push({scene:'bow',ms});assert(ms>=3900&&ms<6500,`bow real-time intro: ${ms} ms`);
      await page.evaluate(()=>{window.grimRun.scene.scenes[0].state='paused';});
      fs.writeFileSync(path.join(dir,'cutscene-realtime.json'),JSON.stringify(marks,null,2));
     }
