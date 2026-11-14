@@ -1,0 +1,363 @@
+{
+  "frames": {
+    "far-smoke-ridge": {
+      "frame": {
+        "x": 8,
+        "y": 8,
+        "w": 304,
+        "h": 142
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 142
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        0,
+        0,
+        443,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        8,
+        204,
+        439,
+        405
+      ],
+      "band": "far",
+      "contact": [
+        0.49,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.49,
+            0.94
+          ]
+        ]
+      }
+    },
+    "far-basalt-shoulder": {
+      "frame": {
+        "x": 328,
+        "y": 8,
+        "w": 304,
+        "h": 278
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 278
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        443,
+        0,
+        887,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        8,
+        32,
+        437,
+        424
+      ],
+      "band": "far",
+      "contact": [
+        0.58,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.58,
+            0.93
+          ]
+        ]
+      }
+    },
+    "far-cinder-mound": {
+      "frame": {
+        "x": 648,
+        "y": 8,
+        "w": 304,
+        "h": 148
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 148
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        887,
+        0,
+        1330,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        6,
+        211,
+        436,
+        420
+      ],
+      "band": "far",
+      "contact": [
+        0.51,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.51,
+            0.94
+          ]
+        ]
+      }
+    },
+    "far-ash-terrace": {
+      "frame": {
+        "x": 968,
+        "y": 8,
+        "w": 304,
+        "h": 122
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 122
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        0,
+        443,
+        443,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        8,
+        221,
+        439,
+        394
+      ],
+      "band": "far",
+      "contact": [
+        0.51,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.51,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-scorched-shelf": {
+      "frame": {
+        "x": 8,
+        "y": 358,
+        "w": 304,
+        "h": 274
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 274
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        1330,
+        0,
+        1774,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        6,
+        40,
+        436,
+        428
+      ],
+      "band": "near",
+      "contact": [
+        0.59,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.59,
+            0.92
+          ]
+        ]
+      }
+    },
+    "near-toppled-slabs": {
+      "frame": {
+        "x": 328,
+        "y": 358,
+        "w": 304,
+        "h": 201
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 201
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        443,
+        443,
+        887,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        8,
+        105,
+        437,
+        389
+      ],
+      "band": "near",
+      "contact": [
+        0.63,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.63,
+            0.92
+          ]
+        ]
+      }
+    },
+    "near-cliff-foot": {
+      "frame": {
+        "x": 648,
+        "y": 358,
+        "w": 304,
+        "h": 258
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 258
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        887,
+        443,
+        1330,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        6,
+        37,
+        436,
+        402
+      ],
+      "band": "near",
+      "contact": [
+        0.59,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.59,
+            0.93
+          ]
+        ]
+      }
+    },
+    "near-basalt-bank": {
+      "frame": {
+        "x": 968,
+        "y": 358,
+        "w": 304,
+        "h": 172
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 172
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/ashlands.png",
+      "crop": [
+        1330,
+        443,
+        1774,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        4,
+        151,
+        438,
+        397
+      ],
+      "band": "near",
+      "contact": [
+        0.55,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.55,
+            0.94
+          ]
+        ]
+      }
+    }
+  },
+  "meta": {
+    "image": "ashlands.webp",
+    "size": {
+      "w": 1280,
+      "h": 700
+    },
+    "format": "RGBA8888",
+    "scale": "1",
+    "atlasBytes": 134930,
+    "atlasSha256": "e13d12be4f663cc09e9b391b939b51a1264b43d61687893339243a6ee65d23fe",
+    "padding": 8,
+    "sources": {
+      "source/ashlands.png": {
+        "sha256": "62c7465529b7ca0e463f1e5a98329ef0b0742e111875e622c4b929790ea924cd",
+        "size": [
+          1774,
+          887
+        ]
+      }
+    },
+    "primarySource": "source/ashlands.png",
+    "primarySourceSha256": "62c7465529b7ca0e463f1e5a98329ef0b0742e111875e622c4b929790ea924cd",
+    "reference": "assets/visuals/biomes/ashlands.webp",
+    "referenceSha256": "b9119ccb5aefb3a6a461b4225115e77efc539a64a70a1123d3a7e4af69ea863b",
+    "alphaCleanup": "connected-alpha",
+    "pillow": "13.0.0",
+    "webp": "1.6.0",
+    "quality": 83,
+    "numpy": "2.3.5",
+    "scipy": "1.17.0"
+  }
+}
