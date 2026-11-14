@@ -702,7 +702,7 @@
           const index=tween?from:Math.round(time)%frames.length;
           const meta=frames[index],sprite=this.boneCrawlerPool[used++];sprite.__grimEntity=e;
           const contacts=motion&&(tween?motion.CRAWL_MIDS[from]:motion.CRAWL_CLAWS[index]);
-          const ground=e.y+scope.GRIM_COMBAT.CRAWLER_HITBOX.footOffset;
+          const ground=e.y+(scope.GRIM_COMBAT?.CRAWLER_HITBOX.footOffset ?? 0);
           const pose=motion?.crawlerPose(s.terrain,e.x,ground,meta.width,meta.height,meta.scale,contacts);
           sprite.setTexture(tween?motion.KEY:meta.key,tween?from:undefined).setOrigin(.5,.5)
             .setScale(tween?meta.scale/(.2*.6):meta.scale)
@@ -730,8 +730,10 @@
             V2_EMBER_IMP_RUN[Math.round(time)%V2_EMBER_IMP_RUN.length];
           const sprite=this.emberImpPool[used++];sprite.__grimEntity=e;
           // Each run, warning and release drawing uses the same foot line.
-          sprite.setTexture(tween?motion.KEY:meta.key,tween?from+4:frame)
-            .setOrigin(meta.origin[0],tween?(245+32)/320:meta.origin[1]).setScale(tween?meta.scale/.6:meta.scale)
+          if(tween)sprite.setTexture(motion.KEY,from+4);
+          else if(sprite.texture&&sprite.texture.key!==meta.key)sprite.setTexture(meta.key,frame);
+          else sprite.setFrame(frame);
+          sprite.setOrigin(meta.origin[0],tween?(245+32)/320:meta.origin[1]).setScale(tween?meta.scale/.6:meta.scale)
             .setPosition(e.x,e.y+22).setVisible(true).setAlpha(1).setRotation(0);
         }
       }
