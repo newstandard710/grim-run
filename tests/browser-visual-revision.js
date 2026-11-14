@@ -76,14 +76,30 @@ const server=http.createServer((req,res)=>{
     return {x:480,y:s.groundY,half:(gap.end-gap.start)/2,open:s.terrain.groundAt(x)===null,height:s.groundFogSurfaceAt(x)};
    },{from,to});
    assert(geo&&geo.open);assert.equal(geo.height,null);
-   await page.waitForTimeout(150);
-   await page.evaluate(()=>window.grimRun.scene.scenes[0].drawScene());
-   const withFog=PNG.sync.read(await page.locator('#game canvas').screenshot({path:path.join(dir,'revision-fog-gap-'+biome+'.png')}));
-   await page.evaluate(()=>{
-    const s=window.grimRun.scene.scenes[0];s._fog=s.drawGroundFog;s.drawGroundFog=function(){for(const v of this.groundFogViews.values())v.setVisible(false)};s.drawScene();
+   await page.waitForFunction(()=>{
+    const s=window.grimRun.scene.scenes[0];
+    return !s.load.isLoading()&&!s.terrainMaterialLoading.size;
+   },null,{polling:100});
+   const captured=await page.evaluate(()=>{
+    const game=window.grimRun,s=game.scene.scenes[0];
+    const realUpdate=s.sys.sceneUpdate;
+    s.sys.sceneUpdate=()=>{};
+    try{
+     s.drawScene();
+     const at=performance.now();
+     game.step(at,0);
+     const withFog=game.canvas.toDataURL();
+     for(const v of s.groundFogViews.values())v.setVisible(false);
+     game.step(at,0);
+     return {withFog,without:game.canvas.toDataURL()};
+    }finally{
+     s.sys.sceneUpdate=realUpdate;
+     for(const v of s.groundFogViews.values())v.setVisible(true);
+    }
    });
-   const without=PNG.sync.read(await page.locator('#game canvas').screenshot());
-   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.drawGroundFog=s._fog;s.drawScene();});
+   const decode=key=>Buffer.from(captured[key].split(',')[1],'base64');
+   fs.writeFileSync(path.join(dir,'revision-fog-gap-'+biome+'.png'),decode('withFog'));
+   const withFog=PNG.sync.read(decode('withFog')),without=PNG.sync.read(decode('without'));
    let gapPixels=0,bankPixels=0;
    for(let y=Math.round(geo.y)-60;y<Math.round(geo.y)+2;y++){
     for(let x=geo.x-Math.floor(geo.half)-70;x<geo.x+Math.floor(geo.half)+70;x++){
