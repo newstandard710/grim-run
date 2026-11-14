@@ -34,3 +34,9 @@ The 740×360 WebGL capture peaked at 3 resident atlases, 14,868,480 decoded RGBA
 - [Desktop and rotation stills](https://chatgpt.com/library?file_id=libfile_fde3_f-a567a515994c8191ba8a3d3c2a506a5e_341adfe3367c819190414eee62b400ed&account_id=personal)
 
 All 22 local Node suites and 2 original SVG checks passed. Draft [PR #80](https://github.com/newstandard710/grim-run/pull/80) is open. At this checkpoint the full GitHub Chromium matrix on the current harness is pending. Once it and all required checks pass, finish any remaining motion inspection, then merge and verify Pages. Compare public `index.html`, renderer JS, seven JSONs and seven WebPs byte-for-byte to the merge commit, then smoke public Forest, every new area, the portal and Boss. Report exact live commit and cache-busted playable URL.
+
+### Release gate
+
+The final WebGL pass completed all 408 frames, including verified 360×740 portrait and 740×360 recovery. The largest per-sequence CPU update p95 was 12.5 ms at 740×360 and 23.4 ms across all sizes during capture. See the [final motion reel](https://chatgpt.com/library?file_id=libfile_fde3_f-91521ff14a38819195378c32daad9e05_341adfe3367c819190414eee62b400ed&account_id=personal) and [recorded metrics](https://chatgpt.com/library?file_id=libfile_fde3_f-f116a689f5f0819181398b4bf202195d_341adfe3367c819190414eee62b400ed&account_id=personal).
+
+Regression, interface, and the Biomes, Forest, World and Powers Chromium groups passed on the validated renderer. The Movement group's merchant-cutscene timing assertion also failed locally at the unmodified Forest baseline. The headless video/still harness can stall the engine heartbeat. The test now measures the same duration thresholds in a fresh Chromium page with the regular game loop and without video recording. No runtime files changed during this diagnosis. The fresh test requires a passing run before PR #80 can be merged and Pages verified. Follow the exact head on the PR Checks tab.

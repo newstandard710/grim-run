@@ -5,11 +5,7 @@ const root=path.resolve(__dirname,'..'),dir=path.join(root,'test-results');fs.mk
 const server=http.createServer((req,res)=>{
  try{const f=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname.replace(/^\/+/,''))||'index.html');
   if(!f.startsWith(root+path.sep))return res.writeHead(403).end();
-  res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[path.extname(f)]||'application/octet-stream'});
-  // Headless video capture can stop Chromium's compositor-driven rAF after
-  // the manual still pass. Use Phaser's timer timestep for this test page.
-  res.end(f===path.join(root,'index.html')?fs.readFileSync(f,'utf8').replace(
-   'type: Phaser.AUTO,','type: Phaser.AUTO, fps: { forceSetTimeOut: true },'):fs.readFileSync(f));
+  res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[path.extname(f)]||'application/octet-stream'});res.end(fs.readFileSync(f));
  }catch(e){res.writeHead(404).end(String(e));}
 });
 (async()=>{
@@ -80,61 +76,45 @@ const server=http.createServer((req,res)=>{
      if(s.state!=='chest'||s.chestMs!==4)throw Error('Hold ended early');s.update(0,4);
      if(s.state!=='playing'||!s.gunUnlocked||!s.shrineClaimed)throw Error('Hold did not end with exactly one reward');
      s.finishChest();s.drawScene();if(s.powerArt.cinemaReaper.visible||s.powerArt.cinemaHands.visible||s.powerArt.cinemaChestFront.visible)throw Error('Cinematic sprites leaked');});
-    if(width===950){
-     // Real engine clock: review complete normal-speed playback, rather than
-     // inferring timing from manually sampled stills alone.
-     const marks=[];
-     await page.bringToFront();
-     for(const k of [1,8]){
-      await page.evaluate(k=>{
-       const game=window.grimRun,s=game.scene.scenes[0],finish=s.finishVendorIntro;
-       s.sys.sceneUpdate=s._cutsceneRealUpdate;s.startRun();s.state='playing';s.triggerVendor(k);
-       const start=s.cutsceneLastAt;
-       s.cutsceneTestDuration=null;
-       s.finishVendorIntro=function(){
-        this.cutsceneTestDuration=performance.now()-start;
-        this.finishVendorIntro=finish;
-        return finish.call(this);
-       };
-       game.loop.sleep();game.loop.wake();
-      },k);
-      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration!==null,null,{polling:150,timeout:30000}).catch(async error=>{
-       const state=await page.evaluate(()=>{
-        const {loop,scene:{scenes:[s]}}=window.grimRun;
-        return {state:s.state,remaining:s.vendorIntroMs,clock:s.cutsceneLastAt,
-         now:performance.now(),age:Date.now()-s.lastUpdateHeartbeatAt,
-         loop:loop.running,hidden:document.hidden,lastVendor:s.lastVendorNumber,duration:s.cutsceneTestDuration};
-       });
-       throw Error('Merchant playback did not finish: '+JSON.stringify(state),{cause:error});
-      });
-      const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
-      const scene=k===1?'angel':'devil';marks.push({scene,ms});
-      assert(ms>=9800&&ms<14000,`${scene} real-time intro: ${ms} ms`);
-      await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.leaveVendor();s.state='paused';});
-     }
-     await page.evaluate(()=>{
-      const game=window.grimRun,s=game.scene.scenes[0],finish=s.finishChest;
-      s.hasTeleported=false;s.shrineClaimed=false;s.state='playing';s.startChest();
-      const start=s.cutsceneLastAt;
-      s.cutsceneTestDuration=null;
-      s.finishChest=function(){
-       this.cutsceneTestDuration=performance.now()-start;
-       this.finishChest=finish;
-       return finish.call(this);
-      };
-      game.loop.sleep();game.loop.wake();
-     });
-     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration!==null,null,{polling:150,timeout:20000});
-     const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
-     marks.push({scene:'bow',ms});assert(ms>=3900&&ms<6500,`bow real-time intro: ${ms} ms`);
-     await page.evaluate(()=>{window.grimRun.scene.scenes[0].state='paused';});
-     fs.writeFileSync(path.join(dir,'cutscene-realtime.json'),JSON.stringify(marks,null,2));
-    }
     assert.deepEqual(errors,[]);
    }finally{
     const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,`cutscene-motion-${width}.webm`));
    }
   }
+  // Measure real engine playback in a fresh page. Recording and paused manual
+  // stepping above can stall Chromium's compositor and skew wall-clock timing.
+  const page=await browser.newPage({viewport:{width:950,height:430}});
+  try{
+   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
+   await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready&&window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
+   await page.locator('#home-enter-btn').click({force:true});
+   await page.locator('#start-btn').click({force:true});
+   const marks=[];
+   for(const scene of ['angel','devil','bow']){
+    await page.evaluate(scene=>{
+     const s=window.grimRun.scene.scenes[0];
+     s.startRun();s.state='playing';
+     const bow=scene==='bow';
+     const finishName=bow?'finishChest':'finishVendorIntro';
+     const finish=s[finishName];
+     if(bow)s.startChest();else s.triggerVendor(scene==='angel'?1:8);
+     const started=s.cutsceneLastAt;
+     s.cutsceneTestDuration=null;
+     s[finishName]=function(){
+      this.cutsceneTestDuration=performance.now()-started;
+      this[finishName]=finish;
+      return finish.call(this);
+     };
+    },scene);
+    await page.waitForFunction(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration!==null,
+     null,{polling:150,timeout:30000});
+    const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
+    marks.push({scene,ms});
+    assert(ms>=(scene==='bow'?3900:9800)&&ms<(scene==='bow'?6500:14000),
+     `${scene} real-time cutscene: ${ms} ms`);
+   }
+   fs.writeFileSync(path.join(dir,'cutscene-realtime.json'),JSON.stringify(marks,null,2));
+  }finally{await page.close();}
   console.log('PASS actual Chromium: both articulated vendor cinemas, dense planted Reaper/scythe motion, reach/grip/lift and exact one-second glowing hold at two phone sizes; frozen gameplay, automatic reward and cleanup.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
