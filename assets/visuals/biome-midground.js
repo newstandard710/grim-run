@@ -89,6 +89,23 @@
     if (!artwork.ok) throw new Error('Scenery texture unavailable');
     const blob = await artwork.blob();
     signal.throwIfAborted();
+    // Decode without a document/image load event so throttled or sleeping
+    // game loops can still complete prefetch. Phaser consumes this as a canvas
+    // atlas source in both renderers.
+    if (scope.createImageBitmap && scope.document) {
+      const bitmap = await scope.createImageBitmap(blob);
+      try {
+        signal.throwIfAborted();
+        if (bitmap.width !== w || bitmap.height !== h) throw new Error('Scenery texture dimensions disagree');
+        const image = scope.document.createElement('canvas');
+        image.width = w;
+        image.height = h;
+        image.getContext('2d').drawImage(bitmap, 0, 0);
+        return {data, bands, image};
+      } finally {
+        bitmap.close();
+      }
+    }
     const url = scope.URL.createObjectURL(blob);
     const image = new scope.Image();
     try {

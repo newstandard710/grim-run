@@ -143,7 +143,9 @@ async function capture(page, name, distance, frames, ids, mode = 'run') {
       }
       const costs = (performance.now() - before) / 4;
       const art = b.art();
-      return {image: b.frame(), costs, art, distance: b.scene.distance};
+      const image = b.frame();
+      return {image, costs, art, distance: b.scene.distance,
+        viewport: [b.game.canvas.width, b.game.canvas.height]};
     }, {i, mode});
     samples.push(shot.costs);
     writeFrame(path.join(dir, String(i).padStart(3, '0') + '.png'), shot.image);
@@ -153,6 +155,8 @@ async function capture(page, name, distance, frames, ids, mode = 'run') {
     masked += shot.art.views.filter(view => view[4]).length;
     slots = Math.max(slots, shot.art.slots);
     resident = Math.max(resident, shot.art.resident.length);
+    if (name === 'rotation-portrait') assert.deepEqual(shot.viewport, [360, 740]);
+    if (name === 'rotation-landscape') assert.deepEqual(shot.viewport, [740, 360]);
     rgbaBytes = Math.max(rgbaBytes, shot.art.rgbaBytes);
   }
   assert.notEqual(first, last, name + ' should move');
