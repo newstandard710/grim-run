@@ -1591,12 +1591,14 @@ window.GRIM_CONFIG = Object.freeze({
     crystals:'abyss-depth-crystals',ashlands:'abyss-depth-ashlands',
     lava:'abyss-depth-lava',boss:'abyss-depth-boss'
   });
-  const ABYSS_BACKDROP_BLEED_MIN=36;
+  const ABYSS_BACKDROP_BLEED_MIN=48;
   const ABYSS_BACKDROP_BLEED_RATIO=.18;
   const ABYSS_OPENING_LIP_MAX=13;
   const ABYSS_ART_TOP_INSET_PX=34;
   const ABYSS_ART_TOP_JITTER_PX=14;
-  const ABYSS_FOG_LAYER_ALPHA=.34;
+  const ABYSS_FOG_LAYER_ALPHA=.24;
+  const ABYSS_FOG_INSET=68;
+  const GROUND_FOG_TAPER=44;
   const ABYSS_FOG_TINTS=Object.freeze({
     forest:0xa6c0b5,foothills:0xaab8c2,tundra:0xd1e0ed,caves:0x8596c4,
     crystals:0x78bdca,ashlands:0x9f879f,lava:0xc78b74,boss:0xa58ca7
@@ -1689,9 +1691,11 @@ window.GRIM_CONFIG = Object.freeze({
       // Solid terrain covers the abyss backplates at the exact run-surface
       // silhouette, so background pixels can never leave a seam at a gap lip.
       this.terrainBase=this.add.graphics().setDepth(.62);
+      this.abyssWallArt=this.add.graphics().setDepth(1.08);
       this.abyssBackdropViews=new Map();
       this.abyssFogViews=new Map();
       this.abyssGeometryCache=new Map();
+      this.abyssWallCache=new Map();
       this.terrainTextureViews=new Map();
       this.terrainSurfaceViews=new Map();
       this.terrainMaterialIds=new Set();
@@ -1702,6 +1706,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.events?.once?.('shutdown',()=>{
         this.destroyAbyssBackdropViews();
         this.destroyAbyssFogViews();
+        this.abyssGeometryCache.clear();
+        this.abyssWallCache.clear();
+        this.textures.remove?.('abyss-fog-feathered');
         this.destroyTerrainTextureViews();
         this.destroyTerrainSurfaceViews();
       });
@@ -1722,6 +1729,7 @@ window.GRIM_CONFIG = Object.freeze({
         for(const sprite of this.groundFogViews.values())sprite.destroy();
         this.groundFogViews.clear();
         this.groundFogMaskGraphics?.destroy?.();
+        this.groundFogCanvas=null;
       });
       this.state = 'home';
       this.countdownMs = 0;
@@ -3861,11 +3869,40 @@ window.GRIM_CONFIG = Object.freeze({
       return {tint,opacity:opacity/total};
     }
     groundFogSurfaceAt(x){
-      const ground=this.terrain.groundAt(x);
-      if(Number.isFinite(ground))return ground;
-      const gap=this.terrain.visibleSections(x,x).find(s=>s.kind==='gap'&&x>=s.start&&x<=s.end);
-      if(!gap||!Number.isFinite(gap.y0)||!Number.isFinite(gap.y1))return null;
-      return gap.y0+(gap.y1-gap.y0)*clamp((x-gap.start)/(gap.end-gap.start),0,1);
+      return this.terrain.groundAt(x);
+    }
+    groundFogOpacityAt(x,gaps){
+      let opacity=1;
+      for(const {start,end,leftFade,rightFade} of gaps){
+        if(x>=start&&x<=end)return 0;
+        const distance=x<start?start-x:x-end;
+        const fade=x<start?leftFade:rightFade;
+        if(distance<fade){
+          const t=distance/fade;
+          opacity=Math.min(opacity,t*t*(3-2*t));
+        }
+      }
+      return opacity;
+    }
+    groundFogColumns(left,width,gaps){
+      const samples=Array.from({length:GROUND_FOG_COLUMNS+1},(_,i)=>i/GROUND_FOG_COLUMNS);
+      const boundaries=gaps.flatMap(g=>[g.start-g.leftFade,g.start-g.leftFade*.5,g.start,
+        g.end,g.end+g.rightFade*.5,g.end+g.rightFade]);
+      // Place explicit vertices at feather and collision boundaries. Retain
+      // the fixed mesh size by replacing the nearest unused interior columns.
+      const locked=new Set([0,GROUND_FOG_COLUMNS]);
+      for(const x of boundaries){
+        const u=(x-left)/width;
+        if(u<=0||u>=1)continue;
+        let nearest=-1,distance=Infinity;
+        for(let i=1;i<GROUND_FOG_COLUMNS;i++){
+          const difference=Math.abs(samples[i]-u);
+          if(!locked.has(i)&&difference<distance){nearest=i;distance=difference;}
+        }
+        if(nearest<0)break;
+        samples[nearest]=u;locked.add(nearest);
+      }
+      return samples.sort((a,b)=>a-b);
     }
     groundFogView(id,key,layer){
       let view=this.groundFogViews.get(id);
@@ -3887,8 +3924,13 @@ window.GRIM_CONFIG = Object.freeze({
         // logical column/edge separately so UV flips cannot move geometry.
         view.fogPoints=view.vertices.map(v=>({u:v.u,column:Math.round(v.u*GROUND_FOG_COLUMNS),bottom:v.v===1}));
         view.fogSamples=new Float64Array(GROUND_FOG_COLUMNS+1);
-      }else view=this.add.image(0,0,key).setOrigin(.5,1);
-      view.setDepth(layer.depth).setMask(this.groundFogMask);
+      }else{
+        view=this.add.image(0,0,key).setOrigin(.5,1);
+        if(view.renderCanvas)
+          view.renderCanvas=(renderer,sprite,camera)=>this.renderGroundFogCanvas(renderer,sprite,camera);
+      }
+      view.setDepth(layer.depth);
+      if(view.fogPoints||!view.renderCanvas)view.setMask(this.groundFogMask);
       this.groundFogViews.set(id,view);
       return view;
     }
@@ -3896,14 +3938,71 @@ window.GRIM_CONFIG = Object.freeze({
       // Two equal layers: 1-(1-alpha)^2 = original single-layer opacity.
       return 1-Math.sqrt(1-clamp(original,0,1));
     }
-    placeGroundFog(view,key,x,width,flip,shade,alpha){
+    renderGroundFogCanvas(renderer,sprite,camera){
+      const target=renderer.currentContext;
+      const canvas=this.groundFogCanvas??=scope.document.createElement('canvas');
+      if(canvas.width!==target.canvas.width||canvas.height!==target.canvas.height){
+        canvas.width=target.canvas.width;canvas.height=target.canvas.height;
+      }
+      const ctx=canvas.getContext('2d');
+      if(!ctx)return;
+      const x=sprite.x-camera.scrollX,y=sprite.y-camera.scrollY;
+      const left=Math.max(0,Math.floor(x-sprite.fogWidth*.65));
+      const right=Math.min(canvas.width,Math.ceil(x+sprite.fogWidth*.65));
+      const top=Math.max(0,Math.floor(y-sprite.fogHeight-sprite.fogWidth*.35));
+      const bottom=Math.min(canvas.height,Math.ceil(y+sprite.fogWidth*.35));
+      if(right<=left||bottom<=top)return;
+      const width=right-left,height=bottom-top;
+      const source=sprite.texture.getSourceImage();
+      ctx.clearRect(left,top,width,height);
+      ctx.save();
+      // Trace the same solid spans as the scene mask onto the isolated
+      // canvas. Keeping the sprite and clip in a single context avoids
+      // relying on Phaser's internal Canvas renderer state.
+      ctx.beginPath();
+      for(const span of this.groundFogSolidSpans||[]){
+        span.forEach((p,i)=>{
+          if(i===0)ctx.moveTo(p.x-camera.scrollX,p.y-camera.scrollY);
+          else ctx.lineTo(p.x-camera.scrollX,p.y-camera.scrollY);
+        });
+        ctx.closePath();
+      }
+      ctx.clip();
+      ctx.translate(x,y);ctx.rotate(sprite.rotation);
+      if(sprite.flipX)ctx.scale(-1,1);
+      ctx.globalAlpha=sprite.alpha*camera.alpha;
+      ctx.drawImage(source,-sprite.fogWidth*.5,-sprite.fogHeight,sprite.fogWidth,sprite.fogHeight);
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation='destination-in';
+      for(const {start,end,leftFade,rightFade} of sprite.fogGaps||[]){
+        const a=start-camera.scrollX,b=end-camera.scrollX;
+        const span=b-a+leftFade+rightFade;
+        const gradient=ctx.createLinearGradient(a-leftFade,0,b+rightFade,0);
+        gradient.addColorStop(0,'#fff');
+        for(const t of [.25,.5,.75,1])
+          gradient.addColorStop(t*leftFade/span,'rgba(255,255,255,'+(1-t*t*(3-2*t))+')');
+        for(const t of [0,.25,.5,.75,1])
+          gradient.addColorStop((leftFade+b-a+t*rightFade)/span,'rgba(255,255,255,'+(t*t*(3-2*t))+')');
+        ctx.fillStyle=gradient;ctx.fillRect(left,top,width,height);
+      }
+      ctx.restore();
+      target.save();target.setTransform(1,0,0,1,0,0);
+      target.globalAlpha=1;target.globalCompositeOperation='source-over';
+      target.drawImage(canvas,left,top,width,height,left,top,width,height);
+      target.restore();
+    }
+    placeGroundFog(view,key,x,width,flip,shade,alpha,ground,gaps=[]){
       if(view.texture?.key!==key)view.setTexture(key);
       const image=this.textures.get?.(key)?.getSourceImage?.();
       // Preserve each painting's own aspect ratio at export AND runtime.
       width*=GROUND_FOG_SCALE;
       const height=width*(image?image.height/image.width:.1);
-      const ground=this.groundFogSurfaceAt(x);
+      ground??=this.groundFogSurfaceAt(x);
       const inset=4;
+      const left=x-width*.5;
+      const localGaps=gaps.filter(g=>g.start-g.leftFade<x+width*.65&&g.end+g.rightFade>x-width*.65);
+      view.fogGaps=localGaps;
       view.fogWidth=width;view.fogHeight=height;
       if(view.fogPoints){
         // Texture.setFrame resets Mesh's size to the image dimensions.
@@ -3913,14 +4012,19 @@ window.GRIM_CONFIG = Object.freeze({
           view.setSize(this.width,this.height);view.setOrtho(this.width,this.height);
         }
         view.setPosition(x,ground);
-        for(let column=0;column<=GROUND_FOG_COLUMNS;column++)
-          view.fogSamples[column]=this.groundFogSurfaceAt(x+(column/GROUND_FOG_COLUMNS-.5)*width)??ground;
+        const columns=localGaps.length?this.groundFogColumns(left,width,localGaps):null;
+        for(let column=0;column<=GROUND_FOG_COLUMNS;column++){
+          const x=left+(columns?.[column]??column/GROUND_FOG_COLUMNS)*width;
+          view.fogSamples[column]=this.groundFogSurfaceAt(x)??ground;
+        }
         for(let i=0;i<view.vertices.length;i++){
           const point=view.fogPoints[i],v=view.vertices[i];
-          const dx=(point.u-.5)*width;
+          const u=columns?.[point.column]??point.u;
+          const dx=(u-.5)*width;
           const surface=view.fogSamples[point.column];
           v.x=dx;v.y=ground-surface-inset+(point.bottom?0:height);
-          v.setUVs(flip?1-point.u:point.u,point.bottom?1:0);
+          v.alpha=this.groundFogOpacityAt(x+dx,localGaps);
+          v.setUVs(flip?1-u:u,point.bottom?1:0);
         }
         view.dirtyCache[9]=-1;
         // drawScene can run while simulation is frozen (pause/teleport).
@@ -3943,17 +4047,24 @@ window.GRIM_CONFIG = Object.freeze({
       }
       const left=this.cameraX-400,right=this.cameraX+this.width+400;
       mask.clear();mask.fillStyle(0xffffff,1);
-      // Fog follows a virtual surface across gaps. Only this atmosphere layer
-      // interpolates the lips; groundAt and all abyss/collision rules stay open.
+      const solidSpans=this.groundFogSolidSpans=[];
+      // Include enough terrain beyond the mask to feather every drifting bank.
       const fogSections=this.terrain.visibleSections(left,right);
+      const gaps=(this.terrain.segments||fogSections)
+        .filter(s=>s.end>=left-540&&s.start<=right+540).filter(s=>s.kind==='gap').map(({start,end})=>({start,end,
+        leftFade:GROUND_FOG_TAPER,rightFade:GROUND_FOG_TAPER}));
+      for(let i=1;i<gaps.length;i++){
+        const bank=Math.max(1,(gaps[i].start-gaps[i-1].end)*.5);
+        gaps[i].leftFade=gaps[i-1].rightFade=Math.min(GROUND_FOG_TAPER,bank);
+      }
       for(const section of fogSections){
+        if(section.kind==='gap')continue;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
         const y0=Number.isFinite(section.y0)?section.y0:section.y;
         const y1=Number.isFinite(section.y1)?section.y1:y0;
         if(!Number.isFinite(y0)||!Number.isFinite(y1))continue;
-        const surface=x=>section.kind==='gap'
-          ?y0+(y1-y0)*(x-section.start)/(section.end-section.start):this.terrainSurfaceY(section,x);
+        const surface=x=>this.terrainSurfaceY(section,x);
         const samples=[from];
         for(let x=Math.ceil(from/24)*24;x<to;x+=24)if(x>from)samples.push(x);
         samples.push(to);
@@ -3961,6 +4072,7 @@ window.GRIM_CONFIG = Object.freeze({
         for(let i=samples.length-1;i>=0;i--)
           points.push({x:samples[i],y:surface(samples[i])+54});
         mask.fillPoints(points,true);
+        solidSpans.push(points);
       }
       const active=new Set();
       const first=Math.floor(left/GROUND_FOG_STRIDE)-1;
@@ -3982,13 +4094,14 @@ window.GRIM_CONFIG = Object.freeze({
           const sprite=this.groundFogView(id,key,layer);
           const drift=Math.sin(this.elapsed*layer.rate+index*1.83+layer.salt)*6;
           this.placeGroundFog(sprite,key,x+drift,width,
-            Boolean(this.groundFogHash(index,251+layer.salt)&1),shade,alpha);
+            Boolean(this.groundFogHash(index,251+layer.salt)&1),shade,alpha,
+            this.groundFogSurfaceAt(x+drift)??ground,gaps);
           active.add(id);
           placedCenters.push(x);
         }
-        // Short ledges and gaps can fall between the world-spaced banks.
-        // Give either kind of section a localized wisp if it has none.
+        // Short solid ledges can fall between the world-spaced banks.
         for(const section of fogSections){
+          if(section.kind==='gap'||section.end<=left||section.start>=right)continue;
           // Use complete world-space sections. Viewport-clipped midpoints made
           // localized wisps slide with the camera at the edge of short ledges.
           const from=section.start,to=section.end;
@@ -4003,7 +4116,7 @@ window.GRIM_CONFIG = Object.freeze({
           const sprite=this.groundFogView(id,key,layer);
           this.placeGroundFog(sprite,key,x+Math.sin(this.elapsed*layer.rate+seed*.017+layer.salt)*3,
             Math.min(430,Math.max(200,to-from+50)),Boolean(this.groundFogHash(seed,503+layer.salt)&1),
-            shade,this.groundFogLayerAlpha(shade.opacity*.70));
+            shade,this.groundFogLayerAlpha(shade.opacity*.70),ground,gaps);
           active.add(id);
         }
       }
@@ -4313,11 +4426,11 @@ window.GRIM_CONFIG = Object.freeze({
         this.removeTerrainSurfaceView(key,view);
       this.terrainSurfaceViews.clear();
     }
-    tundraTerrainTextureView(section,key,textureKey,depth){
+    tundraTerrainTextureView(section,key,textureKey,depth,points,left,right){
       let view=this.terrainTextureViews.get(key);
       if(view)return view;
       if(!this.textures?.createCanvas||!this.add?.image)return null;
-      const x0=section.start,x1=section.end,width=Math.max(1,Math.ceil(x1-x0));
+      const x0=left,x1=right,width=Math.max(1,Math.ceil(x1-x0));
       const y0=Number.isFinite(section.y0)?section.y0:this.terrain.groundAt(x0);
       const y1=Number.isFinite(section.y1)?section.y1:this.terrain.groundAt(x1-.001);
       if(y0===null||y1===null)return null;
@@ -4334,10 +4447,8 @@ window.GRIM_CONFIG = Object.freeze({
       context.clearRect(0,0,width,height);
       context.save();
       context.beginPath();
-      context.moveTo(0,y0-top);
-      for(const point of this.terrainContour(section,x0,x1))context.lineTo(point.x-x0,point.y-top);
-      context.lineTo(x1-x0,bottom-top);
-      context.lineTo(0,bottom-top);
+      context.moveTo(points[0].x-x0,points[0].y-top);
+      for(const point of points)context.lineTo(point.x-x0,point.y-top);
       context.closePath();
       context.clip();
       const scale=TUNDRA_TERRAIN_TILE_SCALE,tileWidth=source.width*scale,tileHeight=source.height*scale;
@@ -4362,7 +4473,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrainTextureViews.set(key,view);
       return view;
     }
-    drawTerrainTexture(section,from,to,h0,h1,underside,depth,meters,activeKeys){
+    drawTerrainTexture(section,from,to,h0,h1,underside,depth,meters,activeKeys,walls){
       if(!this.terrainBase||!this.add?.tileSprite||!this.make?.graphics)return;
       const sectionFrom=section.start,sectionTo=section.end;
       const sectionY0=Number.isFinite(section.y0)?section.y0:h0;
@@ -4372,7 +4483,8 @@ window.GRIM_CONFIG = Object.freeze({
         ?underside:Math.max(sectionY0,sectionY1,h0,h1)+this.height+1500;
       const sectionBottom=Math.max(sectionTop+1,renderBottom);
       const geometrySignature=[section.kind,sectionFrom,sectionTo,sectionY0,sectionY1,
-        ...(this.terrain.surfaceSlopes?.(section)||[]),sectionBottom].join(':');
+        ...(this.terrain.surfaceSlopes?.(section)||[]),sectionBottom,
+        walls?.start?.signature,walls?.end?.signature].join(':');
       const weights=this.terrainBiomeWeights(meters);
       const active=Object.entries(weights).filter(([,weight])=>weight>.003)
         .sort((a,b)=>TERRAIN_BIOME_ORDER.indexOf(a[0])-TERRAIN_BIOME_ORDER.indexOf(b[0]));
@@ -4383,7 +4495,10 @@ window.GRIM_CONFIG = Object.freeze({
       if(active.some(([id])=>!this.terrainMaterialIds.has(id)))return;
       const sectionKey=[section.kind,section.start,section.end].join(':');
       const points=this.terrainBodyPoints(section,sectionFrom,sectionTo,
-        sectionY0,sectionY1,sectionBottom);
+        sectionY0,sectionY1,sectionBottom,walls);
+      const hasWalls=walls?.start||walls?.end;
+      const left=hasWalls?Math.min(sectionFrom,...points.map(p=>p.x)):sectionFrom;
+      const right=hasWalls?Math.max(sectionTo,...points.map(p=>p.x)):sectionTo;
       for(let i=0;i<active.length;i++){
         const [id,weight]=active[i],textureKey='terrain-material-'+id;
         const key=sectionKey+':'+id;
@@ -4393,7 +4508,10 @@ window.GRIM_CONFIG = Object.freeze({
           cachedView=null;
         }
         if(id==='tundra'){
-          const view=this.tundraTerrainTextureView(section,key,textureKey,sectionBottom);
+          const tundraPoints=walls?.start||walls?.end?points:[
+            ...this.terrainContour(section),{x:sectionTo,y:sectionBottom},{x:sectionFrom,y:sectionBottom}];
+          const view=this.tundraTerrainTextureView(section,key,textureKey,sectionBottom,tundraPoints,
+            walls?.start||walls?.end?left:sectionFrom,walls?.start||walls?.end?right:sectionTo);
           if(!view)continue;
           view.geometrySignature=geometrySignature;
           activeKeys.add(key);
@@ -4409,14 +4527,14 @@ window.GRIM_CONFIG = Object.freeze({
           maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);maskGraphics.fillPoints(points,true);
           view.geometrySignature=geometrySignature;
         }
-        const boundsSignature=[sectionFrom,sectionTop,sectionBottom].join(':');
+        const boundsSignature=[left,right,sectionTop,sectionBottom].join(':');
         if(view.boundsSignature!==boundsSignature){
-          sprite.setTexture(textureKey).setPosition(sectionFrom,sectionTop)
-            .setSize(Math.max(1,sectionTo-sectionFrom),sectionBottom-sectionTop);
+          sprite.setTexture(textureKey).setPosition(left,sectionTop)
+            .setSize(Math.max(1,right-left),sectionBottom-sectionTop);
           sprite.setTileScale(TERRAIN_TILE_SCALE,TERRAIN_TILE_SCALE);
           // The material phase is anchored to a fixed world origin, so the
           // section never slides beneath its surface as the camera moves.
-          sprite.setTilePosition(sectionFrom/TERRAIN_TILE_SCALE,sectionTop/TERRAIN_TILE_SCALE);
+          sprite.setTilePosition(left/TERRAIN_TILE_SCALE,sectionTop/TERRAIN_TILE_SCALE);
           view.boundsSignature=boundsSignature;
         }
         sprite.setAlpha(active.length===1||i===0?1:weight);
@@ -4453,7 +4571,17 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.terrain.surfacePoints)return this.terrain.surfacePoints(section,from,to);
       return [{x:from,y:this.terrainSurfaceY(section,from)},{x:to,y:this.terrainSurfaceY(section,to)}];
     }
-    terrainBodyPoints(section,from,to,y0,y1,bottom){
+    terrainBodyPoints(section,from,to,y0,y1,bottom,walls){
+      if(walls?.start||walls?.end){
+        const start=walls.start?this.abyssWallSlice(walls.start,y0,bottom):[{x:from,y:bottom}];
+        const end=walls.end?this.abyssWallSlice(walls.end,y1,bottom):[{x:to,y:bottom}];
+        if(section.kind==='platform'||section.kind==='soul-platform'){
+          const original=this.terrainBodyPoints(section,from,to,y0,y1,bottom);
+          if(!walls.start)start.splice(0,1,...original.slice(8).reverse());
+          if(!walls.end)end.splice(0,1,...original.slice(2,8));
+        }
+        return [...this.terrainContour(section,from,to),...end,...start.reverse()];
+      }
       if(section.kind!=='platform'&&section.kind!=='soul-platform')
         return [...this.terrainContour(section,from,to),{x:to,y:bottom},{x:from,y:bottom}];
       const seed=section.start*.017+section.end*.003;
@@ -4482,8 +4610,93 @@ window.GRIM_CONFIG = Object.freeze({
       ];
       return [left[0],right[0],...right.slice(1),...left.slice(1).reverse()];
     }
+    abyssWallProfile(gap,bank,side){
+      const start=side==='left'?gap.start:gap.end;
+      const y=side==='left'?gap.y0:gap.y1;
+      const direction=side==='left'?1:-1;
+      const width=gap.end-gap.start;
+      const bankWidth=bank.end-bank.start;
+      const bottom=Math.max(gap.y0,gap.y1)+this.height+1600;
+      const signature=[gap.start,gap.end,gap.y0,gap.y1,side,bankWidth,this.height].join(':');
+      const cache=this.abyssWallCache??=new Map();
+      if(cache.has(signature))return cache.get(signature);
+      const hash=i=>this.groundFogHash(Math.round(gap.start*16)^Math.round(gap.end*32),side==='left'?1109+i:1613+i)/0x100000000;
+      const spread=Math.min(40,width*.19),setback=Math.min(spread*.49,bankWidth*.18);
+      const span=bottom-y;
+      const points=[{x:start,y},{
+        x:start+direction*Math.min(7,spread*.34),y:y+8
+      }];
+      let depth=17,i=0;
+      // Wide broken faces alternate between fracture shoulders and deeper
+      // setbacks. A different hash stream makes the two banks asymmetric.
+      while(depth<span){
+        const scale=.5+.5*Math.min(1,depth/115);
+        const roll=hash(i*3+1);
+        const offset=roll<.34?-setback*(.48+hash(i*3+3)*.52):
+          spread*(.14+roll*.86);
+        points.push({x:start+direction*offset*scale,y:y+depth});
+        depth+=i%4===0?11+hash(i*3+2)*14:21+hash(i*3+2)*36;
+        i++;
+      }
+      points.push({x:points.at(-1).x,y:bottom});
+      const wall={points,start,y,direction,spread,bankWidth,signature};
+      if(cache.size>=64)cache.delete(cache.keys().next().value);
+      cache.set(signature,wall);
+      return wall;
+    }
+    abyssWallSlice(wall,top,bottom){
+      const points=[];
+      for(let i=1;i<wall.points.length;i++){
+        const p=wall.points[i],previous=wall.points[i-1];
+        if(p.y<=top)continue;
+        if(p.y>=bottom){
+          const t=(bottom-previous.y)/(p.y-previous.y);
+          points.push({x:previous.x+t*(p.x-previous.x),y:bottom});
+          return points;
+        }
+        points.push(p);
+      }
+      points.push({x:wall.points.at(-1).x,y:bottom});
+      return points;
+    }
+    drawAbyssWallDetails(section,wall,palette){
+      const g=this.abyssWallArt;
+      if(!g||!wall)return;
+      const [body,edge,sheen,detail]=palette;
+      const cameraTop=this.cameraY??0,limit=cameraTop+this.height+72;
+      const {points,direction,start,y,bankWidth,spread}=wall;
+      for(let i=1;i<points.length-1;i++){
+        const a=points[i-1],b=points[i],c=points[i+1];
+        if(b.y>limit||c.y<cameraTop-72)continue;
+        const depth=Math.max(0,b.y-y);
+        const inset=Math.min(bankWidth*.46,14+spread*.45+(i%4)*5);
+        const x=b.x-direction*inset;
+        // Facets remain inside the same wall outline as the texture. Broad
+        // shadows deepen the face without turning it into a single dark stripe.
+        const tone=i%3===0?edge:i%3===1?body:detail;
+        g.fillStyle(tone,Math.min(.54,.22+depth*.00076));
+        g.fillPoints([a,b,c,{x,y:b.y+Math.min(11,(c.y-b.y)*.4)}],true);
+      }
+      if(y<cameraTop-42||y>limit)return;
+      const reach=Math.min(30,bankWidth*.44,12+spread*.44);
+      const a=points[0],b=points[1];
+      let previous=a;
+      // Two to four shallow chips on the solid side follow its real slope.
+      // The edge chip uses the same first wall segment and has no flat ledge
+      // cantilevering across the actual takeoff point.
+      for(let i=1;i<=4;i++){
+        const x=start-direction*reach*i/4;
+        const top={x,y:this.terrainSurfaceY(section,x)};
+        const underside={x:x+direction*reach*.055,y:top.y+(i===4?4:7+(i%2)*4)};
+        g.fillStyle(i%2?edge:detail,.77);
+        g.fillPoints([previous,top,underside,i===1?b:{
+          x:previous.x,y:previous.y+8}],true);
+        g.lineStyle(1.6,sheen,.66).lineBetween(previous.x,previous.y+1,top.x,top.y+1);
+        previous=top;
+      }
+    }
     abyssGapPolygon(section){
-      const cacheKey=[section.start,section.end,this.height].join(':');
+      const cacheKey=[section.start,section.end,section.y0,section.y1,this.height].join(':');
       const cached=this.abyssGeometryCache?.get(cacheKey);
       if(cached)return cached;
       const y0=Number.isFinite(section.y0)?section.y0:this.terrain.anchorAt(section.start);
@@ -4522,6 +4735,8 @@ window.GRIM_CONFIG = Object.freeze({
       const points=[...left,...right.reverse()];
       const shape={points,left,right,top,bottom,width,
         signature:points.map(p=>p.x.toFixed(2)+','+p.y.toFixed(2)).join(';')};
+      if(this.abyssGeometryCache?.size>=64)
+        this.abyssGeometryCache.delete(this.abyssGeometryCache.keys().next().value);
       this.abyssGeometryCache?.set(cacheKey,shape);
       return shape;
     }
@@ -4631,75 +4846,87 @@ window.GRIM_CONFIG = Object.freeze({
       activeKeys.add(key);
       return view;
     }
-    abyssFogView(section,shape,biome,alpha,activeKeys){
-      const textureKey='abyss-fog';
-      if(alpha<=.003||!this.textures?.exists?.(textureKey)||!this.add?.image||
-        !this.make?.graphics||!this.abyssFogViews)return null;
+    abyssFogTexture(){
+      const key='abyss-fog-feathered';
+      if(this.textures?.exists?.(key))return key;
+      if(!this.textures?.exists?.('abyss-fog')||!this.textures.createCanvas)return null;
+      const source=this.textures.get('abyss-fog')?.getSourceImage?.();
+      if(!source)return null;
+      // One shared small derivative of the existing painted fog. Its alpha
+      // fades along all four sides in both WebGL and Canvas.
+      const width=384,height=512;
+      const texture=this.textures.createCanvas(key,width,height);
+      if(!texture)return null;
+      const ctx=texture.getContext();
+      ctx.drawImage(source,0,0,width,height);
+      ctx.globalCompositeOperation='destination-in';
+      const vertical=ctx.createLinearGradient(0,0,0,height);
+      for(const [at,alpha] of [[0,0],[.16,.12],[.36,.66],[.60,1],[.82,.38],[1,0]])
+        vertical.addColorStop(at,'rgba(255,255,255,'+alpha+')');
+      ctx.fillStyle=vertical;ctx.fillRect(0,0,width,height);
+      const horizontal=ctx.createLinearGradient(0,0,width,0);
+      for(const [at,alpha] of [[0,0],[.16,.78],[.27,1],[.73,1],[.84,.78],[1,0]])
+        horizontal.addColorStop(at,'rgba(255,255,255,'+alpha+')');
+      ctx.fillStyle=horizontal;ctx.fillRect(0,0,width,height);
+      ctx.globalCompositeOperation='source-over';
+      texture.refresh();
+      return key;
+    }
+    renderAbyssFogCanvas(renderer,sprite,camera){
+      const ctx=renderer.currentContext;
+      const {points}=sprite.abyssFogBounds;
+      ctx.save();ctx.setTransform(1,0,0,1,0,0);
+      ctx.beginPath();
+      points.forEach((p,i)=>{
+        if(i===0)ctx.moveTo(p.x-camera.scrollX,p.y-camera.scrollY);
+        else ctx.lineTo(p.x-camera.scrollX,p.y-camera.scrollY);
+      });
+      ctx.closePath();ctx.clip();
+      ctx.translate(sprite.x-camera.scrollX,sprite.y-camera.scrollY);
+      ctx.rotate(sprite.rotation);
+      ctx.globalCompositeOperation='source-over';
+      ctx.globalAlpha=sprite.alpha*camera.alpha;
+      ctx.drawImage(sprite.texture.getSourceImage(),-sprite.displayWidth*.5,0,
+        sprite.displayWidth,sprite.displayHeight);
+      ctx.restore();
+    }
+    abyssFogView(section,biome,alpha,activeKeys){
+      if(alpha<=.003||!this.add?.image||!this.make?.graphics||!this.abyssFogViews)return null;
+      const textureKey=this.abyssFogTexture();
+      if(!textureKey)return null;
       const tint=ABYSS_FOG_TINTS[biome]||ABYSS_FOG_TINTS.forest;
       const key=[section.start,section.end,biome].join(':');
       let view=this.abyssFogViews.get(key);
       if(!view){
         const sprite=this.add.image(0,0,textureKey)
           .setOrigin(.5,0).setDepth(.46).setVisible(false);
-        const maskGraphics=this.make.graphics({x:0,y:0,add:false});
-        const mask=maskGraphics.createGeometryMask();
-        sprite.setMask(mask);
-        view={sprite,maskGraphics,mask,geometrySignature:null,boundsSignature:null,
-          positionSignature:null,biome};
+        const canvas=this.sys?.game?.renderer?.type===Phaser.CANVAS;
+        const maskGraphics=canvas?null:this.make.graphics({x:0,y:0,add:false});
+        const mask=maskGraphics?.createGeometryMask();
+        if(mask)sprite.setMask(mask);
+        if(canvas)sprite.renderCanvas=(renderer,view,camera)=>this.renderAbyssFogCanvas(renderer,view,camera);
+        view={sprite,maskGraphics,mask,geometrySignature:null,biome};
         this.abyssFogViews.set(key,view);
       }
       const {sprite,maskGraphics}=view;
-      const bleed=Math.max(ABYSS_BACKDROP_BLEED_MIN,
-        Math.ceil(shape.width*ABYSS_BACKDROP_BLEED_RATIO));
-      const artTop=this.abyssBackdropTopEdge(section,ABYSS_ART_TOP_INSET_PX);
-      const maskPoints=this.abyssBackdropPolygon(section,shape,bleed,
-        ABYSS_ART_TOP_INSET_PX);
-      const signature=shape.signature+':bleed:'+bleed+':top:'+ABYSS_ART_TOP_INSET_PX;
+      const {start,end,y0,y1}=section;
+      const width=end-start,height=clamp(105+width*.36,142,276);
+      const leftY=y0+ABYSS_FOG_INSET,rightY=y1+ABYSS_FOG_INSET;
+      const signature=[start,end,y0,y1].join(':');
       if(view.geometrySignature!==signature){
-        maskGraphics.clear();maskGraphics.fillStyle(0xffffff,1);
-        maskGraphics.fillPoints(maskPoints,true);
+        // The foreground at .62 and above occludes the textured rock, so
+        // only the part of this envelope between the jagged faces is visible.
+        const points=[{x:start,y:leftY},{x:end,y:rightY},
+          {x:end,y:rightY+height+16},{x:start,y:leftY+height+16}];
+        sprite.abyssFogBounds={points};
+        maskGraphics?.clear().fillStyle(0xffffff,1).fillPoints(points,true);
+        sprite.setDisplaySize(width,height).setRotation(Math.atan2(y1-y0,width)).setTint(tint);
         view.geometrySignature=signature;
       }
-      const source=this.textures.get(textureKey)?.getSourceImage?.();
-      const aspect=source?.width>0&&source?.height>0?source.width/source.height:2/3;
-      const maskWidth=shape.width+bleed*2;
-      const displayHeight=Math.max(this.height*1.05,maskWidth/aspect);
-      const displayWidth=displayHeight*aspect;
-      const x=artTop.centerX,y=artTop.centerY;
-      const bounds=[x,y,displayWidth,displayHeight,artTop.rotation]
-        .map(value=>value.toFixed(3)).join(':');
-      if(view.boundsSignature!==bounds){
-        sprite.setTexture(textureKey).setDisplaySize(displayWidth,displayHeight)
-          .setRotation(artTop.rotation);
-        view.boundsSignature=bounds;
-      }
-      // Bring the fog bank into the phone-visible part of the opening. The
-      // transparent upper margin of the source art otherwise leaves only
-      // empty pixels under a short viewport. The fixed ravine mask still owns
-      // the actual edge, so this offset cannot move fog onto solid terrain.
-      const fogOffsetY=-displayHeight*.40;
-      // Let the broad, transparent veils drift almost imperceptibly inside the
-      // fixed ravine mask. The art stays clipped to world geometry and cannot
-      // creep onto the running surface or expose a rectangular image edge.
-      const now=(this.time?.now||0)*.00006;
-      const driftX=Math.sin(now+section.start*.0013)*3.5;
-      const driftY=Math.cos(now*.72+section.end*.0011)*1.5;
-      const px=x+driftX,py=y+fogOffsetY+driftY;
-      const position=[px,py].map(value=>value.toFixed(2)).join(':');
-      if(view.positionSignature!==position){
-        sprite.setPosition(px,py);
-        view.positionSignature=position;
-      }
-      view.artAnchorX=x;view.artAnchorY=y;
-      view.artTopLeft=artTop.left;view.artTopRight=artTop.right;
-      view.artTopInsetPx=ABYSS_ART_TOP_INSET_PX;view.artRotation=artTop.rotation;
-      view.bleedPx=bleed;view.driftX=driftX;view.driftY=driftY;
-      view.textureOffsetRatioY=fogOffsetY/displayHeight;
-      view.geometryBounds={left:section.start-bleed,right:section.end+bleed};
-      if(view.tint!==tint){sprite.setTint(tint);view.tint=tint;}
-      const fogAlpha=alpha*ABYSS_FOG_LAYER_ALPHA;
-      if(view.fogAlpha!==fogAlpha){sprite.setAlpha(fogAlpha);view.fogAlpha=fogAlpha;}
-      if(!sprite.visible)sprite.setVisible(true);
+      const phase=(this.elapsed||0)*.14+start*.0013;
+      const driftX=Math.sin(phase)*2.5,driftY=Math.cos(phase*.72)*2;
+      sprite.setPosition((start+end)*.5+driftX,(leftY+rightY)*.5+7+driftY);
+      sprite.setAlpha(alpha*ABYSS_FOG_LAYER_ALPHA).setVisible(true);
       activeKeys.add(key);
       return view;
     }
@@ -4766,8 +4993,26 @@ window.GRIM_CONFIG = Object.freeze({
       const activeAbyssViews=new Set(),activeAbyssFogViews=new Set();
       const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
+      // Keep both neighbors available when a wall projects into the view
+      // before the underlying bank does.
       const sections=this.terrain.visibleSections(left,right);
+      const neighbors=(this.terrain.segments||sections).filter(s=>s.end>=left-52&&s.start<=right+52);
       const startX=this.startX??200;
+      this.abyssWallArt?.clear();
+      const walls=new Map();
+      for(let i=0;i<neighbors.length;i++){
+        const gap=neighbors[i];
+        if(gap.kind!=='gap'||!Number.isFinite(gap.y0)||!Number.isFinite(gap.y1))continue;
+        const leftBank=neighbors[i-1],rightBank=neighbors[i+1];
+        if(leftBank&&leftBank.kind!=='gap'&&leftBank.end===gap.start){
+          if(!walls.has(leftBank))walls.set(leftBank,{});
+          walls.get(leftBank).end=this.abyssWallProfile(gap,leftBank,'left');
+        }
+        if(rightBank&&rightBank.kind!=='gap'&&rightBank.start===gap.end){
+          if(!walls.has(rightBank))walls.set(rightBank,{});
+          walls.get(rightBank).start=this.abyssWallProfile(gap,rightBank,'right');
+        }
+      }
       for(const section of sections){
         if(section.kind!=='gap')continue;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
@@ -4791,14 +5036,9 @@ window.GRIM_CONFIG = Object.freeze({
         // Fog is one shared translucent texture, tinted through the same
         // biome crossfade as the canyon and ground. Its depth sits above the
         // painting (.34) and below real terrain (.62).
-        let accumulatedFogWeight=0;
         for(const id of TERRAIN_BIOME_ORDER){
           const weight=Math.max(0,weights[id]||0);
-          if(weight<=.003)continue;
-          const alpha=accumulatedFogWeight===0?1:
-            weight/(accumulatedFogWeight+weight);
-          this.abyssFogView(section,shape,id,alpha,activeAbyssFogViews);
-          accumulatedFogWeight+=weight;
+          if(weight>.003)this.abyssFogView(section,id,weight,activeAbyssFogViews);
         }
       }
       for(const section of sections){
@@ -4831,9 +5071,15 @@ window.GRIM_CONFIG = Object.freeze({
           :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
         const underside=depth;
         base.fillStyle(body);
-        const bodyPoints=this.terrainBodyPoints(section,section.start,section.end,surfaceY0,surfaceY1,underside);
+        const bankWalls=walls.get(section);
+        const bodyPoints=this.terrainBodyPoints(section,section.start,section.end,surfaceY0,surfaceY1,underside,bankWalls);
         base.fillPoints(bodyPoints,true);
-        this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews);
+        this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews,bankWalls);
+        if(bankWalls){
+          const wallPalette=scope.GRIM_WORLD_ART?.worldGroundPalette?.(m)||[body,edge,sheen,detail];
+          this.drawAbyssWallDetails(section,bankWalls.start,wallPalette);
+          this.drawAbyssWallDetails(section,bankWalls.end,wallPalette);
+        }
         if(section.kind==='rubble'&&!tundraBiomeWorldArt){
           // Small embedded stone facets follow the local surface and stay
           // below the foot line; the old section-start anchor floated on slopes.

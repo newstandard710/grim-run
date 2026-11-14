@@ -102,7 +102,7 @@ jobs:
       - name: Verify animated powers, combined wings and summit acquisition
         if: ${{ !cancelled() && matrix.group == 'powers' }}
         run: node tests/browser-power-animations.js
-      - name: Verify rooted carnivorous plants, curved supports and continuous fog
+      - name: Verify rooted carnivorous plants, curved supports and fog tapered at gaps
         if: ${{ !cancelled() && matrix.group == 'powers' }}
         run: node tests/browser-visual-revision.js
       - name: Verify gameplay and obstacle textures in actual Chromium Phaser
@@ -117,6 +117,12 @@ jobs:
       - name: Verify ground fog and vendor sprites across all biomes
         if: ${{ !cancelled() && matrix.group == 'world' }}
         run: node tests/browser-ground-fog-vendors.js
+      - name: Verify abyss fog pixels in WebGL and Canvas
+        if: ${{ !cancelled() && matrix.group == 'world' }}
+        run: |
+          for mode in webgl canvas; do
+            GRIM_ABYSS_PIXELS=1 GRIM_ABYSS_RENDERER="$mode" GRIM_ABYSS_OUTPUT="test-results/abyss-$mode" node tests/browser-abyss-walls.js
+          done
       - name: Save mobile-size render evidence
         if: ${{ always() && matrix.group != 'forest' }}
         uses: actions/upload-artifact@v4

@@ -63,39 +63,60 @@ const server=http.createServer((req,res)=>{
    await page.waitForTimeout(180);await page.evaluate(()=>window.grimRun.scene.scenes[0].drawScene());await page.locator('#game canvas').screenshot({path:path.join(dir,'revision-support-'+biome+'.png')});
   }
   // Compare actual rendered fog against the same frame with only foreground
-  // mist hidden. Pixels in the air above each abyss must change, while the
-  // physical gap remains unsupported.
+  // mist hidden. The true opening stays clear while the solid banks keep
+  // their painted fog.
   for(const [biome,from,to] of [['forest',0,900],['foothills',1000,2300],['tundra',2600,4500],['caves',5200,5900],['crystals',6200,6900],['ashlands',7200,7900],['lava',8200,9200],['boss',11000,13000]]){
    const geo=await page.evaluate(({from,to})=>{
     const s=window.grimRun.scene.scenes[0];s.terrain.advance(s.startX+to*12+1000);
     const gap=s.terrain.segments.find(g=>g.kind==='gap'&&(g.start-s.startX)/12>=from&&(g.start-s.startX)/12<to);
-    if(!gap)return null;const x=(gap.start+gap.end)/2,y=s.groundFogSurfaceAt(x);
+    if(!gap)return null;const x=(gap.start+gap.end)/2,y=(gap.y0+gap.y1)/2;
     s.obstacles=[];s.enemies=[];s.distance=(x-s.startX)/12;s.hasTeleported=s.distance>=5000;
     s.player.x=gap.start-70;s.player.y=s.terrain.groundAt(s.player.x)??s.terrain.anchorAt(s.player.x);s.player.grounded=true;
     s.cameraX=x-480;s.cameraY=y-s.groundY;s.cameras.main.setScroll(s.cameraX,s.cameraY);s.drawScene();
-    return {x:480,y:s.groundY,open:s.terrain.groundAt(x)===null,height:y,expected:(gap.y0+gap.y1)/2};
+    return {x:480,y:s.groundY,half:(gap.end-gap.start)/2,open:s.terrain.groundAt(x)===null,height:s.groundFogSurfaceAt(x)};
    },{from,to});
-   assert(geo&&geo.open);assert(Math.abs(geo.height-geo.expected)<.0001);
-   await page.waitForTimeout(150);
-   await page.evaluate(()=>window.grimRun.scene.scenes[0].drawScene());
-   const withFog=PNG.sync.read(await page.locator('#game canvas').screenshot({path:path.join(dir,'revision-fog-gap-'+biome+'.png')}));
-   await page.evaluate(()=>{
-    const s=window.grimRun.scene.scenes[0];s._fog=s.drawGroundFog;s.drawGroundFog=function(){for(const v of this.groundFogViews.values())v.setVisible(false)};s.drawScene();
+   assert(geo&&geo.open);assert.equal(geo.height,null);
+   await page.waitForFunction(()=>{
+    const s=window.grimRun.scene.scenes[0];
+    return !s.load.isLoading()&&!s.terrainMaterialLoading.size;
+   },null,{polling:100});
+   const captured=await page.evaluate(()=>{
+    const game=window.grimRun,s=game.scene.scenes[0];
+    const realUpdate=s.sys.sceneUpdate;
+    s.sys.sceneUpdate=()=>{};
+    try{
+     s.drawScene();
+     const at=performance.now();
+     game.step(at,0);
+     const withFog=game.canvas.toDataURL();
+     for(const v of s.groundFogViews.values())v.setVisible(false);
+     game.step(at,0);
+     return {withFog,without:game.canvas.toDataURL()};
+    }finally{
+     s.sys.sceneUpdate=realUpdate;
+     for(const v of s.groundFogViews.values())v.setVisible(true);
+    }
    });
-   const without=PNG.sync.read(await page.locator('#game canvas').screenshot());
-   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.drawGroundFog=s._fog;s.drawScene();});
-   let changed=0;
-   // Mist is now naturally low and grounded. Inspect the air down to the
-   // virtual surface; the old -100..-20 window excluded its dense base.
-   for(let y=Math.round(geo.y)-60;y<Math.round(geo.y)+2;y++)for(let x=geo.x-25;x<geo.x+25;x++){
-    const index=(y*withFog.width+x)*4;const delta=Math.abs(withFog.data[index]-without.data[index])+Math.abs(withFog.data[index+1]-without.data[index+1])+Math.abs(withFog.data[index+2]-without.data[index+2]);
-    if(delta>12)changed++;
+   const decode=key=>Buffer.from(captured[key].split(',')[1],'base64');
+   fs.writeFileSync(path.join(dir,'revision-fog-gap-'+biome+'.png'),decode('withFog'));
+   const withFog=PNG.sync.read(decode('withFog')),without=PNG.sync.read(decode('without'));
+   let gapPixels=0,bankPixels=0;
+   for(let y=Math.round(geo.y)-60;y<Math.round(geo.y)+2;y++){
+    for(let x=geo.x-Math.floor(geo.half)-70;x<geo.x+Math.floor(geo.half)+70;x++){
+     const i=(y*withFog.width+x)*4;
+     const delta=[0,1,2].reduce((sum,c)=>sum+Math.abs(withFog.data[i+c]-without.data[i+c]),0);
+     if(delta<=12)continue;
+     if(Math.abs(x-geo.x)<Math.min(25,geo.half-4))gapPixels++;
+     if(Math.abs(x-geo.x)>geo.half+30)bankPixels++;
+    }
    }
-   assert(changed>100,biome+' foreground mist truly renders across the abyss: '+changed+' changed pixels');
-   console.log('Continuous foreground fog',biome,changed,'abyss pixels');
+   assert(gapPixels<8,biome+' surface mist cannot span the opening: '+gapPixels);
+   assert(bankPixels>40,biome+' still renders surface fog on the solid banks: '+bankPixels);
+   console.log('Ground fog tapers at',biome,'gap');
+
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS actual Chromium: rooted eight-pose carnivorous plant, six curved terrain supports, and foreground fog across real gaps in all eight biomes.');
+  console.log('PASS actual Chromium: rooted eight-pose carnivorous plant, six curved terrain supports, and foreground fog taper at real gaps in all eight biomes.');
  }finally{
   const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'visual-revision-preview.webm'));
   await browser.close();await new Promise(r=>server.close(r));
