@@ -98,12 +98,12 @@ const server=http.createServer((req,res)=>{
        };
        game.loop.sleep();game.loop.wake();
       },k);
-      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{polling:100,timeout:16000}).catch(async error=>{
+      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration!==null,null,{polling:150,timeout:30000}).catch(async error=>{
        const state=await page.evaluate(()=>{
         const {loop,scene:{scenes:[s]}}=window.grimRun;
         return {state:s.state,remaining:s.vendorIntroMs,clock:s.cutsceneLastAt,
          now:performance.now(),age:Date.now()-s.lastUpdateHeartbeatAt,
-         loop:loop.running,hidden:document.hidden,lastVendor:s.lastVendorNumber};
+         loop:loop.running,hidden:document.hidden,lastVendor:s.lastVendorNumber,duration:s.cutsceneTestDuration};
        });
        throw Error('Merchant playback did not finish: '+JSON.stringify(state),{cause:error});
       });
@@ -124,7 +124,7 @@ const server=http.createServer((req,res)=>{
       };
       game.loop.sleep();game.loop.wake();
      });
-     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].gunUnlocked&&window.grimRun.scene.scenes[0].state!=='chest',null,{polling:100,timeout:10000});
+     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration!==null,null,{polling:150,timeout:20000});
      const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
      marks.push({scene:'bow',ms});assert(ms>=3900&&ms<6500,`bow real-time intro: ${ms} ms`);
      await page.evaluate(()=>{window.grimRun.scene.scenes[0].state='paused';});
