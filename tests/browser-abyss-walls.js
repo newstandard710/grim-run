@@ -154,20 +154,33 @@ async function abyssParity(browser){
   return {checkpoints,steps:1200};
 }
 async function isolatedFog(page){
-  await page.evaluate(()=>window.biomeReview.stageGap(766));
+  const gap=await page.evaluate(()=>window.biomeReview.stageGap(766));
   await page.waitForFunction(()=>{
     const {scene:s}=window.biomeReview;
     return !s.load.isLoading()&&!s.terrainMaterialLoading.size&&s.abyssFogViews.size>0;
   },null,{polling:100});
-  const shot=await page.evaluate(()=>{
-    const b=window.biomeReview,s=b.scene,gap=b.stageGap(766);
-    for(const child of s.children.list)child.setVisible(false);
-    for(const bank of s.groundFogViews.values())bank.setVisible(true);
-    for(const view of s.abyssFogViews.values())view.sprite.setVisible(false);
-    s.cameras.main.setBackgroundColor('#000000');
-    return {data:b.frame(),start:gap.start-s.cameraX,end:gap.end-s.cameraX,
-      y:gap.y0-s.cameraY,webgl:b.game.renderer.type===Phaser.WEBGL};
-  });
+  const shot=await page.evaluate(gap=>{
+    const b=window.biomeReview,s=b.scene,camera=s.cameras.main;
+    const renderer=b.game.renderer;
+    // Feed Phaser the exact weather objects for this pass. Camera culling
+    // still applies, but async backdrop loading and display-list updates
+    // cannot restore a hidden object during either screenshot.
+    const fog=[...s.groundFogViews.values()].filter(v=>v.visible);
+    const weather=[...s.abyssFogViews.entries()]
+      .find(([key])=>key.startsWith(gap.start+':'+gap.end+':'))?.[1];
+    if(!weather)throw Error('The inspected gap has no abyss mist');
+    const original=s.children.getChildren;
+    try{
+      camera.setBackgroundColor('#000000');
+      s.children.getChildren=()=>fog;
+      const data=b.frame();
+      s.cameraY+=110;camera.setScroll(s.cameraX,s.cameraY);
+      s.children.getChildren=()=>[weather.sprite];
+      const depth=b.frame();
+      return {data,depth,start:gap.start-s.cameraX,end:gap.end-s.cameraX,
+        y:gap.y0-(s.cameraY-110),depthY:gap.y0-s.cameraY,webgl:renderer.type===Phaser.WEBGL};
+    }finally{s.children.getChildren=original;}
+  },gap);
   const png=PNG.sync.read(Buffer.from(shot.data.split(',')[1],'base64'));
   const column=x=>{
     let light=0;
@@ -184,20 +197,8 @@ async function isolatedFog(page){
   assert(left[4]+right[4]>100,'Ground fog is visible on the solid banks');
   assert(left[0]+right[0]<.35*(left[3]+right[3]),'Fog feathers into the rims');
   fs.writeFileSync(path.join(outputs,'isolated-fog.json'),JSON.stringify({left,right,webgl:shot.webgl}));
-  const depthShot=await page.evaluate(()=>{
-    const b=window.biomeReview,s=b.scene,gap=b.stageGap(766);
-    s.cameraY+=110;s.cameras.main.setScroll(s.cameraX,s.cameraY);
-    s.drawScene();
-    for(const child of s.children.list)child.setVisible(false);
-    for(const mist of s.abyssFogViews.values())mist.sprite.setVisible(false);
-    const view=[...s.abyssFogViews.entries()]
-      .find(([key])=>key.startsWith(gap.start+':'+gap.end+':'))?.[1];
-    if(!view)throw Error('The inspected gap has no abyss mist');
-    view.sprite.setVisible(true);
-    s.cameras.main.setBackgroundColor('#000000');
-    return {data:b.frame(),start:gap.start-s.cameraX,end:gap.end-s.cameraX,y:gap.y0-s.cameraY};
-  });
-  const depth=PNG.sync.read(Buffer.from(depthShot.data.split(',')[1],'base64'));
+  const depthShot={y:shot.depthY,start:shot.start,end:shot.end};
+  const depth=PNG.sync.read(Buffer.from(shot.depth.split(',')[1],'base64'));
   let above=0,below=0;
   for(let y=Math.max(0,Math.round(depthShot.y));y<depth.height;y++){
     for(let x=Math.ceil(depthShot.start)+3;x<Math.floor(depthShot.end)-3;x++){
