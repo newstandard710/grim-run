@@ -6,7 +6,7 @@
   const ROOT = 'assets/visuals/forest-midground/v1/forest-midground';
   const BANDS = [
     {
-      depth: -24, rate: .16, stride: 440, base: .77, color: 0x273945, salt: 0x519,
+      depth: -24, rate: .16, stride: 440, base: .77, color: 0x273945, tint: 0xd1dee8, salt: 0x519,
       opacity: [.60, .72], treeHeight: [.52, .70],
       // Normalized contact points identify the painted roots, including flared and leaning trunks.
       trees: [
@@ -141,16 +141,19 @@
       for (let cell = first; cell <= last && used < pool.length; cell++) {
         const density = variation(seed, Math.floor(cell / 3), salt + 7);
         const kind = variation(seed, cell, salt);
-        if (kind < .08 + .21 * density) continue;
-        const isCover = kind < .26 + .25 * density;
+        // Give the Forest entrance one large oak before the seeded clearings.
+        const entranceTree = band.giants && cell === 0;
+        if (!entranceTree && kind < .08 + .21 * density) continue;
+        const isCover = !entranceTree && kind < .19 + .19 * density;
         const pieces = isCover ? band.cover : band.trees;
         const selection = Math.floor(variation(seed, cell, salt + 1) * pieces.length);
         const previous = Math.floor(variation(seed, cell - 1, salt + 1) * pieces.length);
         const [key, rootX, rootY, coverHeight] = pieces[
           selection === previous ? (selection + 1) % pieces.length : selection];
-        const worldX = (cell + .20 + .60 * variation(seed, cell, salt + 2)) * band.stride;
+        const position = variation(seed, cell, salt + 2);
+        const worldX = (cell + (entranceTree ? mix(.58, .76, position) : mix(.20, .80, position))) * band.stride;
         const x = worldX - offset, y = ground(worldX);
-        const tall = band.giants && variation(seed, cell, salt + 3) < .24;
+        const tall = entranceTree || (band.giants && variation(seed, cell, salt + 3) < .24);
         const size = variation(seed, cell, salt + 4);
         const relativeHeight = isCover ? coverHeight * mix(.85, 1.12, size)
           : mix(...(tall ? band.giants : band.treeHeight), size);
@@ -162,7 +165,7 @@
         const image = pool[used++];
         if (image.frame.name !== key) image.setFrame(key);
         image.setOrigin(rootX, rootY).setPosition(x, y).setScale(flip ? -scale : scale, scale)
-          .setAlpha(weight * mix(...band.opacity, variation(seed, cell, salt + 6))).setVisible(true);
+          .setTint(band.tint ?? 0xffffff).setAlpha(weight * mix(...band.opacity, variation(seed, cell, salt + 6))).setVisible(true);
         this.drawBank(bank, band, ground, worldX, x, scaleHeight, Math.min(frame.width * scale * .54, band.stride * .32));
       }
       for (; used < pool.length; used++) pool[used].setVisible(false);

@@ -176,6 +176,8 @@ async function reviewAdvance(page) {
 }
 
 async function screenshotAt(page, distance) {
+  await page.evaluate(m => window.forestTest.place(m), distance);
+  await page.waitForFunction(() => !window.forestTest.scene.terrainMaterialLoading.size);
   await page.evaluate(m => window.forestTest.place(m, true), distance);
   return PNG.sync.read(await page.screenshot());
 }
@@ -196,6 +198,15 @@ async function screenshotAt(page, distance) {
       'Identical inputs preserve gameplay, camera, terrain, encounters, vendor offers and RNG');
     assert.deepEqual(on.states, old.states, 'Previous and revised Forest footage use the same gameplay and seed');
     compareFrames(old.frames, on.frames);
+    for (const capture of [previous, page]) {
+      await capture.evaluate(() => {
+        const {scene, place} = window.forestTest;
+        place(742);
+        scene.requestTerrainMaterial('forest');
+        scene.requestTerrainMaterial('foothills');
+      });
+      await capture.waitForFunction(() => !window.forestTest.scene.terrainMaterialLoading.size);
+    }
     const previousRim = await reviewAdvance(previous), revisedRim = await reviewAdvance(page);
     for (let i = 0; i < previousRim.length; i++) {
       const index = String(i + 90).padStart(3, '0');
@@ -386,7 +397,15 @@ async function screenshotAt(page, distance) {
       return {maxVisible, variants: seen.size, blends: scenes, giantSamples, rimSamples, renderer: s.game.renderer.type};
     });
 
-    for (const distance of [55, 315, 765, 782, 900, 1080]) {
+    for (const capture of [previous, page]) {
+      await capture.evaluate(() => {
+        const {scene, game} = window.forestTest;
+        scene.startRun();
+        scene.setGodMode(true);
+        game.loop.sleep();
+      });
+    }
+    for (const distance of [15, 55, 315, 390, 765, 782, 900, 1080]) {
       const left = await screenshotAt(previous, distance), right = await screenshotAt(page, distance);
       fs.writeFileSync(path.join(out, 'forest-pilot-950-' + distance + '.png'), pair(left, right));
     }
@@ -395,7 +414,7 @@ async function screenshotAt(page, distance) {
     await page.evaluate(() => window.forestTest.game.loop.wake());
     await page.setViewportSize({width: 390, height: 844});
     await page.waitForFunction(() => window.forestTest.scene.height === 844);
-    await page.evaluate(() => window.forestTest.place(55, true));
+    await page.evaluate(() => window.forestTest.place(15, true));
     await page.screenshot({path: path.join(out, 'forest-pilot-portrait.png')});
     await page.setViewportSize({width: 950, height: 430});
     await page.waitForFunction(() => window.forestTest.scene.width === 950);
@@ -409,12 +428,14 @@ async function screenshotAt(page, distance) {
 
     const {page: small, errors: smallErrors} = await openGame(browser, 740, 360);
     const perfSmall = (await sequence(small, false)).perf;
-    await small.evaluate(() => {
-      window.forestTest.scene.state = 'playing';
-      window.forestTest.place(120, true);
-    });
     const oldSmall = await openGame(browser, 740, 360, {previous: true});
-    const smallOld = await screenshotAt(oldSmall.page, 120), smallNew = await screenshotAt(small, 120);
+    await small.evaluate(() => {
+      const {scene, game} = window.forestTest;
+      scene.startRun();
+      scene.setGodMode(true);
+      game.loop.sleep();
+    });
+    const smallOld = await screenshotAt(oldSmall.page, 35), smallNew = await screenshotAt(small, 35);
     fs.writeFileSync(path.join(out, 'forest-pilot-740.png'), pair(smallOld, smallNew));
     assert.deepEqual(smallErrors.concat(oldSmall.errors), []);
     await oldSmall.page.close();
