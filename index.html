@@ -1531,7 +1531,7 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/visuals/forest-midground.js?v=1"></script>
+  <script src="assets/visuals/forest-midground.js?v=2"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.3"></script>
   <script src="assets/motion/v0193/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/motion-animations.js?v=0.19.3"></script>
@@ -3806,10 +3806,10 @@ window.GRIM_CONFIG = Object.freeze({
       g.clear();
       this.ensureBiomeBackdropGroup(this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
-      this.forestMidground?.render();
       this.updateBackdropGroundVeil();
       this.worldPolish?.beginFrame();
-      this.drawGround();
+      const terrainSections=this.drawGround();
+      this.forestMidground?.render(terrainSections);
       this.vendorArt?.renderWorld();
       this.drawGroundFog();
       this.drawPortals();
@@ -4880,6 +4880,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.pruneTerrainTextureViews(activeTerrainViews);
       this.pruneTerrainSurfaceViews(activeSurfaceViews);
       this.releaseInactiveTerrainMaterials(keepTerrainMaterials);
+      return sections;
     }
     drawCoin(c) {
       if(this.worldPolish?.drawPickup(c,'coin'))return;
