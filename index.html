@@ -3824,7 +3824,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.updateBackdropGroundVeil();
       this.worldPolish?.beginFrame();
       const terrainSections=this.drawGround();
-      if(this.forestMidground||this.biomeMidground){
+      if(scope.GRIM_MIDGROUND_TERRAIN&&(this.forestMidground||this.biomeMidground)){
         const project=scope.GRIM_MIDGROUND_TERRAIN.createProjection(this,this.cameraX+this.width*C.reaperXRatio);
         this.forestMidground?.render(terrainSections,project);
         this.biomeMidground?.render(terrainSections,project);
