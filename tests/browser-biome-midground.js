@@ -19,8 +19,9 @@ const server = http.createServer((req, res) => {
     const file = path.resolve(root, '.' + decodeURIComponent(pathname === '/' ? '/index.html' : pathname));
     if (!file.startsWith(root + path.sep)) return res.writeHead(403).end();
     res.writeHead(200, {'Content-Type': mime[path.extname(file)] || 'application/octet-stream'});
-    res.end(pathname === '/forest-baseline.html' ?
-      execFileSync('git', ['show', baseline + ':index.html'], {cwd: root}) : fs.readFileSync(file));
+    const frozenForest = pathname === '/assets/visuals/forest-midground.js' && req.url.endsWith('?v=2');
+    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest ? pathname.slice(1) : null;
+    res.end(original ? execFileSync('git', ['show', baseline + ':' + original], {cwd: root}) : fs.readFileSync(file));
   } catch {
     if (!res.headersSent) res.writeHead(404);
     res.end();
@@ -168,6 +169,102 @@ async function capture(page, name, distance, frames, ids, mode = 'run') {
     updateMsP95: samples[Math.floor(samples.length * .95)]};
 }
 
+async function hillside(browser) {
+  const {page, errors} = await setup(browser, {width: 740, height: 360});
+  try {
+    const results = {};
+    for (const [id, meters, descending] of [['forest', 429, true], ['caves', 5612, true], ['tundra', 3700, false]]) {
+      const route = await page.evaluate(({meters, descending, id}) => {
+        const {scene, teleport, place} = window.biomeReview;
+        if (meters >= 5000) teleport(Math.round(meters / 500) * 500);
+        const {pxPerMeter} = window.GRIM_CONFIG;
+        const center = scene.startX + meters * pxPerMeter;
+        const radius = id === 'tundra' ? 5100 : 420;
+        let best;
+        for (let x = center - radius; x <= center + radius; x += 12) {
+          const ground = Array.from({length: 51}, (_, i) => scene.terrain.groundAt(x + i * 9));
+          if (ground.some(y => y === null)) continue;
+          const fall = (ground.at(-1) - ground[0]) * (descending ? 1 : -1);
+          const monotone = ground.slice(1).filter((y, i) => (y - ground[i]) * (descending ? 1 : -1) > 0).length;
+          if (monotone >= 39 && (!best || fall > best.fall)) best = {x, fall};
+        }
+        if (!best) throw Error('No continuous hillside for ' + id);
+        place((best.x - scene.startX) / pxPerMeter);
+        return best;
+      }, {id, meters, descending});
+      await page.waitForFunction(id => {
+        const {scene, art} = window.biomeReview;
+        return id === 'forest' ? scene.forestMidground.pools[0].length > 0 :
+          scene.biomeBackdrops[id] && art().loaded.includes(id);
+      }, id, {timeout: 20000});
+      const report = await page.evaluate(id => {
+        const {scene, place, frame} = window.biomeReview;
+        scene.drawScene();
+        const native = scene.biomeMidground.groups.find(group => group.id === id);
+        const pools = id === 'forest' ? scene.forestMidground.pools : native?.layers.map(layer => layer.images);
+        const {pxPerMeter} = window.GRIM_CONFIG;
+        const root = pool => pool.filter(v => v.visible).map(v => [v.frame.name, v.x, v.y]);
+        const snapshots = [], images = [];
+        scene.drawScene();
+        const initial = scene.cameraY;
+        const before = pools.map(root);
+        scene.cameraY += 32;
+        scene.cameras.main.setScroll(scene.cameraX, scene.cameraY);
+        scene.drawScene();
+        const after = pools.map(root);
+        scene.cameraY = initial;
+        scene.cameras.main.setScroll(scene.cameraX, initial);
+        scene.drawScene();
+        const origin = scene.player.x;
+        for (let i = 0; i <= 60; i++) {
+          if (i) scene.update(0, 1000 / 60);
+          const travel = scene.cameraX - scene.startX;
+          const bands = pools.map((pool, j) => root(pool).map(([name, x, y]) => [name, x + travel * [.16, .42][j], y]));
+          snapshots.push({bands, cam: scene.cameraY, ground: scene.terrain.groundAt(scene.player.x)});
+          if (i % 4 === 0) images.push(frame());
+        }
+        place((origin - scene.startX) / pxPerMeter);
+        const returned = pools.map(root);
+        return {before, after, snapshots, images, returned, renderer: scene.game.renderer.type};
+      }, id);
+      for (const [i, rate] of [.16, .42].entries()) {
+        assert(report.before[i].length > 0, id + ' shows band ' + i);
+        assert.equal(report.before[i].length, report.after[i].length);
+        for (const [j, [key, x, y]] of report.before[i].entries()) {
+          const [newKey, newX, newY] = report.after[i][j];
+          assert.deepEqual([key, x], [newKey, newX]);
+          assert(Math.abs(newY - y + 32 * rate) < .00001, id + ' projects vertical-only camera motion at altitude');
+        }
+        assert.deepEqual(report.before[i], report.returned[i], id + ' repeated camera pose is independent of history');
+      }
+      const {snapshots, images} = report;
+      const a = snapshots[0], b = snapshots.at(-1);
+      const tracked = a.bands[1].map(([key, x, y]) => {
+        const next = b.bands[1].find(([k, wx]) => key === k && Math.abs(wx - x) < .00001);
+        return next && {key, x, delta: next[2] - y};
+      }).filter(Boolean);
+      assert(tracked.length > 0, id + ' retains a near hillside anchor');
+      assert(Math.abs(b.cam - a.cam) > 6, id + ' drives a real vertical camera move');
+      assert(tracked.some(anchor => Math.abs(anchor.delta) > (id === 'forest' ? 2 : 8)), id + ' moves a near ground anchor');
+      let maxStep = 0;
+      for (const anchor of tracked) {
+        const positions = snapshots.map(s => s.bands[1].find(([key, x]) => key === anchor.key && Math.abs(x - anchor.x) < .00001)?.[2]);
+        for (let i = 1; i < positions.length; i++) {
+          if (positions[i] !== undefined && positions[i - 1] !== undefined)
+            maxStep = Math.max(maxStep, Math.abs(positions[i] - positions[i - 1]));
+        }
+      }
+      assert(maxStep < 9, id + ' does not snap during a hillside run');
+      const dir = path.join(outputs, 'hill-' + id);
+      fs.mkdirSync(dir, {recursive: true});
+      images.forEach((image, i) => writeFrame(path.join(dir, String(i).padStart(3, '0') + '.png'), image));
+      results[id] = {route, tracked, cameraDelta: b.cam - a.cam, maxStep, renderer: report.renderer};
+    }
+    assert.deepEqual(errors, []);
+    return results;
+  } finally { await page.close(); }
+}
+
 async function parity(browser) {
   const viewport = {width: 740, height: 360};
   const use = async (options, check) => {
@@ -182,6 +279,7 @@ async function parity(browser) {
   };
   const forest = async page => page.evaluate(() => {
     const b = window.biomeReview;
+    for (const section of b.scene.terrain.segments) section.y0 = section.y1 = b.scene.groundY;
     b.place(300);
     return Array.from({length: 10}, () => {
       for (let j = 0; j < 7; j++) b.scene.update(0, 1000 / 60);
@@ -194,7 +292,7 @@ async function parity(browser) {
     writeFrame(path.join(outputs, 'forest-baseline-' + i + '.png'), old[i]);
   }
   const hashes = frames => frames.map(frame => createHash('sha256').update(frame).digest('hex'));
-  assert.deepEqual(hashes(first), hashes(old), 'Forest render differs from the accepted commit');
+  assert.deepEqual(hashes(first), hashes(old), 'Flat Forest render differs from the accepted commit');
 
   const run = async on => {
     const samples = [];
@@ -337,13 +435,18 @@ async function lifecycle(page) {
 async function main() {
   fs.mkdirSync(outputs, {recursive: true});
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  const browser = await chromium.launch({headless: true, args: ['--no-sandbox', '--use-angle=swiftshader']});
+  const browser = await chromium.launch({headless: true, args: ['--no-sandbox',
+    process.env.GRIM_BIOME_RENDERER === 'canvas' ? '--disable-webgl' : '--use-angle=swiftshader']});
   const metrics = {};
   try {
     const mode = process.env.GRIM_BIOME_MODE;
+    if (!mode || mode === 'hillside') {
+      metrics.hillside = await hillside(browser);
+      console.log('PASS live terrain projection on Forest and Caves descents and a Tundra climb');
+    }
     if (!mode || ['checks', 'parity'].includes(mode)) {
       metrics.parity = await parity(browser);
-      console.log('PASS Forest pixel parity and gameplay/RNG parity');
+      console.log('PASS flat Forest pixel parity and gameplay/RNG parity');
     }
     if (!mode || ['checks', 'lifecycle'].includes(mode)) {
       metrics.faults = await faultReview(browser);

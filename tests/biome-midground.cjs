@@ -10,11 +10,12 @@ const root = path.join(__dirname, '..');
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 const scope = vm.createContext({AbortController, setTimeout, clearTimeout});
 vm.runInContext('Math.random = () => { throw Error("ambient randomness accessed"); };', scope);
-for (const file of ['world-art.js', 'biome-midground.js'])
+for (const file of ['world-art.js', 'midground-terrain.js', 'biome-midground.js'])
   vm.runInContext(read('assets', 'visuals', file), scope, {filename: file});
 
 const {AtlasStream, BiomeMidground, BANDS, STYLES, formation, planAtlases, rimContour, loadAtlas} =
   scope.GRIM_BIOME_MIDGROUND;
+const {createProjection} = scope.GRIM_MIDGROUND_TERRAIN;
 const copy = value => JSON.parse(JSON.stringify(value));
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 const ids = Object.keys(STYLES);
@@ -25,6 +26,58 @@ const payloadFor = id => {
     .filter(([, frame]) => frame.band === band.name).map(([name, frame]) => ({name, ...frame})));
   return {data, bands, image: {}};
 };
+
+function flatScene(cameraY = 0, height = 440, groundY = 348) {
+  return {
+    startX: 200, cameraY, height, groundY, hasTeleported: false,
+    terrain: {
+      segments: [{start: -2500, end: 61500, y0: groundY, y1: groundY, kind: 'ground'}],
+      portalX: 60200, portalExitX: 60510,
+      surfaceAt: section => section.y0,
+      groundAt: () => assert.fail('projection must not use generation-capable terrain queries'),
+      advance: () => assert.fail('projection must not advance terrain')
+    }
+  };
+}
+
+function hillsideProjection() {
+  const scene = flatScene();
+  const {terrain} = scene;
+  terrain.segments = [
+    {start: -2500, end: 0, y0: 108, y1: 108, kind: 'ground'},
+    {start: 0, end: 960, y0: 108, y1: 588, kind: 'ground'},
+    {start: 960, end: 1080, y0: 588, y1: 588, kind: 'gap'},
+    {start: 1080, end: 3200, y0: 612, y1: 108, kind: 'ground'},
+    {start: 3200, end: 60200, y0: 108, y1: 108, kind: 'ground'},
+    {start: 60200, end: 60400, y0: 108, y1: 108, kind: 'portal'},
+    {start: 60400, end: 62000, y0: 3010, y1: 3190, kind: 'ground'}
+  ];
+  terrain.surfaceAt = (s, x) => {
+    assert(x >= s.start && x <= s.end);
+    return s.y0 + (s.y1 - s.y0) * ((x - s.start) / (s.end - s.start));
+  };
+  for (const band of BANDS) {
+    const bandX = x => 240 + (x - scene.startX - 240) * band.rate;
+    const place = (x, reference, cam = scene.cameraY) => createProjection({...scene, cameraY: cam}, reference)(band, bandX(x));
+    assert(place(700, 480) > place(270, 480), 'bank follows a descending profile');
+    assert(place(1350, 1800) > place(2150, 1800), 'bank follows an uphill profile');
+    assert(Math.abs(place(1080.01, 1030) - place(1079.99, 1030)) < .01, 'gap span is continuous');
+    near(place(480, 480, 0), 0);
+    near(place(720, 480, 3040) - place(720, 480, 3000), -40 * band.rate);
+    near(place(720, 480, -3000) - place(720, 480, -3040), -40 * band.rate);
+    near(place(60200, 59900), place(60700, 59900));
+    scene.hasTeleported = true;
+    near(place(60200, 60600), place(60510, 60600));
+    scene.hasTeleported = false;
+    const a = place(720, 480, 0);
+    scene.groundY += 300;
+    for (const s of terrain.segments) { s.y0 += 300; s.y1 += 300; }
+    near(place(720, 480, 0), a);
+    scene.groundY -= 300;
+    for (const s of terrain.segments) { s.y0 -= 300; s.y1 -= 300; }
+  }
+  console.log('PASS projected slope, continuous gap span, camera movement at altitude, portal and resize');
+}
 
 function weightsAndGeometry() {
   const art = scope.GRIM_WORLD_ART;
@@ -59,8 +112,11 @@ function weightsAndGeometry() {
       const rate = [.16, .42][i];
       const tuning = STYLES[id][i];
       for (const frame of bands[i]) {
-        const pick = (cell, delta = {}) =>
-          formation(band, 89, cell, [frame, frame], tuning, {...camera, ...delta}, .48);
+        const pick = (cell, delta = {}) => {
+          const view = {...camera, ...delta};
+          view.project = createProjection(flatScene(view.cameraY), 640);
+          return formation(band, 89, cell, [frame, frame], tuning, view, .48);
+        };
         for (let cell = 0; cell < 5; cell++) {
           const a = pick(cell);
           if (!a || a.x < 30 || a.x > 840) continue;
@@ -98,7 +154,7 @@ function weightsAndGeometry() {
   assert.equal(rimContour(gap, {...view, cameraX: 161}), null);
 
   const html = read('index.html');
-  assert.match(html, /forestMidground\?\.render\(terrainSections\);\s*this\.biomeMidground\?\.render\(terrainSections\);/);
+  assert.match(html, /forestMidground\?\.render\(terrainSections,project\);\s*this\.biomeMidground\?\.render\(terrainSections,project\);/);
   assert.match(html, /biomeMidground\?\.prioritizeTeleport\(this\.distance\);\s*this\.drawScene\(\);/);
   console.log('PASS exact weights, portal and Boss, all four support kinds, separate deterministic hash and rim geometry');
 }
@@ -222,7 +278,7 @@ async function renderer() {
   const {requests, loader} = controlledLoader();
   layer.stream.loader = loader;
   const section = {kind: 'gap', start: 200, end: 280, y0: 328, y1: 351};
-  const draw = () => layer.render([section]);
+  const draw = () => layer.render([section], createProjection(flatScene(scene.cameraY), 640));
   const visible = () => views.filter(v => v.type === 'sprite' && v.visible);
   draw();
   assert.equal(views.length, 0, 'the backdrop remains visible while atlas work is pending');
@@ -238,7 +294,7 @@ async function renderer() {
   assert(visible().some(v => v.texture.key.endsWith('crystals')));
   assert.ok(visible().length <= 28);
   assert(visible().every(v => v.alpha > 0 && v.alpha <= .5));
-  layer.render([]);
+  layer.render([], createProjection(flatScene(scene.cameraY), 640));
   assert(visible().every(v => !v.mask));
 
   scene.distance = 19800;
@@ -311,6 +367,7 @@ async function transfers() {
 }
 
 (async () => {
+  hillsideProjection();
   weightsAndGeometry();
   await lifecycle();
   await renderer();

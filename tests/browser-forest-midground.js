@@ -254,7 +254,7 @@ async function screenshotAt(page, distance) {
       const after = views();
       for (const [depth, rate] of [[-24, .16], [-22, .42]]) {
         const pairs = before.filter(v => v.depth === depth).map(v => [v,
-          after.find(w => w.depth === depth && w.frame === v.frame && w.scale === v.scale && w.y === v.y)]);
+          after.find(w => w.depth === depth && w.frame === v.frame && w.scale === v.scale && close(v.x - w.x, 10 * rate))]);
         check(pairs.some(([, next]) => next), 'Shared visible instances for movement measurement');
         for (const [start, next] of pairs) {
           if (next) check(Math.abs(start.x - next.x - 10 * rate) < 1e-8, 'Camera travel drives band speed');
@@ -265,10 +265,8 @@ async function screenshotAt(page, distance) {
       s.cameraY += 40;
       draw();
       const elevated = views();
-      const verticalShift = s.height * .13;
       for (const [depth, rate] of [[-24, .16], [-22, .42]]) {
-        const projection = y => Math.max(-verticalShift, Math.min(verticalShift, y * rate));
-        const change = projection(s.cameraY) - projection(s.cameraY - 40);
+        const change = 40 * rate;
         const from = after.filter(v => v.depth === depth), to = elevated.filter(v => v.depth === depth);
         check(from.every((v, i) => close(v.x, to[i].x) && close(v.y - to[i].y, change)),
           'A camera climb projects tree roots vertically at their band rate');

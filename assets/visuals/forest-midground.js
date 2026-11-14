@@ -79,7 +79,7 @@
       for (const bank of this.banks) bank.setVisible(false);
     }
 
-    render(sections) {
+    render(sections, project) {
       if (!this.pools[0].length) return;
       const scene = this.scene;
       const weight = scope.GRIM_WORLD_ART?.biomeWeights?.(scene.distance)?.forest || 0;
@@ -92,7 +92,7 @@
       this.clipRims(sections || []);
       const travel = scene.cameraX - scene.startX;
       for (const [i, band] of BANDS.entries()) {
-        this.drawBand(band, this.pools[i], this.banks[i], travel, weight);
+        this.drawBand(band, this.pools[i], this.banks[i], travel, weight, project);
       }
     }
 
@@ -125,12 +125,11 @@
       }
     }
 
-    drawBand(band, pool, bank, travel, weight) {
-      const {seed, width, height, cameraY} = this.scene;
+    drawBand(band, pool, bank, travel, weight, project) {
+      const {seed, width, height} = this.scene;
       const offset = travel * band.rate;
       const scaleHeight = Math.min(height, 540);
-      const drift = Math.max(-height * .13, Math.min(height * .13, cameraY * band.rate));
-      const ground = x => groundAt(band, seed, x, height, scaleHeight) - drift;
+      const ground = x => groundAt(band, seed, x, height, scaleHeight) + project(band, x);
       // Enlarged crowns can enter from beyond a full viewport height away.
       const margin = scaleHeight * 1.75;
       const first = Math.floor((offset - margin) / band.stride);
