@@ -52,24 +52,25 @@ async function openGame(browser, width, height, options = {}) {
     game.loop.sleep();
 
     // Drive the real update and render paths at known camera states.
+    const draw = () => {
+      scene.cameras.main.setScroll(scene.cameraX, scene.cameraY);
+      scene.drawScene();
+    };
     window.forestTest = {
       game, scene,
       views: () => scene.forestMidground.pools.flat().filter(image => image.visible)
         .map(image => ({frame: image.frame.name, x: image.x, y: image.y,
           alpha: image.alpha, depth: image.depth, scale: image.scaleX, flip: image.flipX})),
-      draw() {
-        scene.cameras.main.setScroll(scene.cameraX, scene.cameraY);
-        scene.drawScene();
-        game.step(performance.now(), 0);
-      },
-      place(meters) {
+      draw,
+      place(meters, render = false) {
         const x = scene.startX + meters * window.GRIM_CONFIG.pxPerMeter;
         scene.terrain.advance(x + scene.width + 800);
         const y = scene.terrain.groundAt(x) ?? scene.terrain.anchorAt(x);
         Object.assign(scene.player, {x, y, grounded: true, velocityY: 0});
         Object.assign(scene, {distance: meters, speed: window.GRIM_CORE.runSpeed(meters), cameraX: x - scene.width * .32,
           cameraY: y - scene.groundY});
-        this.draw();
+        draw();
+        if (render) game.step(performance.now(), 0);
       },
       signature() {
         return JSON.stringify({
@@ -300,7 +301,7 @@ function compareFrames(before, after) {
     });
 
     for (const distance of [55, 665, 900, 1080]) {
-      await page.evaluate(m => window.forestTest.place(m), distance);
+      await page.evaluate(m => window.forestTest.place(m, true), distance);
       await page.screenshot({path: path.join(out, 'forest-pilot-950-' + distance + '.png')});
     }
     await page.evaluate(() => window.forestTest.game.loop.wake());
@@ -317,7 +318,7 @@ function compareFrames(before, after) {
     const perfSmall = (await sequence(small, false)).perf;
     await small.evaluate(() => {
       window.forestTest.scene.state = 'playing';
-      window.forestTest.place(120);
+      window.forestTest.place(120, true);
     });
     await small.screenshot({path: path.join(out, 'forest-pilot-740.png')});
     assert.deepEqual(smallErrors, []);
