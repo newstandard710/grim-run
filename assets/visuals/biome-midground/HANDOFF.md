@@ -5,3 +5,5 @@
 - Feature branch: feat/all-biome-parallax. Work is committed in checkpoints. The rollout is complete only after full visual and regression review, an approved-scope merge, and public smoke verification.
 - Art batches: Surface (Foothills, Tundra), cave pair (Caves, Crystals), volcanic/architecture (Ashlands, Lava, Boss). Original transparent PNG outputs and the exact ImageGen prompts are stored beside this file. Early sheets sometimes vary from the requested grid; map actual art bounds and preserve source bytes.
 - Next: complete atlases, renderer/streaming, browser evidence for all seven biomes and Forest baseline, CI, merge, live hash/smoke verification.
+
+- Recovery: the old local checkout and remote checkpoint 6d2bf4a have identical source trees. All seven primary sheets and their recorded prompts are present. Both late refinement PNGs were also recovered. Their exact prompts/references could not be retrieved, so their byte hashes and known provenance are recorded separately. The primary Boss sheet has an opaque matte and should be archived as source; use the transparent refinement cutouts.
