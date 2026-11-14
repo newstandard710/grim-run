@@ -81,14 +81,9 @@ const server=http.createServer((req,res)=>{
      // inferring timing from manually sampled stills alone.
      const marks=[];
      await page.bringToFront();
-     await page.evaluate(()=>{
-      const game=window.grimRun,s=game.scene.scenes[0];
-      s.sys.sceneUpdate=s._cutsceneRealUpdate;
-      game.loop.sleep();game.loop.wake();
-     });
      for(const k of [1,8]){
       await page.evaluate(k=>{
-       const s=window.grimRun.scene.scenes[0],finish=s.finishVendorIntro;
+       const game=window.grimRun,s=game.scene.scenes[0],finish=s.finishVendorIntro;
        s.sys.sceneUpdate=s._cutsceneRealUpdate;s.startRun();s.state='playing';s.triggerVendor(k);
        const start=s.cutsceneLastAt;
        s.cutsceneTestDuration=null;
@@ -97,15 +92,24 @@ const server=http.createServer((req,res)=>{
         this.finishVendorIntro=finish;
         return finish.call(this);
        };
+       game.loop.sleep();game.loop.wake();
       },k);
-      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{polling:100,timeout:16000});
+      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{polling:100,timeout:16000}).catch(async error=>{
+       const state=await page.evaluate(()=>{
+        const {loop,scene:{scenes:[s]}}=window.grimRun;
+        return {state:s.state,remaining:s.vendorIntroMs,clock:s.cutsceneLastAt,
+         now:performance.now(),age:Date.now()-s.lastUpdateHeartbeatAt,
+         loop:loop.running,hidden:document.hidden,lastVendor:s.lastVendorNumber};
+       });
+       throw Error('Merchant playback did not finish: '+JSON.stringify(state),{cause:error});
+      });
       const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
       const scene=k===1?'angel':'devil';marks.push({scene,ms});
       assert(ms>=9800&&ms<14000,`${scene} real-time intro: ${ms} ms`);
       await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.leaveVendor();s.state='paused';});
      }
      await page.evaluate(()=>{
-      const s=window.grimRun.scene.scenes[0],finish=s.finishChest;
+      const game=window.grimRun,s=game.scene.scenes[0],finish=s.finishChest;
       s.hasTeleported=false;s.shrineClaimed=false;s.state='playing';s.startChest();
       const start=s.cutsceneLastAt;
       s.cutsceneTestDuration=null;
@@ -114,6 +118,7 @@ const server=http.createServer((req,res)=>{
        this.finishChest=finish;
        return finish.call(this);
       };
+      game.loop.sleep();game.loop.wake();
      });
      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].gunUnlocked&&window.grimRun.scene.scenes[0].state!=='chest',null,{polling:100,timeout:10000});
      const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
