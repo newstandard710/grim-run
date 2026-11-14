@@ -1,4 +1,4 @@
-/* Forest scenery uses camera displacement and its own position-based variation. */
+/* Seeded Forest scenery projected in two visual planes behind the playable ground. */
 (function(scope) {
   'use strict';
 
@@ -6,18 +6,24 @@
   const ROOT = 'assets/visuals/forest-midground/v1/forest-midground';
   const BANDS = [
     {
-      depth: -24, rate: .16, stride: 310, base: .67, opacity: .50, salt: 0x519,
-      pieces: [
-        ['far-leaning-ash', .40], ['far-shadow-grove', .38], ['far-open-oak', .42],
-        ['far-bare-pair', .32], ['far-low-canopy', .23], ['far-wooded-bank', .17]
-      ]
+      depth: -24, rate: .16, stride: 440, base: .77, color: 0x273945, tint: 0xd1dee8, coverCutoff: [.26, .25], salt: 0x519,
+      opacity: [.60, .72], treeHeight: [.52, .70],
+      // Normalized contact points identify the painted roots, including flared and leaning trunks.
+      trees: [
+        ['far-leaning-ash', .25, .925], ['far-shadow-grove', .44, .94],
+        ['far-open-oak', .59, .935], ['far-bare-pair', .59, .91]
+      ],
+      cover: [['far-low-canopy', .46, .89, .27], ['far-wooded-bank', .52, .85, .32]]
     },
     {
-      depth: -22, rate: .42, stride: 470, base: .755, opacity: .63, salt: 0x776,
-      pieces: [
-        ['near-curved-oak', .56], ['near-split-trunk', .53], ['near-twin-trunks', .59],
-        ['near-bent-oak', .44], ['near-fern-brush', .14], ['near-mossy-roots', .18]
-      ]
+      depth: -22, rate: .42, stride: 690, base: .87, color: 0x212a2d, coverCutoff: [.19, .19], salt: 0x776,
+      opacity: [.82, .95], treeHeight: [.75, .95],
+      trees: [
+        ['near-curved-oak', .34, .89], ['near-split-trunk', .34, .92],
+        ['near-twin-trunks', .28, .92], ['near-bent-oak', .27, .90]
+      ],
+      cover: [['near-fern-brush', .48, .86, .23], ['near-mossy-roots', .48, .85, .25]],
+      giants: [1, 1.25]
     }
   ];
   const POOL_PER_BAND = 7;
@@ -30,6 +36,17 @@
     return ((value ^ (value >>> 16)) >>> 0) / 0x100000000;
   }
 
+  function mix(a, b, fraction) {
+    return a + (b - a) * fraction;
+  }
+
+  function groundAt(band, seed, x, height, scaleHeight) {
+    const segment = x / (band.stride * .75);
+    const i = Math.floor(segment), t = segment - i;
+    const a = variation(seed, i, band.salt + 8), b = variation(seed, i + 1, band.salt + 8);
+    return height * band.base + (mix(a, b, t * t * (3 - 2 * t)) - .5) * scaleHeight * .09;
+  }
+
   function preload(scene) {
     if (new URLSearchParams(scope.location?.search).get('forestMidground') === '0') return;
     scene.load?.atlas?.(ATLAS, ROOT + '.webp', ROOT + '.json');
@@ -40,14 +57,16 @@
       this.scene = scene;
       this.atlas = scene.textures?.exists?.(ATLAS) ? scene.textures.get(ATLAS) : null;
       this.pools = [[], []];
-      if (!scene.add?.image || !this.atlas ||
-          BANDS.some(band => band.pieces.some(([key]) => !this.atlas.has(key)))) return;
-      for (let i = 0; i < BANDS.length; i++) {
-        const band = BANDS[i];
+      this.banks = [];
+      this.rimClipped = false;
+      if (!scene.add?.image || !scene.add?.graphics || !this.atlas ||
+          BANDS.some(band => [...band.trees, ...band.cover].some(([key]) => !this.atlas.has(key)))) return;
+
+      for (const [i, band] of BANDS.entries()) {
+        this.banks.push(scene.add.graphics().setScrollFactor(0).setDepth(band.depth - .1).setVisible(false));
         for (let k = 0; k < POOL_PER_BAND; k++) {
-          const image = scene.add.image(0, 0, ATLAS, band.pieces[0][0]);
-          this.pools[i].push(image.setOrigin(.5, 1).setScrollFactor(0)
-            .setDepth(band.depth).setVisible(false));
+          this.pools[i].push(scene.add.image(0, 0, ATLAS, band.trees[0][0])
+            .setScrollFactor(0).setDepth(band.depth).setTint(band.tint ?? 0xffffff).setVisible(false));
         }
       }
       scene.events?.once?.('shutdown', () => this.destroy());
@@ -57,11 +76,12 @@
       for (const pool of this.pools) {
         for (const image of pool) image.setVisible(false);
       }
+      for (const bank of this.banks) bank.setVisible(false);
     }
 
-    render() {
-      const scene = this.scene;
+    render(sections) {
       if (!this.pools[0].length) return;
+      const scene = this.scene;
       const weight = scope.GRIM_WORLD_ART?.biomeWeights?.(scene.distance)?.forest || 0;
       if (!weight || scene.hasTeleported || !scene.biomeBackdrops?.forest ||
           CONCEALED.has(scene.state) || !Number.isFinite(scene.startX)) {
@@ -69,46 +89,108 @@
         return;
       }
 
-      // Absolute scroll projects the same cells during normal play, rewind and
-      // teleports. No timer, mutable scenery RNG or rewind snapshot is needed.
+      this.clipRims(sections || []);
       const travel = scene.cameraX - scene.startX;
-      for (let i = 0; i < BANDS.length; i++) {
-        this.drawBand(BANDS[i], this.pools[i], travel, weight);
+      for (const [i, band] of BANDS.entries()) {
+        this.drawBand(band, this.pools[i], this.banks[i], travel, weight);
       }
     }
 
-    drawBand(band, pool, travel, weight) {
-      const {seed, width, height} = this.scene;
+    clipRims(sections) {
+      const {scene} = this;
+      if (!scene.make?.graphics) return;
+      const {width, height, cameraX, cameraY} = scene;
+      const gaps = sections.filter(s => s.kind === 'gap' && s.start < cameraX + width && s.end > cameraX);
+      if (!gaps.length && !this.rimClipped) return;
+      if (gaps.length) {
+        this.rim ||= scene.make.graphics({x: 0, y: 0, add: false}).setScrollFactor(0);
+        this.rimMask ||= this.rim.createGeometryMask();
+        const contour = [{x: -1, y: height + 1}];
+        for (const gap of gaps) {
+          const a = gap.start - cameraX, b = gap.end - cameraX;
+          const left = Math.max(-1, a), right = Math.min(width + 1, b);
+          const rimY = x => Math.min(height + 1, Math.max(-1, mix(gap.y0, gap.y1, (x - a) / (b - a)) - cameraY));
+          contour.push({x: left, y: height + 1}, {x: left, y: rimY(left)},
+            {x: right, y: rimY(right)}, {x: right, y: height + 1});
+        }
+        contour.push({x: width + 1, y: height + 1}, {x: width + 1, y: -2}, {x: -1, y: -2});
+        this.rim.clear().fillStyle(0xffffff).fillPoints(contour, true);
+      }
+      if (Boolean(gaps.length) !== this.rimClipped) {
+        this.rimClipped = Boolean(gaps.length);
+        for (const view of [...this.banks, ...this.pools.flat()]) {
+          if (this.rimClipped) view.setMask(this.rimMask);
+          else view.clearMask();
+        }
+      }
+    }
+
+    drawBand(band, pool, bank, travel, weight) {
+      const {seed, width, height, cameraY} = this.scene;
       const offset = travel * band.rate;
       const scaleHeight = Math.min(height, 540);
-      // Include wide branches outside the viewport before testing exact bounds.
-      const margin = scaleHeight * .85;
+      const drift = Math.max(-height * .13, Math.min(height * .13, cameraY * band.rate));
+      const ground = x => groundAt(band, seed, x, height, scaleHeight) - drift;
+      // Enlarged crowns can enter from beyond a full viewport height away.
+      const margin = scaleHeight * 1.75;
       const first = Math.floor((offset - margin) / band.stride);
       const last = Math.floor((width + offset + margin) / band.stride);
+      const {salt} = band;
       let used = 0;
+      bank.clear().setVisible(true).setAlpha(weight);
       for (let cell = first; cell <= last && used < pool.length; cell++) {
-        const salt = band.salt;
-        const clearing = .07 + .28 * variation(seed, Math.floor(cell / 3), salt + 7);
-        if (variation(seed, cell, salt) < clearing) continue;
-        const selection = Math.floor(variation(seed, cell, salt + 1) * band.pieces.length);
-        const previous = Math.floor(variation(seed, cell - 1, salt + 1) * band.pieces.length);
-        const piece = band.pieces[selection === previous ? (selection + 1) % band.pieces.length : selection];
-        const x = (cell + .08 + .84 * variation(seed, cell, salt + 2)) * band.stride - offset;
-        const y = height * band.base + (variation(seed, cell, salt + 3) - .5) * scaleHeight * .085;
-        const frame = this.atlas.get(piece[0]);
-        const scale = scaleHeight * piece[1] * (.82 + .34 * variation(seed, cell, salt + 4)) / frame.height;
-        const radius = frame.width * scale * .5;
-        if (x + radius < 0 || x - radius > width) continue;
+        const density = variation(seed, Math.floor(cell / 3), salt + 7);
+        const kind = variation(seed, cell, salt);
+        // Give the Forest entrance one large oak before the seeded clearings.
+        const entranceTree = band.giants && cell === 0;
+        if (!entranceTree && kind < .08 + .21 * density) continue;
+        const [minimumCover, extraCover] = band.coverCutoff;
+        const isCover = !entranceTree && kind < minimumCover + extraCover * density;
+        const pieces = isCover ? band.cover : band.trees;
+        const selection = Math.floor(variation(seed, cell, salt + 1) * pieces.length);
+        const previous = Math.floor(variation(seed, cell - 1, salt + 1) * pieces.length);
+        const [key, rootX, rootY, coverHeight] = pieces[
+          selection === previous ? (selection + 1) % pieces.length : selection];
+        const position = variation(seed, cell, salt + 2);
+        const worldX = (cell + (entranceTree ? mix(.58, .76, position) : mix(.20, .80, position))) * band.stride;
+        const x = worldX - offset, y = ground(worldX);
+        const tall = entranceTree || (band.giants && variation(seed, cell, salt + 3) < .24);
+        const size = variation(seed, cell, salt + 4);
+        const relativeHeight = isCover ? coverHeight * mix(.85, 1.12, size)
+          : mix(...(tall ? band.giants : band.treeHeight), size);
+        const frame = this.atlas.get(key);
+        const scale = scaleHeight * relativeHeight / frame.height;
+        const flip = variation(seed, cell, salt + 5) < .5;
+        const left = (flip ? 1 - rootX : rootX) * frame.width * scale;
+        if (x - left > width || x + frame.width * scale - left < 0) continue;
         const image = pool[used++];
-        if (image.frame.name !== piece[0]) image.setFrame(piece[0]);
-        image.setPosition(x, y).setScale(scale).setFlipX(variation(seed, cell, salt + 5) < .5)
-          .setAlpha(weight * band.opacity * (.86 + .14 * variation(seed, cell, salt + 6)))
-          .setVisible(true);
+        if (image.frame.name !== key) image.setFrame(key);
+        image.setOrigin(rootX, rootY).setPosition(x, y).setScale(flip ? -scale : scale, scale)
+          .setAlpha(weight * mix(...band.opacity, variation(seed, cell, salt + 6))).setVisible(true);
+        this.drawBank(bank, band, ground, worldX, x, scaleHeight, Math.min(frame.width * scale * .54, band.stride * .32));
       }
       for (; used < pool.length; used++) pool[used].setVisible(false);
     }
 
+    drawBank(bank, band, ground, worldX, x, height, radius) {
+      // Low, tapered banks back the illustrated root flares. All points share
+      // the same ground profile and camera projection as their tree.
+      const points = [];
+      for (let i = -3; i <= 3; i++) {
+        const dx = radius * i / 3;
+        points.push({x: x + dx, y: ground(worldX + dx)});
+      }
+      for (let i = 3; i >= -3; i--) {
+        const dx = radius * i / 3;
+        points.push({x: x + dx, y: ground(worldX + dx) + (1 - Math.abs(i) / 3) * height * .11});
+      }
+      bank.fillStyle(band.color, .57).fillPoints(points, true);
+    }
+
     destroy() {
+      this.rimMask?.destroy();
+      this.rim?.destroy();
+      for (const bank of this.banks) bank.destroy();
       for (const pool of this.pools) {
         for (const image of pool) image.destroy();
         pool.length = 0;
