@@ -1,0 +1,363 @@
+{
+  "frames": {
+    "far-cobalt-vein": {
+      "frame": {
+        "x": 8,
+        "y": 8,
+        "w": 304,
+        "h": 211
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 211
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        443,
+        0,
+        887,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        21,
+        124,
+        426,
+        405
+      ],
+      "band": "far",
+      "contact": [
+        0.53,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.53,
+            0.92
+          ]
+        ]
+      }
+    },
+    "far-amethyst-bed": {
+      "frame": {
+        "x": 328,
+        "y": 8,
+        "w": 304,
+        "h": 130
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 130
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        887,
+        0,
+        1330,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        20,
+        230,
+        428,
+        404
+      ],
+      "band": "far",
+      "contact": [
+        0.53,
+        0.91
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.53,
+            0.91
+          ]
+        ]
+      }
+    },
+    "far-inset-crystals": {
+      "frame": {
+        "x": 648,
+        "y": 8,
+        "w": 304,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        443,
+        443,
+        887,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        20,
+        91,
+        422,
+        377
+      ],
+      "band": "far",
+      "contact": [
+        0.55,
+        0.95
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.55,
+            0.95
+          ]
+        ]
+      }
+    },
+    "far-ceiling-socket": {
+      "frame": {
+        "x": 968,
+        "y": 8,
+        "w": 289,
+        "h": 334
+      },
+      "sourceSize": {
+        "w": 289,
+        "h": 334
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        1330,
+        443,
+        1774,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        83,
+        36,
+        403,
+        406
+      ],
+      "band": "far",
+      "contact": [
+        0.61,
+        0.23
+      ],
+      "support": {
+        "kind": "ceiling",
+        "points": [
+          [
+            0.61,
+            0.23
+          ]
+        ]
+      }
+    },
+    "near-wall-geode": {
+      "frame": {
+        "x": 8,
+        "y": 358,
+        "w": 304,
+        "h": 290
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 290
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        0,
+        0,
+        443,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        25,
+        29,
+        418,
+        404
+      ],
+      "band": "near",
+      "contact": [
+        0.41,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.41,
+            0.92
+          ]
+        ]
+      }
+    },
+    "near-fused-fan": {
+      "frame": {
+        "x": 328,
+        "y": 358,
+        "w": 304,
+        "h": 280
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 280
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        1330,
+        0,
+        1774,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        24,
+        42,
+        422,
+        409
+      ],
+      "band": "near",
+      "contact": [
+        0.48,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.48,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-geode-shelf": {
+      "frame": {
+        "x": 648,
+        "y": 358,
+        "w": 304,
+        "h": 240
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 240
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        0,
+        443,
+        443,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        25,
+        76,
+        417,
+        386
+      ],
+      "band": "near",
+      "contact": [
+        0.49,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.49,
+            0.92
+          ]
+        ]
+      }
+    },
+    "near-ceiling-ledge": {
+      "frame": {
+        "x": 968,
+        "y": 358,
+        "w": 304,
+        "h": 198
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 198
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/crystals.png",
+      "crop": [
+        887,
+        443,
+        1330,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        19,
+        76,
+        427,
+        342
+      ],
+      "band": "near",
+      "contact": [
+        0.54,
+        0.15
+      ],
+      "support": {
+        "kind": "ceiling",
+        "points": [
+          [
+            0.54,
+            0.15
+          ]
+        ]
+      }
+    }
+  },
+  "meta": {
+    "image": "crystals.webp",
+    "size": {
+      "w": 1280,
+      "h": 700
+    },
+    "format": "RGBA8888",
+    "scale": "1",
+    "atlasBytes": 162840,
+    "atlasSha256": "644a5649c32b87419075eee964b4626e954d68969c61e0b7379b2d10e43dca25",
+    "padding": 8,
+    "sources": {
+      "source/crystals.png": {
+        "sha256": "cde6c80d87214c845b05f7e2cc05c7c1027cfb3df43023025928ca23d1c64d97",
+        "size": [
+          1774,
+          887
+        ]
+      }
+    },
+    "primarySource": "source/crystals.png",
+    "primarySourceSha256": "cde6c80d87214c845b05f7e2cc05c7c1027cfb3df43023025928ca23d1c64d97",
+    "reference": "assets/visuals/biomes/deep-underground.webp",
+    "referenceSha256": "6f85501fb735b6338d4aa5c4f7fb14186868e154af13ff0fb54281128b2ebe0c",
+    "alphaCleanup": "connected-alpha",
+    "pillow": "13.0.0",
+    "webp": "1.6.0",
+    "quality": 83,
+    "numpy": "2.3.5",
+    "scipy": "1.17.0"
+  }
+}

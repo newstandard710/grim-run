@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        group: [movement, powers, world, forest]
+        group: [movement, powers, world, forest, biomes]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,6 +32,19 @@ jobs:
       - name: Check Forest parallax and compare with the previous live build
         if: ${{ success() && matrix.group == 'forest' }}
         run: node tests/browser-forest-midground.js
+      - name: Review grounded scenery, atlas streaming and gameplay parity
+        if: ${{ success() && matrix.group == 'biomes' }}
+        run: |
+          revision=b1930a49c52a8aed796cb3a388165bc5bbb6a898
+          git cat-file -e "$revision^{commit}" 2>/dev/null || git fetch --depth 1 origin "$revision"
+          node tests/browser-biome-midground.js
+      - name: Save biome motion frames and validation metrics
+        if: ${{ always() && matrix.group == 'biomes' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: biome-midground-review
+          path: test-results/biome-review
+          if-no-files-found: ignore
       - name: Install FFmpeg for the Forest comparison
         if: ${{ !cancelled() && matrix.group == 'forest' && hashFiles('test-results/forest-comparison-frames/127.png') != '' }}
         run: |

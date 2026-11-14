@@ -1,0 +1,609 @@
+{
+  "frames": {
+    "far-slate-spur": {
+      "frame": {
+        "x": 8,
+        "y": 8,
+        "w": 304,
+        "h": 170
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 170
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        0,
+        0,
+        362,
+        325
+      ],
+      "alphaBoundsInCrop": [
+        18,
+        78,
+        348,
+        262
+      ],
+      "band": "far",
+      "contact": [
+        0.56,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.56,
+            0.93
+          ]
+        ]
+      }
+    },
+    "far-heather-terrace": {
+      "frame": {
+        "x": 328,
+        "y": 8,
+        "w": 304,
+        "h": 151
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 151
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        362,
+        0,
+        725,
+        325
+      ],
+      "alphaBoundsInCrop": [
+        17,
+        97,
+        347,
+        261
+      ],
+      "band": "far",
+      "contact": [
+        0.51,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.51,
+            0.93
+          ]
+        ]
+      }
+    },
+    "far-fractured-ridge": {
+      "frame": {
+        "x": 648,
+        "y": 8,
+        "w": 304,
+        "h": 146
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 146
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        725,
+        0,
+        1087,
+        325
+      ],
+      "alphaBoundsInCrop": [
+        11,
+        99,
+        350,
+        262
+      ],
+      "band": "far",
+      "contact": [
+        0.57,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.57,
+            0.94
+          ]
+        ]
+      }
+    },
+    "far-scrub-bank": {
+      "frame": {
+        "x": 968,
+        "y": 8,
+        "w": 304,
+        "h": 152
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 152
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        1087,
+        0,
+        1448,
+        325
+      ],
+      "alphaBoundsInCrop": [
+        12,
+        94,
+        344,
+        260
+      ],
+      "band": "far",
+      "contact": [
+        0.47,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.47,
+            0.93
+          ]
+        ]
+      }
+    },
+    "far-heather-spur": {
+      "frame": {
+        "x": 8,
+        "y": 263,
+        "w": 304,
+        "h": 135
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 135
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        0,
+        325,
+        362,
+        540
+      ],
+      "alphaBoundsInCrop": [
+        23,
+        51,
+        348,
+        195
+      ],
+      "band": "far",
+      "contact": [
+        0.46,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.46,
+            0.93
+          ]
+        ]
+      }
+    },
+    "far-low-heather": {
+      "frame": {
+        "x": 328,
+        "y": 263,
+        "w": 304,
+        "h": 95
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 95
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        362,
+        325,
+        725,
+        540
+      ],
+      "alphaBoundsInCrop": [
+        17,
+        95,
+        344,
+        197
+      ],
+      "band": "far",
+      "contact": [
+        0.48,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.48,
+            0.92
+          ]
+        ]
+      }
+    },
+    "far-slate-boulder": {
+      "frame": {
+        "x": 648,
+        "y": 263,
+        "w": 304,
+        "h": 141
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 141
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        725,
+        325,
+        1087,
+        540
+      ],
+      "alphaBoundsInCrop": [
+        12,
+        51,
+        343,
+        205
+      ],
+      "band": "far",
+      "contact": [
+        0.48,
+        0.9
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.48,
+            0.9
+          ]
+        ]
+      }
+    },
+    "far-scree-bank": {
+      "frame": {
+        "x": 968,
+        "y": 263,
+        "w": 304,
+        "h": 98
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 98
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        1087,
+        325,
+        1448,
+        540
+      ],
+      "alphaBoundsInCrop": [
+        11,
+        84,
+        347,
+        192
+      ],
+      "band": "far",
+      "contact": [
+        0.52,
+        0.9
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.52,
+            0.9
+          ]
+        ]
+      }
+    },
+    "near-rock-shoulder": {
+      "frame": {
+        "x": 8,
+        "y": 518,
+        "w": 304,
+        "h": 204
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 204
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        0,
+        540,
+        362,
+        835
+      ],
+      "alphaBoundsInCrop": [
+        13,
+        50,
+        352,
+        277
+      ],
+      "band": "near",
+      "contact": [
+        0.56,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.56,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-windbent-tree": {
+      "frame": {
+        "x": 328,
+        "y": 518,
+        "w": 304,
+        "h": 236
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 236
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        362,
+        540,
+        725,
+        835
+      ],
+      "alphaBoundsInCrop": [
+        13,
+        18,
+        349,
+        279
+      ],
+      "band": "near",
+      "contact": [
+        0.43,
+        0.93
+      ],
+      "support": {
+        "kind": "root",
+        "points": [
+          [
+            0.43,
+            0.93
+          ]
+        ]
+      }
+    },
+    "near-slate-bed": {
+      "frame": {
+        "x": 648,
+        "y": 518,
+        "w": 304,
+        "h": 193
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 193
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        725,
+        540,
+        1087,
+        835
+      ],
+      "alphaBoundsInCrop": [
+        10,
+        62,
+        350,
+        278
+      ],
+      "band": "near",
+      "contact": [
+        0.52,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.52,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-slate-twins": {
+      "frame": {
+        "x": 968,
+        "y": 518,
+        "w": 304,
+        "h": 209
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        1087,
+        540,
+        1448,
+        835
+      ],
+      "alphaBoundsInCrop": [
+        15,
+        51,
+        347,
+        279
+      ],
+      "band": "near",
+      "contact": [
+        0.57,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.57,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-heather-bed": {
+      "frame": {
+        "x": 8,
+        "y": 773,
+        "w": 304,
+        "h": 102
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 102
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        0,
+        835,
+        725,
+        1086
+      ],
+      "alphaBoundsInCrop": [
+        77,
+        17,
+        691,
+        223
+      ],
+      "band": "near",
+      "contact": [
+        0.48,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.48,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-shale-talus": {
+      "frame": {
+        "x": 328,
+        "y": 773,
+        "w": 304,
+        "h": 91
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 91
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/foothills.png",
+      "crop": [
+        725,
+        835,
+        1448,
+        1086
+      ],
+      "alphaBoundsInCrop": [
+        58,
+        44,
+        647,
+        221
+      ],
+      "band": "near",
+      "contact": [
+        0.54,
+        0.9
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.54,
+            0.9
+          ]
+        ]
+      }
+    }
+  },
+  "meta": {
+    "image": "foothills.webp",
+    "size": {
+      "w": 1280,
+      "h": 1020
+    },
+    "format": "RGBA8888",
+    "scale": "1",
+    "atlasBytes": 196988,
+    "atlasSha256": "fde33afe7c88a01a5fc1ddce911dc7a38da5c4ef8b7d47612b2033723a61f79d",
+    "padding": 8,
+    "sources": {
+      "source/foothills.png": {
+        "sha256": "df9e5ca1e9a4320055b3c43ce4f36938bc2472b36e5dd2acc677e76b607c71cc",
+        "size": [
+          1448,
+          1086
+        ]
+      }
+    },
+    "primarySource": "source/foothills.png",
+    "primarySourceSha256": "df9e5ca1e9a4320055b3c43ce4f36938bc2472b36e5dd2acc677e76b607c71cc",
+    "reference": "assets/visuals/biomes/foothills.webp",
+    "referenceSha256": "5c9c6dd4d6a0606fc17170ab1d1d6eb21295aa05e02ccb6d1811863a3f25c5a8",
+    "alphaCleanup": "connected-alpha",
+    "pillow": "13.0.0",
+    "webp": "1.6.0",
+    "quality": 83,
+    "numpy": "2.3.5",
+    "scipy": "1.17.0"
+  }
+}

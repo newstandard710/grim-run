@@ -1,0 +1,367 @@
+{
+  "frames": {
+    "far-fortress-buttress": {
+      "frame": {
+        "x": 8,
+        "y": 8,
+        "w": 304,
+        "h": 311
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 311
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        891,
+        0,
+        1331,
+        440
+      ],
+      "alphaBoundsInCrop": [
+        10,
+        5,
+        427,
+        431
+      ],
+      "band": "far",
+      "contact": [
+        0.52,
+        0.95
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.52,
+            0.95
+          ]
+        ]
+      }
+    },
+    "far-fortress-terrace": {
+      "frame": {
+        "x": 328,
+        "y": 8,
+        "w": 304,
+        "h": 302
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 302
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        1331,
+        0,
+        1774,
+        440
+      ],
+      "alphaBoundsInCrop": [
+        13,
+        9,
+        438,
+        431
+      ],
+      "band": "far",
+      "contact": [
+        0.57,
+        0.96
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.57,
+            0.96
+          ]
+        ]
+      }
+    },
+    "far-courtyard-wall": {
+      "frame": {
+        "x": 648,
+        "y": 8,
+        "w": 304,
+        "h": 275
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 275
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        441,
+        440,
+        891,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        5,
+        18,
+        441,
+        412
+      ],
+      "band": "far",
+      "contact": [
+        0.52,
+        0.96
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.52,
+            0.96
+          ]
+        ]
+      }
+    },
+    "far-masonry-rubble": {
+      "frame": {
+        "x": 968,
+        "y": 8,
+        "w": 304,
+        "h": 165
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 165
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        1331,
+        440,
+        1774,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        5,
+        168,
+        438,
+        403
+      ],
+      "band": "far",
+      "contact": [
+        0.61,
+        0.96
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.61,
+            0.96
+          ]
+        ]
+      }
+    },
+    "near-broken-tower": {
+      "frame": {
+        "x": 8,
+        "y": 358,
+        "w": 304,
+        "h": 307
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 307
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        0,
+        0,
+        441,
+        440
+      ],
+      "alphaBoundsInCrop": [
+        10,
+        6,
+        432,
+        432
+      ],
+      "band": "near",
+      "contact": [
+        0.45,
+        0.95
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.45,
+            0.95
+          ]
+        ]
+      }
+    },
+    "near-ruined-arch": {
+      "frame": {
+        "x": 328,
+        "y": 358,
+        "w": 304,
+        "h": 282
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 282
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        441,
+        0,
+        891,
+        440
+      ],
+      "alphaBoundsInCrop": [
+        7,
+        23,
+        441,
+        426
+      ],
+      "band": "near",
+      "contact": [
+        0.5,
+        0.96
+      ],
+      "support": {
+        "kind": "arch",
+        "points": [
+          [
+            0.22,
+            0.96
+          ],
+          [
+            0.77,
+            0.96
+          ]
+        ]
+      }
+    },
+    "near-fortress-pier": {
+      "frame": {
+        "x": 648,
+        "y": 358,
+        "w": 304,
+        "h": 295
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 295
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        0,
+        440,
+        441,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        12,
+        10,
+        429,
+        415
+      ],
+      "band": "near",
+      "contact": [
+        0.46,
+        0.95
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.46,
+            0.95
+          ]
+        ]
+      }
+    },
+    "near-crenellated-rampart": {
+      "frame": {
+        "x": 968,
+        "y": 358,
+        "w": 304,
+        "h": 283
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 283
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/boss.png",
+      "crop": [
+        891,
+        440,
+        1331,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        4,
+        11,
+        436,
+        413
+      ],
+      "band": "near",
+      "contact": [
+        0.58,
+        0.96
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.58,
+            0.96
+          ]
+        ]
+      }
+    }
+  },
+  "meta": {
+    "image": "boss.webp",
+    "size": {
+      "w": 1280,
+      "h": 700
+    },
+    "format": "RGBA8888",
+    "scale": "1",
+    "atlasBytes": 187132,
+    "atlasSha256": "4818d6fba4122e0407cf71a6cb530f54accee59a55b73240df5fd46a28fc8c8b",
+    "padding": 8,
+    "sources": {
+      "source/boss.png": {
+        "sha256": "39c7bab4a09a278a1d5611c50a8de8f76436de8893acd01ce3a29130ef0f4a37",
+        "size": [
+          1774,
+          887
+        ]
+      }
+    },
+    "primarySource": "source/boss.png",
+    "primarySourceSha256": "39c7bab4a09a278a1d5611c50a8de8f76436de8893acd01ce3a29130ef0f4a37",
+    "reference": "assets/visuals/biomes/boss-castle.webp",
+    "referenceSha256": "6b8c78aa9f4fd3ded18ec6bce2111385415d7e2b5429e58681eb5b1b021128ed",
+    "alphaCleanup": "boss-luma-alpha-dematte",
+    "pillow": "13.0.0",
+    "webp": "1.6.0",
+    "quality": 83,
+    "numpy": "2.3.5",
+    "scipy": "1.17.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "boss": {
+    "source": "source/boss-refinement.png",
+    "sourceSha256": "730c77c904181c5ad4a488899e39c0d76925e893210cac63f16f3ed0261aacd6",
+    "prompt": null,
+    "reference": null,
+    "status": "Recovered generated PNG from prior workspace. Exact refinement prompt and its reference were not available in retained context."
+  },
+  "lava": {
+    "source": "source/lava-refinement.png",
+    "sourceSha256": "f275d07f936115df86fb8504ee4d7d715d07f85a7f5bf36791b9a61d4eef8699",
+    "prompt": null,
+    "reference": null,
+    "status": "Recovered generated PNG from prior workspace. Exact refinement prompt and its reference were not available in retained context."
+  }
+}

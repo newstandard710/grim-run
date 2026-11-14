@@ -1,0 +1,367 @@
+{
+  "frames": {
+    "far-organ-pipes": {
+      "frame": {
+        "x": 8,
+        "y": 8,
+        "w": 304,
+        "h": 246
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 246
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        887,
+        0,
+        1330,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        18,
+        58,
+        429,
+        390
+      ],
+      "band": "far",
+      "contact": [
+        0.56,
+        0.95
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.56,
+            0.95
+          ]
+        ]
+      }
+    },
+    "far-limestone-cluster": {
+      "frame": {
+        "x": 328,
+        "y": 8,
+        "w": 304,
+        "h": 236
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 236
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        1330,
+        0,
+        1774,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        17,
+        72,
+        430,
+        393
+      ],
+      "band": "far",
+      "contact": [
+        0.56,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.56,
+            0.94
+          ]
+        ]
+      }
+    },
+    "far-limestone-scree": {
+      "frame": {
+        "x": 648,
+        "y": 8,
+        "w": 304,
+        "h": 110
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 110
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        0,
+        443,
+        443,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        13,
+        170,
+        432,
+        321
+      ],
+      "band": "far",
+      "contact": [
+        0.51,
+        0.9
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.51,
+            0.9
+          ]
+        ]
+      }
+    },
+    "far-ceiling-fan": {
+      "frame": {
+        "x": 968,
+        "y": 8,
+        "w": 304,
+        "h": 184
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 184
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        887,
+        443,
+        1330,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        8,
+        99,
+        435,
+        358
+      ],
+      "band": "far",
+      "contact": [
+        0.5,
+        0.16
+      ],
+      "support": {
+        "kind": "ceiling",
+        "points": [
+          [
+            0.5,
+            0.16
+          ]
+        ]
+      }
+    },
+    "near-buttress": {
+      "frame": {
+        "x": 8,
+        "y": 358,
+        "w": 304,
+        "h": 262
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 262
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        0,
+        0,
+        443,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        13,
+        41,
+        429,
+        400
+      ],
+      "band": "near",
+      "contact": [
+        0.45,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.45,
+            0.93
+          ]
+        ]
+      }
+    },
+    "near-joined-columns": {
+      "frame": {
+        "x": 328,
+        "y": 358,
+        "w": 304,
+        "h": 264
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 264
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        443,
+        0,
+        887,
+        443
+      ],
+      "alphaBoundsInCrop": [
+        14,
+        34,
+        430,
+        395
+      ],
+      "band": "near",
+      "contact": [
+        0.5,
+        0.93
+      ],
+      "support": {
+        "kind": "arch",
+        "points": [
+          [
+            0.21,
+            0.94
+          ],
+          [
+            0.77,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-layered-shelf": {
+      "frame": {
+        "x": 648,
+        "y": 358,
+        "w": 304,
+        "h": 164
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 164
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        443,
+        443,
+        887,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        14,
+        105,
+        431,
+        330
+      ],
+      "band": "near",
+      "contact": [
+        0.54,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.54,
+            0.92
+          ]
+        ]
+      }
+    },
+    "near-ceiling-terrace": {
+      "frame": {
+        "x": 968,
+        "y": 358,
+        "w": 304,
+        "h": 190
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 190
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/caves.png",
+      "crop": [
+        1330,
+        443,
+        1774,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        12,
+        81,
+        432,
+        343
+      ],
+      "band": "near",
+      "contact": [
+        0.51,
+        0.19
+      ],
+      "support": {
+        "kind": "ceiling",
+        "points": [
+          [
+            0.51,
+            0.19
+          ]
+        ]
+      }
+    }
+  },
+  "meta": {
+    "image": "caves.webp",
+    "size": {
+      "w": 1280,
+      "h": 700
+    },
+    "format": "RGBA8888",
+    "scale": "1",
+    "atlasBytes": 165002,
+    "atlasSha256": "e4a624d731e4be7e6a75d18ca1316caa3232e4e18a6777793f80adcc69185f23",
+    "padding": 8,
+    "sources": {
+      "source/caves.png": {
+        "sha256": "28f389d72316a6a85e4320e2aaa4ea765516b1c72a33e0cd0ed23ded8d67dd0a",
+        "size": [
+          1774,
+          887
+        ]
+      }
+    },
+    "primarySource": "source/caves.png",
+    "primarySourceSha256": "28f389d72316a6a85e4320e2aaa4ea765516b1c72a33e0cd0ed23ded8d67dd0a",
+    "reference": "assets/visuals/biomes/underground-caves.webp",
+    "referenceSha256": "c26df4da2000facbed220e0a2559a4de3c95fb8bb86d180e2a0b11fe600d7dac",
+    "alphaCleanup": "connected-alpha",
+    "pillow": "13.0.0",
+    "webp": "1.6.0",
+    "quality": 83,
+    "numpy": "2.3.5",
+    "scipy": "1.17.0"
+  }
+}

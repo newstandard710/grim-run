@@ -1,0 +1,363 @@
+{
+  "frames": {
+    "far-cooled-columns": {
+      "frame": {
+        "x": 8,
+        "y": 8,
+        "w": 304,
+        "h": 290
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 290
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        0,
+        0,
+        443,
+        438
+      ],
+      "alphaBoundsInCrop": [
+        11,
+        20,
+        430,
+        420
+      ],
+      "band": "far",
+      "contact": [
+        0.52,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.52,
+            0.94
+          ]
+        ]
+      }
+    },
+    "far-slag-shelf": {
+      "frame": {
+        "x": 328,
+        "y": 8,
+        "w": 304,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        443,
+        0,
+        887,
+        438
+      ],
+      "alphaBoundsInCrop": [
+        12,
+        119,
+        428,
+        415
+      ],
+      "band": "far",
+      "contact": [
+        0.34,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.34,
+            0.92
+          ]
+        ]
+      }
+    },
+    "far-lavafall": {
+      "frame": {
+        "x": 648,
+        "y": 8,
+        "w": 304,
+        "h": 288
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 288
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        887,
+        0,
+        1330,
+        438
+      ],
+      "alphaBoundsInCrop": [
+        8,
+        25,
+        432,
+        427
+      ],
+      "band": "far",
+      "contact": [
+        0.46,
+        0.96
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.46,
+            0.96
+          ]
+        ]
+      }
+    },
+    "far-basalt-shoulder": {
+      "frame": {
+        "x": 968,
+        "y": 8,
+        "w": 304,
+        "h": 228
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 228
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        1330,
+        0,
+        1774,
+        438
+      ],
+      "alphaBoundsInCrop": [
+        9,
+        100,
+        434,
+        419
+      ],
+      "band": "far",
+      "contact": [
+        0.54,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.54,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-basalt-pillar": {
+      "frame": {
+        "x": 8,
+        "y": 358,
+        "w": 304,
+        "h": 295
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 295
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        0,
+        438,
+        443,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        10,
+        13,
+        433,
+        423
+      ],
+      "band": "near",
+      "contact": [
+        0.43,
+        0.92
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.43,
+            0.92
+          ]
+        ]
+      }
+    },
+    "near-layered-shelf": {
+      "frame": {
+        "x": 328,
+        "y": 358,
+        "w": 304,
+        "h": 202
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 202
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        443,
+        438,
+        887,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        10,
+        134,
+        434,
+        416
+      ],
+      "band": "near",
+      "contact": [
+        0.49,
+        0.93
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.49,
+            0.93
+          ]
+        ]
+      }
+    },
+    "near-crust-island": {
+      "frame": {
+        "x": 648,
+        "y": 358,
+        "w": 304,
+        "h": 153
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 153
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        887,
+        438,
+        1330,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        11,
+        208,
+        431,
+        419
+      ],
+      "band": "near",
+      "contact": [
+        0.53,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.53,
+            0.94
+          ]
+        ]
+      }
+    },
+    "near-basalt-talus": {
+      "frame": {
+        "x": 968,
+        "y": 358,
+        "w": 304,
+        "h": 155
+      },
+      "sourceSize": {
+        "w": 304,
+        "h": 155
+      },
+      "rotated": false,
+      "trimmed": false,
+      "source": "source/lava.png",
+      "crop": [
+        1330,
+        438,
+        1774,
+        887
+      ],
+      "alphaBoundsInCrop": [
+        9,
+        198,
+        436,
+        416
+      ],
+      "band": "near",
+      "contact": [
+        0.55,
+        0.94
+      ],
+      "support": {
+        "kind": "floor",
+        "points": [
+          [
+            0.55,
+            0.94
+          ]
+        ]
+      }
+    }
+  },
+  "meta": {
+    "image": "lava.webp",
+    "size": {
+      "w": 1280,
+      "h": 700
+    },
+    "format": "RGBA8888",
+    "scale": "1",
+    "atlasBytes": 183122,
+    "atlasSha256": "99189e55025625a93ddfb911617449232d7f2e71f578679c8d0f1e0d063f049c",
+    "padding": 8,
+    "sources": {
+      "source/lava.png": {
+        "sha256": "d251ef09215e783522897cd677b4e1e7bd4edf9c97f24008c3fae3b0b6b029b9",
+        "size": [
+          1774,
+          887
+        ]
+      }
+    },
+    "primarySource": "source/lava.png",
+    "primarySourceSha256": "d251ef09215e783522897cd677b4e1e7bd4edf9c97f24008c3fae3b0b6b029b9",
+    "reference": "assets/visuals/biomes/lava.webp",
+    "referenceSha256": "f63fdb6a57cc5ce4449bf281fcfa8e144fd39e0050714a0aa7bda20cdc2e1ac4",
+    "alphaCleanup": "connected-alpha",
+    "pillow": "13.0.0",
+    "webp": "1.6.0",
+    "quality": 83,
+    "numpy": "2.3.5",
+    "scipy": "1.17.0"
+  }
+}
