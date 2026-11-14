@@ -13,8 +13,8 @@ assert.ok(html.includes('ABYSS_BACKDROP_FILES')&&
  html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog')"),
  'Biome-specific abyss paintings load in the production scene');
 assert.ok(html.includes("this.load.image('abyss-fog','assets/visuals/terrain/abyss-fog-v1.webp?v=0.13.6-abyss-fog')")&&
- html.includes('const ABYSS_FOG_LAYER_ALPHA=.34')&&
- html.includes('this.abyssFogView(section,shape,id,alpha,activeAbyssFogViews)')&&
+ html.includes('abyss-fog-feathered')&&
+ html.includes('this.abyssFogView(section,id,weight,activeAbyssFogViews)')&&
  html.includes('.setDepth(.46)')&&html.includes('this.pruneAbyssFogViews(activeAbyssFogViews)'),
  'Shared translucent fog stays above the abyss art, below ground, and is pruned with offscreen gaps');
 assert.ok(fs.statSync(path.join(__dirname,'..','assets','visuals','terrain','abyss-fog-v1.webp')).size>50000,
@@ -39,7 +39,7 @@ for(const asset of ['abyss-canyon-gap-01.webp','abyss-canyon-gap-02.webp',
  'abyss-lava-gap-01.webp','abyss-lava-gap-02.webp'])
  assert.ok(!fs.existsSync(path.join(__dirname,'..','assets','visuals','terrain',asset)),
    `${asset} is removed from the old shared-art attempt`);
-assert.ok(html.includes('const ABYSS_BACKDROP_BLEED_MIN=36')&&
+assert.ok(html.includes('const ABYSS_BACKDROP_BLEED_MIN=48')&&
  html.includes('const displayWidth=displayHeight*aspect')&&
  html.includes('const ABYSS_ART_TOP_INSET_PX=34')&&
  html.includes('const ABYSS_ART_TOP_JITTER_PX=14')&&

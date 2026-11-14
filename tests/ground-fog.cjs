@@ -68,7 +68,18 @@ for(const x of [1000,6000,12000,18000,24000]){
 }
 for(const gap of s.terrain.segments.filter(v=>v.kind==='gap').slice(0,20)){
  const x=(gap.start+gap.end)/2;assert.equal(s.terrain.groundAt(x),null);
- assert(Number.isFinite(s.groundFogSurfaceAt(x)));assert.equal(s.terrain.groundAt(x),null);
+ assert.equal(s.groundFogSurfaceAt(x),null);assert.equal(s.terrain.groundAt(x),null);
+ const fades=[{...gap,leftFade:44,rightFade:44}];
+ for(const edge of [gap.start,gap.end,x])assert.equal(s.groundFogOpacityAt(edge,fades),0);
+ for(const [edge,sign] of [[gap.start,-1],[gap.end,1]]){
+  assert.equal(s.groundFogOpacityAt(edge+sign*44,fades),1);
+  assert.equal(s.groundFogOpacityAt(edge+sign*22,fades),.5);
+ }
+ const width=gap.end-gap.start+160,left=gap.start-80;
+ const columns=s.groundFogColumns(left,width,fades);
+ for(const edge of [gap.start-44,gap.start,gap.end,gap.end+44])
+  assert(columns.some(u=>Math.abs(left+u*width-edge)<.00001));
+
 }
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/visuals/ground-fog/manifest-v3.json')));
 for(const [file,m]of Object.entries(manifest.runtime)){

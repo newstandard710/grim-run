@@ -88,7 +88,8 @@ const server=http.createServer((req,res)=>{
           if(!bank.fogPoints)throw Error('WebGL terrain mist must use its curved strip');
           for(let i=0;i<bank.vertices.length;i++)if(bank.fogPoints[i].bottom){
             const v=bank.vertices[i],surface=s.groundFogSurfaceAt(bank.x+v.vx);
-            if(Number.isFinite(surface))errors.push(Math.abs(bank.y+v.vy-surface-4));
+            if(Number.isFinite(surface)&&v.alpha>0)errors.push(Math.abs(bank.y+v.vy-surface-4));
+            if(bank.fogGaps.some(g=>bank.x+v.x>=g.start&&bank.x+v.x<=g.end))errors.push(Math.abs(v.alpha));
           }
         }
         return {fog:fog.length,onscreenFog:fog.filter(v=>
@@ -132,7 +133,8 @@ const server=http.createServer((req,res)=>{
         const banks=[...s.groundFogViews.values()];for(const v of banks)v.setVisible(true);
         s._fogBackground=s.cameras.main.backgroundColor.rgba;
         s.cameras.main.setBackgroundColor('#000000');
-        return banks.filter(v=>v.x-s.cameraX>150&&v.x-s.cameraX<s.width-150).map(v=>({
+        return banks.filter(v=>v.x-s.cameraX>150&&v.x-s.cameraX<s.width-150&&
+          Number.isFinite(s.groundFogSurfaceAt(v.x))&&s.groundFogOpacityAt(v.x,v.fogGaps)>.8).map(v=>({
           x:Math.round(v.x-s.cameraX),y:Math.round(s.groundFogSurfaceAt(v.x)-s.cameraY)}));
       });
       await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
@@ -188,7 +190,8 @@ const server=http.createServer((req,res)=>{
         for(const bank of s.groundFogViews.values())for(let i=0;i<bank.vertices.length;i++){
           if(!bank.fogPoints[i].bottom)continue;
           const v=bank.vertices[i],surface=s.groundFogSurfaceAt(bank.x+v.vx);
-          if(Number.isFinite(surface))error=Math.max(error,Math.abs(bank.y+v.vy-surface-4));
+          if(Number.isFinite(surface)&&v.alpha>0)error=Math.max(error,Math.abs(bank.y+v.vy-surface-4));
+          if(bank.fogGaps.some(g=>bank.x+v.x>=g.start&&bank.x+v.x<=g.end))error=Math.max(error,Math.abs(v.alpha));
         }
         return error;
       });

@@ -3944,6 +3944,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(!sprite.fogGaps?.length||!scope.document)
         return render.call(sprite,renderer,sprite,camera,parent);
       const target=renderer.currentContext;
+      const gameContext=renderer.gameContext;
       const canvas=this.groundFogCanvas??=scope.document.createElement('canvas');
       if(canvas.width!==target.canvas.width||canvas.height!==target.canvas.height){
         canvas.width=target.canvas.width;canvas.height=target.canvas.height;
@@ -3959,8 +3960,12 @@ window.GRIM_CONFIG = Object.freeze({
       ctx.clearRect(left,top,width,height);
       try{
         renderer.currentContext=ctx;
+        renderer.gameContext=ctx;
         render.call(sprite,renderer,sprite,camera,parent);
-      }finally{renderer.currentContext=target;}
+      }finally{
+        renderer.currentContext=target;
+        renderer.gameContext=gameContext;
+      }
       ctx.save();
       ctx.globalCompositeOperation='destination-in';
       for(const {start,end,leftFade,rightFade} of sprite.fogGaps){
@@ -4035,8 +4040,9 @@ window.GRIM_CONFIG = Object.freeze({
       const left=this.cameraX-400,right=this.cameraX+this.width+400;
       mask.clear();mask.fillStyle(0xffffff,1);
       // Include enough terrain beyond the mask to feather every drifting bank.
-      const fogSections=this.terrain.visibleSections(left-540,right+540);
-      const gaps=fogSections.filter(s=>s.kind==='gap').map(({start,end})=>({start,end,
+      const fogSections=this.terrain.visibleSections(left,right);
+      const gaps=(this.terrain.segments||fogSections)
+        .filter(s=>s.end>=left-540&&s.start<=right+540).filter(s=>s.kind==='gap').map(({start,end})=>({start,end,
         leftFade:GROUND_FOG_TAPER,rightFade:GROUND_FOG_TAPER}));
       for(let i=1;i<gaps.length;i++){
         const bank=Math.max(1,(gaps[i].start-gaps[i-1].end)*.5);
@@ -4605,7 +4611,7 @@ window.GRIM_CONFIG = Object.freeze({
       const cache=this.abyssWallCache??=new Map();
       if(cache.has(signature))return cache.get(signature);
       const hash=i=>this.groundFogHash(Math.round(gap.start*16)^Math.round(gap.end*32),side==='left'?1109+i:1613+i)/0x100000000;
-      const spread=Math.min(46,width*.19),setback=Math.min(spread*.54,bankWidth*.20);
+      const spread=Math.min(40,width*.19),setback=Math.min(spread*.49,bankWidth*.18);
       const span=bottom-y;
       const points=[{x:start,y},{
         x:start+direction*Math.min(7,spread*.34),y:y+8
@@ -4615,10 +4621,11 @@ window.GRIM_CONFIG = Object.freeze({
       // setbacks. A different hash stream makes the two banks asymmetric.
       while(depth<span){
         const scale=.5+.5*Math.min(1,depth/115);
-        const offset=i%3===1?-setback*(.6+hash(i*3+1)*.4):
-          spread*(.19+hash(i*3+1)*.81);
+        const roll=hash(i*3+1);
+        const offset=roll<.34?-setback*(.48+hash(i*3+3)*.52):
+          spread*(.14+roll*.86);
         points.push({x:start+direction*offset*scale,y:y+depth});
-        depth+=i%3===0?10+hash(i*3+2)*14:22+hash(i*3+2)*31;
+        depth+=i%4===0?11+hash(i*3+2)*14:21+hash(i*3+2)*36;
         i++;
       }
       points.push({x:points.at(-1).x,y:bottom});
@@ -4671,10 +4678,10 @@ window.GRIM_CONFIG = Object.freeze({
         const x=start-direction*reach*i/4;
         const top={x,y:this.terrainSurfaceY(section,x)};
         const underside={x:x+direction*reach*.055,y:top.y+(i===4?4:7+(i%2)*4)};
-        g.fillStyle(i%2?edge:detail,.58);
+        g.fillStyle(i%2?edge:detail,.77);
         g.fillPoints([previous,top,underside,i===1?b:{
           x:previous.x,y:previous.y+8}],true);
-        g.lineStyle(1.4,sheen,.46).lineBetween(previous.x,previous.y+1,top.x,top.y+1);
+        g.lineStyle(1.6,sheen,.66).lineBetween(previous.x,previous.y+1,top.x,top.y+1);
         previous=top;
       }
     }
@@ -4958,8 +4965,8 @@ window.GRIM_CONFIG = Object.freeze({
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       // Keep both neighbors available when a wall projects into the view
       // before the underlying bank does.
-      const neighbors=this.terrain.visibleSections(left-52,right+52);
-      const sections=neighbors.filter(s=>s.end>=left&&s.start<=right);
+      const sections=this.terrain.visibleSections(left,right);
+      const neighbors=(this.terrain.segments||sections).filter(s=>s.end>=left-52&&s.start<=right+52);
       const startX=this.startX??200;
       this.abyssWallArt?.clear();
       const walls=new Map();

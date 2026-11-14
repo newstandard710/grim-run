@@ -22,12 +22,38 @@ const w={Phaser:{Scene:class{},Game:class{},AUTO:1,Scale:{RESIZE:1,CENTER_BOTH:1
  document:{getElementById:node,createElement:node,addEventListener(){},write(){}},
  localStorage:{getItem(){return null},setItem(){}},location:{search:'?seed=1'},URLSearchParams,addEventListener(){},innerWidth:950,innerHeight:430};w.window=w;vm.createContext(w);
 for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w);
+let wallsChecked=0;
 for(const seed of [1,7,19,33,42,99]){
- const terrain=w.GRIM_TERRAIN.makeTerrain(seed,339,200,12),scene=new w.GrimGameScene();scene.terrain=terrain;
- for(const gap of terrain.segments.filter(s=>s.kind==='gap').slice(0,30)){
-  const x=(gap.start+gap.end)/2,before=JSON.stringify(gap);
-  assert.equal(terrain.groundAt(x),null);assert(Math.abs(scene.groundFogSurfaceAt(x)-(gap.y0+gap.y1)/2)<.000001);
-  assert.equal(terrain.groundAt(x),null,'Atmospheric surface never fills a real gap');assert.equal(JSON.stringify(gap),before);
+ const terrain=w.GRIM_TERRAIN.makeTerrain(seed,339,200,12),scene=new w.GrimGameScene();
+ Object.assign(scene,{terrain,height:430});
+ const before=JSON.stringify(terrain.segments);
+ for(const [i,gap] of terrain.segments.entries()){
+  if(gap.kind!=='gap')continue;
+  const x=(gap.start+gap.end)/2;
+  assert.equal(terrain.groundAt(x),null);assert.equal(scene.groundFogSurfaceAt(x),null);
+  const signature=[];
+  for(const [side,bank] of [['left',terrain.segments[i-1]],['right',terrain.segments[i+1]]]){
+   assert(bank);
+   const wall=scene.abyssWallProfile(gap,bank,side);
+   const y=side==='left'?gap.y0:gap.y1;
+   const edge=side==='left'?gap.start:gap.end;
+   assert.equal(wall.points[0].x,edge);
+   assert.equal(wall.points[0].y,y);
+   assert.equal(scene.abyssWallProfile(gap,bank,side),wall);
+   assert(wall.points.slice(1).every((p,i)=>p.y>wall.points[i].y));
+   assert(wall.points.at(-1).y>y+430);
+   assert(wall.points.some(p=>p.y>y+430&&Math.abs(p.x-edge)>1));
+   const gapReach=(gap.end-gap.start)*.19+.00001;
+   assert(wall.points.every(p=>(p.x-edge)*wall.direction<=gapReach));
+   const slice=scene.abyssWallSlice(wall,y,y+450);
+   assert.equal(slice.at(-1).y,y+450);
+   signature.push(wall.signature);
+  }
+  assert.notEqual(...signature);
+  wallsChecked++;
  }
+ assert.equal(JSON.stringify(terrain.segments),before,'Rendering never mutates a terrain section');
+ assert(scene.abyssWallCache.size<=64);
 }
-console.log('PASS v0.15.1: revision source/runtime hashes, 169 sequential relic poses, and continuous fog heights across 180 seeded gaps without collision changes.');
+assert(wallsChecked>100);
+console.log('PASS revision assets, 169 relic poses, full-depth wall anchors and preservation of seeded terrain.');
