@@ -241,7 +241,10 @@ async function abyssReview(browser){
           canyonViews:s.abyssFogViews.size,renderer:b.game.renderer.type};
       },i);
       writeFrame(path.join(dir,String(i).padStart(3,'0')+'.png'),shot.data);
-      delete shot.data;samples.push(shot);
+      delete shot.data;
+      assert(shot.wallCache<=64&&shot.bankViews<=45&&shot.canyonViews<=12,
+        name+' bounded visible resources');
+      samples.push(shot);
     }
     assert.deepEqual(errors,[],name);
     stats[name]={gap:gap.end-gap.start,rise:gap.y1-gap.y0,samples};
