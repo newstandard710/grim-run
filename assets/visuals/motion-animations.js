@@ -6,6 +6,8 @@
   // over 188 world pixels instead of playing all four at that distance.
   const GAITS_PER_SHEET=RUN?.gaitsPerSheet||4,PIXELS_PER_GAIT=RUN?.pixelsPerGait||188,
     STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
+  const JUMP_TWEENS=new Set([4,5,7,9,11,12,16,17,18,19,20,21,22]);
+  const JUMP_TWEEN_CELL=192, JUMP_TWEEN_KEY='motion-reaper-jump-inbetweens';
   // The old 0.14-source scale was sized for the damage reach, making the
   // cutting weapon larger than the carried one. One carry-matched scale is
   // immutable throughout windup, swing and recovery; reach belongs to the arc.
@@ -24,12 +26,22 @@
   }
   function jumpFrame(p){
     if(p.grounded)return 18+clamp(1-(p.visualLandingMs||0)/LAND_MS)*5;
-    if(p.hovering)return 10.5;
+    const apex=11.5;
+    if(p.hovering)return apex;
     const age=p.jumpAgeMs||0,vy=p.velocityY||0;
-    if(age<55&&vy<0)return age/55*4;
-    if(vy<-100)return 4+6*clamp(1-(-vy-100)/Math.max(1,(p.visualLaunchVelocity||610)-100));
-    if(vy<=100)return 10+clamp((vy+100)/200)*2;
-    return 12+6*clamp((vy-100)/550);
+    if(vy<0){
+      const first=p.airJumpUsed?5:0, rise=p.airJumpUsed?6:4, launchMs=55;
+      if(age<launchMs)return mix(first,rise,age/launchMs);
+      const launchSpeed=Math.max(101,p.visualLaunchVelocity||610);
+      const target=vy < -100
+        ? mix(rise,10,clamp((launchSpeed+vy)/(launchSpeed-100)))
+        : mix(10,apex,clamp((vy+100)/100));
+      // Cutting jump velocity changes where the apex falls. Initial rise
+      // poses have time to catch up across frames rather than skipping ahead.
+      const visualCeiling=rise+(age-launchMs)/20;
+      return Math.min(target,visualCeiling);
+    }
+    return mix(apex,17,clamp(vy/365));
   }
   function cutFrame(progress){
     const t=clamp(progress);
@@ -104,6 +116,10 @@
     if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0193/reaper-run.png?v=0.19.3',
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
+  function queueAirDetails(s){
+    s.load?.spritesheet?.(JUMP_TWEEN_KEY,ROOT+'reaper-jump-inbetweens.webp?v=1',
+      {frameWidth:JUMP_TWEEN_CELL,frameHeight:JUMP_TWEEN_CELL,endFrame:22});
+  }
   class MotionAnimations{
     constructor(s){
       this.scene=s;this.body=[];this.ready=false;this.state=null;
@@ -155,16 +171,18 @@
       const rig=name==='reaper-cut-body'?cutRig(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs):null;
       const alpha=p.invulMs>0&&Math.floor((s.elapsed||0)/.083333)%2===0?.58:1;
       const solidRun=name==='reaper-run'&&this.runReady;
+      const from=Math.floor(t);
+      const tween=name==='reaper-jump'&&JUMP_TWEENS.has(from)&&Math.abs(t-from-.5)<=.25&&
+        s.textures?.exists?.(JUMP_TWEEN_KEY)&&s.textures.get(JUMP_TWEEN_KEY).has(from);
       const atlasFrame=solidRun?runAtlasFrame(p.x-(s.startX||0)):
-        (loop?Math.round(t)%COUNT:Math.round(t));
+        tween?from:(loop?Math.round(t)%COUNT:Math.round(t));
+      const texture=solidRun?'motion-reaper-run-solid':tween?JUMP_TWEEN_KEY:'motion-'+name;
       const anchor=solidRun?RUN.anchor:DATA.anchor,cell=solidRun?RUN.cell:DATA.cell[0];
-      // One complete painted silhouette. Crossfading two source-over sprites
-      // made common opaque regions 75% opaque and doubled moving limbs.
-      // The run's correspondence-aware in-betweens are baked, not calculated
-      // on the phone. Brief action poses are sampled without opacity blending.
-      this.body[0].setTexture(solidRun?'motion-reaper-run-solid':'motion-'+name,atlasFrame)
+      // One opaque registered painting at a time, including the derived
+      // transitions. Keep the same apparent size and feet anchor.
+      this.body[0].setTexture(texture,atlasFrame)
         .setOrigin(anchor[0]/cell,anchor[1]/cell)
-        .setPosition(p.x+(rig?.bodyX||0),s.feetY).setScale(solidRun?RUN.scale:scale)
+        .setPosition(p.x+(rig?.bodyX||0),s.feetY).setScale(solidRun?RUN.scale:tween?scale*cell/JUMP_TWEEN_CELL:scale)
         .setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
       if(name==='reaper-cut-body'){
         const progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;
@@ -172,9 +190,9 @@
           .setScale(-WEAPON_SCALE,WEAPON_SCALE).setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
         drawSwingArc(this.trail,s,progress,alpha);
       }
-      this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null};
+      this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture};
     }
     destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();}
   }
-  scope.GRIM_MOTION_ART={MotionAnimations,preload,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
+  scope.GRIM_MOTION_ART={MotionAnimations,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
 })(typeof window!=='undefined'?window:globalThis);

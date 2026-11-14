@@ -93,6 +93,11 @@ jobs:
       - name: Verify fluid movement, blade sweep, phone rendering and CPU frame budget
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-motion-performance.js
+      - name: Verify opening load, filled bridges and grounded animation
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
+        run: |
+          node tests/browser-five-polishes.js
+          GRIM_POLISH_CANVAS=1 node tests/browser-five-polishes.js
       - name: Verify sanctuary grounds, vendor introductions and crossbow grip
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-vendor-sanctuaries.js
