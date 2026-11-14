@@ -1532,6 +1532,7 @@ window.GRIM_CONFIG = Object.freeze({
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
   <script src="assets/visuals/forest-midground.js?v=2"></script>
+  <script src="assets/visuals/biome-midground.js?v=1"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.3"></script>
   <script src="assets/motion/v0193/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/motion-animations.js?v=0.19.3"></script>
@@ -1679,6 +1680,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.biomeBackdropReady=this.createBiomeBackdropSet('surface');
       const forestArt=scope.GRIM_FOREST_MIDGROUND;
       if(forestArt)this.forestMidground=new forestArt.ForestMidground(this);
+      const biomeArt=scope.GRIM_BIOME_MIDGROUND;
+      if(biomeArt&&new URLSearchParams(scope.location?.search).get('biomeMidground')!=='0')
+        this.biomeMidground=new biomeArt.BiomeMidground(this);
       this.createBackdropGroundVeil();
       this.resizeBiomeBackdrops();
       this.abyssFallback=this.add.graphics().setDepth(.25);
@@ -1983,6 +1987,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,
         this.coinCount,this.points,this.powerManager.summary());
       this.captureRewind();this.updateRewindButton();
+      this.biomeMidground?.prioritizeTeleport(this.distance);
       this.drawScene();
       return true;
     }
@@ -3799,6 +3804,7 @@ window.GRIM_CONFIG = Object.freeze({
       // second complete world and fog stack behind it on every display frame.
       if(scope.GRIM_FRONTEND&&['home','menu'].includes(this.state)){
         this.forestMidground?.hide();
+        this.biomeMidground?.hide(true);
         this.cameras.main.visible=false;return;
       }
       this.cameras.main.visible=true;
@@ -3810,6 +3816,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.worldPolish?.beginFrame();
       const terrainSections=this.drawGround();
       this.forestMidground?.render(terrainSections);
+      this.biomeMidground?.render(terrainSections);
       this.vendorArt?.renderWorld();
       this.drawGroundFog();
       this.drawPortals();
