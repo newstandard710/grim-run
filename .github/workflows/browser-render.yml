@@ -24,21 +24,26 @@ jobs:
         run: |
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
-      - name: Check Forest parallax and capture the same run with and without scenery
+      - name: Fetch the previous live Forest renderer
+        if: matrix.group == 'forest'
+        run: |
+          revision=32fd050ea83b3ccfec8f235d3c044ba1f320af20
+          git cat-file -e "$revision^{commit}" || git fetch --depth 1 origin "$revision"
+      - name: Check Forest parallax and compare with the previous live build
         if: ${{ success() && matrix.group == 'forest' }}
         run: node tests/browser-forest-midground.js
       - name: Install FFmpeg for the Forest comparison
-        if: ${{ !cancelled() && matrix.group == 'forest' && hashFiles('test-results/forest-comparison-frames/089.png') != '' }}
+        if: ${{ !cancelled() && matrix.group == 'forest' && hashFiles('test-results/forest-comparison-frames/127.png') != '' }}
         run: |
           if ! command -v ffmpeg >/dev/null; then
             sudo apt-get update
             sudo apt-get install -y --no-install-recommends ffmpeg
           fi
       - name: Encode the completed Forest comparison
-        if: ${{ !cancelled() && matrix.group == 'forest' && hashFiles('test-results/forest-comparison-frames/089.png') != '' }}
+        if: ${{ !cancelled() && matrix.group == 'forest' && hashFiles('test-results/forest-comparison-frames/127.png') != '' }}
         run: |
           ffmpeg -hide_banner -loglevel error -framerate 15 -i test-results/forest-comparison-frames/%03d.png \
-            -vf "pad=iw:ih+36:0:36:color=0x101922,drawtext=text='V0.19.8 VIEW':x=20:y=9:fontsize=18:fontcolor=white,drawtext=text='FOREST PILOT':x=w/2+20:y=9:fontsize=18:fontcolor=white" \
+            -vf "pad=iw:ih+36:0:36:color=0x101922,drawtext=text='PREVIOUS FOREST':x=20:y=9:fontsize=18:fontcolor=white,drawtext=text='ROOTED FOREST':x=w/2+20:y=9:fontsize=18:fontcolor=white" \
             -c:v libx264 -pix_fmt yuv420p -movflags +faststart test-results/forest-comparison.mp4
       - name: Save Forest pilot review
         if: ${{ always() && matrix.group == 'forest' }}

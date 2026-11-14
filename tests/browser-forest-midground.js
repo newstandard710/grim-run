@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const {execFileSync} = require('node:child_process');
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
@@ -10,6 +11,9 @@ const {PNG} = require('pngjs');
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, 'test-results');
 const clip = path.join(out, 'forest-comparison-frames');
+const previousRelease = '32fd050ea83b3ccfec8f235d3c044ba1f320af20';
+const previousRenderer = execFileSync('git', ['show', previousRelease + ':assets/visuals/forest-midground.js'],
+  {cwd: root, encoding: 'utf8'});
 fs.mkdirSync(clip, {recursive: true});
 const mime = {'.html': 'text/html', '.js': 'application/javascript', '.json': 'application/json',
   '.ttf': 'font/ttf', '.png': 'image/png', '.webp': 'image/webp'};
@@ -29,6 +33,10 @@ async function openGame(browser, width, height, options = {}) {
   const page = await browser.newPage({viewport: {width, height}});
   const errors = [];
   page.on('pageerror', error => errors.push(String(error)));
+  if (options.previous) {
+    await page.route('**/forest-midground.js?*', route =>
+      route.fulfill({contentType: 'application/javascript', body: previousRenderer}));
+  }
   if (options.missing) {
     await page.route('**/forest-midground.webp', route => route.fulfill({status: 404}));
   }
@@ -60,7 +68,9 @@ async function openGame(browser, width, height, options = {}) {
       game, scene,
       views: () => scene.forestMidground.pools.flat().filter(image => image.visible)
         .map(image => ({frame: image.frame.name, x: image.x, y: image.y,
-          alpha: image.alpha, depth: image.depth, scale: image.scaleX, flip: image.flipX})),
+          alpha: image.alpha, depth: image.depth, scale: image.scaleX, flip: image.flipX,
+          width: image.displayWidth, height: image.displayHeight, origin: [image.originX, image.originY],
+          top: image.y - image.displayHeight * image.originY, masked: Boolean(image.mask)})),
       draw,
       place(meters, render = false) {
         const x = scene.startX + meters * window.GRIM_CONFIG.pxPerMeter;
@@ -153,19 +163,27 @@ function compareFrames(before, after) {
   try {
     const {page: baseline, errors: baselineErrors} = await openGame(browser, 950, 430, {off: true});
     assert(await baseline.evaluate(() => !window.forestTest.scene.textures.exists('forest-midground-v1')));
-    const off = await sequence(baseline, true);
-    console.log('Recorded the baseline Forest run.');
+    const off = await sequence(baseline, false);
     await baseline.close();
+    const {page: previous, errors: previousErrors} = await openGame(browser, 950, 430, {previous: true});
+    const old = await sequence(previous, true);
     const {page, errors} = await openGame(browser, 950, 430);
     const on = await sequence(page, true);
     assert.deepEqual(on.states, off.states,
       'Identical inputs preserve gameplay, camera, terrain, encounters, vendor offers and RNG');
-    compareFrames(off.frames, on.frames);
-    console.log('Matched the gameplay and RNG traces and paired 90 rendered frames.');
+    assert.deepEqual(on.states, old.states, 'Previous and revised Forest footage use the same gameplay and seed');
+    compareFrames(old.frames, on.frames);
+    const previousRim = await reviewAdvance(previous), revisedRim = await reviewAdvance(page);
+    for (let i = 0; i < previousRim.length; i++) {
+      const index = String(i + 90).padStart(3, '0');
+      fs.writeFileSync(path.join(clip, index + '.png'), pair(png(previousRim[i]), png(revisedRim[i])));
+    }
+    console.log('Matched the gameplay and RNG traces and paired 128 rendered frames.');
 
     const runtime = await page.evaluate(() => {
       const {scene: s, views, draw, place} = window.forestTest;
       const check = (condition, message) => { if (!condition) throw Error(message); };
+      const close = (a, b) => Math.abs(a - b) < 1e-6;
       const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const atlas = s.textures.get('forest-midground-v1');
       const source = atlas.getSourceImage();
@@ -190,6 +208,9 @@ function compareFrames(before, after) {
       s.state = 'playing';
       place(360);
       const before = views();
+      const banks = s.forestMidground.banks;
+      const profile = () => banks.map(bank => bank.commandBuffer.slice());
+      const initialProfile = profile();
       const depths = Array.from(new Set(before.map(v => v.depth))).sort((a, b) => a - b);
       check(eq(depths, [-24, -22]), 'Two bands are visible in the Forest');
       check(depths.every(d => d > s.biomeBackdrops.forest.depth &&
@@ -205,10 +226,18 @@ function compareFrames(before, after) {
           if (next) check(Math.abs(start.x - next.x - 10 * rate) < 1e-8, 'Camera travel drives band speed');
         }
       }
+      const bankProfile = profile();
+      check(!eq(initialProfile, bankProfile), 'Supporting banks scroll with the canopy');
       s.cameraY += 40;
       draw();
-      check(eq(after, views()), 'Vertical camera changes leave backdrop anchors stable');
-      s.cameraY -= 40;
+      const elevated = views();
+      for (const [depth, rate] of [[-24, .16], [-22, .42]]) {
+        const from = after.filter(v => v.depth === depth), to = elevated.filter(v => v.depth === depth);
+        check(from.every((v, i) => close(v.x, to[i].x) && close(v.y - to[i].y, 40 * rate)),
+          'A camera climb projects tree roots vertically at their band rate');
+      }
+      check(!eq(bankProfile, profile()), 'Bank mesh follows the same vertical projection');
+      place(360);
       s.togglePause();
       s.update(0, 20);
       const paused = views();
@@ -241,11 +270,11 @@ function compareFrames(before, after) {
       s.player.slowCooldownMs = 0;
 
       const weights = window.GRIM_WORLD_ART.biomeWeights;
-      let maxVisible = 0;
+      let maxVisible = 0, giantSamples = 0, rimSamples = 0;
       const seen = new Set(), scenes = [];
       const originalSeed = s.seed;
       // Seeded clearings and repeats need not use the entire atlas in any one run.
-      for (const seed of [originalSeed, 34]) {
+      for (const seed of [originalSeed, 34, 35, 37, 123]) {
         s.seed = seed;
         for (let m = 0; m <= 1080; m += 5) {
           place(m);
@@ -253,11 +282,38 @@ function compareFrames(before, after) {
           maxVisible = Math.max(maxVisible, list.length);
           list.forEach(v => seen.add(v.frame));
           if (seed === originalSeed && [720, 900, 1080].includes(m)) scenes.push({m, weight, count: list.length});
-          check(list.every(v => v.alpha <= weight * .63), 'Forest weight bounds visible opacity');
+          for (const v of list) {
+            const near = v.depth === -22, alpha = v.alpha / weight;
+            check(alpha >= (near ? .82 : .60) && alpha <= (near ? .95 : .72),
+              'Full Forest opacity stays in the correct band');
+            check(v.origin[0] > .19 && v.origin[0] < .66 && v.origin[1] > .82 && v.origin[1] < .96,
+              'Illustrated contact is anchored inside the frame');
+            const bank = banks[near ? 1 : 0];
+            const commands = bank.commandBuffer;
+            check(commands.some((x, i) => x === v.x && close(commands[i + 1], v.y)),
+              'The projected bank includes the exact painted root contact');
+            if (!/low-canopy|wooded-bank|fern-brush|mossy-roots/.test(v.frame)) {
+              const h = v.height / s.height;
+              check(near ? (h >= .75 && h <= .95) || (h >= 1 && h <= 1.25) : h >= .52 && h <= .70,
+                'Full tree sizes preserve stronger near/far separation');
+              if (near && h >= 1 && v.top < 0) giantSamples++;
+            }
+          }
+          if (s.forestMidground.rimClipped) {
+            rimSamples++;
+            check(list.every(v => v.masked) && banks.every(bank => Boolean(bank.mask)),
+              'The same foreground rim excludes exposed tree and bank pixels');
+            check(s.forestMidground.rim.commandBuffer.length > 16, 'Rim follows the actual gap endpoints');
+          }
         }
       }
       s.seed = originalSeed;
       check(maxVisible <= 14 && seen.size === 12, 'All pieces are used across seeds within the bounded pool');
+      check(giantSamples > 0 && rimSamples > 0, 'Review includes off-screen crowns and real gap occlusion');
+      place(765);
+      check(s.forestMidground.rimClipped, 'Opening abyss uses the existing terrain rim');
+      place(650);
+      check(views().every(v => !v.masked), 'Canopies return to normal rendering away from the abyss');
       check(scenes[1].count > 0 && scenes[2].count === 0, 'Visible through blend midpoint, gone at exit');
       place(505);
       const pattern = views();
@@ -301,20 +357,27 @@ function compareFrames(before, after) {
       s.startRun();
       draw();
       check(views().length > 0, 'Restart restores scenery');
-      return {maxVisible, variants: seen.size, blends: scenes, renderer: s.game.renderer.type};
+      return {maxVisible, variants: seen.size, blends: scenes, giantSamples, rimSamples, renderer: s.game.renderer.type};
     });
 
-    for (const distance of [55, 600, 900, 1080]) {
-      await page.evaluate(m => window.forestTest.place(m, true), distance);
-      await page.screenshot({path: path.join(out, 'forest-pilot-950-' + distance + '.png')});
+    for (const distance of [55, 315, 765, 782, 900, 1080]) {
+      const left = await screenshotAt(previous, distance), right = await screenshotAt(page, distance);
+      fs.writeFileSync(path.join(out, 'forest-pilot-950-' + distance + '.png'), pair(left, right));
     }
+    await previous.close();
+    assert.deepEqual(previousErrors, []);
     await page.evaluate(() => window.forestTest.game.loop.wake());
     await page.setViewportSize({width: 390, height: 844});
     await page.waitForFunction(() => window.forestTest.scene.height === 844);
-    await page.evaluate(() => window.forestTest.draw());
+    await page.evaluate(() => window.forestTest.place(55, true));
+    await page.screenshot({path: path.join(out, 'forest-pilot-portrait.png')});
     await page.setViewportSize({width: 950, height: 430});
     await page.waitForFunction(() => window.forestTest.scene.width === 950);
-    await page.evaluate(() => window.forestTest.draw());
+    assert(await page.evaluate(() => {
+      const fixture = window.forestTest;
+      fixture.place(55, true);
+      return fixture.views().length > 0 && fixture.scene.forestMidground.pools.flat().length === 14;
+    }), 'Returning to landscape restores the scenery with the same pool');
     assert.deepEqual(errors, []);
     await page.close();
 
@@ -324,8 +387,11 @@ function compareFrames(before, after) {
       window.forestTest.scene.state = 'playing';
       window.forestTest.place(120, true);
     });
-    await small.screenshot({path: path.join(out, 'forest-pilot-740.png')});
-    assert.deepEqual(smallErrors, []);
+    const oldSmall = await openGame(browser, 740, 360, {previous: true});
+    const smallOld = await screenshotAt(oldSmall.page, 120), smallNew = await screenshotAt(small, 120);
+    fs.writeFileSync(path.join(out, 'forest-pilot-740.png'), pair(smallOld, smallNew));
+    assert.deepEqual(smallErrors.concat(oldSmall.errors), []);
+    await oldSmall.page.close();
     await small.close();
     const {page: missing, errors: missingErrors} = await openGame(browser, 740, 360, {missing: true});
     assert(await missing.evaluate(() => {
@@ -337,9 +403,9 @@ function compareFrames(before, after) {
     assert.deepEqual(missingErrors.concat(baselineErrors), []);
     fs.writeFileSync(path.join(out, 'forest-pilot-metrics.json'), JSON.stringify({
       scope: 'Headless Chromium, simulation and draw preparation CPU only (ms)',
-      baseline950: off.perf, pilot950: on.perf, pilot740: perfSmall, ...runtime
+      sceneryOff950: off.perf, previous950: old.perf, revised950: on.perf, revised740: perfSmall, ...runtime
     }, null, 2));
-    console.log('PASS Forest browser: 12 RGBA pieces, paired gameplay/RNG, layer order/rates, pause/slow/rewind/teleport, blend, two viewport widths, resize and missing atlas.');
+    console.log('PASS Forest browser: unchanged gameplay/RNG, painted root contact, projected slope and rim mask, size/opacity, pause/slow/rewind/teleport, fade, pooling, two widths, rotation and missing atlas.');
   } finally {
     await browser.close();
     await new Promise(resolve => server.close(resolve));
