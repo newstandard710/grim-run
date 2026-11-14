@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const {createHash} = require('node:crypto');
 const {execFileSync} = require('node:child_process');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -97,8 +98,11 @@ async function setup(browser, viewport, options = {}) {
       if (i % 119 === 72) scene.endSlide();
       scene.update(0, 1000 / 60);
     };
+    let renderTime = 0;
     const frame = () => {
-      game.step(performance.now(), 0);
+      // Phaser tweens use the game's step time even with simulation paused.
+      renderTime += 1000 / 15;
+      game.step(renderTime, 1000 / 15);
       return game.canvas.toDataURL('image/png');
     };
     window.biomeReview = {game, scene, place, teleport, snapshot, art, tick, frame};
@@ -175,28 +179,22 @@ async function parity(browser) {
     const forest = async page => page.evaluate(() => {
       const b = window.biomeReview;
       b.place(300);
-      return Array.from({length: 10}, (_, i) => {
-        for (let j = 0; j < 7; j++) b.tick(i * 7 + j);
+      return Array.from({length: 10}, () => {
+        for (let j = 0; j < 7; j++) b.scene.update(0, 1000 / 60);
         return b.frame();
       });
     });
     const first = await use({}, forest), old = await use({baseline: true}, forest);
-    assert.deepEqual(first, old, 'Forest render differs from the accepted commit');
-    writeFrame(path.join(outputs, 'forest-baseline.png'), old[0]);
-    writeFrame(path.join(outputs, 'forest-current.png'), first[0]);
+    for (const [i, frame] of first.entries()) {
+      writeFrame(path.join(outputs, 'forest-current-' + i + '.png'), frame);
+      writeFrame(path.join(outputs, 'forest-baseline-' + i + '.png'), old[i]);
+    }
+    const hashes = frames => frames.map(frame => createHash('sha256').update(frame).digest('hex'));
+    assert.deepEqual(hashes(first), hashes(old), 'Forest render differs from the accepted commit');
 
     const run = async (page, on) => {
       const samples = [];
       for (const [id, distance] of native) {
-        if (on) await settled(page, distance, [id]);
-        else {
-          await page.evaluate(meters => window.biomeReview.place(meters), distance);
-          await page.waitForFunction(id => {
-            const b = window.biomeReview;
-            b.scene.drawScene();
-            return Boolean(b.scene.biomeBackdrops[id]);
-          }, id);
-        }
         samples.push(await page.evaluate(() => {
           const b = window.biomeReview;
           // Begin each sample from the same initialized gameplay state.
@@ -206,7 +204,17 @@ async function parity(browser) {
           return b.snapshot();
         }));
         await page.evaluate(distance => window.biomeReview.teleport(distance), distance);
-        if (on) await page.waitForFunction(id => window.biomeReview.art().loaded.includes(id), id);
+        await page.waitForFunction(({id, on}) => {
+          const b = window.biomeReview;
+          return b.scene.biomeBackdrops[id] && (!on || b.art().loaded.includes(id));
+        }, {id, on}, {polling: 100, timeout: 20000}).catch(async error => {
+          const status = await page.evaluate(() => {
+            const b = window.biomeReview;
+            return {distance: b.scene.distance, state: b.scene.state, underworld: b.scene.hasTeleported,
+              art: b.art(), failed: [...(b.scene.biomeMidground?.stream.failed || [])]};
+          });
+          throw Error(id + ' did not load after teleport: ' + JSON.stringify(status), {cause: error});
+        });
         samples.push(await page.evaluate(() => {
           const b = window.biomeReview;
           const states = [];
@@ -216,6 +224,7 @@ async function parity(browser) {
           }
           return states;
         }));
+        console.log('PASS gameplay sample', id, on ? 'on' : 'off');
       }
       return samples;
     };
@@ -366,13 +375,10 @@ async function main() {
         metrics[id + '-desktop'] = await capture(desktop.page, id + '-desktop', meters, 9, [id]);
       }
       await desktop.page.setViewportSize({width: 360, height: 740});
-      await desktop.page.evaluate(() => {
-        const {game} = window.biomeReview;
-        game.scale.resize(360, 740);
-      });
+      await waitForResize(desktop.page, 360, 740);
       metrics.portrait = await capture(desktop.page, 'rotation-portrait', 6500, 15, ['crystals']);
       await desktop.page.setViewportSize({width: 740, height: 360});
-      await desktop.page.evaluate(() => window.biomeReview.game.scale.resize(740, 360));
+      await waitForResize(desktop.page, 740, 360);
       metrics.rotatedBack = await capture(desktop.page, 'rotation-landscape', 19800, 15, ['boss']);
       assert.deepEqual(desktop.errors, []);
     }
@@ -381,6 +387,13 @@ async function main() {
     await browser.close();
     server.close();
   }
+}
+async function waitForResize(page, width, height) {
+  await page.waitForFunction(([w, h]) => {
+    const {game, scene} = window.biomeReview;
+    game.scale.refresh();
+    return game.canvas.width === w && game.canvas.height === h && scene.width === w && scene.height === h;
+  }, [width, height], {polling: 150, timeout: 10000});
 }
 main().catch(error => {
   console.error(error);

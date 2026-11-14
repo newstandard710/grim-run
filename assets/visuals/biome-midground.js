@@ -23,8 +23,8 @@
     boss: [[.55, .80, .55, .72], [.80, 1.20, .80, .94], 0x30252f]
   };
   const BANDS = [
-    {name: 'far', rate: .16, depth: -24, stride: 230, floor: .75, ceiling: .10, salt: 179},
-    {name: 'near', rate: .42, depth: -22, stride: 295, floor: .795, ceiling: .075, salt: 313}
+    {name: 'far', rate: .16, depth: -24, stride: 230, floor: .86, ceiling: .10, salt: 179},
+    {name: 'near', rate: .42, depth: -22, stride: 295, floor: .93, ceiling: .075, salt: 313}
   ];
 
   const clamp = (n, low, high) => Math.max(low, Math.min(n, high));
