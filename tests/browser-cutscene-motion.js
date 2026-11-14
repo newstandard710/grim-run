@@ -80,6 +80,12 @@ const server=http.createServer((req,res)=>{
      // Real engine clock: review complete normal-speed playback, rather than
      // inferring timing from manually sampled stills alone.
      const marks=[];
+     await page.bringToFront();
+     await page.evaluate(()=>{
+      const game=window.grimRun,s=game.scene.scenes[0];
+      s.sys.sceneUpdate=s._cutsceneRealUpdate;
+      game.loop.sleep();game.loop.wake();
+     });
      for(const k of [1,8]){
       await page.evaluate(k=>{
        const s=window.grimRun.scene.scenes[0],finish=s.finishVendorIntro;
@@ -92,7 +98,7 @@ const server=http.createServer((req,res)=>{
         return finish.call(this);
        };
       },k);
-      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{timeout:16000});
+      await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='upgrade',null,{polling:100,timeout:16000});
       const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
       const scene=k===1?'angel':'devil';marks.push({scene,ms});
       assert(ms>=9800&&ms<14000,`${scene} real-time intro: ${ms} ms`);
@@ -109,7 +115,7 @@ const server=http.createServer((req,res)=>{
        return finish.call(this);
       };
      });
-     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].gunUnlocked&&window.grimRun.scene.scenes[0].state!=='chest',null,{timeout:10000});
+     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].gunUnlocked&&window.grimRun.scene.scenes[0].state!=='chest',null,{polling:100,timeout:10000});
      const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
      marks.push({scene:'bow',ms});assert(ms>=3900&&ms<6500,`bow real-time intro: ${ms} ms`);
      await page.evaluate(()=>{window.grimRun.scene.scenes[0].state='paused';});
