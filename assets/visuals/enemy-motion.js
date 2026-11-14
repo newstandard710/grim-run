@@ -11,7 +11,7 @@
   const CRAWL_MIDS=CRAWL_CLAWS.map((pair,index)=>pair.map((value,claw)=>
     (value+CRAWL_CLAWS[(index+1)%CRAWL_CLAWS.length][claw])*.5));
   const HIT_CLAWS=[[224,441,390,437],[212,433,352,438],[222,442,392,439]];
-  function preload(scene){
+  function queueGroundDetails(scene){
     scene.load?.spritesheet?.(KEY,'assets/enemies/illustrated-v2/ground-inbetweens.webp?v=1',
       {frameWidth:CELL,frameHeight:CELL,endFrame:7});
   }
@@ -62,5 +62,5 @@
   }
   const hasTweens=scene=>Boolean(scene.textures?.exists?.(KEY));
   scope.GRIM_ENEMY_MOTION={KEY,CELL,CRAWLER_STRIDE,IMP_STRIDE,CRAWL_CLAWS,CRAWL_MIDS,HIT_CLAWS,
-    preload,cycle,floor,crawlerPose,hasTweens};
+    queueGroundDetails,cycle,floor,crawlerPose,hasTweens};
 })(typeof window!=='undefined'?window:globalThis);

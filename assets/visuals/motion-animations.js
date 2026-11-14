@@ -113,10 +113,12 @@
     for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,ROOT+name+'.png?v=0.18.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
     s.load.image('motion-scythe',ROOT+'scythe.png?v=0.18.0');
-    s.load.spritesheet(JUMP_TWEEN_KEY,ROOT+'reaper-jump-inbetweens.webp?v=1',
-      {frameWidth:JUMP_TWEEN_CELL,frameHeight:JUMP_TWEEN_CELL,endFrame:22});
     if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0193/reaper-run.png?v=0.19.3',
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
+  }
+  function queueAirDetails(s){
+    s.load?.spritesheet?.(JUMP_TWEEN_KEY,ROOT+'reaper-jump-inbetweens.webp?v=1',
+      {frameWidth:JUMP_TWEEN_CELL,frameHeight:JUMP_TWEEN_CELL,endFrame:22});
   }
   class MotionAnimations{
     constructor(s){
@@ -192,5 +194,5 @@
     }
     destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();}
   }
-  scope.GRIM_MOTION_ART={MotionAnimations,preload,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
+  scope.GRIM_MOTION_ART={MotionAnimations,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
 })(typeof window!=='undefined'?window:globalThis);

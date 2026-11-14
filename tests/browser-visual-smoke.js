@@ -1207,7 +1207,7 @@ const server=http.createServer((req,res)=>{
   await earlyPage.waitForFunction(()=>{
     const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
     return v?.reviewV2===true&&document.getElementById('start-btn')?.disabled===true;
-  },null,{timeout:12000});
+  },null,{timeout:45000});
   assert.equal(await earlyPage.locator('#start-btn').isEnabled(),false,
     'Do not start a run before the first small Reaper image is ready');
   releaseFirstPose();

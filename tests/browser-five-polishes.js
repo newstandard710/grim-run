@@ -46,6 +46,12 @@ async function opening(browser,url){
   const tab=await open(browser,url);
   const release=[];
   let held=0;
+  let releaseFirstPose;
+  const firstPoseGate=new Promise(resolve=>{releaseFirstPose=resolve;});
+  await tab.page.route('**/reaper_run_pose_01_v1.png*',async route=>{
+    await firstPoseGate;
+    await route.continue();
+  });
   await tab.page.route(/reaper_idle_v1|v0193\/reaper-run\.png/,async route=>{
     held++;
     await new Promise(resolve=>release.push(resolve));
@@ -83,15 +89,24 @@ async function opening(browser,url){
     const staticActors=await pixels();
     await tab.page.waitForTimeout(140);
     assert.deepEqual(await pixels(),staticActors,'Reduced motion freezes opening enemies');
+    await tab.page.emulateMedia({reducedMotion:'no-preference'});
     release.splice(0).forEach(resolve=>resolve());
-    await tab.page.waitForFunction(ready,null,{timeout:60000});
+    await tab.page.waitForFunction(()=>Boolean(window.grimRun?.scene.scenes[0]?.visuals?.reviewV2),null,{timeout:45000});
     await tab.page.locator('#home-enter-btn').tap();
-    await tab.page.locator('#start-btn').tap();
+    const control=tab.page.locator('#start-btn');
+    assert(await control.isDisabled(),'Menu waits for the first verified run pose');
+    assert.match(await control.innerText(),/PREPARING REAPER/);
+    assert(await tab.page.locator('#frontispiece').isVisible(),'Menu loading has the same visible tableau');
+    boot.preparingReaper=true;
+    releaseFirstPose();
+    await tab.page.waitForFunction(ready,null,{timeout:60000});
+    await control.tap();
     await tab.page.waitForFunction(()=>window.grimRun.scene.scenes[0].distance>1);
     assert(!(await tab.page.locator('#frontispiece').isVisible()),'Opening canvas is hidden during play');
     assert.deepEqual(tab.errors,[]);
     return boot;
   } finally {
+    releaseFirstPose();
     release.splice(0).forEach(resolve=>resolve());
     await tab.page.close();
   }

@@ -1536,10 +1536,10 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/biome-midground.js?v=2"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.3"></script>
   <script src="assets/motion/v0193/animation-data.js?v=0.19.3"></script>
-  <script src="assets/visuals/motion-animations.js?v=air2"></script>
+  <script src="assets/visuals/motion-animations.js?v=air3"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
-  <script src="assets/visuals/enemy-motion.js?v=1"></script>
+  <script src="assets/visuals/enemy-motion.js?v=2"></script>
   <script src="assets/visuals/combat-animations.js?v=ground2"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=breeze1"></script>
   <script src="assets/visuals/visual-system.js?v=ground2"></script>
@@ -1635,7 +1635,6 @@ window.GRIM_CONFIG = Object.freeze({
       scope.GRIM_MOTION_ART?.preload(this);
       scope.GRIM_POWER_ART?.preload(this);
       scope.GRIM_COMBAT_ART?.preload(this);
-      scope.GRIM_ENEMY_MOTION?.preload(this);
       scope.GRIM_VENDOR_ART?.preload(this);
       scope.GRIM_WORLD_POLISH?.preload(this);
       scope.GRIM_FOREST_MIDGROUND?.preload(this);
@@ -1838,6 +1837,12 @@ window.GRIM_CONFIG = Object.freeze({
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.motionArt=scope.GRIM_MOTION_ART?new scope.GRIM_MOTION_ART.MotionAnimations(this):null;
       this.drawScene();
+      // Optional in-betweens stream after the initial scene and controls exist.
+      if(this.load?.spritesheet){
+        scope.GRIM_MOTION_ART?.queueAirDetails(this);
+        scope.GRIM_ENEMY_MOTION?.queueGroundDetails(this);
+        if(!this.load.isLoading())this.load.start();
+      }
     }
     enterHome(){
       if(this.state!=='home')return false;
