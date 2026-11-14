@@ -1,0 +1,19 @@
+{
+  "tool": "Built-in ImageGen",
+  "styleReference": {
+    "path": "assets/visuals/biomes/forest.webp",
+    "commit": "0ad54d8f05772b2932f1e09d8492b60562a673c4",
+    "role": "Style reference only"
+  },
+  "transparentBackground": true,
+  "sources": [
+    {
+      "file": "forest-far.png",
+      "prompt": "Use case: stylized-concept. Asset type: game environment sprite sheet for the middle background of Grim Run, landscape mobile side-scroller. The attached live Forest backdrop is a STYLE REFERENCE ONLY. Create brand-new individually isolated paintings. Match its illustrated gothic storybook mood, twisted old deciduous trees, angular painterly edges, slate-blue moonlit woodland, and subtle moss. True transparent alpha canvas around and between every sprite and through branch gaps. No backdrop, painted rectangle, checkerboard, ground plane, text, labels, borders, characters, lights, coins, thorns, hanging hazards, or ruins. Each silhouette is independently placed inside its own cell with at least 24 px fully transparent margin at every cell boundary. Keep sprites fully in frame. Side-on landscape perspective, muted lighting and soft natural root edges. Paint texture into the shapes, keep readable at game size. FAR layer, canvas landscape with exactly 3 columns by 2 rows of equal-sized cells. Six different blue-gray, low contrast woodland cutouts that visibly recede into mist. Top row left to right: a slender leaning pair of ash trunks with a delicate crown; a stand of three uneven narrow shadow trunks with small crowns; an asymmetric wide oak silhouette with an open fork. Bottom row left to right: two wispy bare smaller trees with a few attached leaves; a low ragged canopy and scrub silhouette clustered close to its soft base; a low gently sloped blue-green wooded bank with scrub, no flat top ledge. Distinct massing for each piece, moderate contrast and no warm highlights. Avoid wisps stretching outside cells. Empty transparent gutters and no overlap."
+    },
+    {
+      "file": "forest-near.png",
+      "prompt": "Use case: stylized-concept. Asset type: game environment sprite sheet for the middle background of Grim Run, landscape mobile side-scroller. The attached live Forest backdrop is a STYLE REFERENCE ONLY. Create brand-new individually isolated paintings. Match its illustrated gothic storybook mood, twisted old deciduous trees, angular painterly edges, slate-blue moonlit woodland, and subtle moss. True transparent alpha canvas around and between every sprite and through branch gaps. No backdrop, painted rectangle, checkerboard, ground plane, text, labels, borders, characters, lights, coins, thorns, hanging hazards, or ruins. Each silhouette is independently placed inside its own cell with at least 24 px fully transparent margin at every cell boundary. Keep sprites fully in frame. Side-on landscape perspective, muted lighting and soft natural root edges. Paint texture into the shapes, keep readable at game size. NEAR layer, canvas landscape with exactly 3 columns by 2 rows of equal-sized cells. Six different slate-blue, muted charcoal-brown and moss-gray woodland cutouts, a little richer than distant trunks, with restrained dusk blue-green shading; very muted burgundy on a few leaves only. Top row left to right: a gnarly curved ancient oak with an open crown; a narrow tall split trunk with an uneven loose crown; a pair of overlapping upright trunks and muted leaf clusters. Bottom row left to right: a bent smaller oak with sparse leaves and organic sloping roots; a low uneven patch of fern fronds and tangled brush; a low sloping mossy root mound with tiny plants and no straight surface or sharp ledge. Distinct silhouettes and subtle bark texture. No bright edge highlights, no black outlines, no thick overhead ledge, no dangerous-looking thorns. Empty transparent gutters and no overlap."
+    }
+  ]
+}

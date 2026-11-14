@@ -9,12 +9,12 @@ on:
 jobs:
   browser-checks:
     name: Chromium — ${{ matrix.group }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        group: [movement, powers, world]
+        group: [movement, powers, world, forest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,6 +24,32 @@ jobs:
         run: |
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
+      - name: Check Forest parallax and capture the same run with and without scenery
+        if: ${{ success() && matrix.group == 'forest' }}
+        run: node tests/browser-forest-midground.js
+      - name: Install FFmpeg for the Forest comparison
+        if: ${{ !cancelled() && matrix.group == 'forest' && hashFiles('test-results/forest-comparison-frames/089.png') != '' }}
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+      - name: Encode the completed Forest comparison
+        if: ${{ !cancelled() && matrix.group == 'forest' && hashFiles('test-results/forest-comparison-frames/089.png') != '' }}
+        run: |
+          ffmpeg -hide_banner -loglevel error -framerate 15 -i test-results/forest-comparison-frames/%03d.png \
+            -vf "pad=iw:ih+36:0:36:color=0x101922,drawtext=text='V0.19.8 VIEW':x=20:y=9:fontsize=18:fontcolor=white,drawtext=text='FOREST PILOT':x=w/2+20:y=9:fontsize=18:fontcolor=white" \
+            -c:v libx264 -pix_fmt yuv420p -movflags +faststart test-results/forest-comparison.mp4
+      - name: Save Forest pilot review
+        if: ${{ always() && matrix.group == 'forest' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: forest-pilot-review
+          path: |
+            test-results/forest-comparison.mp4
+            test-results/forest-pilot-*.png
+            test-results/forest-pilot-metrics.json
+          if-no-files-found: ignore
       - name: Review all three fluid cutscenes and exact raised-bow timing
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-cutscene-motion.js
@@ -74,7 +100,7 @@ jobs:
         if: ${{ !cancelled() && matrix.group == 'world' }}
         run: node tests/browser-ground-fog-vendors.js
       - name: Save mobile-size render evidence
-        if: always()
+        if: ${{ always() && matrix.group != 'forest' }}
         uses: actions/upload-artifact@v4
         with:
           name: grim-run-mobile-renders-${{ matrix.group }}

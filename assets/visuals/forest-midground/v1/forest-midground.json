@@ -1,0 +1,360 @@
+{
+  "frames": {
+    "far-leaning-ash": {
+      "frame": {
+        "x": 8,
+        "y": 8,
+        "w": 268,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 268,
+        "h": 272
+      },
+      "source": "forest-far.png",
+      "sheetRegion": [
+        0,
+        0,
+        515,
+        530
+      ],
+      "alphaBoundsInRegion": [
+        30,
+        44,
+        472,
+        492
+      ]
+    },
+    "far-shadow-grove": {
+      "frame": {
+        "x": 328,
+        "y": 8,
+        "w": 269,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 269,
+        "h": 272
+      },
+      "source": "forest-far.png",
+      "sheetRegion": [
+        515,
+        0,
+        1015,
+        530
+      ],
+      "alphaBoundsInRegion": [
+        25,
+        40,
+        475,
+        495
+      ]
+    },
+    "far-open-oak": {
+      "frame": {
+        "x": 648,
+        "y": 8,
+        "w": 280,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 280,
+        "h": 272
+      },
+      "source": "forest-far.png",
+      "sheetRegion": [
+        1015,
+        0,
+        1536,
+        530
+      ],
+      "alphaBoundsInRegion": [
+        19,
+        39,
+        490,
+        496
+      ]
+    },
+    "far-bare-pair": {
+      "frame": {
+        "x": 968,
+        "y": 8,
+        "w": 304,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 304,
+        "h": 263
+      },
+      "source": "forest-far.png",
+      "sheetRegion": [
+        0,
+        530,
+        515,
+        1024
+      ],
+      "alphaBoundsInRegion": [
+        33,
+        25,
+        481,
+        412
+      ]
+    },
+    "far-low-canopy": {
+      "frame": {
+        "x": 8,
+        "y": 296,
+        "w": 304,
+        "h": 151
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 304,
+        "h": 151
+      },
+      "source": "forest-far.png",
+      "sheetRegion": [
+        515,
+        530,
+        1025,
+        1024
+      ],
+      "alphaBoundsInRegion": [
+        16,
+        151,
+        492,
+        388
+      ]
+    },
+    "far-wooded-bank": {
+      "frame": {
+        "x": 328,
+        "y": 296,
+        "w": 304,
+        "h": 193
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 304,
+        "h": 193
+      },
+      "source": "forest-far.png",
+      "sheetRegion": [
+        1025,
+        530,
+        1536,
+        1024
+      ],
+      "alphaBoundsInRegion": [
+        18,
+        95,
+        493,
+        396
+      ]
+    },
+    "near-curved-oak": {
+      "frame": {
+        "x": 648,
+        "y": 296,
+        "w": 296,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 296,
+        "h": 272
+      },
+      "source": "forest-near.png",
+      "sheetRegion": [
+        0,
+        0,
+        566,
+        553
+      ],
+      "alphaBoundsInRegion": [
+        20,
+        53,
+        542,
+        532
+      ]
+    },
+    "near-split-trunk": {
+      "frame": {
+        "x": 968,
+        "y": 296,
+        "w": 199,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 199,
+        "h": 272
+      },
+      "source": "forest-near.png",
+      "sheetRegion": [
+        566,
+        0,
+        1008,
+        553
+      ],
+      "alphaBoundsInRegion": [
+        51,
+        50,
+        411,
+        541
+      ]
+    },
+    "near-twin-trunks": {
+      "frame": {
+        "x": 8,
+        "y": 584,
+        "w": 261,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 261,
+        "h": 272
+      },
+      "source": "forest-near.png",
+      "sheetRegion": [
+        1008,
+        0,
+        1536,
+        553
+      ],
+      "alphaBoundsInRegion": [
+        38,
+        51,
+        506,
+        538
+      ]
+    },
+    "near-bent-oak": {
+      "frame": {
+        "x": 328,
+        "y": 584,
+        "w": 304,
+        "h": 272
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 304,
+        "h": 272
+      },
+      "source": "forest-near.png",
+      "sheetRegion": [
+        0,
+        553,
+        507,
+        1024
+      ],
+      "alphaBoundsInRegion": [
+        51,
+        32,
+        483,
+        419
+      ]
+    },
+    "near-fern-brush": {
+      "frame": {
+        "x": 648,
+        "y": 584,
+        "w": 304,
+        "h": 151
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 304,
+        "h": 151
+      },
+      "source": "forest-near.png",
+      "sheetRegion": [
+        507,
+        553,
+        1008,
+        1024
+      ],
+      "alphaBoundsInRegion": [
+        20,
+        168,
+        470,
+        391
+      ]
+    },
+    "near-mossy-roots": {
+      "frame": {
+        "x": 968,
+        "y": 584,
+        "w": 304,
+        "h": 145
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 304,
+        "h": 145
+      },
+      "source": "forest-near.png",
+      "sheetRegion": [
+        1008,
+        553,
+        1536,
+        1024
+      ],
+      "alphaBoundsInRegion": [
+        11,
+        154,
+        501,
+        388
+      ]
+    }
+  },
+  "meta": {
+    "image": "forest-midground.webp",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1280,
+      "h": 864
+    },
+    "scale": "1",
+    "padding": 8,
+    "alphaNoiseCutoff": 3,
+    "pillow": "13.0.0",
+    "libwebp": "1.6.0",
+    "sources": {
+      "forest-far.png": {
+        "sha256": "cdbac6cc6001ca43d087c5a72eceea9714535073da7e960df793d2acc116f19c",
+        "size": [
+          1536,
+          1024
+        ]
+      },
+      "forest-near.png": {
+        "sha256": "63fce96fb29a6e0517e9ae683bbd7eae16d6cbdd587daf6ab9ef4d37bca70775",
+        "size": [
+          1536,
+          1024
+        ]
+      }
+    },
+    "referenceSha256": "855b52c905ffceb0066320c6ecf0c5c1dc1ffbc7719bf7fec82604332b7bbcf8",
+    "atlasSha256": "d735df2c84efaa5569e64730bb34fb2180503eebba4c5f22996a7ca9cd1676cc",
+    "atlasBytes": 409600
+  }
+}
