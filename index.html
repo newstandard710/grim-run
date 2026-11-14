@@ -1531,8 +1531,9 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
-  <script src="assets/visuals/forest-midground.js?v=2"></script>
-  <script src="assets/visuals/biome-midground.js?v=1"></script>
+  <script src="assets/visuals/midground-terrain.js?v=1"></script>
+  <script src="assets/visuals/forest-midground.js?v=3"></script>
+  <script src="assets/visuals/biome-midground.js?v=2"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.3"></script>
   <script src="assets/motion/v0193/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/motion-animations.js?v=0.19.3"></script>
@@ -3823,8 +3824,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.updateBackdropGroundVeil();
       this.worldPolish?.beginFrame();
       const terrainSections=this.drawGround();
-      this.forestMidground?.render(terrainSections);
-      this.biomeMidground?.render(terrainSections);
+      if(this.forestMidground||this.biomeMidground){
+        const project=scope.GRIM_MIDGROUND_TERRAIN.createProjection(this,this.cameraX+this.width*C.reaperXRatio);
+        this.forestMidground?.render(terrainSections,project);
+        this.biomeMidground?.render(terrainSections,project);
+      }
       this.vendorArt?.renderWorld();
       this.drawGroundFog();
       this.drawPortals();

@@ -19,8 +19,9 @@ const server = http.createServer((req, res) => {
     const file = path.resolve(root, '.' + decodeURIComponent(pathname === '/' ? '/index.html' : pathname));
     if (!file.startsWith(root + path.sep)) return res.writeHead(403).end();
     res.writeHead(200, {'Content-Type': mime[path.extname(file)] || 'application/octet-stream'});
-    res.end(pathname === '/forest-baseline.html' ?
-      execFileSync('git', ['show', baseline + ':index.html'], {cwd: root}) : fs.readFileSync(file));
+    const frozenForest = pathname === '/assets/visuals/forest-midground.js' && req.url.endsWith('?v=2');
+    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest ? pathname.slice(1) : null;
+    res.end(original ? execFileSync('git', ['show', baseline + ':' + original], {cwd: root}) : fs.readFileSync(file));
   } catch {
     if (!res.headersSent) res.writeHead(404);
     res.end();
@@ -182,6 +183,7 @@ async function parity(browser) {
   };
   const forest = async page => page.evaluate(() => {
     const b = window.biomeReview;
+    for (const section of b.scene.terrain.segments) section.y0 = section.y1 = b.scene.groundY;
     b.place(300);
     return Array.from({length: 10}, () => {
       for (let j = 0; j < 7; j++) b.scene.update(0, 1000 / 60);
@@ -194,7 +196,7 @@ async function parity(browser) {
     writeFrame(path.join(outputs, 'forest-baseline-' + i + '.png'), old[i]);
   }
   const hashes = frames => frames.map(frame => createHash('sha256').update(frame).digest('hex'));
-  assert.deepEqual(hashes(first), hashes(old), 'Forest render differs from the accepted commit');
+  assert.deepEqual(hashes(first), hashes(old), 'Flat Forest render differs from the accepted commit');
 
   const run = async on => {
     const samples = [];
@@ -343,7 +345,7 @@ async function main() {
     const mode = process.env.GRIM_BIOME_MODE;
     if (!mode || ['checks', 'parity'].includes(mode)) {
       metrics.parity = await parity(browser);
-      console.log('PASS Forest pixel parity and gameplay/RNG parity');
+      console.log('PASS flat Forest pixel parity and gameplay/RNG parity');
     }
     if (!mode || ['checks', 'lifecycle'].includes(mode)) {
       metrics.faults = await faultReview(browser);

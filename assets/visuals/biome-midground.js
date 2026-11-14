@@ -203,18 +203,17 @@
     }
   }
 
-  function landscapeAt(band, seed, x, height, cameraY, ceiling) {
+  function landscapeAt(band, seed, x, height, ceiling) {
     const period = band.stride * .76;
     const cell = Math.floor(x / period);
     const t = x / period - cell;
     const salt = band.salt + (ceiling ? 29 : 19);
     const roll = mix(visualHash(seed, cell, salt), visualHash(seed, cell + 1, salt), t * t * (3 - 2 * t));
-    const drift = clamp(cameraY * band.rate, -height * .13, height * .13);
-    return height * (ceiling ? band.ceiling : band.floor) + (roll - .5) * Math.min(height, 540) * .07 - drift;
+    return height * (ceiling ? band.ceiling : band.floor) + (roll - .5) * Math.min(height, 540) * .07;
   }
 
   function formation(band, seed, cell, frames, tuning, camera, weight) {
-    const {width, height, cameraY, travel} = camera;
+    const {width, height, travel, project} = camera;
     const {stride, rate, salt} = band;
     const group = Math.floor(cell / 4);
     const density = visualHash(seed, group, salt + 1);
@@ -236,7 +235,10 @@
     if (left >= width || left + frameWidth <= 0) return null;
     const kind = frame.support.kind;
     const ceiling = kind === 'ceiling';
-    const profile = dx => landscapeAt(band, seed, worldX + dx, height, cameraY, ceiling);
+    const profile = dx => {
+      const anchor = worldX + dx;
+      return landscapeAt(band, seed, anchor, height, ceiling) + project(band, anchor);
+    };
     const points = frame.support.points.map(([px, py]) => [
       (px - originX) * frameWidth * direction, (py - originY) * frame.frame.h * scale
     ]);
@@ -318,7 +320,7 @@
       }
     }
 
-    render(sections = []) {
+    render(sections, project) {
       const {scene} = this;
       if (!Number.isFinite(scene.startX) || RELEASE.has(scene.state)) {
         this.hide(true);
@@ -335,7 +337,7 @@
         return;
       }
       const camera = {width: scene.width, height: scene.height, cameraX: scene.cameraX,
-        cameraY: scene.cameraY, travel: scene.cameraX - scene.startX};
+        cameraY: scene.cameraY, project, travel: scene.cameraX - scene.startX};
       const ready = active.filter(([id]) => this.stream.loaded.has(id) && scene.biomeBackdrops?.[id]);
       if (!ready.length) {
         this.hide();
