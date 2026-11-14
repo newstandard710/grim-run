@@ -1547,6 +1547,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.8"></script>
   <script src="assets/visuals/cutscene-motion.js?v=0.19.8"></script>
   <script src="assets/visuals/power-animations.js?v=0.19.8"></script>
+  <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
   <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.7"></script>
@@ -1699,6 +1700,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.abyssWallCache=new Map();
       this.terrainTextureViews=new Map();
       this.terrainSurfaceViews=new Map();
+      this.boneBridges=scope.GRIM_BONE_BRIDGES ? new scope.GRIM_BONE_BRIDGES.BoneBridges(this) : null;
+      this.events.once('shutdown',()=>this.boneBridges?.clear());
       this.terrainMaterialIds=new Set();
       this.terrainMaterialLoading=new Set();
       this.terrainMaterialFailed=new Set();
@@ -3812,6 +3815,7 @@ window.GRIM_CONFIG = Object.freeze({
       // The opaque opening/menu has its own animated canvas. Do not draw a
       // second complete world and fog stack behind it on every display frame.
       if(scope.GRIM_FRONTEND&&['home','menu'].includes(this.state)){
+        this.boneBridges?.clear();
         this.forestMidground?.hide();
         this.biomeMidground?.hide(true);
         this.cameras.main.visible=false;return;
@@ -5000,6 +5004,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Keep both neighbors available when a wall projects into the view
       // before the underlying bank does.
       const sections=this.terrain.visibleSections(left,right);
+      this.boneBridges?.prune(sections);
       const neighbors=(this.terrain.segments||sections).filter(s=>s.end>=left-52&&s.start<=right+52);
       const startX=this.startX??200;
       this.abyssWallArt?.clear();
@@ -5074,15 +5079,20 @@ window.GRIM_CONFIG = Object.freeze({
           :openingWorldArt?scope.GRIM_WORLD_ART.openingGroundPalette()
           :underworldWorldArt?scope.GRIM_WORLD_ART.underworldGroundPalette(m):this.groundPalette(m);
         const underside=depth;
-        base.fillStyle(body);
+        const boneBridge=section.kind==='rubble'&&this.boneBridges;
+        base.fillStyle(boneBridge?0x211b16:body);
         const bankWalls=walls.get(section);
         const bodyPoints=this.terrainBodyPoints(section,section.start,section.end,surfaceY0,surfaceY1,underside,bankWalls);
         base.fillPoints(bodyPoints,true);
-        this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews,bankWalls);
+        if(!boneBridge)this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews,bankWalls);
         if(bankWalls){
           const wallPalette=scope.GRIM_WORLD_ART?.worldGroundPalette?.(m)||[body,edge,sheen,detail];
           this.drawAbyssWallDetails(section,bankWalls.start,wallPalette);
           this.drawAbyssWallDetails(section,bankWalls.end,wallPalette);
+        }
+        if(boneBridge){
+          boneBridge.draw(section,from,to);
+          continue;
         }
         if(section.kind==='rubble'&&!tundraBiomeWorldArt){
           // Small embedded stone facets follow the local surface and stay
