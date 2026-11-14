@@ -3926,13 +3926,11 @@ window.GRIM_CONFIG = Object.freeze({
         view.fogSamples=new Float64Array(GROUND_FOG_COLUMNS+1);
       }else{
         view=this.add.image(0,0,key).setOrigin(.5,1);
-        if(view.renderCanvas){
-          const render=view.renderCanvas;
-          view.renderCanvas=(renderer,sprite,camera,parent)=>
-            this.renderGroundFogCanvas(render,renderer,sprite,camera,parent);
-        }
+        if(view.renderCanvas)
+          view.renderCanvas=(renderer,sprite,camera)=>this.renderGroundFogCanvas(renderer,sprite,camera);
       }
-      view.setDepth(layer.depth).setMask(this.groundFogMask);
+      view.setDepth(layer.depth);
+      if(view.fogPoints||!view.renderCanvas)view.setMask(this.groundFogMask);
       this.groundFogViews.set(id,view);
       return view;
     }
@@ -3940,35 +3938,44 @@ window.GRIM_CONFIG = Object.freeze({
       // Two equal layers: 1-(1-alpha)^2 = original single-layer opacity.
       return 1-Math.sqrt(1-clamp(original,0,1));
     }
-    renderGroundFogCanvas(render,renderer,sprite,camera,parent){
-      if(!sprite.fogGaps?.length||!scope.document)
-        return render.call(sprite,renderer,sprite,camera,parent);
+    renderGroundFogCanvas(renderer,sprite,camera){
       const target=renderer.currentContext;
-      const gameContext=renderer.gameContext;
       const canvas=this.groundFogCanvas??=scope.document.createElement('canvas');
       if(canvas.width!==target.canvas.width||canvas.height!==target.canvas.height){
         canvas.width=target.canvas.width;canvas.height=target.canvas.height;
       }
       const ctx=canvas.getContext('2d');
-      if(!ctx)return render.call(sprite,renderer,sprite,camera,parent);
-      const left=Math.max(0,Math.floor(sprite.x-sprite.fogWidth*.65-camera.scrollX));
-      const right=Math.min(canvas.width,Math.ceil(sprite.x+sprite.fogWidth*.65-camera.scrollX));
-      const top=Math.max(0,Math.floor(sprite.y-sprite.fogHeight-sprite.fogWidth*.35-camera.scrollY));
-      const bottom=Math.min(canvas.height,Math.ceil(sprite.y+sprite.fogWidth*.35-camera.scrollY));
+      if(!ctx)return;
+      const x=sprite.x-camera.scrollX,y=sprite.y-camera.scrollY;
+      const left=Math.max(0,Math.floor(x-sprite.fogWidth*.65));
+      const right=Math.min(canvas.width,Math.ceil(x+sprite.fogWidth*.65));
+      const top=Math.max(0,Math.floor(y-sprite.fogHeight-sprite.fogWidth*.35));
+      const bottom=Math.min(canvas.height,Math.ceil(y+sprite.fogWidth*.35));
       if(right<=left||bottom<=top)return;
       const width=right-left,height=bottom-top;
+      const source=sprite.texture.getSourceImage();
       ctx.clearRect(left,top,width,height);
-      try{
-        renderer.currentContext=ctx;
-        renderer.gameContext=ctx;
-        render.call(sprite,renderer,sprite,camera,parent);
-      }finally{
-        renderer.currentContext=target;
-        renderer.gameContext=gameContext;
+      ctx.save();
+      // Trace the same solid spans as the scene mask onto the isolated
+      // canvas. Keeping the sprite and clip in a single context avoids
+      // relying on Phaser's internal Canvas renderer state.
+      ctx.beginPath();
+      for(const span of this.groundFogSolidSpans||[]){
+        span.forEach((p,i)=>{
+          if(i===0)ctx.moveTo(p.x-camera.scrollX,p.y-camera.scrollY);
+          else ctx.lineTo(p.x-camera.scrollX,p.y-camera.scrollY);
+        });
+        ctx.closePath();
       }
+      ctx.clip();
+      ctx.translate(x,y);ctx.rotate(sprite.rotation);
+      if(sprite.flipX)ctx.scale(-1,1);
+      ctx.globalAlpha=sprite.alpha*camera.alpha;
+      ctx.drawImage(source,-sprite.fogWidth*.5,-sprite.fogHeight,sprite.fogWidth,sprite.fogHeight);
+      ctx.restore();
       ctx.save();
       ctx.globalCompositeOperation='destination-in';
-      for(const {start,end,leftFade,rightFade} of sprite.fogGaps){
+      for(const {start,end,leftFade,rightFade} of sprite.fogGaps||[]){
         const a=start-camera.scrollX,b=end-camera.scrollX;
         const span=b-a+leftFade+rightFade;
         const gradient=ctx.createLinearGradient(a-leftFade,0,b+rightFade,0);
@@ -3981,7 +3988,8 @@ window.GRIM_CONFIG = Object.freeze({
       }
       ctx.restore();
       target.save();target.setTransform(1,0,0,1,0,0);
-      target.globalAlpha=1;target.drawImage(canvas,left,top,width,height,left,top,width,height);
+      target.globalAlpha=1;target.globalCompositeOperation='source-over';
+      target.drawImage(canvas,left,top,width,height,left,top,width,height);
       target.restore();
     }
     placeGroundFog(view,key,x,width,flip,shade,alpha,ground,gaps=[]){
@@ -4039,6 +4047,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       const left=this.cameraX-400,right=this.cameraX+this.width+400;
       mask.clear();mask.fillStyle(0xffffff,1);
+      const solidSpans=this.groundFogSolidSpans=[];
       // Include enough terrain beyond the mask to feather every drifting bank.
       const fogSections=this.terrain.visibleSections(left,right);
       const gaps=(this.terrain.segments||fogSections)
@@ -4063,6 +4072,7 @@ window.GRIM_CONFIG = Object.freeze({
         for(let i=samples.length-1;i>=0;i--)
           points.push({x:samples[i],y:surface(samples[i])+54});
         mask.fillPoints(points,true);
+        solidSpans.push(points);
       }
       const active=new Set();
       const first=Math.floor(left/GROUND_FOG_STRIDE)-1;
@@ -4862,6 +4872,24 @@ window.GRIM_CONFIG = Object.freeze({
       texture.refresh();
       return key;
     }
+    renderAbyssFogCanvas(renderer,sprite,camera){
+      const ctx=renderer.currentContext;
+      const {points}=sprite.abyssFogBounds;
+      ctx.save();ctx.setTransform(1,0,0,1,0,0);
+      ctx.beginPath();
+      points.forEach((p,i)=>{
+        if(i===0)ctx.moveTo(p.x-camera.scrollX,p.y-camera.scrollY);
+        else ctx.lineTo(p.x-camera.scrollX,p.y-camera.scrollY);
+      });
+      ctx.closePath();ctx.clip();
+      ctx.translate(sprite.x-camera.scrollX,sprite.y-camera.scrollY);
+      ctx.rotate(sprite.rotation);
+      ctx.globalCompositeOperation='source-over';
+      ctx.globalAlpha=sprite.alpha*camera.alpha;
+      ctx.drawImage(sprite.texture.getSourceImage(),-sprite.displayWidth*.5,0,
+        sprite.displayWidth,sprite.displayHeight);
+      ctx.restore();
+    }
     abyssFogView(section,biome,alpha,activeKeys){
       if(alpha<=.003||!this.add?.image||!this.make?.graphics||!this.abyssFogViews)return null;
       const textureKey=this.abyssFogTexture();
@@ -4872,9 +4900,11 @@ window.GRIM_CONFIG = Object.freeze({
       if(!view){
         const sprite=this.add.image(0,0,textureKey)
           .setOrigin(.5,0).setDepth(.46).setVisible(false);
-        const maskGraphics=this.make.graphics({x:0,y:0,add:false});
-        const mask=maskGraphics.createGeometryMask();
-        sprite.setMask(mask);
+        const canvas=this.sys?.game?.renderer?.type===Phaser.CANVAS;
+        const maskGraphics=canvas?null:this.make.graphics({x:0,y:0,add:false});
+        const mask=maskGraphics?.createGeometryMask();
+        if(mask)sprite.setMask(mask);
+        if(canvas)sprite.renderCanvas=(renderer,view,camera)=>this.renderAbyssFogCanvas(renderer,view,camera);
         view={sprite,maskGraphics,mask,geometrySignature:null,biome};
         this.abyssFogViews.set(key,view);
       }
@@ -4886,10 +4916,10 @@ window.GRIM_CONFIG = Object.freeze({
       if(view.geometrySignature!==signature){
         // The foreground at .62 and above occludes the textured rock, so
         // only the part of this envelope between the jagged faces is visible.
-        maskGraphics.clear().fillStyle(0xffffff,1).fillPoints([
-          {x:start,y:leftY},{x:end,y:rightY},
-          {x:end,y:rightY+height+16},{x:start,y:leftY+height+16}
-        ],true);
+        const points=[{x:start,y:leftY},{x:end,y:rightY},
+          {x:end,y:rightY+height+16},{x:start,y:leftY+height+16}];
+        sprite.abyssFogBounds={points};
+        maskGraphics?.clear().fillStyle(0xffffff,1).fillPoints(points,true);
         sprite.setDisplaySize(width,height).setRotation(Math.atan2(y1-y0,width)).setTint(tint);
         view.geometrySignature=signature;
       }

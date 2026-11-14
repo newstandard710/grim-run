@@ -6,6 +6,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const {chromium} = require('playwright');
+const {PNG} = require('pngjs');
 
 const root = path.resolve(__dirname, '..');
 const baseline = '4b3dcf30f9520551c1ea97398ce41fdf1f6a3f54';
@@ -152,6 +153,66 @@ async function abyssParity(browser){
   }
   return {checkpoints,steps:1200};
 }
+async function isolatedFog(page){
+  await page.evaluate(()=>window.biomeReview.stageGap(766));
+  await page.waitForFunction(()=>{
+    const {scene:s}=window.biomeReview;
+    return !s.load.isLoading()&&!s.terrainMaterialLoading.size&&s.abyssFogViews.size>0;
+  },null,{polling:100});
+  const shot=await page.evaluate(()=>{
+    const b=window.biomeReview,s=b.scene,gap=b.stageGap(766);
+    for(const child of s.children.list)child.setVisible(false);
+    for(const bank of s.groundFogViews.values())bank.setVisible(true);
+    for(const view of s.abyssFogViews.values())view.sprite.setVisible(false);
+    s.cameras.main.setBackgroundColor('#000000');
+    return {data:b.frame(),start:gap.start-s.cameraX,end:gap.end-s.cameraX,
+      y:gap.y0-s.cameraY,webgl:b.game.renderer.type===Phaser.WEBGL};
+  });
+  const png=PNG.sync.read(Buffer.from(shot.data.split(',')[1],'base64'));
+  const column=x=>{
+    let light=0;
+    for(let y=Math.round(shot.y)-60;y<Math.round(shot.y)+4;y++){
+      const p=(y*png.width+x)*4;
+      light+=Math.max(png.data[p],png.data[p+1],png.data[p+2]);
+    }
+    return light;
+  };
+  const start=Math.ceil(shot.start),end=Math.floor(shot.end);
+  for(let x=start+1;x<end;x++)assert.equal(column(x),0,'No surface fog inside the gap at '+x);
+  const side=(edge,direction)=>[2,10,22,40,57].map(px=>column(edge+direction*px));
+  const left=side(start,-1),right=side(end,1);
+  assert(left[4]+right[4]>100,'Ground fog is visible on the solid banks');
+  assert(left[0]+right[0]<.35*(left[3]+right[3]),'Fog feathers into the rims');
+  fs.writeFileSync(path.join(outputs,'isolated-fog.json'),JSON.stringify({left,right,webgl:shot.webgl}));
+  const depthShot=await page.evaluate(()=>{
+    const b=window.biomeReview,s=b.scene,gap=b.stageGap(766);
+    s.cameraY+=110;s.cameras.main.setScroll(s.cameraX,s.cameraY);
+    s.drawScene();
+    for(const child of s.children.list)child.setVisible(false);
+    for(const mist of s.abyssFogViews.values())mist.sprite.setVisible(false);
+    const view=[...s.abyssFogViews.entries()]
+      .find(([key])=>key.startsWith(gap.start+':'+gap.end+':'))?.[1];
+    if(!view)throw Error('The inspected gap has no abyss mist');
+    view.sprite.setVisible(true);
+    s.cameras.main.setBackgroundColor('#000000');
+    return {data:b.frame(),start:gap.start-s.cameraX,end:gap.end-s.cameraX,y:gap.y0-s.cameraY};
+  });
+  const depth=PNG.sync.read(Buffer.from(depthShot.data.split(',')[1],'base64'));
+  let above=0,below=0;
+  for(let y=Math.max(0,Math.round(depthShot.y));y<depth.height;y++){
+    for(let x=Math.ceil(depthShot.start)+3;x<Math.floor(depthShot.end)-3;x++){
+      const i=(y*depth.width+x)*4;
+      const value=Math.max(depth.data[i],depth.data[i+1],depth.data[i+2]);
+      if(y<depthShot.y+65)above=Math.max(above,value);
+      else below=Math.max(below,value);
+    }
+  }
+  assert.equal(above,0,'Abyss mist stays below the rim');
+  assert(below>3&&below<70,'Abyss mist is visible and subdued: '+below);
+
+  return {left,right,webgl:shot.webgl,below};
+}
+
 async function abyssReview(browser){
   const cases=[['forest',766],...native,...blends];
   const stats={};let viewport={width:740,height:360};
@@ -211,9 +272,20 @@ async function abyssReview(browser){
 async function main(){
   fs.mkdirSync(outputs,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
-  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
+  const canvas=process.env.GRIM_ABYSS_RENDERER==='canvas';
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox',
+    canvas?'--disable-webgl':'--use-angle=swiftshader']});
   try{
-    if(process.env.GRIM_ABYSS_PARITY==='1'){
+    if(process.env.GRIM_ABYSS_PIXELS==='1'){
+      const session=await setup(browser,{width:740,height:360});
+      try{
+        const result=await isolatedFog(session.page);
+        assert.equal(result.webgl,!canvas);
+        assert.deepEqual(session.errors,[]);
+        console.log('PASS isolated surface and abyss fog',result);
+      }
+      finally{await session.page.close();}
+    }else if(process.env.GRIM_ABYSS_PARITY==='1'){
       const parity=await abyssParity(browser);
       fs.writeFileSync(path.join(outputs,'parity.json'),JSON.stringify(parity,null,2));
       console.log('PASS gameplay and RNG against the live baseline',parity.steps,'steps');
