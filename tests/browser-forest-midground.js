@@ -26,7 +26,8 @@ const server = http.createServer((req, res) => {
 });
 
 async function openGame(browser, width, height, options = {}) {
-  const page = await browser.newPage({viewport: {width, height}});
+  // Suppress the animated entry button's movement during Playwright's click.
+  const page = await browser.newPage({viewport: {width, height}, reducedMotion: 'reduce'});
   const errors = [];
   page.on('pageerror', error => errors.push(String(error)));
   if (options.missing) {
@@ -36,6 +37,8 @@ async function openGame(browser, width, height, options = {}) {
   await page.goto(origin + '/?seed=33' + (options.off ? '&forestMidground=0' : ''));
   await page.waitForFunction(() => window.grimRun?.scene.scenes[0]?.visuals?.reaperReady &&
     window.GRIM_FRONTEND?.ready, null, {timeout: 90000});
+  // Both captures must use the same fully loaded character poses.
+  await page.evaluate(async () => { await window.grimRun.scene.scenes[0].visuals.reviewLoad; });
   await page.locator('#home-enter-btn').click();
   await page.locator('#start-btn').click();
   await page.evaluate(() => {
