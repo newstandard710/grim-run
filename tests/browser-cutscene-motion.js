@@ -5,7 +5,11 @@ const root=path.resolve(__dirname,'..'),dir=path.join(root,'test-results');fs.mk
 const server=http.createServer((req,res)=>{
  try{const f=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname.replace(/^\/+/,''))||'index.html');
   if(!f.startsWith(root+path.sep))return res.writeHead(403).end();
-  res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[path.extname(f)]||'application/octet-stream'});res.end(fs.readFileSync(f));
+  res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[path.extname(f)]||'application/octet-stream'});
+  // Headless video capture can stop Chromium's compositor-driven rAF after
+  // the manual still pass. Use Phaser's timer timestep for this test page.
+  res.end(f===path.join(root,'index.html')?fs.readFileSync(f,'utf8').replace(
+   'type: Phaser.AUTO,','type: Phaser.AUTO, fps: { forceSetTimeOut: true },'):fs.readFileSync(f));
  }catch(e){res.writeHead(404).end(String(e));}
 });
 (async()=>{
