@@ -50,9 +50,7 @@ def midpoint(source, target):
             remap(alpha, coords), remap(signed, coords))
 
 
-atlas = Image.new('RGBA', (6*RUNTIME_CELL, 4*RUNTIME_CELL))
-for index in PAIRS:
-    a, b = key_pose(index), key_pose(index+1)
+def bake_pair(a, b):
     color_a, alpha_a, edge_a = midpoint(a, b)
     color_b, alpha_b, edge_b = midpoint(b, a)
     coverage = alpha_a + alpha_b
@@ -65,7 +63,43 @@ for index in PAIRS:
         if stats[label, cv2.CC_STAT_AREA] < 20:
             alpha[labels == label] = 0
     pixels = np.uint8(np.clip(np.dstack([color, alpha])*255+.5, 0, 255))
-    tile = Image.fromarray(pixels).resize((RUNTIME_CELL, RUNTIME_CELL), Image.Resampling.LANCZOS)
-    atlas.paste(tile, (index % 6 * RUNTIME_CELL, index // 6 * RUNTIME_CELL))
-atlas.save(OUT, lossless=True, method=6)
-print(f'{len(PAIRS)} solid intermediate poses, {OUT.stat().st_size:,} bytes')
+    return Image.fromarray(pixels).resize((RUNTIME_CELL, RUNTIME_CELL), Image.Resampling.LANCZOS)
+
+
+def bake_jump():
+    atlas = Image.new('RGBA', (6*RUNTIME_CELL, 4*RUNTIME_CELL))
+    for index in PAIRS:
+        tile = bake_pair(key_pose(index), key_pose(index+1))
+        atlas.paste(tile, (index % 6 * RUNTIME_CELL, index // 6 * RUNTIME_CELL))
+    atlas.save(OUT, lossless=True, method=6)
+    print(f'{len(PAIRS)} solid intermediate poses, {OUT.stat().st_size:,} bytes')
+
+
+def bake_enemies():
+    enemy_root = ROOT / 'assets/enemies/illustrated-v2'
+    crawler = [Image.open(p).convert('RGBA').resize((295, 213), Image.Resampling.LANCZOS)
+               for p in sorted((enemy_root / 'bone-crawler').glob('crawler_crawl_*.png'))]
+    imp_atlas = Image.open(enemy_root / 'ember-imp/ember_imp_atlas_v1.png').convert('RGBA')
+    imp = [imp_atlas.crop((x, y, x+256, y+256)) for x, y in ((0,0),(256,0),(512,0),(512,256))]
+
+    def pad(tile):
+        layer = Image.new('RGBA', (CELL, CELL))
+        layer.paste(tile, ((CELL-tile.width)//2, (CELL-tile.height)//2))
+        return np.asarray(layer, dtype=np.float32) / 255
+
+    atlas = Image.new('RGBA', (4*RUNTIME_CELL, 2*RUNTIME_CELL))
+    for row, frames in enumerate((crawler, imp)):
+        poses = [pad(frame) for frame in frames]
+        for i in range(4):
+            atlas.paste(bake_pair(poses[i], poses[(i+1)%4]), (i*RUNTIME_CELL,row*RUNTIME_CELL))
+    output = enemy_root / 'ground-inbetweens.webp'
+    atlas.save(output, lossless=True, method=6)
+    print(f'8 solid ground enemy transitions, {output.stat().st_size:,} bytes')
+
+
+if __name__ == '__main__':
+    import sys
+    if '--enemies' in sys.argv:
+        bake_enemies()
+    else:
+        bake_jump()

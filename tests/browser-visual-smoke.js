@@ -287,7 +287,7 @@ const server=http.createServer((req,res)=>{
     const g=window.grimRun,s=g.scene.scenes[0],v=s.visuals;
     const ground=s.terrain.groundAt(s.cameraX+320),x=s.cameraX+320;
     const y=ground-window.GRIM_COMBAT.CRAWLER_HITBOX.footOffset;
-    const enemy={kind:'crawler',x,y,phase:0,dead:false,hp:1};
+    const enemy={kind:'crawler',x,y,phase:-x/window.GRIM_ENEMY_MOTION.CRAWLER_STRIDE*4,dead:false,hp:1};
     s.enemies=[enemy];s.drawScene();g.step(performance.now(),0);
     const sprite=v.boneCrawlerPool[0],meta=window.GRIM_VISUALS.V2_BONE_CRAWLER_FRAMES[0];
     return {frame:sprite.texture.key,visible:sprite.visible,x:sprite.x,y:sprite.y,
@@ -300,7 +300,8 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(crawlerRect.frame,'gr_v2_crawler_crawl_01');
   assert.equal(crawlerRect.visible,true);assert.equal(crawlerRect.x,crawlerRect.enemyX);
-  assert.equal(crawlerRect.y,crawlerRect.enemyY);
+  assert.ok(crawlerRect.y>crawlerRect.enemyY&&crawlerRect.y<crawlerRect.groundY,
+    'The visual center shifts down so the painted claws reach the terrain');
   assert.equal(crawlerRect.flipX,true,'Bone Crawler art faces right, in its direction of travel');
   assert.ok(Math.abs(crawlerRect.scale-crawlerRect.expectedScale)<.00001);
   assert.ok(crawlerRect.displayWidth>137&&crawlerRect.displayWidth<141);
@@ -321,7 +322,8 @@ const server=http.createServer((req,res)=>{
     const state=crawlerStates[i];
     const rendered=await skeletalPage.evaluate(({elapsed,name})=>{
       const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.boneCrawlerPool[0];
-      s.elapsed=elapsed;s.drawScene();g.step(performance.now(),0);
+      s.elapsed=elapsed;enemy.phase=elapsed*8-enemy.x/window.GRIM_ENEMY_MOTION.CRAWLER_STRIDE*4;
+      s.drawScene();g.step(performance.now(),0);
       return {frame:sprite.texture.key,visible:sprite.visible};
     },state);
     assert.equal(rendered.frame,'gr_v2_crawler_'+state.name,
@@ -382,7 +384,7 @@ const server=http.createServer((req,res)=>{
   const impRect=await skeletalPage.evaluate(()=>{
     const g=window.grimRun,s=g.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_EMBER_IMP_ATLAS;
     const x=s.cameraX+600,ground=s.terrain.groundAt(x),y=ground-30;
-    const enemy={kind:'imp',x,y,homeY:y,phase:0,dead:false,hp:2,warningMs:0};
+    const enemy={kind:'imp',x,y,homeY:y,phase:-x/window.GRIM_ENEMY_MOTION.IMP_STRIDE*4,dead:false,hp:2,warningMs:0};
     s.enemies=[enemy];s.fireballs=[];s.drawScene();g.step(performance.now(),0);
     const sprite=v.emberImpPool[0],hitbox=window.GRIM_COMBAT.rectFor(enemy);
     return {frame:sprite.frame.name,visible:sprite.visible,x:sprite.x,y:sprite.y,
@@ -412,6 +414,7 @@ const server=http.createServer((req,res)=>{
     const rendered=await skeletalPage.evaluate(({elapsed,warningMs,ageMs})=>{
       const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.emberImpPool[0];
       s.elapsed=elapsed;enemy.warningMs=warningMs;
+      enemy.phase=elapsed*8-enemy.x/window.GRIM_ENEMY_MOTION.IMP_STRIDE*4;
       s.fireballs=ageMs===null?[]:[{owner:enemy,ageMs,dead:false,x:enemy.x-12,y:enemy.y-11}];
       s.drawScene();g.step(performance.now(),0);
       return {frame:sprite.frame.name,visible:sprite.visible,fireballs:s.fireballs.length};
@@ -496,6 +499,8 @@ const server=http.createServer((req,res)=>{
       phase:0,dead:false,hp:1};
     const imp={kind:'imp',x:impX,y:impGround-30,homeY:impGround-30,
       phase:0,dead:false,hp:2,warningMs:0};
+    crawler.phase=-crawler.x/window.GRIM_ENEMY_MOTION.CRAWLER_STRIDE*4;
+    imp.phase=-imp.x/window.GRIM_ENEMY_MOTION.IMP_STRIDE*4;
     s.enemies=[crawler,imp];s.fireballs=[];s.drawScene();g.step(performance.now(),0);
     const crawlerSprite=s.visuals.boneCrawlerPool[0],impSprite=s.visuals.emberImpPool[0];
     return {crawlerVisible:crawlerSprite.visible,crawlerFrame:crawlerSprite.texture.key,

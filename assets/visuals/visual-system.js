@@ -694,11 +694,20 @@
         const left=s.cameraX-100,right=s.cameraX+s.width+100,now=Math.max(0,s.elapsed||0);
         for(const e of s.enemies||[]){
           if(e.kind!=='crawler'||e.dead||e.x<left||e.x>right||used>=this.boneCrawlerPool.length)continue;
-          const index=Math.floor(now*V2_BONE_CRAWLER_FPS+(e.phase||0))%frames.length;
+          const motion=scope.GRIM_ENEMY_MOTION;
+          const time=motion?motion.cycle(e.x,e.phase,motion.CRAWLER_STRIDE):
+            (now*V2_BONE_CRAWLER_FPS+(e.phase||0))%frames.length;
+          const from=Math.floor(time), part=time-from;
+          const tween=motion&&motion.hasTweens(s)&&part>=.25&&part<.75;
+          const index=tween?from:Math.round(time)%frames.length;
           const meta=frames[index],sprite=this.boneCrawlerPool[used++];sprite.__grimEntity=e;
-          sprite.setTexture(meta.key).setOrigin(meta.origin[0],meta.origin[1])
-            .setScale(meta.scale).setPosition(e.x,e.y).setFlipX(true).setVisible(true)
-            .setAlpha(1).setRotation(0);
+          const contacts=motion&&(tween?motion.CRAWL_MIDS[from]:motion.CRAWL_CLAWS[index]);
+          const ground=e.y+scope.GRIM_COMBAT.CRAWLER_HITBOX.footOffset;
+          const pose=motion?.crawlerPose(s.terrain,e.x,ground,meta.width,meta.height,meta.scale,contacts);
+          sprite.setTexture(tween?motion.KEY:meta.key,tween?from:undefined).setOrigin(.5,.5)
+            .setScale(tween?meta.scale/(.2*.6):meta.scale)
+            .setPosition(pose?.x??e.x,pose?.y??e.y).setFlipX(true).setVisible(true)
+            .setAlpha(1).setRotation(pose?.angle??0);
         }
       }
       for(let i=used;i<this.boneCrawlerPool.length;i++)this.boneCrawlerPool[i].setVisible(false);
@@ -712,13 +721,18 @@
         for(const e of s.enemies||[]){
           if(e.kind!=='imp'||e.dead||e.x<left||e.x>right||used>=this.emberImpPool.length)continue;
           const launched=(s.fireballs||[]).some(ball=>ball.owner===e&&!ball.dead&&ball.ageMs<=260);
+          const motion=scope.GRIM_ENEMY_MOTION;
+          const time=motion?motion.cycle(e.x,e.phase,motion.IMP_STRIDE):
+            (now*V2_EMBER_IMP_FPS+(e.phase||0))%V2_EMBER_IMP_RUN.length;
+          const from=Math.floor(time),part=time-from;
+          const tween=motion&&e.warningMs<=0&&!launched&&motion.hasTweens(s)&&part>=.25&&part<.75;
           const frame=e.warningMs>0?'warning':launched?'release':
-            V2_EMBER_IMP_RUN[Math.floor(now*V2_EMBER_IMP_FPS+(e.phase||0))%V2_EMBER_IMP_RUN.length];
+            V2_EMBER_IMP_RUN[Math.round(time)%V2_EMBER_IMP_RUN.length];
           const sprite=this.emberImpPool[used++];sprite.__grimEntity=e;
-          // The atlas is anchored to the existing 38x42 imp collision footprint.
-          sprite.setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
-            .setPosition(e.x,e.y+22).setFrame(frame).setVisible(true)
-            .setAlpha(1).setRotation(0);
+          // Each run, warning and release drawing uses the same foot line.
+          sprite.setTexture(tween?motion.KEY:meta.key,tween?from+4:frame)
+            .setOrigin(meta.origin[0],tween?(245+32)/320:meta.origin[1]).setScale(tween?meta.scale/.6:meta.scale)
+            .setPosition(e.x,e.y+22).setVisible(true).setAlpha(1).setRotation(0);
         }
       }
       for(let i=used;i<this.emberImpPool.length;i++)this.emberImpPool[i].setVisible(false);

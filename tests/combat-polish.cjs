@@ -6,6 +6,28 @@ const els=new Map(),el=id=>{if(!els.has(id))els.set(id,node());return els.get(id
 const w={document:{getElementById:el,createElement:node,write(){},addEventListener(){}},localStorage:{getItem(){return null},setItem(){}},Phaser:{Scene:class{},Game:class{},AUTO:1,Scale:{RESIZE:1,CENTER_BOTH:1}},location:{search:'?seed=33'},URLSearchParams,addEventListener(){},innerWidth:950,innerHeight:430};w.window=w;vm.createContext(w);
 for(const [,attrs,body]of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w);
 const C=w.GRIM_CONFIG;
+vm.runInContext(read('assets/visuals/enemy-motion.js'),w);
+const Ground=w.GRIM_ENEMY_MOTION;
+const mScale=100/1065;
+for(const grade of [-.73,0,.73]){
+  const estimate=(x)=>240+(x-180)*grade;
+  const ground={segments:[{kind:'ground',start:0,end:400}],surfaceAt:(_,x)=>estimate(x)};
+  for(const claws of [...Ground.CRAWL_CLAWS,...Ground.CRAWL_MIDS]){
+    const pose=Ground.crawlerPose(ground,180,240,1477,1065,mScale,claws);
+    const c=Math.cos(pose.angle), sin=Math.sin(pose.angle);
+    for(let i=0;i<4;i+=2){
+      const dx=(1477*.5-claws[i])*mScale,dy=(claws[i+1]-1065*.5)*mScale;
+      assert(Math.abs(pose.y+dx*sin+dy*c-estimate(pose.x+dx*c-dy*sin))<.05,
+        'Crawler claws share the ground at either end of a slope');
+    }
+  }
+}
+const ledge={segments:[{kind:'ground',start:0,end:180},{kind:'gap',start:180,end:320}],
+  surfaceAt:()=>240};
+assert.equal(Ground.floor(ledge,180),null);
+assert(Number.isFinite(Ground.crawlerPose(ledge,179,240,1477,1065,mScale,Ground.CRAWL_CLAWS[0]).y));
+assert.equal(Ground.cycle(104,0,104),0);
+
 function game(){const s=new w.GrimGameScene();s.scale={width:950,height:430,on(){},off(){}};s.events={once(){}};s.add={graphics:node,text:node};s.cameras={main:{setScroll(){}}};s.create();s.drawScene=()=>{};s.startRun();return s;}
 // Contact, rather than the merchant center or an airborne distance crossing,
 // must own both types of first encounter.

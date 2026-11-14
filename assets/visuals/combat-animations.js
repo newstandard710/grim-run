@@ -150,7 +150,17 @@
         const scale={bat:.26,skeletalBat:.30,crawler:.43,imp:.24}[item.kind];
         const alpha=dead?clamp((1-progress)/.24):1;
         const pair=this.responses[n++];this.blend(pair,name,progress*(frames.length-1),item.x,y,scale,alpha,0,frames);
-        if(item.kind==='crawler')for(const v of pair)v.setFlipX(true);
+        if(item.kind==='crawler'){
+          const motion=scope.GRIM_ENEMY_MOTION;
+          for(const v of pair){
+            v.setFlipX(true);
+            if(dead||!motion||!v.visible)continue;
+            const contacts=motion.HIT_CLAWS[Number(v.frame.name)];
+            if(!contacts)continue;
+            const pose=motion.crawlerPose(s.terrain,item.x,y,512,512,scale,contacts);
+            v.setOrigin(.5,.5).setPosition(pose.x,pose.y).setRotation(pose.angle);
+          }
+        }
       };
       for(const e of s.enemies||[])if(!e.dead&&e.visualHitMs>0&&e.x>=s.cameraX-150&&e.x<=s.cameraX+s.width+150){
         for(const pool of [s.visuals?.skeletalBatPool,s.visuals?.boneCrawlerPool,s.visuals?.emberImpPool])
