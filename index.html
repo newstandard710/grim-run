@@ -1584,7 +1584,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=ground2"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=1"></script>
-  <script src="assets/visuals/obstacle-mounts.js?v=1"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=2"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.8"></script>
   <script src="assets/visuals/cutscene-motion.js?v=0.19.8"></script>
@@ -5471,6 +5471,7 @@ window.GRIM_CONFIG = Object.freeze({
           image.setOrigin(245/384,originY);
           image.plantNext.setFrame(Math.min(15,first+1)).setPosition(x,y).setOrigin(245/384,originY)
             .setDisplaySize(width,height).setAlpha(mix).setVisible(mix>.001);
+          scope.GRIM_OBSTACLE_ART?.seatPlantRoot(this,image,x,y,width,height);
         }else{width=b.width;height=b.height;x=b.x+b.width/2;y=b.y+b.height/2+this.obstacleVisualInset(o);}
       }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){
         const scale=this.obstacleSpriteScaleFor(skin,o.type);

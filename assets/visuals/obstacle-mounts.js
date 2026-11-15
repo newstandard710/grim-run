@@ -113,5 +113,29 @@
     image.mountFeet=[foot];image.mountJoint={x:targetX,y:targetY};
     return true;
   }
-  scope.GRIM_OBSTACLE_ART={drawSlideMount,mountBramble};
+
+  function seatPlantRoot(scene,image,x,y,width,height){
+    const frameW=384,frameH=400,rootTop=340,rootBottom=376,origin=[245,375];
+    const floor=scene.terrain.groundAt(x);
+    const naturalBottom=y+(rootBottom-origin[1])*height/frameH;
+    if(!Number.isFinite(floor)||floor<=naturalBottom){
+      if(image.plantRoot?.visible){
+        image.plantRoot.setVisible(false);
+        image.setCrop();image.plantNext.setCrop();
+      }
+      return;
+    }
+    if(!image.plantRoot){
+      // The lower strip is identical in all 16 frames. Stretch only that
+      // strip and leave the jaw, painted strike silhouette and collision fixed.
+      image.plantRoot=scene.add.image(x,y,image.texture.key,0).setDepth(image.depth)
+        .setOrigin(origin[0]/frameW,rootTop/frameH).setCrop(0,rootTop,frameW,rootBottom-rootTop);
+      image.once('destroy',()=>image.plantRoot.destroy());
+    }
+    const joint=y+(rootTop-origin[1])*height/frameH;
+    image.setCrop(0,0,frameW,rootTop);image.plantNext.setCrop(0,0,frameW,rootTop);
+    image.plantRoot.setPosition(x,joint).setScale(width/frameW,(floor+3-joint)/(rootBottom-rootTop))
+      .setVisible(true);
+  }
+  scope.GRIM_OBSTACLE_ART={drawSlideMount,mountBramble,seatPlantRoot};
 })(typeof window!=='undefined'?window:globalThis);
