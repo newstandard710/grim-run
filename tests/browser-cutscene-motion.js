@@ -18,7 +18,7 @@ const server=http.createServer((req,res)=>{
    try{
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
     await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,null,{timeout:90000});
-    await page.locator('#home-enter-btn').click({force:true});await page.locator('#start-btn').click({force:true});
+    await page.mouse.click(23,43);await page.locator('#start-btn').click();
     const eyes=await page.evaluate(()=>{
      const s=window.grimRun.scene.scenes[0],texture=s.textures.get('cutscene-bow');
      const canvas=document.createElement('canvas');canvas.width=224;canvas.height=224;const ctx=canvas.getContext('2d');
@@ -87,8 +87,8 @@ const server=http.createServer((req,res)=>{
   try{
    await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
    await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready&&window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
-   await page.locator('#home-enter-btn').click({force:true});
-   await page.locator('#start-btn').click({force:true});
+   await page.mouse.click(23,43);
+   await page.locator('#start-btn').click();
    const marks=[];
    for(const scene of ['angel','devil','bow']){
     await page.evaluate(scene=>{
