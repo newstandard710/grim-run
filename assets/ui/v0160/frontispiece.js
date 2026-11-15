@@ -106,7 +106,7 @@
       ctx.globalAlpha=.9;art.drawFrame(ctx,images.batFlight,clock,0,0,placement.scale);
       ctx.restore();
     }else {const bat=bats[Math.floor(clock*8/.96)%bats.length];actor(bat,w*.84,batY,batHeight,true,.9);}
-    actor('crawler',w*.86,h*.91,h*(portrait?.17:.28),true,.9,crawlerIdle);
+    actor('crawler',w*.86,h*.91,h*(portrait?.17:.28),false,.9,crawlerIdle);
     actor('imp',w*.69,h*.91,h*(portrait?.12:.2),true,.88,impIdle);
     // Dim moving motes sit below typography, independently of the run RNG.
     for(let i=0;i<19;i++){const phase=(clock*(.012+i%3*.003)+i*.173)%1,px=w*((i*.618+.07)%1),py=h*(.2+(1-phase)*.64);ctx.globalAlpha=Math.sin(phase*Math.PI)*.35;ctx.fillStyle=i%4?'#bed5c7':'#d9b275';ctx.beginPath();ctx.arc(px+Math.sin(clock*.2+i)*10,py,i%3?.8:1.25,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
