@@ -26,14 +26,18 @@ const begin=(page,k)=>page.evaluate(k=>{
   s.triggerVendor(k);
   s.drawScene();g.step(performance.now(),0);
 },k);
-const time=(page,t)=>page.evaluate(t=>{
+const time=(page,t,capture=false)=>page.evaluate(async ({t,capture})=>{
   const g=window.grimRun,s=g.scene.scenes[0],a=s.vendorArt;
   s.vendorIntroMs=8000-t;s.drawScene();g.step(performance.now(),0);
-  return {held:a.holdingFrame(),reaper:Number(a.reaper.frame.name),mesh:a.merchantMesh?.visible||false,
+  const state={held:a.holdingFrame(),reaper:Number(a.reaper.frame.name),mesh:a.merchantMesh?.visible||false,
     canvas:a.canvasMerchant?.visible?Number(a.canvasMerchant.frame.name):null,dip:a.merchantMesh?.cutscenePose?.dip??null,
     aura:a.back.commandBuffer.length};
-},t);
-const pixels=page=>page.locator('#game canvas').screenshot({animations:'disabled'});
+  if(!capture)return state;
+  // Read the completed frame before Chromium can discard WebGL's default drawing buffer.
+  const png=new TextEncoder().encode(g.canvas.toDataURL());
+  const digest=await crypto.subtle.digest('SHA-256',png);
+  return {...state,frame:Array.from(new Uint8Array(digest))};
+},{t,capture});
 function comparable(snapshot){
   const {state,ms,focus,...game}=snapshot;
   return game;
@@ -58,18 +62,19 @@ async function inspect(browser,url,canvas,failed=false){
       const first=await vendorState(page);
       assert.equal(first.focus,'vendor-intro-skip');
       assert.equal(first.ms,8000);
-      const travel=await time(page,900),late=await time(page,2999);
+      const travel=await time(page,900),late=await time(page,2999,true);
       assert.equal(travel.held,false); assert.equal(late.held,false);
       assert(travel.reaper<late.reaper);
-      const almost=await pixels(page),held=await time(page,3000),final=await pixels(page);
+      const {frame:final,...held}=await time(page,3000,true);
       assert(held.held);
       assert.equal(held.reaper,failed?11:192);
       if(canvas)assert.equal(held.canvas,failed?null:(k===1?23:47));
       else assert.equal(held.dip,1);
-      if(!failed)assert(!almost.equals(final),'The final composition starts at exactly three seconds');
+      if(!failed)assert.notDeepEqual(late.frame,final,'The final composition starts at exactly three seconds');
       for(const t of [3001,5060,7999]){
-        assert.deepEqual(await time(page,t),held);
-        assert((await pixels(page)).equals(final),'The entire rendered composition holds');
+        const {frame,...snapshot}=await time(page,t,true);
+        assert.deepEqual(snapshot,held);
+        assert.deepEqual(frame,final,'The entire rendered composition holds');
       }
       assert.deepEqual(comparable(await vendorState(page)),comparable(first));
       await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,1));
@@ -164,10 +169,11 @@ async function inspect(browser,url,canvas,failed=false){
       await page.setViewportSize({width:393,height:740});
       await page.waitForFunction(()=>window.grimRun.scene.scenes[0].width===393);
       await page.evaluate(()=>window.grimRun.loop.sleep());
-      const rotated=await time(page,4000),rotatedFrame=await pixels(page);
+      const {frame:rotatedFrame,...rotated}=await time(page,4000,true);
       assert(rotated.held);assert.equal(rotated.reaper,192);
-      assert.deepEqual(await time(page,7340),rotated);
-      assert((await pixels(page)).equals(rotatedFrame));
+      const {frame,...rotatedLater}=await time(page,7340,true);
+      assert.deepEqual(rotatedLater,rotated);
+      assert.deepEqual(frame,rotatedFrame);
       await page.emulateMedia({reducedMotion:'reduce'});
       await begin(page,8);
       assert.deepEqual(await time(page,0),await time(page,7999));
