@@ -185,13 +185,63 @@ async function inspect(browser,url,canvas,failed=false){
   }finally{await page.close();}
 }
 
+async function inspectMerchantFallback(browser,url,canvas,missing){
+  const page=await browser.newPage({viewport:{width:950,height:430},hasTouch:true});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  try{
+    await page.route('**/vendor-canvas.webp*',route=>route.abort());
+    await page.route('**/'+missing+'-vendor-v1.webp*',route=>route.fulfill({
+      status:200,contentType:'image/webp',body:'invalid merchant painting'
+    }));
+    await page.goto(url,{waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
+    await page.evaluate(()=>{
+      const g=window.grimRun,s=g.scene.scenes[0];
+      s.sys.sceneUpdate=()=>{};clearInterval(s.loopWatchdogId);g.loop.sleep();
+    });
+    const visible=()=>page.evaluate(()=>{
+      const a=window.grimRun.scene.scenes[0].vendorArt;
+      return [a.merchant,a.merchantMesh,a.canvasMerchant]
+        .filter(v=>v?.visible).map(v=>v.texture.key);
+    });
+    const kind=missing==='angel'?1:8,ownKey=kind===1?'vendor-angel':'vendor-demon';
+    const other=kind===1?8:1,otherKey=kind===1?'vendor-demon':'vendor-angel';
+    await begin(page,other);
+    await time(page,1500);
+    assert.deepEqual(await visible(),[otherKey],'The surviving base merchant renders without the other vendor');
+    const state=await time(page,3000);
+    assert.equal(state.mesh,!canvas,'The surviving merchant retains the renderer-specific path');
+    await begin(page,kind);
+    await time(page,1200);
+    assert.deepEqual(await visible(),[],'An unavailable merchant never shows the opposite vendor');
+    await page.evaluate(key=>{
+      const s=window.grimRun.scene.scenes[0];
+      const c=document.createElement('canvas');c.width=16;c.height=16;
+      c.getContext('2d').fillRect(0,0,16,16);
+      s.textures.addCanvas(key,c);
+    },ownKey);
+    await time(page,3000);
+    assert.deepEqual(await visible(),[],'Art arriving late cannot change a pinned intro');
+    await page.touchscreen.tap(180,220);
+    assert.equal((await vendorState(page)).type,kind===1?'angel':'devil');
+    assert.equal((await vendorState(page)).state,'upgrade');
+    await begin(page,kind);await time(page,3000);
+    assert.deepEqual(await visible(),[ownKey],'The next intro may use newly ready art');
+    assert.deepEqual(errors,[]);
+  }finally{await page.close();}
+}
+
 (async()=>{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const url='http://127.0.0.1:'+server.address().port+'/?seed=33';
   for(const canvas of [false,true]){
     const browser=await chromium.launch({headless:true,args:['--no-sandbox',canvas?'--disable-webgl':'--use-angle=swiftshader']});
-    try{await inspect(browser,url,canvas);if(canvas)await inspect(browser,url,canvas,true);}
+    try{
+      await inspect(browser,url,canvas);
+      if(canvas)await inspect(browser,url,canvas,true);
+      for(const missing of ['angel','demon'])await inspectMerchantFallback(browser,url,canvas,missing);
+    }
     finally{await browser.close();}
   }
-  console.log('PASS vendor hold: WebGL and Canvas, both merchants, full-frame freeze, exact boundaries, both skip phases, held touch/mouse/key handoff, rotation, reduced motion and missing art.');
+  console.log('PASS vendor hold: WebGL and Canvas, both merchants, full-frame freeze, exact boundaries, both skip phases, held touch/mouse/key handoff, rotation, reduced motion, and isolated invalid or late merchant art.');
 })().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>server.close());

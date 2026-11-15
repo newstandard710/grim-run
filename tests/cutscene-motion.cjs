@@ -4,11 +4,11 @@ const root=path.resolve(__dirname,'..'),w={};w.window=w;vm.createContext(w);
 for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-data.js','assets/cutscenes/v0197/animation-data.js'])vm.runInContext(fs.readFileSync(path.join(root,p),'utf8'),w);
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-assert(html.includes('assets/cutscenes/v0197/animation-data.js?v='+D.version));
-assert(html.includes('assets/visuals/power-animations.js?v='+D.version),'Bow keeps its matched metadata and renderer cache versions');
-assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.11'));
+assert(html.includes('assets/cutscenes/v0197/animation-data.js?v=0.19.12'));
+assert(html.includes('assets/visuals/power-animations.js?v=0.19.11'),'Bow preserves its released renderer');
+assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.12'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
-assert(loaded.every(([,url])=>url.endsWith('?v='+D.version)));
+assert(loaded.every(([key,url])=>url.endsWith(key==='cutscene-vendor'?'?v=0.19.12':'?v=0.19.11')));
 assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.VENDOR_ANIMATION_SECONDS,3);assert.equal(A.VENDOR_SETTLED_FRAME,192);
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){
@@ -71,19 +71,35 @@ assert(m.runtime['reaper-vendor.webp'].bytes<=5252880,'Vendor approach stays wit
 assert(m.runtime['reaper-vendor.webp'].size.every(v=>v<=3584),'Vendor atlas stays inside the existing texture limit');
 assert(Object.values(m.runtime).reduce((bytes,asset)=>bytes+asset.bytes,0)<=9874079,'The three dense atlases stay within the PR87 transfer budget');
 assert(fs.statSync(path.join(root,'assets/cutscenes/v0197/vendor-canvas.webp')).size<=602944,'Canvas merchant atlas stays within the prior transfer budget');
-const vendor=D.vendor.rig, walk=vendor.slice(0,96);
+const vendor=D.vendor.rig;
 assert.equal(vendor.length,193);
-assert(Math.max(...walk.map(p=>p.pelvis[1]))-Math.min(...walk.map(p=>p.pelvis[1]))>4,'The upper body participates in both walking loads');
-for(const [i,p] of walk.entries()){
- assert(p.feet.some(f=>f.forefoot[1]===214),'At least one boot bears weight throughout the walk');
- for(const j of [0,1]){
-  const q=(i/96+(j===0?.5:0))%1;
-  const [x,y]=p.feet[j].forefoot;
-  if(q<=.61)assert(y===214&&Math.abs(x+q*A.WALK_STRIDE*.4-(j===0?160:174))<.002,'The loaded forefoot stays in the same stage position');
+assert(Math.max(...vendor.map(p=>p.pelvis[1]))-Math.min(...vendor.map(p=>p.pelvis[1]))>4,'The upper body participates in the walking loads');
+const heels=[],lastStates=[null,null];
+for(const [i,p] of vendor.entries()){
+ assert(p.feet.some(f=>f.state!=='swing'&&f.contact[1]===214),'At least one boot bears weight throughout the walk');
+ assert(i===0||p.travel>=vendor[i-1].travel,'The last heel brakes forward travel without sliding back');
+ for(const [j,f] of p.feet.entries()){
+  const state=lastStates[j],previous=vendor[i-1];
+  if(i&&f.state==='heel'&&state==='swing')heels.push([j,i/64]);
+  if(previous&&f.state===state&&state!=='swing'){
+   const x=f.contact[0]+p.travel,x0=previous.feet[j].contact[0]+previous.travel;
+   assert(Math.abs(x-x0)<.002,'Each heel, sole and toe locks its own stage contact');
+  }
+  assert(Math.abs(dist(f.hip,f.knee)-31)<.002&&Math.abs(dist(f.knee,f.ankle)-30)<.002,'The leg segments retain length');
+  lastStates[j]=f.state;
  }
 }
-assert.deepEqual(vendor[96],vendor[0],'Settle begins in the exact last touchdown drawing');
-assert(vendor.slice(96).every(p=>p.feet[1].forefoot[0]===vendor[96].feet[1].forefoot[0]),'The lead boot brakes and holds while the trailing boot gathers');
+assert.deepEqual(heels.map(([j])=>j),[0,1,0,1,0]);
+for(const [i,time] of [.45,.95,1.50,2.10,2.50].entries())assert(Math.abs(heels[i][1]-time)<.016);
+assert(vendor.slice(Math.ceil(2.26*64)).every(p=>Math.abs(p.travel-A.WALK_DISTANCE)<.00001&&p.feet[1].state==='flat'),
+ 'The lead boot supports the stop and the closing step');
+for(const height of [360,430]){
+ for(let ms=0;ms<3000;ms++){
+  const pose=A.approachAt(ms/1000),paint=vendor[pose.frame];
+  const drift=Math.abs(pose.travel*A.WALK_DISTANCE-paint.travel)*height/420;
+  assert(drift<.65,'The interpolated root stays registered to the sampled paint');
+ }
+}
 assert.equal(A.merchantPose(2.2,true).offer,0);
 assert(A.merchantPose(2.55,true).offer>.45);
 assert.equal(A.merchantPose(3,true).offer,1);
