@@ -1,18 +1,18 @@
 # Cutscene art — v0.19.8 arm repair, v0.19.7 vendor motion
 
-The first Angel and Devil introductions retain their ten-second presentation
-clock and existing skip/offer rules. A new scythe-gripping Reaper has 96 dense
-walking frames, 97 approach-to-stance frames and 48 planted breathing frames.
-Walking uses two-link painted legs with fixed boot contacts and curved swing strokes. Its phase follows eased travel, ending on the same contact painting that
-begins settling. The idle deforms only the hood, shoulders and trailing cloth;
-boots and gripped staff are excluded.
+The first Angel and Devil introductions animate for three visible seconds and
+hold their entire settled composition for five seconds. Either phase can be
+skipped directly to the corresponding vendor menu. The two planted walk cycles
+complete at 2.2 seconds, the Reaper settles onto frame 192 at three seconds, and
+the merchant's downward gaze and ambient motion ease to rest at the same point.
+Reduced motion shows the settled painting from entry and uses the same clock.
 
-Both accepted merchant paintings are retained byte-for-byte. A small WebGL mesh
-articulates the torso, hood/head and cloth without scaling the whole body.
-The downward head turn starts at seven seconds, settles by 9.25 seconds and
-holds through the end, with the head turning toward the smaller Reaper.
-Mesh updates use presentation time and contain no image readback or gameplay
-randomness. Fixed bottom vertices retain planted feet.
+The accepted merchant paintings and Reaper approach atlas are reused. WebGL
+uses the existing articulated mesh. Canvas samples a compact 24-pose sequence
+per merchant from the same deformation and original paints. Rebuild it using
+`python scripts/prepare-vendor-canvas.py` with Node, Pillow, NumPy and OpenCV.
+The Canvas-only WebP is 602,944 bytes at 2176×1344. Its SHA-256 is
+`a0dbe84b7278af4a93d370e7a605a0c0efe02a6e742f8655819c4cdf4846df4c`.
 
 The summit acquisition uses one matching painted body/hood/scythe layer and
 separate painted arm components. A continuous body hinge, knee/hip bend and
@@ -56,7 +56,7 @@ registers feet/eyes at a fixed scale, restores opaque paint, builds the vendor's
 leg rig and in-betweens, and bakes the summit body/arm rig from
 `scripts/bow_rig.py`. No source PNG is modified. The game samples one solid
 atlas frame. Presentation uses real visible frame timestamps, so smoothed
-simulation deltas cannot stretch the 10s/4s scenes; visibility changes reset the
+simulation deltas cannot stretch the 8s/4s scenes; visibility changes reset the
 timestamp baseline without consuming hidden-page time.
 
 `manifest.json` records exact raw/runtime SHA-256, dimensions and every frame's

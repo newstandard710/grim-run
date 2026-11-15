@@ -3,13 +3,18 @@
   'use strict';
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const smooth=v=>{v=clamp(v,0,1);return v*v*(3-2*v);};
-  const INTRO_MS=10000,HALF_METERS=25,VENDOR_SCALE=1.75;
+  const HALF_METERS=25,VENDOR_SCALE=1.75;
+  const CANVAS_CELLS=24,CANVAS_WIDTH=272,CANVAS_HEIGHT=224;
+  const CANVAS_URL='assets/cutscenes/v0197/vendor-canvas.webp?v=1';
+  const cinematicElapsed=s=>Math.max(0,(scope.GRIM_CONFIG.vendorIntroDurationMs-s.vendorIntroMs)/1000);
   function preload(s){
     for(const kind of ['angel','devil']){
       s.load.image('sanctuary-'+kind+'-floor','assets/vendors/v0152/'+kind+'-floor.png?v=0.15.2');
       s.load.spritesheet('sanctuary-'+kind+'-architecture','assets/vendors/v0152/'+kind+'-architecture.png?v=0.15.2',
         {frameWidth:384,frameHeight:768,endFrame:1});
     }
+    if(s.sys?.game?.renderer?.type===scope.Phaser?.CANVAS)s.load.spritesheet('vendor-canvas',CANVAS_URL,
+      {frameWidth:CANVAS_WIDTH,frameHeight:CANVAS_HEIGHT,endFrame:CANVAS_CELLS*2-1});
     s.load.spritesheet('vendor-reaper-approach','assets/vendors/v0152/reaper-approach.png?v=0.15.2',
       {frameWidth:512,frameHeight:512,endFrame:11});
     s.load.spritesheet('relic-grip-overlay','assets/vendors/v0152/relic-grip-overlay.png?v=0.15.2',
@@ -51,6 +56,9 @@
       this.columns=[image('sanctuary-angel-architecture',26.3,0),image('sanctuary-angel-architecture',26.3,1)];
       this.merchant=image('vendor-angel',28);
       this.merchantMesh=scope.GRIM_CUTSCENES?.createMerchantMesh(scene,'vendor-angel',28);
+      this.canvasMerchant=image('vendor-canvas',28,0);
+      this.motionPreference=scope.matchMedia?.('(prefers-reduced-motion: reduce)');
+      this.introPresentation=null;
       this.approachReady=scene.textures.exists('cutscene-vendor');
       this.reaper=image(this.approachReady?'cutscene-vendor':'vendor-reaper-approach',29,0);
       this.light=scene.add.graphics().setScrollFactor(0).setDepth(29.2);
@@ -75,30 +83,45 @@
       }
       for(const [k,view] of this.views)if(!active.has(k)){view.floor.destroy();view.columns.forEach(v=>v.destroy());this.views.delete(k);}
     }
+    holdingFrame(){
+      const s=this.scene,p=this.introPresentation;
+      return s.state==='vendorIntro'&&p?.holdWidth===s.width&&p.holdHeight===s.height;
+    }
     renderCinema(){
       const s=this.scene;this.shade.clear();this.back.clear();this.light.clear();
       this.cinema.forEach(v=>v.setVisible(false));
       this.merchantMesh?.setVisible(false);
-      if(s.state!=='vendorIntro')return;
-      const elapsed=clamp((INTRO_MS-s.vendorIntroMs)/1000,0,10);
-      const t=elapsed,motion=approachAt(t);
+      if(s.state!=='vendorIntro'){this.introPresentation=null;return;}
+      const A=scope.GRIM_CUTSCENES;
+      this.introPresentation??={reduced:Boolean(this.motionPreference?.matches),
+        approach:this.approachReady,mesh:this.merchantMesh,canvas:this.canvasMerchant};
+      const p=this.introPresentation;
+      const t=A.vendorVisualTime(cinematicElapsed(s),p.reduced),motion=approachAt(t);
+      if(t===A.VENDOR_ANIMATION_SECONDS){p.holdWidth=s.width;p.holdHeight=s.height;}
       const w=s.width,h=s.height,devil=s.vendorType==='devil',kind=devil?'devil':'angel';
       const ground=h*.84,vx=w*.66,rx=w*.36-scope.GRIM_CUTSCENES.vendorTravel(h)*(1-motion.travel);
       const push=0;
       this.shade.fillStyle(devil?0x120811:0x071321,.88);this.shade.fillRect(0,0,w,h);
       this.shade.fillStyle(0x020710,.7);this.shade.fillRect(0,0,w,h*.11);this.shade.fillRect(0,h*.91,w,h*.09);
-      drawAura(this.back,vx,ground,devil,elapsed,h*.72/142*(1+motion.presence*.05));
+      drawAura(this.back,vx,ground,devil,A.vendorAmbientTime(t),h*.72/142*(1+motion.presence*.05));
       this.floor?.setTexture('sanctuary-'+kind+'-floor').setOrigin(.5,0).setPosition(w*.5,ground-3)
         .setDisplaySize(w*.94+push,h*.19).setVisible(true);
       this.columns.forEach((v,i)=>v?.setTexture('sanctuary-'+kind+'-architecture',i).setOrigin(.5,740/768)
         .setPosition(vx+(i?1:-1)*w*.20,ground+9).setDisplaySize(w*.21+push,h*.82+push).setVisible(true));
       this.merchant?.setTexture(devil?'vendor-demon':'vendor-angel').setOrigin(.5,1).setPosition(vx,ground+5)
         .setDisplaySize(h*(devil?.88:.85),h*.72).setVisible(true);
-      if(scope.GRIM_CUTSCENES?.placeMerchant(this.merchantMesh,s,devil?'vendor-demon':'vendor-angel',
+      if(A.placeMerchant(p.mesh,s,devil?'vendor-demon':'vendor-angel',
         vx,ground+5,h*(devil?.88:.85),h*.72,t,devil))this.merchant?.setVisible(false);
-      this.reaper?.setFrame(this.approachReady?motion.frame:Math.min(11,Math.floor(t*4)))
-        .setOrigin(this.approachReady?136/224:300/512,this.approachReady?214/224:480/512).setPosition(rx,ground)
-        .setScale(h/(this.approachReady?420:800)).setVisible(true);
+      if(p.canvas){
+        const cell=Math.floor(t/A.VENDOR_ANIMATION_SECONDS*(CANVAS_CELLS-1));
+        const width=h*(devil?.88:.85);
+        p.canvas.setFrame(cell+(devil?CANVAS_CELLS:0)).setOrigin(.5,216/CANVAS_HEIGHT)
+          .setPosition(vx,ground+5).setDisplaySize(width*CANVAS_WIDTH/256,h*.72*CANVAS_HEIGHT/208).setVisible(true);
+        this.merchant?.setVisible(false);
+      }
+      this.reaper?.setFrame(p.approach?motion.frame:Math.min(11,Math.floor(t*4)))
+        .setOrigin(p.approach?136/224:300/512,p.approach?214/224:480/512).setPosition(rx,ground)
+        .setScale(h/(p.approach?420:800)).setVisible(true);
       // The baked idle articulates hood/shoulders/cloth around planted feet.
       this.reaper?.setRotation(0);
       const beat=Math.sin(clamp((t-2)/.9,0,1)*Math.PI)*motion.presence;
@@ -118,5 +141,5 @@
     destroy(){for(const view of this.views.values()){view.floor.destroy();view.columns.forEach(v=>v.destroy());}
       this.views.clear();[...this.cinema,this.merchantMesh,this.shade,this.back,this.light].forEach(v=>v?.destroy());this.cinema=[];}
   }
-  scope.GRIM_VENDOR_ART={preload,VendorSanctuaries,drawAura,approachAt,INTRO_MS,HALF_METERS,VENDOR_SCALE};
+  scope.GRIM_VENDOR_ART={preload,VendorSanctuaries,drawAura,approachAt,HALF_METERS,VENDOR_SCALE};
 })(typeof window!=='undefined'?window:globalThis);

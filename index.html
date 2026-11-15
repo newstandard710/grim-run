@@ -282,7 +282,7 @@ button {cursor:pointer;}
   <div id="upgrade-screen" class="modal-wrap reward-wrap hidden" aria-label="Choose your upgrade">
     <div class="modal reward-modal" role="dialog" aria-modal="true" aria-labelledby="reward-title">
       <div class="eyebrow" id="vendor-eyebrow">A HEAVENLY MERCHANT</div>
-      <h2 id="reward-title">ANGEL VENDOR</h2>
+      <h2 id="reward-title" tabindex="-1">ANGEL VENDOR</h2>
       <div class="reward-subtitle"><span id="reward-distance">666</span> METERS · <span id="vendor-stats">♥ 3/3 · GOLD 0</span></div>
       <div id="reward-cards" class="reward-cards" aria-label="Vendor merchandise"></div>
       <div id="vendor-actions" class="vendor-actions"></div>
@@ -375,7 +375,7 @@ button {cursor:pointer;}
   })(window);
   </script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
-  <div id="vendor-intro-screen" class="vendor-intro-scene hidden">
+  <div id="vendor-intro-screen" class="vendor-intro-scene hidden" role="dialog" aria-modal="true" aria-labelledby="vendor-intro-title">
     <div id="vendor-intro-title">THE HEAVENLY MERCHANT</div>
     <div id="vendor-intro-caption">A MOMENT OF SANCTUARY</div>
     <button id="vendor-intro-skip" class="primary" aria-label="Skip vendor introduction">SKIP ▶</button>
@@ -393,7 +393,7 @@ window.GRIM_CONFIG = Object.freeze({
   speedGainPerMeter: (425-300)/5000,
   accelerationEndMeters: 5000,
   maxSpeed: 425,
-  vendorIntroDurationMs: 10000,
+  vendorIntroDurationMs: 8000,
   practiceTimeScales: Object.freeze([1,.5,.25,0]),
   projectileVisualScale: 3,
   pxPerMeter: 12,
@@ -1244,8 +1244,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('revive-yes-btn').addEventListener('click', () => actions.revive());
       el('revive-no-btn').addEventListener('click', () => actions.declineRevive());
       el('chest-continue-btn').addEventListener('click', () => actions.finishChest());
-      el('vendor-intro-skip').addEventListener('click', () => actions.finishVendorIntro());
-      el('vendor-intro-screen').addEventListener('click', event => {event.preventDefault();event.stopPropagation();actions.finishVendorIntro();});
+      this.bindVendorIntro();
       el('menu-btn').addEventListener('click', () => actions.menu());
       el('pause-btn').addEventListener('click', () => actions.pause());
       el('resume-btn').addEventListener('click', () => actions.resume());
@@ -1263,8 +1262,19 @@ window.GRIM_CONFIG = Object.freeze({
         const home=!el('home-screen').classList.contains('hidden');
         const menu=!el('menu').classList.contains('hidden');
         const gameOver=!el('game-over').classList.contains('hidden');
-        if((event.code==='Enter'||event.code==='Space')&&
-          (home||menu||gameOver)&&event.target?.closest?.('button'))return;
+        const activate=event.code==='Enter'||event.code==='Space';
+        const intro=!el('vendor-intro-screen').classList.contains('hidden');
+        const vendor=!el('upgrade-screen').classList.contains('hidden');
+        if(activate&&this.vendorSkipKeys.has(event.code)){event.preventDefault();return;}
+        if(activate&&intro){
+          event.preventDefault();
+          if(!event.repeat){
+            this.vendorSkipKeys.add(event.code);
+            actions.finishVendorIntro();
+          }
+          return;
+        }
+        if(activate&&(home||menu||gameOver||vendor)&&event.target?.closest?.('button'))return;
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
@@ -1284,14 +1294,46 @@ window.GRIM_CONFIG = Object.freeze({
       });
       document.addEventListener('keyup', event => {
         this.heldKeys.delete(event.code);
+        if(this.vendorSkipKeys.delete(event.code)){event.preventDefault();return;}
         if (['Space','ArrowUp','KeyJ'].includes(event.code)) actions.jumpEnd();
         if (event.code === 'ArrowDown' || event.code === 'KeyS') actions.slideEnd();
       });
       window.addEventListener('blur', () => {
-        this.releaseAll(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
+        this.releaseAll(); this.vendorSkipKeys.clear(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
       });
       document.addEventListener('contextmenu', event => event.preventDefault());
     }
+    bindVendorIntro(){
+      const intro=el('vendor-intro-screen'),menu=el('upgrade-screen'),pointers=new Map();
+      this.vendorSkipKeys=new Set();
+      document.addEventListener('pointerdown',event=>{
+        // A new gesture, including one at the same coordinates, owns its click.
+        for(const [id,release] of pointers)if(release||id===event.pointerId)pointers.delete(id);
+        if(event.button!==0||intro.classList.contains('hidden')||!intro.contains(event.target))return;
+        pointers.set(event.pointerId,null);
+        try {event.target.setPointerCapture(event.pointerId);} catch (_) {}
+      },true);
+      document.addEventListener('pointerup',event=>{
+        if(pointers.has(event.pointerId))pointers.set(event.pointerId,
+          {x:event.clientX,y:event.clientY,time:event.timeStamp});
+      },true);
+      document.addEventListener('pointercancel',event=>pointers.delete(event.pointerId),true);
+      document.addEventListener('click',event=>{
+        if(!event.detail||!menu.contains(event.target))return;
+        const release=[...pointers].find(([,point])=>point&&event.timeStamp>=point.time&&
+          event.timeStamp-point.time<450&&Math.hypot(event.clientX-point.x,event.clientY-point.y)<24);
+        const id=pointers.has(event.pointerId)?event.pointerId:release?.[0];
+        if(id===undefined)return;
+        pointers.delete(id);
+        event.preventDefault();event.stopImmediatePropagation();
+      },true);
+      intro.addEventListener('click',event=>{
+        if(event.button!==0)return;
+        event.preventDefault();event.stopPropagation();
+        this.actions.finishVendorIntro();
+      });
+    }
+    focusVendorMenu(){el('reward-title').focus({preventScroll:true});}
     requestMenuStart(event){
       if(el('menu').classList.contains('hidden')||el('start-btn').disabled||
         scope.GRIM_HOME_ENTRY?.blocksStart(event))return;
@@ -1338,6 +1380,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('controls',mode==='playing');
       show('hud', mode==='playing'||mode==='paused'||mode==='upgrade'||mode==='countdown'||mode==='portal'||mode==='rewinding'||mode==='respawning'||mode==='dying');
       this.releaseAll();
+      if(mode==='vendorIntro')el('vendor-intro-skip').focus({preventScroll:true});
     }
     updateCountdown(seconds) {
       el('countdown-number').textContent = String(Math.max(1, Math.ceil(seconds)));
@@ -1587,12 +1630,12 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/obstacle-mounts.js?v=2"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.8"></script>
-  <script src="assets/visuals/cutscene-motion.js?v=0.19.8"></script>
+  <script src="assets/visuals/cutscene-motion.js?v=0.19.9"></script>
   <script src="assets/visuals/power-animations.js?v=0.19.8"></script>
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.7"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.9"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/world-polish.js?v=0.19.3"></script>
   <script>
@@ -2596,7 +2639,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     finishVendorIntro(){
       if(this.state!=='vendorIntro')return;
-      this.vendorIntroMs=0;this.state='upgrade';this.showVendor();this.drawScene();
+      this.vendorIntroMs=0;this.state='upgrade';this.showVendor();this.ui.focusVendorMenu?.();this.drawScene();
     }
     showVendor(){
       if(this.state!=='upgrade')return;
@@ -3876,7 +3919,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     drawScene() {
-      if (!this.bg) return;
+      if (!this.bg||this.vendorArt?.holdingFrame()) return;
       // The opaque opening/menu has its own animated canvas. Do not draw a
       // second complete world and fog stack behind it on every display frame.
       if(scope.GRIM_FRONTEND&&['home','menu'].includes(this.state)){

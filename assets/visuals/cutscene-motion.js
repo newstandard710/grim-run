@@ -2,7 +2,7 @@
 (function(scope){
   'use strict';
   const CELL=224,ANCHOR=[136,214],BOW_FRAMES=169,VENDOR_FRAMES=241;
-  const SHRINE_MS=4000,HOLD_START=3,HOLD_SECONDS=1,INTRO_MS=10000;
+  const SHRINE_MS=4000,HOLD_START=3,HOLD_SECONDS=1,VENDOR_ANIMATION_SECONDS=3,VENDOR_SETTLED_FRAME=192;
   const ROOT='assets/cutscenes/v0197/';
   const clamp=v=>Math.max(0,Math.min(1,v));
   const smooth=v=>{v=clamp(v);return v*v*v*(10+v*(-15+v*6));};
@@ -23,15 +23,25 @@
   const WALK_STRIDE=100/.6;
   const vendorTravel=h=>2*WALK_STRIDE*.4*h/420;
   function approachAt(t){
+    if(t>=VENDOR_ANIMATION_SECONDS)return {frame:VENDOR_SETTLED_FRAME,travel:1,presence:1};
     const travel=smooth(t/2.2);
-    // Two complete gait cycles end on the exact painting that begins settling.
-    const frame=t<2.2?Math.floor(travel*192)%96:t<3.4?96+Math.floor(smooth((t-2.2)/1.2)*96):193+Math.floor((t-3.4)/3.2*48)%48;
-    return {frame,travel,presence:smooth((t-2.1)/1.3)};
+    // Two complete gait cycles join the existing planted settle sequence.
+    const frame=t<2.2?Math.floor(travel*192)%96:
+      96+Math.min(95,Math.floor(smooth((t-2.2)/.8)*96));
+    return {frame,travel,presence:smooth((t-2.1)/.9)};
+  }
+  function vendorVisualTime(elapsed,reduced=false){
+    return reduced?VENDOR_ANIMATION_SECONDS:Math.min(VENDOR_ANIMATION_SECONDS,Math.max(0,elapsed));
+  }
+  function vendorAmbientTime(t){
+    if(t<=2.5)return t;
+    const u=clamp((t-2.5)/.5);
+    return 2.5+.5*(u+u*u-u*u*u);
   }
   function merchantPose(t,devil=false){
-    const dip=smooth((t-7.0)/2.25),presence=smooth((t-2.4)/1.2);
+    const dip=smooth((t-1.5)/1.5),presence=smooth((t-1.75)/1.25),ambient=vendorAmbientTime(t);
     return {dip,headAngle:-(devil?.29:.25)*dip,
-      lean:-.012*presence-.012*dip,breath:Math.sin(t*1.45)*.0025,cloth:Math.sin(t*1.15-.5)*.002};
+      lean:-.012*presence-.012*dip,breath:Math.sin(ambient*1.45)*.0025,cloth:Math.sin(ambient*1.15-.5)*.002};
   }
   function merchantPoint(u,v,t,devil=false){
     const p=merchantPose(t,devil),upper=1-smooth((v-.32)/.55);
@@ -70,6 +80,7 @@
     m.cutscenePose=merchantPose(t,devil);
     return true;
   }
-  scope.GRIM_CUTSCENES={CELL,ANCHOR,BOW_FRAMES,VENDOR_FRAMES,SHRINE_MS,HOLD_START,HOLD_SECONDS,INTRO_MS,
+  scope.GRIM_CUTSCENES={CELL,ANCHOR,BOW_FRAMES,VENDOR_FRAMES,SHRINE_MS,HOLD_START,HOLD_SECONDS,VENDOR_ANIMATION_SECONDS,VENDOR_SETTLED_FRAME,
+    vendorVisualTime,vendorAmbientTime,
     vendorTravel,WALK_STRIDE,preload,relicMotionAt,approachAt,merchantPose,merchantPoint,createMerchantMesh,placeMerchant};
 })(typeof window!=='undefined'?window:globalThis);
