@@ -3049,7 +3049,10 @@ window.GRIM_CONFIG = Object.freeze({
         this.drawScene();return;
       }
       else if(this.state==='vendorIntro'){
-        this.vendorIntroMs=Math.max(0,this.vendorIntroMs-this.cutsceneDelta(_,deltaMs));
+        // Entry and playback share the same monotonic clock. A Phaser frame
+        // timestamp can lead that clock and reveal the next stage early.
+        const now=_>0?(scope.performance?.now?.()??_):_;
+        this.vendorIntroMs=Math.max(0,this.vendorIntroMs-this.cutsceneDelta(now,deltaMs));
         if(this.vendorIntroMs===0)this.finishVendorIntro();
       }
       else if(this.state==='chest'){

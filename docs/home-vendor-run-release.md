@@ -39,3 +39,9 @@ then the Pages build. Verify the deployed SHA and the actual Pages bytes for
 `index.html`, the Home frontispiece, both vendor modules and the two new
 atlases. A fresh public session should enter through Home, show the planted
 run, and exercise first-vendor handoffs before the release is called live.
+
+CI exposed a renderer timestamp ahead of the vendor's start clock. Vendor
+entry and render updates now use the same monotonic source. The focused
+tests require the first held frame and automatic menu at or after the exact
+3 and 8 second boundaries, including an advancing Phaser timestamp and a
+paused practice run. The summit clock keeps its earlier behavior.

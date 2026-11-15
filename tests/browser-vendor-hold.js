@@ -97,18 +97,19 @@ async function inspect(browser,url,canvas,failed=false){
       await time(page,7999);
       const clock=await page.evaluate(()=>{
         const s=window.grimRun.scene.scenes[0];
-        let hidden=true;
+        let hidden=true,now=11000;
         Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});
+        Object.defineProperty(performance,'now',{configurable:true,value:()=>now});
         try{
           s.cutsceneLastAt=1000;
           s.update(11000,10000);
           const suspended=s.vendorIntroMs;
-          hidden=false;
+          hidden=false;now=21000;
           s.update(21000,10000);
           const resumed=s.vendorIntroMs;
-          s.update(21001,1);
+          now=21001;s.update(21001,1);
           return {suspended,resumed,state:s.state};
-        }finally{delete document.hidden;}
+        }finally{delete document.hidden;delete performance.now;}
       });
       assert.deepEqual(clock,{suspended:1,resumed:1,state:'upgrade'},'Only visible, unscaled time opens the vendor');
       const bounds=await heal.boundingBox();

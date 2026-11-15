@@ -47,13 +47,15 @@ for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art
  vm.runInContext(fs.readFileSync(path.join(root,src.split('?')[0]),'utf8'),visual);
 assert(visual.GRIM_VENDOR_ART&&visual.GRIM_VENDOR_DATA,'Game HTML loads sanctuary renderer and registration data');
 const A=visual.GRIM_POWER_ART,frames=new Set();
-// Presentation time follows real frame timestamps even if Phaser's simulation
-// delta is smoothed or very slow. Hidden-page time is explicitly excluded.
-const clock=game();clock.triggerVendor(1);clock.cutsceneLastAt=1000;
-clock.update(4250,16);assert.equal(clock.vendorIntroMs,4750);
-w.document.hidden=true;clock.update(100000,16);assert.equal(clock.vendorIntroMs,4750);
-w.document.hidden=false;clock.update(200000,16);assert.equal(clock.vendorIntroMs,4750);
-clock.update(204750,16);assert.equal(clock.state,'upgrade');
+// A frame timestamp ahead of the monotonic clock cannot shorten the vendor
+// introduction. Hidden intervals and Phaser's simulation delta stay out.
+let now=1000;w.performance={now:()=>now};
+const clock=game();clock.triggerVendor(1);
+now=4250;clock.update(4350,16);assert.equal(clock.vendorIntroMs,4750);
+w.document.hidden=true;now=100000;clock.update(100100,16);assert.equal(clock.vendorIntroMs,4750);
+w.document.hidden=false;now=200000;clock.update(200100,16);assert.equal(clock.vendorIntroMs,4750);
+now=204749;clock.update(204849,16);assert.equal(clock.vendorIntroMs,1);
+now=204750;clock.update(204850,16);assert.equal(clock.state,'upgrade');
 clock.startRun();clock.startChest();clock.cutsceneLastAt=1000;
 clock.update(4000,16);assert.equal(clock.chestMs,1000);
 clock.update(4999,16);assert.equal(clock.state,'chest');assert.equal(clock.chestMs,1);

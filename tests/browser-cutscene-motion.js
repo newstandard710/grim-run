@@ -97,7 +97,7 @@ const server=http.createServer((req,res)=>{
      const bow=scene==='bow';
      const finishName=bow?'finishChest':'finishVendorIntro';
      const finish=s[finishName];
-     if(bow)s.startChest();else {s.practiceTimeMode=3;s.triggerVendor(scene==='angel'?1:8);}
+     if(bow)s.startChest();else {s.setGodMode(true);s.practiceTimeMode=3;s.triggerVendor(scene==='angel'?1:8);}
      const started=s.cutsceneLastAt;
      s.cutsceneTestDuration=null;
      s.cutsceneTestHold=null;
@@ -119,8 +119,8 @@ const server=http.createServer((req,res)=>{
     const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
     const holdMs=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestHold);
     marks.push({scene,ms,holdMs});
-    if(scene!=='bow')assert(holdMs>=2980&&holdMs<3600,`${scene} real-time frozen frame: ${holdMs} ms`);
-    assert(ms>=(scene==='bow'?3900:7980)&&ms<(scene==='bow'?6500:8600),
+    if(scene!=='bow')assert(holdMs>=3000&&holdMs<3600,`${scene} real-time frozen frame: ${holdMs} ms`);
+    assert(ms>=(scene==='bow'?3900:8000)&&ms<(scene==='bow'?6500:8600),
      `${scene} real-time cutscene: ${ms} ms`);
    }
    fs.writeFileSync(path.join(dir,'cutscene-realtime.json'),JSON.stringify(marks,null,2));
