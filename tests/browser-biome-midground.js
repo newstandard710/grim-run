@@ -279,6 +279,11 @@ async function parity(browser) {
   };
   const forest = async page => page.evaluate(() => {
     const b = window.biomeReview;
+    // Compare the complete Forest scene with the revised slide support layer
+    // isolated. The obstacle suite exercises the production supports separately.
+    for (const sprite of b.scene.obstacleSupportObjects.values()) sprite.destroy();
+    b.scene.obstacleSupportObjects.clear();
+    b.scene.drawObstacleSupport = () => {};
     for (const section of b.scene.terrain.segments) section.y0 = section.y1 = b.scene.groundY;
     b.place(300);
     return Array.from({length: 10}, () => {

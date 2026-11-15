@@ -872,6 +872,8 @@ const server=http.createServer((req,res)=>{
           const image=scene.textures.get('abyss-fog')?.getSourceImage?.();
           return [image?.width,image?.height];
         })(),
+        fogViewsForGap:[...scene.abyssFogViews.entries()].filter(([key,view])=>
+          key.startsWith(prefix)&&view.sprite.visible).length,
         fogView:fogView?{key:fogView.sprite.texture.key,type:fogView.sprite.type,
           depth:fogView.sprite.depth,alpha:fogView.sprite.alpha,tint:fogView.sprite.tintTopLeft,
           biome:fogView.biome,bounds:fogView.sprite.abyssFogBounds.points,
@@ -902,23 +904,27 @@ const server=http.createServer((req,res)=>{
     assert.equal(location.allBackdropTexturesSized,true,'Depth plates use cropped 768x624 images');
     assert.equal(location.fogTextureLoaded,true,'Shared transparent abyss fog texture loads');
     assert.deepEqual(location.fogTextureSize,[768,1152],'Fog texture is phone-scale and downsampled');
-    assert.ok(location.fogView,target.name+' has a visible biome-tinted fog layer');
-    assert.equal(location.fogView.key,'abyss-fog-feathered');
-    assert.equal(location.fogView.type,'Image');
-    assert.equal(location.fogView.biome,target.biomeId);
-    assert.equal(location.fogView.tint,abyssFogTints[target.biomeId],
-      target.name+' fog tint matches its biome');
-    assert.ok(location.fogView.alpha>0&&location.fogView.alpha<=.24,
-      target.name+' fog remains translucent over the ravine painting');
-    assert.equal(location.fogView.bounds[0].y-location.gap.y0,68,
-      target.name+' mist feather begins below the left rim');
-    assert.equal(location.fogView.bounds[1].y-location.gap.y1,68,
-      target.name+' mist feather follows the right rim');
-    assert.ok(location.fogView.centerError<=2.5&&location.fogView.headroom>=73&&location.fogView.headroom<=77,
-      target.name+' mist drifts subtly inside its separate depth envelope');
-    assert.ok(location.view&&location.view.depth<location.fogView.depth&&
-      location.fogView.depth<location.terrainDepth,
-      target.name+' render order places fog over the canyon and beneath the ground');
+    if(target.biomeId==='tundra'){
+      assert.equal(location.fogViewsForGap,0,'Pure Tundra has no abyss fog over the canyon painting');
+    }else{
+      assert.ok(location.fogView,target.name+' has a visible biome-tinted fog layer');
+      assert.equal(location.fogView.key,'abyss-fog-feathered');
+      assert.equal(location.fogView.type,'Image');
+      assert.equal(location.fogView.biome,target.biomeId);
+      assert.equal(location.fogView.tint,abyssFogTints[target.biomeId],
+        target.name+' fog tint matches its biome');
+      assert.ok(location.fogView.alpha>0&&location.fogView.alpha<=.24,
+        target.name+' fog remains translucent over the ravine painting');
+      assert.equal(location.fogView.bounds[0].y-location.gap.y0,68,
+        target.name+' mist feather begins below the left rim');
+      assert.equal(location.fogView.bounds[1].y-location.gap.y1,68,
+        target.name+' mist feather follows the right rim');
+      assert.ok(location.fogView.centerError<=2.5&&location.fogView.headroom>=73&&location.fogView.headroom<=77,
+        target.name+' mist drifts subtly inside its separate depth envelope');
+      assert.ok(location.view&&location.view.depth<location.fogView.depth&&
+        location.fogView.depth<location.terrainDepth,
+        target.name+' render order places fog over the canyon and beneath the ground');
+    }
     assert.ok(location.visibleViews.some(view=>view.key==='abyss-depth-'+target.biomeId),
       target.name+' renderer uses its own biome-specific depth image');
     assert.ok(location.visibleViews.every(view=>view.type==='Image'),
@@ -1284,7 +1290,7 @@ const server=http.createServer((req,res)=>{
   await page.locator('#god-mode-checkbox').uncheck();
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceSlow),false);
   assert.deepEqual(errors,[],'Browser console errors including new God Mode tools');
-  console.log('PASS actual Chromium: v0.13.6 fills all eight biome gaps with cropped biome-specific depth paintings and biome-tinted fog beneath terrain, while preserving gameplay geometry.');
+  console.log('PASS actual Chromium: v0.13.6 fills all eight biome gaps with cropped biome-specific depth paintings and biome-tinted fog outside Tundra, while preserving gameplay geometry.');
  }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));

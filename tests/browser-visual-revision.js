@@ -110,9 +110,13 @@ const server=http.createServer((req,res)=>{
      if(Math.abs(x-geo.x)>geo.half+30)bankPixels++;
     }
    }
-   assert(gapPixels<8,biome+' surface mist cannot span the opening: '+gapPixels);
-   assert(bankPixels>40,biome+' still renders surface fog on the solid banks: '+bankPixels);
-   console.log('Ground fog tapers at',biome,'gap');
+   if(biome==='tundra'){
+    assert.equal(gapPixels+bankPixels,0,'Pure Tundra has no surface fog in the gap or along either bank');
+   }else{
+    assert(gapPixels<8,biome+' surface mist cannot span the opening: '+gapPixels);
+    assert(bankPixels>40,biome+' still renders surface fog on the solid banks: '+bankPixels);
+   }
+   console.log('Checked surface fog and gap separation in',biome);
 
   }
   assert.deepEqual(errors,[]);
