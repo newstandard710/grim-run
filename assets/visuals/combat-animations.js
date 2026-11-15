@@ -3,8 +3,10 @@
   'use strict';
   const ROOT='assets/combat/v0170/',BAT=scope.GRIM_BAT_FLIGHT;
   const TRANSITION_ROOT='assets/combat/v01912/';
-  const BAT_HANDOFF={key:'combat-cavern-bat-handoff',file:'cavern-bat-handoff.webp',
+  const BAT_HANDOFF={key:'combat-cavern-bat-handoff',url:TRANSITION_ROOT+'cavern-bat-handoff.webp?v=1',
     width:192,height:128,columns:6,frames:36,anchor:[126,65]};
+  const REAPER_HANDOFF={key:'combat-reaper-hurt-death-handoff',url:TRANSITION_ROOT+'reaper-hurt-death-handoff.webp?v=1',
+    width:224,height:168,columns:5,frames:20,anchor:[112,157]};
   const DATA={...(scope.GRIM_COMBAT_DATA?.sheets||{})};
   if(BAT)DATA['bat-flight']=BAT.SPEC;
   const FIRE_MS=260,HURT_MS=340,DEATH_MS=880,DEFEAT_MS=760,MAX_DEFEATS=12;
@@ -17,11 +19,6 @@
     if(!s.load?.spritesheet)return;
     for(const [name,m]of Object.entries(DATA))s.load.spritesheet('combat-'+name,name==='bat-flight'?(BAT?.FILE||'assets/encounters/v0190/bat-flight.png?v=0.19.0'):ROOT+name+'.png?v=0.17.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
-    queueTransition(s,BAT_HANDOFF);
-  }
-  function queueTransition(s,art){
-    s.load.spritesheet(art.key,TRANSITION_ROOT+art.file+'?v=1',
-      {frameWidth:art.width,frameHeight:art.height,endFrame:art.frames-1});
   }
   function transitionReady(s,art){
     if(!s.textures.exists(art.key))return false;
@@ -48,11 +45,15 @@
   class CombatAnimations{
     constructor(s){
       this.scene=s;this.ready={};this.corpses=[];this.sequence=0;this.reaperState=null;
+      this.batHandoffs=new WeakMap();this.reaperHandoff=null;
       this.reaper=[];this.bats=[];this.responses=[];this.effects=[];this.echoes=[];
       if(!s.add?.image||!s.textures?.exists)return;
       for(const [name,m]of Object.entries(DATA))this.ready[name]=Boolean(s.textures.exists('combat-'+name)&&
         Array.from({length:m.frames},(_,i)=>s.textures.get('combat-'+name).has(i)).every(Boolean));
       this.batHandoffReady=transitionReady(s,BAT_HANDOFF);
+      this.reaperHandoffReady=transitionReady(s,REAPER_HANDOFF);
+      scope.GRIM_ACTOR_TEXTURES?.load(s,BAT_HANDOFF,()=>{this.batHandoffReady=transitionReady(s,BAT_HANDOFF);});
+      scope.GRIM_ACTOR_TEXTURES?.load(s,REAPER_HANDOFF,()=>{this.reaperHandoffReady=transitionReady(s,REAPER_HANDOFF);});
       const pair=(depth)=>[0,1].map(()=>s.add.image(0,0,'combat-reaper-slide-cut',0).setDepth(depth).setVisible(false));
       if(this.ready['reaper-slide-cut']){
         this.reaper=pair(12.05);
@@ -64,7 +65,10 @@
       s.events?.once?.('shutdown',()=>this.destroy());
     }
     all(){return this.views||(this.views=[...this.reaper,...this.bats.flat(),...this.responses.flat(),...this.effects.flat(),...this.echoes.flat()]);}
-    reset(){this.corpses=[];this.sequence=0;this.reaperState=null;for(const v of this.all())v.setVisible(false);}
+    reset(){
+      this.corpses=[];this.sequence=0;this.reaperState=null;this.reaperHandoff=null;
+      this.batHandoffs=new WeakMap();for(const v of this.all())v.setVisible(false);
+    }
     snapshot(){return this.corpses.map(v=>({...v}));}
     restore(values=[]){this.corpses=values.map(v=>({...v}));}
     enemyHit(e,defeated){
@@ -104,21 +108,41 @@
     hideReaper(){
       const s=this.scene;s.powerArt?.hideBase();s.powerArt?.action?.setVisible(false);s.powerArt?.weapon?.setVisible(false);
     }
+    renderHurtDeath(t,x,y,alpha,death=false){
+      const count=death?8:4,first=death?4:0,part=clamp(t,0,count-1);
+      const slot=Math.floor(part*3),offset=slot%3;
+      const view=this.reaper[0];
+      if(!this.reaperHandoff||this.reaperHandoff.death!==death||part<this.reaperHandoff.part)
+        this.reaperHandoff={death,ready:this.reaperHandoffReady,part};
+      this.reaperHandoff.part=part;
+      if(offset&&this.reaperHandoff.ready){
+        const art=REAPER_HANDOFF,segment=Math.floor(slot/3)+(death?3:0);
+        view.setTexture(art.key,segment*2+offset-1)
+          .setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height).setScale(1);
+      }else{
+        const key='reaper-hurt-death',art=DATA[key];
+        view.setTexture('combat-'+key,first+Math.round(part))
+          .setOrigin(art.anchor[0]/art.cell[0],art.anchor[1]/art.cell[1]).setScale(.45);
+      }
+      this.reaper[1].setVisible(false);
+      view.setPosition(x,y).setRotation(0).setFlipX(false).clearTint().setAlpha(alpha).setVisible(alpha>0);
+    }
     renderReaper(){
       const s=this.scene,p=s.player;if(!p||!s.visuals?.reaperReady||!this.reaper.length)return;
       const dead=['dying','dead','revive'].includes(s.state);
+      if(!dead&&(!(p.visualHurtMs>0)||s.lowProfile))this.reaperHandoff=null;
       if(dead&&this.ready['reaper-hurt-death']){
         const progress=s.state==='dying'?clamp((s.deathPoseMs||0)/DEATH_MS):1;
         const floor=s.terrain.groundAt(p.x),fall=Number.isFinite(floor)&&floor>s.feetY?clamp(progress*1.5)**2:0;
         const y=s.feetY+(Number.isFinite(floor)?floor-s.feetY:0)*fall;
-        this.hideReaper();this.blend(this.reaper,'reaper-hurt-death',progress*7,p.x,y,.45,1,0,[4,5,6,7,8,9,10,11]);
+        this.hideReaper();this.renderHurtDeath(progress*7,p.x,y,1,true);
         this.reaperState={name:'death',progress};return;
       }
       if(!['playing','paused','rewinding','countdown'].includes(s.state))return;
       let name,t,scale,frames;
       if((p.visualHurtMs||0)>0){
         if(s.lowProfile){name='reaper-slide-cut';frames=[0];t=0;scale=.385;}
-        else {name='reaper-hurt-death';frames=[0,1,2,3];t=(1-p.visualHurtMs/HURT_MS)*3;scale=.45;}
+        else {name='reaper-hurt-death';t=(1-p.visualHurtMs/HURT_MS)*3;}
       }else if(p.sliding&&p.attackMs>0){
         name='reaper-slide-cut';t=attackFrame(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs,DATA[name].frames);scale=.385;
       }else if(p.grounded&&p.attackMs>0&&s.powerManager.level('soulCleave')>0&&this.ready['reaper-soul-cleave']){
@@ -132,7 +156,9 @@
       }
       if(name&&this.ready[name]){
         this.hideReaper();const alpha=p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1;
-        this.blend(this.reaper,name,t,p.x,s.feetY,scale,alpha,0,frames);this.reaperState={name,frame:t};
+        if(name==='reaper-hurt-death')this.renderHurtDeath(t,p.x,s.feetY,alpha);
+        else this.blend(this.reaper,name,t,p.x,s.feetY,scale,alpha,0,frames);
+        this.reaperState={name,frame:t};
       }
     }
     renderBats(){
@@ -150,9 +176,17 @@
       const elapsed=this.scene.elapsed||0,phase=e.phase||0,timer=e.timer||0;
       const weight=e.mode==='dive'?clamp(timer/.12):e.mode==='recover'?1-clamp(timer/.12):0;
       const pose=Math.round(weight*4);
+      let pinned=this.batHandoffs.get(e);
+      if(e.mode==='dive'||e.mode==='recover'){
+        if(!pinned||pinned.mode!==e.mode||timer<pinned.timer){
+          pinned={mode:e.mode,timer,ready:this.batHandoffReady};
+          this.batHandoffs.set(e,pinned);
+        }
+        pinned.timer=timer;
+      }else {this.batHandoffs.delete(e);pinned=null;}
       // Select one solid contour. Sample the flight phase at the shared end
       // of the handoff so the strip's starting wing pose stays consistent.
-      if(this.batHandoffReady&&BAT&&pose>0&&pose<4){
+      if(pinned?.ready&&BAT&&pose>0&&pose<4){
         const boundary=elapsed+(e.mode==='dive'?-timer:.12-timer);
         const lead=Math.round(batMotion(boundary,phase).a/8)%12;
         const art=BAT_HANDOFF;

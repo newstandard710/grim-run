@@ -163,6 +163,7 @@ async function testMissing(page,mode){
           }
           await page.goto(url,{waitUntil:'domcontentloaded'});
           await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.loaded, null,{timeout:50000});
+          if(mode==='ready')await page.waitForFunction(()=>window.grimRun.scene.scenes[0].textures.exists('ground-slide-paint'));
           assert.equal(await page.evaluate(()=>window.grimRun.renderer.type),renderer==='canvas'?1:2);
           if(mode==='ready')await testReady(page);
           else await testMissing(page,mode);

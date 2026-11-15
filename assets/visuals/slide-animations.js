@@ -4,10 +4,8 @@
   const KEY='ground-slide-paint',WIDTH=224,HEIGHT=144,COUNT=16;
   const ENTRY=6,BRACE=4,RECOVERY=3,RECOVERY_MS=66;
   const WIDTH_SHEET=WIDTH*4,HEIGHT_SHEET=HEIGHT*4;
-  function preload(scene){
-    scene.load?.spritesheet?.(KEY,'assets/motion/v01912/ground-slide.webp?v=1',
-      {frameWidth:WIDTH,frameHeight:HEIGHT,endFrame:COUNT-1});
-  }
+  const ART={key:KEY,url:'assets/motion/v01912/ground-slide.webp?v=1',
+    width:WIDTH,height:HEIGHT,columns:4,frames:COUNT};
   class GroundSlideAnimations{
     constructor(scene){
       this.scene=scene;
@@ -18,6 +16,7 @@
       this.recoveryAt=null;
       this.painted=false;
       scene.events?.once?.('shutdown',()=>this.sprite?.destroy());
+      scope.GRIM_ACTOR_TEXTURES?.load(scene,ART,()=>{});
     }
     chooseSource(){
       const s=this.scene;
@@ -84,5 +83,5 @@
       return this.draw(ENTRY+BRACE+lead*RECOVERY+Math.floor(age/22),runner);
     }
   }
-  scope.GRIM_SLIDE_ART={preload,GroundSlideAnimations};
+  scope.GRIM_SLIDE_ART={GroundSlideAnimations};
 })(typeof window!=='undefined'?window:globalThis);

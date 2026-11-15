@@ -4,6 +4,7 @@ The contour moves between registered drawings. Interior alpha stays solid.
 Uses the same offline optical-flow and distance-field approach as prepare-reaper-run.py.
 """
 from pathlib import Path
+import argparse
 
 import cv2
 import numpy as np
@@ -45,7 +46,7 @@ def light(image):
     return np.uint8((gray*.45+.55)*image[:,:,3]*255)
 
 
-def between(first, last, fractions):
+def between(first, last, fractions, lock_paint=False):
     engine=cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
     engine.setFinestScale(0)
     a,b=light(first),light(last)
@@ -67,6 +68,13 @@ def between(first, last, fractions):
         ca,cb=remap(first[:,:,3],pa),remap(last[:,:,3],pb)
         coverage=ca*(1-t)+cb*t
         rgb=(remap(pma,pa)*(1-t)+remap(pmb,pb)*t)/np.maximum(coverage[:,:,None],.0001)
+        if lock_paint:
+            # The two hurt drawings disagree on where the edge and fingers
+            # belong. Choose a single source wherever that paint can cover.
+            preferred,coords=(first,pa) if t<.5 else (last,pb)
+            color=remap(preferred,coords)
+            keep=color[:,:,3]>.44
+            rgb[keep]=color[keep,:3]
         boundary=remap(sdf_a,pa)*(1-t)+remap(sdf_b,pb)*t
         alpha=np.clip(boundary+.5,0,1)
         alpha[coverage<.02]=0
@@ -105,5 +113,38 @@ def caverns():
     write('cavern-bat-handoff.webp',frames,6)
 
 
+def reaper():
+    size,anchor=(224,168),(112,157)
+    originals=load(ASSETS/'combat/v0170/reaper-hurt-death.png')
+    poses=[register(tile(originals,i,4,(512,512)),size,anchor,(280,456),.45) for i in range(12)]
+    frames=[]
+    # Hurt and death are separate action ranges. Never bridge between them.
+    for i in (0,1,2,4,5,6,7,8,9,10):
+        # These widely separated keys move the weapon across the entire
+        # silhouette. Keep the actual single weapon painting on either side.
+        if i in (1,8):
+            for pose in poses[i:i+2]:
+                pixels=np.uint8(pose*255+.5)
+                alpha=pixels[:,:,3]
+                alpha[alpha>=250]=255
+                frames.append(Image.fromarray(pixels))
+            continue
+        for image in between(poses[i],poses[i+1],(1/3,2/3),lock_paint=True):
+            pixels=np.array(image)
+            _,labels,stats,_=cv2.connectedComponentsWithStats(np.uint8(pixels[:,:,3]>40))
+            main=1+np.argmax(stats[1:,cv2.CC_STAT_AREA])
+            bottom=np.nonzero(labels==main)[0].max()
+            tiny=np.flatnonzero(stats[1:,cv2.CC_STAT_AREA]<16)+1
+            pixels[np.isin(labels,tiny)]=0
+            result=Image.new('RGBA',size)
+            result.paste(Image.fromarray(pixels),(0,157-bottom))
+            result.paste((0,0,0,0),(0,158,size[0],size[1]))
+            frames.append(result)
+    write('reaper-hurt-death-handoff.webp',frames,5)
+
+
 if __name__=='__main__':
-    caverns()
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('actor',choices=('bat','reaper'))
+    args=parser.parse_args()
+    (caverns if args.actor=='bat' else reaper)()
