@@ -107,7 +107,8 @@ def body_frame(i, phase=None, air=None, weight=0):
             sole = blend(tucked, AIR_FOOT[air][far], weight)
         x, y, pitch = sole
         hip = run.point(102 if far else 105, 117 if far else 118) + offset
-        run.draw_leg(out, plate, hip, run.point(x, y), pitch, False, far)
+        cuff_trim = run.ankle_trim(phase, far) * weight if has_phase else 0
+        run.draw_leg(out, plate, hip, run.point(x, y), pitch, False, far, cuff_trim)
 
     free_joint = run.point(113, 106)
     dx, dy = run.torso_offset(free_joint[1])

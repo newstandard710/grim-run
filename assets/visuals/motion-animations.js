@@ -157,9 +157,9 @@
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
     s.load.image('motion-scythe',ROOT+'scythe.png?v=0.18.0');
     if(DATA.visualCutWeapon)s.load.image('motion-cut-scythe',ROOT+'reaper-cut-scythe.png?v=1');
-    if(CUT_HANDOFF)s.load.spritesheet(CUT_HANDOFF_KEY,ROOT+'reaper-cut-handoffs.webp?v=1',
+    if(CUT_HANDOFF)s.load.spritesheet(CUT_HANDOFF_KEY,ROOT+'reaper-cut-handoffs.webp?v=2',
       {frameWidth:CUT_HANDOFF.cell,frameHeight:CUT_HANDOFF.cell,endFrame:CUT_HANDOFF.poses.length-1});
-    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=3',
+    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=4',
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
   function queueAirDetails(s){

@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 from scipy.ndimage import distance_transform_edt, map_coordinates
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -166,7 +166,36 @@ def foot(q):
     return point(x, 167.2 - lift), pitch, False
 
 
-def draw_leg(out, plates, hip, sole, pitch, planted, far):
+def ankle_trim(phase, far):
+    """Taper the cuff correction in and out around the bulky swing poses."""
+    frame = phase * (FRAMES // GAITS)
+    start, peak_in, peak_out, end = (31, 36, 41, 46) if far else (53, 57, 64, 68)
+    return ease((frame - start) / (peak_in - start)) * ease((end - frame) / (end - peak_out))
+
+
+def trim_greave(shin, knee, ankle, strength):
+    """Take a little volume out of the outer distal edge, leaving the boot plate intact."""
+    radius = 15 * SUPERSAMPLE
+    cx, cy = ankle * SUPERSAMPLE
+    x0, y0 = max(0, math.floor(cx - radius)), max(0, math.floor(cy - radius))
+    x1 = min(shin.width, math.ceil(cx + radius))
+    y1 = min(shin.height, math.ceil(cy + radius))
+    y, x = np.mgrid[y0:y1, x0:x1] / SUPERSAMPLE
+    dx, dy = x - ankle[0], y - ankle[1]
+    axis = (ankle - knee) / SHIN
+    along = dx * axis[0] + dy * axis[1]
+    distal = np.clip((along + 12) / 8, 0, 1)
+    local = np.clip((14 - np.hypot(dx, dy)) / 5, 0, 1)
+    alpha = shin.getchannel('A')
+    original = np.asarray(alpha.crop((x0, y0, x1, y1)), dtype=float)
+    inset = np.asarray(alpha.filter(ImageFilter.MinFilter(7)).crop((x0, y0, x1, y1)))
+    corrected = original + (inset - original) * (strength * distal * local)
+    alpha.paste(Image.fromarray(np.uint8(np.round(corrected))), (x0, y0))
+    shin.putalpha(alpha)
+    return shin
+
+
+def draw_leg(out, plates, hip, sole, pitch, planted, far, cuff_trim=0):
     (old_hip, old_knee, old_ankle), thigh, shin, boot, heel, ball = plates
     sole_pitch = math.atan2(*(ball - heel)[::-1])
     rotate = rotation(pitch - sole_pitch)
@@ -182,9 +211,12 @@ def draw_leg(out, plates, hip, sole, pitch, planted, far):
     bend = math.sqrt(THIGH ** 2 - along ** 2)
     knee = hip + axis * along + point(axis[1], -axis[0]) * bend
 
+    greave = segment(shin, old_knee, old_ankle, knee, ankle)
+    if cuff_trim:
+        greave = trim_greave(greave, knee, ankle, cuff_trim)
     layers = (
         segment(thigh, old_hip, old_knee, hip, knee),
-        segment(shin, old_knee, old_ankle, knee, ankle),
+        greave,
         warp(boot, rotate, destination),
     )
     for layer in layers:
@@ -207,7 +239,7 @@ def draw(frame, with_weapon=True):
     for far, phase, plates in ((True, (q + .5) % 1, FAR), (False, q, NEAR)):
         hip = point(102 if far else 105, 117 if far else 118) + offset
         foot_pose = foot(phase)
-        contact = draw_leg(out, plates, hip, *foot_pose, far)
+        contact = draw_leg(out, plates, hip, *foot_pose, far, ankle_trim(q, far))
         if contact:
             support = contact
 
