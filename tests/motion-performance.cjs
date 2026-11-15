@@ -6,7 +6,7 @@ function node(id=''){let n;n=new Proxy({textContent:'',disabled:false,style:{set
 const el=id=>{if(!elements.has(id))elements.set(id,node(id));return elements.get(id);};
 const w={document:{getElementById:el,createElement:node,write(){},addEventListener(){}},localStorage:{getItem(){return null},setItem(){}},Phaser:{Scene:class{},Game:class{},AUTO:1,Scale:{RESIZE:1,CENTER_BOTH:1}},location:{search:'?seed=33'},URLSearchParams,addEventListener(){},innerWidth:950,innerHeight:430};w.window=w;vm.createContext(w);
 for(const [,attrs,body]of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w);
-for(const file of ['assets/motion/v0193/animation-data.js','assets/motion/v0180/animation-data.js','assets/visuals/motion-animations.js','assets/visuals/world-polish.js'])vm.runInContext(read(file),w);
+for(const file of ['assets/motion/v0194/animation-data.js','assets/motion/v0180/animation-data.js','assets/visuals/motion-animations.js','assets/visuals/world-polish.js'])vm.runInContext(read(file),w);
 const A=w.GRIM_MOTION_ART,D=w.GRIM_MOTION_DATA;
 // Cadence is a function of distance, with no hardcoded dependency on the current
 // move-speed config or the display refresh rate.
@@ -121,4 +121,23 @@ assert.equal(solidBytes.readUInt32BE(16),3072);assert.equal(solidBytes.readUInt3
 assert.equal(runManifest.runtime['reaper-run.png'].bounds.length,192);
 assert(runManifest.runtime['reaper-run.png'].bounds.every(([l,t,r,b])=>l>=0&&t>=0&&r<192&&b<192&&r-l>50&&b-t>70));
 assert(!runManifest.keys.some(k=>k.from===13||k.to===13),'Mismatched contact drawing is replaced by registered neighbouring motion');
+const planted=JSON.parse(read('assets/motion/v0194/manifest.json'));
+const packed=fs.readFileSync(path.join(root,'assets/motion/v0194/reaper-run.webp'));
+assert.equal(packed.toString('ascii',0,4),'RIFF');
+assert.equal(packed.toString('ascii',8,12),'WEBP');
+assert.equal(packed.readUInt32LE(4)+8,packed.length);
+assert(packed.length<solidBytes.length);
+assert.equal(crypto.createHash('sha256').update(packed).digest('hex'),planted.runtime['reaper-run.webp'].sha256);
+for(const [file,record]of Object.entries(planted.sources))
+ assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex'),record.sha256);
+const {contacts,supportX,groundX}=w.GRIM_RUN_DATA,step=752/192;
+assert.equal(contacts.length,8);
+for(const [frame,x]of contacts){
+ assert.equal(x,supportX[frame]);
+ for(let i=0;i<16;i++)assert(Math.abs((frame+i)*step+supportX[frame+i]-(frame*step+x))<.001,
+  'A supporting sole stays fixed in world space for the full stance');
+ assert.equal(supportX[frame+16],null);
+ assert(groundX.slice(frame,frame+24).every(Number.isFinite));
+}
+
 console.log('PASS v0.18: distance-linked gait at four speeds/three refresh rates, jump/landing phases, 24 cutting poses, rigid point-leading blade through every active sample, swept collision envelope, dirty-only HUD, refresh-independent camera, skipped idle root masks, full PNG CRC/SHA integrity.');

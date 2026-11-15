@@ -1,4 +1,4 @@
-/* v0.19.3 — solid distance-driven gait, physical jumps and a rigid cutting edge. */
+/* Solid distance-driven gait, physical jumps and a rigid cutting edge. */
 (function(scope){
   'use strict';
   const DATA=scope.GRIM_MOTION_DATA,RUN=scope.GRIM_RUN_DATA,ROOT='assets/motion/v0180/';
@@ -23,6 +23,14 @@
   function runAtlasFrame(distance){
     const count=RUN?.frames||COUNT;
     return Math.floor(((distance/STRIDE_PX*count)%count+count)%count);
+  }
+  function runSupportRise(s,p,frame){
+    if(p.onSoulPlatform!==false||!RUN?.groundX||!s.terrain?.groundAt)return 0;
+    const ground=s.terrain.groundAt(p.x),underfoot=s.terrain.groundAt(p.x+RUN.groundX[frame]);
+    if(!Number.isFinite(ground)||!Number.isFinite(underfoot)||Math.abs(s.feetY-ground)>2)return 0;
+    // Keep the planted boot on ordinary slopes without moving the collision
+    // root, or letting steep terrain pull the entire painted body too far.
+    return clamp(underfoot-ground,-12,12);
   }
   function ease(t){t=clamp(t);return t*t*(3-2*t);}
   function jumpFrame(p){
@@ -123,7 +131,7 @@
     for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,ROOT+name+'.png?v=0.18.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
     s.load.image('motion-scythe',ROOT+'scythe.png?v=0.18.0');
-    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0193/reaper-run.png?v=0.19.3',
+    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=1',
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
   function queueAirDetails(s){
@@ -191,7 +199,7 @@
       // transitions. Keep the same apparent size and feet anchor.
       this.body[0].setTexture(texture,atlasFrame)
         .setOrigin(anchor[0]/cell,anchor[1]/cell)
-        .setPosition(p.x+(rig?.bodyX||0),s.feetY).setScale(solidRun?RUN.scale:tween?scale*cell/JUMP_TWEEN_CELL:scale)
+        .setPosition(p.x+(rig?.bodyX||0),s.feetY+(solidRun?runSupportRise(s,p,atlasFrame):0)).setScale(solidRun?RUN.scale:tween?scale*cell/JUMP_TWEEN_CELL:scale)
         .setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
       if(name==='reaper-cut-body'){
         const progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;

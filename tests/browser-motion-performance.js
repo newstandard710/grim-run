@@ -6,7 +6,7 @@ const types={'.html':'text/html','.js':'application/javascript','.css':'text/css
 const server=http.createServer((req,res)=>{try{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname.slice(1))||'index.html');if(!file.startsWith(root+path.sep))return res.writeHead(403).end();res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));}catch(e){res.writeHead(404).end();}});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox',process.env.GRIM_MOTION_CANVAS==='1'?'--disable-webgl':'--use-angle=swiftshader']});
  const context=await browser.newContext({viewport:{width:950,height:430},recordVideo:{dir,size:{width:950,height:430}}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
  const shot=async name=>{await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:path.join(dir,'motion-'+name+'.png')});};
@@ -31,7 +31,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   const solid=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],R=window.GRIM_RUN_DATA,A=window.GRIM_MOTION_ART;
    const c=document.createElement('canvas');c.width=c.height=R.cell;const g=c.getContext('2d');
-   const source=s.textures.get('motion-reaper-run-solid').getSourceImage();let minHead=255,seen=new Set();
+   const source=s.textures.get('motion-reaper-run-solid').getSourceImage();let minHead=255,seen=new Set(),toe=[];
    for(let i=0;i<R.frames;i++){
     s.player.x=s.startX+A.STRIDE_PX*(i+.1)/R.frames;s.player.grounded=true;s.player.visualLandingMs=0;
     s.drawScene();const visible=s.motionArt.body.filter(v=>v.visible);
@@ -39,9 +39,19 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     seen.add(s.motionArt.state.atlasFrame);
     g.clearRect(0,0,R.cell,R.cell);g.drawImage(source,i%R.columns*R.cell,Math.floor(i/R.columns)*R.cell,R.cell,R.cell,0,0,R.cell,R.cell);
     const bytes=g.getImageData(110,80,20,28).data,alpha=[];for(let j=3;j<bytes.length;j+=4)alpha.push(bytes[j]);alpha.sort((a,b)=>a-b);minHead=Math.min(minHead,alpha[Math.floor(alpha.length/2)]);
+    if(i<=8){
+      // The first eight frames are the same planted paint. Measure actual toe
+      // pixels in world coordinates, independent of the contact metadata.
+      const strip=g.getImageData(105,160,65,12).data;
+      let right=-1;
+      for(let j=3;j<strip.length;j+=4)if(strip[j]>=128)right=Math.max(right,105+Math.floor(j/4)%65);
+      if(right<0)throw Error('The planted boot is missing '+i);
+      toe.push(i*R.distancePerSheet/R.frames+(right-R.anchor[0])*R.scale);
+    }
    }
-   return {ready:s.motionArt.runReady,frames:seen.size,minHead};
+   return {ready:s.motionArt.runReady,frames:seen.size,minHead,drift:Math.max(...toe)-Math.min(...toe)};
   });assert(solid.ready);assert.equal(solid.frames,192);assert(solid.minHead>=250,'The hood remains opaque between paintings');
+  assert(solid.drift<2,'Decoded planted toe drifts less than two world pixels over the sampled support');
   const frames=new Set();
   for(let i=0;i<24;i++){
    const pose=await page.evaluate(i=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.x=s.startX+window.GRIM_MOTION_ART.STRIDE_PX*i/24;p.y=s.terrain.groundAt(p.x);p.grounded=true;p.visualLandingMs=0;s.cameraX=p.x-s.width*.32;s.cameras.main.setScroll(s.cameraX,s.cameraY);s.drawScene();return {frame:s.motionArt.state.frame,name:s.motionArt.state.name,old:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible),visible:s.motionArt.body.some(v=>v.visible)};},i);

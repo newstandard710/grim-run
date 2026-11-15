@@ -1,8 +1,6 @@
 /* Tundra powder rides on the registered contacts of the solid run atlas. */
 (function(scope){
   'use strict';
-  const CONTACTS=Object.freeze([[2,-8],[24,-4],[37,-23],[71,-10],
-    [96,2],[123,-11],[145,-23],[176,-5]]);
   const SIZE=32, COLORS=[0xe3f3fb,0xb6d6ea,0xeff7ff];
   function snowHash(value,salt){
     let x=Math.imul(value^salt,0x45d9f3b);
@@ -60,10 +58,10 @@
       if(landed&&p.onSoulPlatform===false){
         this.emit(p.x,0,733,true);return;
       }
-      if(!run||!s.motionArt?.runReady||!wasRunning||!isRunning(p)||!s.snowCoverAt(p.x))return;
+      if(!run?.contacts||!s.motionArt?.runReady||!wasRunning||!isRunning(p)||!s.snowCoverAt(p.x))return;
       const stride=run.distancePerSheet,from=previousX-s.startX,to=p.x-s.startX;
       const lap=Math.floor(from/stride);
-      for(const [frame,offset] of CONTACTS){
+      for(const [frame,offset] of run.contacts){
         let at=(lap+frame/run.frames)*stride;
         if(at<=from)at+=stride;
         if(at<=to)this.emit(s.startX+at,offset,frame);

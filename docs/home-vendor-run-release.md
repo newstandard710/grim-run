@@ -11,3 +11,16 @@ systems. Roll back to the base if a verified public regression requires it.
    Both ease to the full settled composition at 3 seconds and hold it through
    the 8-second menu handoff. WebGL reuses the mesh. Canvas uses the baked poses
    from the same mesh and paint. Tests cover pixels, timing, safe skip and focus.
+3. The Reaper run uses one opaque painted atlas with measured stance contacts.
+   Offline two-link legs hold the boot in world space through stance and lift
+   during swing. The separate painted upper body provides a stable grip,
+   slight weight shift, and cloak follow-through. Phase takes actual traveled
+   distance. Tundra uses the same atlas contact table. A bounded rendering
+   offset helps align the planted boot on slopes while the collision root stays
+   at the original simulation position.
+
+The run bake reuses the PR #84 paint. Run `python scripts/prepare-planted-run.py`
+with Pillow, NumPy and OpenCV. The original run, jump, landing, and combat
+assets stay in the repository. The runtime atlas is a 3072×2304 transparent
+WebP and its source/runtime hashes, silhouette bounds, support positions and
+footfalls are recorded in `assets/motion/v0194/manifest.json`.
