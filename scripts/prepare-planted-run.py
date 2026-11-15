@@ -1,177 +1,231 @@
-"""Build a distance-registered running gait from the accepted Reaper paintings."""
-from pathlib import Path
+"""Bake the shared Reaper profile and articulated, distance-registered run."""
+
 import hashlib
 import json
 import math
+from pathlib import Path
 
-import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageEnhance
+from scipy.ndimage import distance_transform_edt, map_coordinates
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'assets/motion/v0194'
 SOURCE = ROOT / 'assets/motion/v0193/reaper-run.png'
+GUIDE = ROOT / 'docs/reaper-motion-pose-guide.md'
 CELL, COLUMNS, FRAMES, GAITS = 192, 16, 192, 2
-STRIDE, SCALE = 202, 13/15
-ANCHOR = np.array([123,168],dtype=float)
-STANCE = 1/3
-HIP = np.array([103,128],dtype=float)
-THIGH, SHIN = 29, 28.5
-SOLE = np.array([125,166.5],dtype=float)
-SUBPIXELS = 2
-CV = cv2.INTER_LINEAR
+STRIDE, SCALE = 202, 13 / 15
+ANCHOR = np.array([123., 168.])
+STANCE = 1 / 3
+THIGH, SHIN = 29.1, 27.4
+SUPERSAMPLE = 2
+
+atlas = Image.open(SOURCE).convert('RGBA')
 
 
-def source_pose(atlas, frame):
-    x,y = frame%COLUMNS*CELL,frame//COLUMNS*CELL
-    return atlas[y:y+CELL,x:x+CELL].copy()
+def point(x, y):
+    return np.array([x, y], dtype=float)
 
 
-def mask(paint, points):
-    selection = np.zeros((CELL,CELL),dtype=np.uint8)
-    cv2.fillPoly(selection,[np.asarray(points,dtype=np.int32)],255)
-    part = paint*selection[:,:,None].astype(np.float32)/255
-    return part
+def source_pose(frame):
+    x, y = frame % COLUMNS * CELL, frame // COLUMNS * CELL
+    return atlas.crop((x, y, x + CELL, y + CELL))
 
 
-def image(pixels):
-    pixels[:,:,:3] /= np.maximum(pixels[:,:,3:4],1/255)
-    return Image.fromarray(np.uint8(np.clip(pixels*255+.5,0,255)))
+def mask(paint, outline):
+    selection = Image.new('L', paint.size)
+    ImageDraw.Draw(selection).polygon(outline, fill=255)
+    return Image.composite(paint, Image.new('RGBA', paint.size), selection)
 
 
-def warp(paint, transform):
-    return image(cv2.warpAffine(paint,transform*SUBPIXELS,(CELL*SUBPIXELS,CELL*SUBPIXELS),
-                                flags=CV,borderMode=cv2.BORDER_CONSTANT))
+def remove(paint, outline):
+    selection = Image.new('L', paint.size, 255)
+    ImageDraw.Draw(selection).polygon(outline, fill=0)
+    return Image.composite(paint, Image.new('RGBA', paint.size), selection)
 
 
-def similarity(start, end, target_start, target_end):
-    """Rotate and uniformly rescale the painted segment around its joint."""
-    a = complex(*(end-start))
-    b = complex(*(target_end-target_start))
-    q = b/a
-    r = np.array([[q.real,-q.imag],[q.imag,q.real]])
-    return np.column_stack((r,target_start-r@start))
+def rotation(angle):
+    c, s = math.cos(angle), math.sin(angle)
+    return np.array([[c, -s], [s, c]])
 
 
-def foot(q, hip_x):
-    """Travel backward at world speed during support, then swing back to contact."""
-    travel = STRIDE/SCALE
-    half_stance = STANCE*travel/2
-    hip_x += 4.3
-    if q<STANCE:
-        return np.array([hip_x+half_stance-q*travel,ANCHOR[1]-.35]),0,True
-    u = (q-STANCE)/(1-STANCE)
-    ease = u*u*(3-2*u)
-    # Carry the stance velocity through toe-off and touchdown. Lift the boot
-    # on the return stroke with zero vertical velocity at the two contacts.
-    stroke = -half_stance+2*half_stance*ease-travel*(1-STANCE)*u*(1-u)*((1-u)**11-u**11)
-    lift = math.sin(math.pi*u)**2*(24+10*(1-u))
-    pitch = -.38*math.sin(2*math.pi*u)*math.sin(math.pi*u)
-    return np.array([hip_x+stroke,ANCHOR[1]-.35-lift]),pitch,False
+def warp(paint, matrix, offset):
+    inverse = np.linalg.inv(matrix * SUPERSAMPLE)
+    return paint.transform(
+        (CELL * SUPERSAMPLE,) * 2, Image.Transform.AFFINE,
+        tuple(np.column_stack((inverse, -inverse @ (offset * SUPERSAMPLE))).ravel()),
+        resample=Image.Resampling.BICUBIC,
+    )
 
 
-def draw_leg(out, paint, hip, contact, pitch, planted):
-    upper,lower,boot = paint
-    c,s = math.cos(pitch),math.sin(pitch)
-    rotation = np.array([[c,-s],[s,c]])
-    ankle = contact+rotation@(OLD_ANKLE-SOLE)
-    direction = ankle-hip
-    distance = np.linalg.norm(direction)
-    unit = direction/distance
-    assert abs(THIGH-SHIN)<distance<THIGH+SHIN, (hip, contact, distance)
-    along = (THIGH**2-SHIN**2+distance**2)/(2*distance)
-    bend = math.sqrt(max(0,THIGH**2-along**2))
-    knee = hip+unit*along+np.array([unit[1],-unit[0]])*bend
-    for pixels,a,b,x,y in (
-        (upper,OLD_HIP,OLD_KNEE,hip,knee),
-        (lower,OLD_KNEE,OLD_ANKLE,knee,ankle),
-        (boot,SOLE,SOLE+np.array([16,0]),contact,contact+rotation@np.array([16,0])),
-    ):
-        layer=warp(pixels,similarity(a,b,x,y))
-        if planted and pixels is lower:
-            layer.paste((0,0,0,0),(0,163*SUBPIXELS,layer.width,layer.height))
-        out.alpha_composite(layer)
+def segment(paint, start, end, target_start, target_end):
+    """Overlap the painted joints while rotating each segment at fixed length."""
+    scale_turn = complex(*(target_end - target_start)) / complex(*(end - start))
+    matrix = np.array([[scale_turn.real, -scale_turn.imag], [scale_turn.imag, scale_turn.real]])
+    return warp(paint, matrix, target_start - matrix @ start)
 
 
-atlas = np.asarray(Image.open(SOURCE).convert('RGBA'),dtype=np.float32)/255
-atlas[:,:,:3] *= atlas[:,:,3:4]
-paint = source_pose(atlas,96)
-OLD_HIP, OLD_KNEE, OLD_ANKLE = (np.array(p,dtype=float) for p in [(103,128),(115,144),(124,160)])
-upper = mask(paint,[(98,124),(107,123),(113,131),(119,139),(120,146),
-                    (113,152),(106,149),(102,142),(97,136)])
-lower = mask(paint,[(111,139),(119,139),(123,146),(125,153),(130,159),
-                    (125,161),(121,162),(116,160),(114,150),(109,146)])
-boot = mask(paint,[(120,152),(127,152),(130,159),(140,158),(146,158),
-                   (146,162),(141,165),(130,168),(119,169),(117,163)])
-near = upper,lower,boot
-far = tuple(p*np.array([.67,.68,.73,1],dtype=np.float32) for p in near)
-# This mask keeps the moving silhouette and scythe tip in the accepted coat
-# painting while removing the two original legs below its folds.
-body = mask(paint,[(0,0),(191,0),(191,130),(116,130),(110,130),(105,134),(101,140),
-                   (100,148),(94,150),(91,144),(82,143),(74,144),(67,143),
-                   (61,145),(54,145),(41,147),(30,148),(0,148)])
-# Keep the same painting at the shoulder and grip. The free forearm moves
-# under the pauldron, while the head and lower end of the scythe stay rigid.
-free_arm = mask(body,[(107,103),(115,106),(120,110),(125,113),(131,109),(142,110),
-                      (143,121),(134,128),(127,126),(122,122),(112,123),(105,115)])
-weapon = (
-    mask(body,[(0,79),(15,52),(39,40),(69,32),(78,25),(83,40),(97,24),(98,39),(112,38),
-               (107,58),(99,68),(85,72),(93,101),(85,104),(78,76),(73,71),(59,71)] )
-    + mask(body,[(89,113),(94,112),(101,133),(101,145),(92,139),(91,132)])
+def ease(t):
+    t = min(1, max(0, t))
+    return t * t * (3 - 2 * t)
+
+
+near_source = source_pose(96)
+far_source = source_pose(176)
+
+# Two independently painted boots, greaves and thighs. Include the painted
+# sockets at both ends so the composites can articulate without gaps.
+NEAR = (
+    (point(101, 126), point(114, 143), point(123, 157)),
+    remove(mask(near_source, [(97, 122), (108, 120), (113, 129), (121, 142),
+                              (119, 149), (111, 150), (104, 146), (97, 136)]),
+           [(90, 115), (94, 114), (101, 132), (100, 141), (95, 139), (91, 125)]),
+    mask(near_source, [(110, 139), (119, 138), (123, 145), (128, 154),
+                       (132, 159), (122, 163), (115, 159), (111, 151), (108, 145)]),
+    mask(near_source, [(121, 151), (128, 152), (131, 157), (139, 157),
+                       (146, 155), (148, 161), (139, 167), (125, 168), (116, 166), (116, 160)]),
+    point(121, 165), point(141.5, 159.5),
 )
-yy,xx = np.mgrid[:CELL,:CELL].astype(np.float32)
-# Fill the narrow shaft underpaint using neighboring cloak pixels. Preserve
-# the hand and leave the space outside the hood and coat transparent.
-shaft = (weapon[:,:,3] > 0) & (yy>=72) & (xx >= 80+(yy-72)*.22) & (yy<137)
-shaft &= (yy>=93) | (xx>89)
-cut = np.maximum(free_arm[:,:,3],weapon[:,:,3])>0
-straight = np.uint8(np.clip(body[:,:,:3]/np.maximum(body[:,:,3:4],1/255)*255+.5,0,255))
-underpaint = cv2.inpaint(straight,np.uint8(shaft)*255,3,cv2.INPAINT_TELEA).astype(np.float32)/255
-body[cut] = 0
-body[shaft,:3] = underpaint[shaft]
-body[shaft,3] = 1
-cloth = np.clip((90-xx)/71,0,1)*np.clip((yy-65)/46,0,1)
+FAR = (
+    (point(99, 125), point(110, 142), point(117, 154)),
+    mask(far_source, [(93, 120), (106, 119), (113, 131), (117, 138),
+                      (115, 146), (107, 149), (100, 143), (94, 135)]),
+    mask(far_source, [(104, 136), (114, 135), (119, 144), (124, 153),
+                      (120, 160), (112, 160), (107, 151), (103, 145)]),
+    mask(far_source, [(112, 149), (119, 146), (125, 152), (130, 151),
+                      (137, 147), (140, 151), (138, 158), (128, 165), (116, 169), (111, 161)]),
+    point(117, 164), point(129, 157.5),
+)
+
+# Keep the accepted hood, arm armour, exposed grip and rigid weapon paint.
+body = mask(near_source, [(0, 64), (119, 62), (191, 71), (191, 129), (112, 128),
+                          (106, 132), (100, 137), (97, 145), (91, 146), (84, 142),
+                          (72, 144), (58, 146), (39, 148), (0, 148)])
+arm = mask(body, [(111, 103), (118, 105), (123, 108), (133, 109), (144, 107),
+                  (145, 121), (137, 128), (126, 124), (118, 121), (109, 116)])
+weapon = mask(near_source, [(0, 79), (15, 52), (39, 40), (69, 32), (78, 25),
+                            (83, 40), (97, 24), (98, 39), (112, 38), (107, 58),
+                            (99, 68), (85, 72), (92, 96), (96, 114), (101, 133),
+                            (101, 145), (92, 139), (90, 125), (85, 115), (84, 104),
+                            (78, 76), (73, 71), (59, 71)])
+grip = mask(body, [(74, 108), (78, 100), (82, 98), (88, 98), (94, 102),
+                   (93, 109), (90, 115), (79, 117), (75, 114)])
+yy, xx = np.mgrid[:CELL, :CELL].astype(np.float32)
+paint = np.array(body)
+shaft = mask(body, [(75, 71), (85, 68), (91, 91), (97, 114), (102, 136),
+                    (100, 142), (90, 138), (87, 120), (82, 100)])
+cut = np.maximum.reduce([np.array(layer.getchannel('A')) for layer in (arm, shaft, weapon, grip)]) > 0
+under = cut & (xx > 69) & (xx < 112) & (yy > 78) & (yy < 139)
+valid = (paint[:, :, 3] > 100) & ~cut
+neighbors = distance_transform_edt(~valid, return_distances=False, return_indices=True)
+paint[cut] = 0
+paint[under] = paint[tuple(k[under] for k in neighbors)]
+torso_pixels = paint.astype(np.float32)
+torso_pixels[:, :, :3] *= torso_pixels[:, :, 3:4] / 255
+
+# From the source belt to the raised pelvis, and from the visibly rearward
+# pauldron to the forward chest. The hood keeps its original silhouette.
+def torso_offset(y):
+    dx = np.interp(y, [62, 86, 98, 110, 124, 137, 149], [15, 16, 20, 15, 4, 2, 2])
+    dy = np.interp(y, [62, 91, 112, 128, 149], [-1, -2, -5, -10, -7])
+    return dx, dy
 
 
-def local_rotation(parent,pivot,angle):
-    local = cv2.getRotationMatrix2D(pivot,angle,1)
-    return parent[:,:2] @ local + np.column_stack((np.zeros((2,2)),parent[:,2]))
+def torso_frame(q, offset):
+    phase = 2 * math.pi * q
+    sx, sy = xx - offset[0], yy - offset[1]
+    # Invert the row-wise torso warp and the smooth displacement of just the
+    # trailing folds. Keep the chest, coat attachment and hood fully opaque.
+    for _ in range(5):
+        dx, dy = torso_offset(sy)
+        trailing = np.clip((83 - sx) / 81, 0, 1) ** 1.4
+        ripple = math.sin(phase) * np.cos(sy * .08) + math.cos(phase) * np.sin(sy * .08)
+        sx = xx - offset[0] - dx - trailing * (12 + 2.6 * ripple)
+        sy = yy - offset[1] - dy - trailing * (6 + 2.2 * np.sin(phase - sx * .06))
+    sampled = np.stack([map_coordinates(channel, [sy, sx], order=1)
+                        for channel in torso_pixels.transpose(2, 0, 1)], axis=-1)
+    sampled[:, :, :3] *= 255 / np.maximum(sampled[:, :, 3:4], 1)
+    return Image.fromarray(np.uint8(np.clip(sampled + .5, 0, 255)))
 
 
-def draw(frame):
-    cycle = FRAMES//GAITS
-    phase = frame/cycle
-    q = (frame%cycle)/cycle
-    # Sink over the loading boot, then rise through the push and keep the
-    # chest moving forward out of flight. The hips stay near the support path.
-    beat = 4*math.pi*q
-    stride = 2*math.pi*q
-    bob = 1.9*math.sin(beat+.26)
-    tilt = -7.0+1.8*math.cos(beat-.65)
-    pelvis = cv2.getRotationMatrix2D(tuple(HIP),-1.0+1.2*math.cos(stride),1)
-    pelvis[:,2] += [1.1*math.sin(stride-.2),bob]
-    transform = cv2.getRotationMatrix2D(tuple(HIP),tilt,1)
-    transform[:,2] += pelvis[:,2]-(HIP-pelvis[:,:2]@HIP)
-    remap_x = xx-cloth*(3.4*np.sin(2*math.pi*phase/2-yy*.085-.6)
-                       +1.2*np.cos(beat-yy*.026))
-    remap_y = yy-cloth*1.7*np.sin(stride-xx*.051-.9)
-    torso = cv2.remap(body,remap_x,remap_y,CV,borderMode=cv2.BORDER_CONSTANT)
-    out = Image.new('RGBA',(CELL*SUBPIXELS,CELL*SUBPIXELS))
+def foot(q):
+    travel = STRIDE / SCALE
+    contact_x = 143.
+    if q < STANCE:
+        t = q / STANCE
+        pitch = .70 * ease((t - .64) / .36)
+        return point(contact_x - q * travel, 167.2), pitch, True
+
+    u = (q - STANCE) / (1 - STANCE)
+    # Keep the stance velocity at the transition and the return to contact.
+    edge = u * (1 - u) * ((1 - u) ** 11 - u ** 11)
+    x = contact_x - STANCE * travel * (1 - ease(u)) - travel * (1 - STANCE) * edge
+    lift = math.sin(math.pi * u) ** 1.2 * (15 + 8 * (1 - u))
+    lift += 9 * math.exp(-((u - .18) / .15) ** 2) * math.sin(math.pi * u)
+    pitch = .70 * (1 - ease(u / .25)) - .34 * math.sin(math.pi * u) ** 2
+    return point(x, 167.2 - lift), pitch, False
+
+
+def draw_leg(out, plates, hip, sole, pitch, planted, far):
+    (old_hip, old_knee, old_ankle), thigh, shin, boot, heel, ball = plates
+    sole_pitch = math.atan2(*(ball - heel)[::-1])
+    rotate = rotation(pitch - sole_pitch)
+    # Both boots pivot around the plate's painted forefoot during push-off.
+    # The physical forward patch is stationary even as its heel rises.
+    destination = sole + point(6 if far else 8, 0) - rotate @ ball
+    ankle = rotate @ old_ankle + destination
+    direction = ankle - hip
+    distance = np.linalg.norm(direction)
+    assert abs(THIGH - SHIN) < distance < THIGH + SHIN, (hip, sole, pitch, distance)
+    axis = direction / distance
+    along = (THIGH ** 2 - SHIN ** 2 + distance ** 2) / (2 * distance)
+    bend = math.sqrt(THIGH ** 2 - along ** 2)
+    knee = hip + axis * along + point(axis[1], -axis[0]) * bend
+
+    layers = (
+        segment(thigh, old_hip, old_knee, hip, knee),
+        segment(shin, old_knee, old_ankle, knee, ankle),
+        warp(boot, rotate, destination),
+    )
+    for layer in layers:
+        if far:
+            layer = ImageEnhance.Brightness(layer).enhance(.79)
+        out.alpha_composite(layer)
+    if planted:
+        return {'x': round((sole[0] - ANCHOR[0]) * SCALE, 4), 'foot': 'far' if far else 'near'}
+    return None
+
+
+def draw(frame, with_weapon=True):
+    cycle = FRAMES // GAITS
+    q = (frame % cycle) / cycle
+    beat = 2 * math.pi * q
+    offset = point(1.3 * math.sin(beat - .32),
+                   2.6 * math.cos(2 * beat) + .68 * math.sin(2 * beat))
+    out = Image.new('RGBA', (CELL * SUPERSAMPLE,) * 2)
     support = None
-    for back,step,parts in [(True,((frame+cycle//2)%cycle)/cycle,far),(False,q,near)]:
-        hip = HIP+[-4 if back else 2,1 if back else 0]
-        pin = pelvis[:,:2]@hip+pelvis[:,2]
-        sole,angle,planted = foot(step,hip[0])
-        draw_leg(out,parts,pin,sole,angle,planted)
-        if planted:
-            x = round((sole[0]-ANCHOR[0])*SCALE,4)
-            support = {'x':x,'foot':'far' if back else 'near'}
-    arm = local_rotation(transform,(110,108),-1.8+7.8*math.sin(stride+.65))
-    carry = local_rotation(transform,(89.5,108),-1.3*math.sin(beat-.9))
-    out.alpha_composite(warp(free_arm,arm))
-    out.alpha_composite(warp(torso,transform))
-    out.alpha_composite(warp(weapon,carry))
-    return out.resize((CELL,CELL),Image.Resampling.LANCZOS),support
+    for far, phase, plates in ((True, (q + .5) % 1, FAR), (False, q, NEAR)):
+        hip = point(102 if far else 105, 117 if far else 118) + offset
+        foot_pose = foot(phase)
+        contact = draw_leg(out, plates, hip, *foot_pose, far)
+        if contact:
+            support = contact
+
+    free_shoulder = point(113, 106)
+    dx, dy = torso_offset(free_shoulder[1])
+    free_swing = rotation(math.radians(27 - 36 * math.cos(beat - .18)))
+    out.alpha_composite(warp(arm, free_swing, free_shoulder + point(dx, dy) + offset - free_swing @ free_shoulder))
+    out.alpha_composite(torso_frame(q, offset).resize(out.size, Image.Resampling.BICUBIC))
+    hand = point(87, 107)
+    dx, dy = torso_offset(hand[1])
+    carry = rotation(math.radians(2.1 * math.sin(2 * beat - .75)))
+    carry_offset = hand + point(dx, dy) + offset - carry @ hand
+    if with_weapon:
+        out.alpha_composite(warp(weapon, carry, carry_offset))
+    out.alpha_composite(warp(grip, carry, carry_offset))
+    # Transparent padding begins just below the support line.
+    out.paste((0, 0, 0, 0), (0, 169 * SUPERSAMPLE, out.width, out.height))
+    return out.resize((CELL, CELL), Image.Resampling.LANCZOS), support
 
 
 def digest(path):
@@ -209,7 +263,7 @@ def build():
         b = following*step+support[following%FRAMES]['x']
         ground[i] = round(a+(b-a)*u-i*step,4)
     data['groundX'] = ground
-    manifest = {**data,'sources':{str(SOURCE.relative_to(ROOT)):digest(SOURCE)},
+    manifest = {**data,'sources':{str(SOURCE.relative_to(ROOT)):digest(SOURCE), str(GUIDE.relative_to(ROOT)):digest(GUIDE)},
                 'runtime':{path.name:{**digest(path),'bounds':bounds}}}
     (OUTPUT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     (OUTPUT/'animation-data.js').write_text('/* Planted and registered solid run poses. */\nwindow.GRIM_RUN_DATA='+json.dumps(data,separators=(',',':'))+';\n')
