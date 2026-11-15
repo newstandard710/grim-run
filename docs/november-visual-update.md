@@ -7,3 +7,9 @@ Baseline: PR 83, c33cf4af582cb070f6df51e296104b04daa4e112.
 The jump renderer uses source poses 0, 4, 12 and 16 for push-off, gathered hold, and one extension. Landing uses poses 16, 18, 20 and 23 inside the existing 175 ms post-contact timer. Hover holds pose 4; a second jump begins from an airborne extension. No simulation fields or physics were modified.
 
 The optional 18-cell air sheet uses registered source pixels and solid interpolated edges. Rebuild with `python scripts/prepare-jump-inbetweens.py --deliberate`. The original sheet and PR 83 sheet remain available for comparison. When the new sheet is unavailable, the selected source poses still use the same cadence.
+
+## Tundra
+
+The existing cliff tile is preserved. A textured snow crust is baked into the contour-following tread cache, weighted by world position as Foothills fades into Tundra. A 32-slot powder pool uses registered footfall markers from the solid run atlas and the existing ground contact event. All through-run randomness remains on the original streams.
+
+Both ground banks, the abyss layer and the legacy foreground haze omit pure Tundra. Transition masks use world X and the 5,000 m portal cut. The shared fog textures and the other biomes retain their settings.

@@ -1178,7 +1178,7 @@ window.GRIM_CONFIG = Object.freeze({
     // Keep the normal course pre-generated. God Mode continues in fixed chunks
     // only when its requested range approaches the generated edge.
     advance(finishX+1000);
-    return {segments,sequences,groundAt,surfaceAt,surfaceSlopes,surfacePoints,fillGaps,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
+    return {segments,sequences,groundAt,sectionAt:findSection,surfaceAt,surfaceSlopes,surfacePoints,fillGaps,anchorAt,groupNear,canPlace,visibleSections,advance,shiftY,profileAt,
       get firstGapX(){return startX+766*pxPerMeter;},get portalX(){return portalX;},get portalExitX(){return portalX+310;},
       get finishX(){return finishX;},get worldEndX(){return worldEndX;},get generatedThrough(){return cursor;},get groupCount(){return groupsMade;}};
   }
@@ -1530,7 +1530,8 @@ window.GRIM_CONFIG = Object.freeze({
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
-  <script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>
+  <script src="assets/visuals/world-art.js?v=snow-tread1"></script>
+  <script src="assets/visuals/snow-tread.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=1"></script>
   <script src="assets/visuals/forest-midground.js?v=3"></script>
   <script src="assets/visuals/biome-midground.js?v=2"></script>
@@ -1602,6 +1603,7 @@ window.GRIM_CONFIG = Object.freeze({
   const ABYSS_FOG_LAYER_ALPHA=.24;
   const ABYSS_FOG_INSET=68;
   const GROUND_FOG_TAPER=44;
+  const SNOW_FADE_START=2120,SNOW_PURE_START=2480,SNOW_PORTAL=5000;
   const ABYSS_FOG_TINTS=Object.freeze({
     forest:0xa6c0b5,foothills:0xaab8c2,tundra:0xd1e0ed,caves:0x8596c4,
     crystals:0x78bdca,ashlands:0x9f879f,lava:0xc78b74,boss:0xa58ca7
@@ -1719,6 +1721,7 @@ window.GRIM_CONFIG = Object.freeze({
       });
       this.world = this.add.graphics().setDepth(2);
       this.fx = this.add.graphics().setDepth(5);
+      this.snowTread=scope.GRIM_SNOW_TREAD?new scope.GRIM_SNOW_TREAD.SnowTread(this):null;
       this.vendorFallback=this.add.graphics().setDepth(10);
       this.vendorAura=this.add.graphics().setDepth(9);
       this.actor = this.add.graphics().setDepth(14);
@@ -1961,6 +1964,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       if(y===null){this.state='paused';this.ui.setMode('paused');return false;}
       const p=this.player;
+      this.snowTread?.clear();
       this.teleportUsed=true;
       if(d>C.finishMeters)this.godModePastFinish=true;
       this.resetRewindHistory();
@@ -2268,6 +2272,7 @@ window.GRIM_CONFIG = Object.freeze({
         durationMs:Math.max(180,(this.rewindClockMs-saved.at)/3),
         lastIndex:-1};
       this.rewindPlayback.target=saved;
+      this.snowTread?.clear();
       this.state='rewinding';
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.ui.setMode('rewinding');
@@ -2276,6 +2281,7 @@ window.GRIM_CONFIG = Object.freeze({
       return true;
     }
     startRun() {
+      this.snowTread?.clear();
       this.wakeGameLoop();
       this.lastUpdateHeartbeatAt=Date.now();
       const params = new URLSearchParams(location.search);
@@ -2351,6 +2357,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     goToMenu() {
+      this.snowTread?.clear();
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.wakeGameLoop();
       this.state = 'menu'; this.pendingOffers=[];
@@ -2996,6 +3003,8 @@ window.GRIM_CONFIG = Object.freeze({
         // required for correct landings on steep uphill sections.
         const previousGround=this.terrain.groundAt(p.x);
         const previousX=p.x;
+        const snowRun=this.snowTread&&scope.GRIM_SNOW_TREAD.isRunning(p);
+        let snowLanding=false;
         p.x += this.speed*dt*worldFactor;
         p.slowMs=Math.max(0,p.slowMs-frameMs);
         p.slowCooldownMs=Math.max(0,p.slowCooldownMs-frameMs);
@@ -3067,6 +3076,7 @@ window.GRIM_CONFIG = Object.freeze({
             p.y=groundHit;p.velocityY=0;p.grounded=true;p.onSoulPlatform=false;p.coyoteMs=0;
           }
           if(p.grounded){
+            snowLanding=groundHit!==null&&groundHit!==undefined;
             if(this.motionArt?.ready)p.visualLandingMs=scope.GRIM_MOTION_ART.LAND_MS;
             p.jumpHeld=false;p.jumpAgeMs=0;p.jumpsUsed=0;p.airJumpUsed=false;p.airTuck=false;
             p.hovering=false;p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
@@ -3095,6 +3105,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.hasTeleported && this.distance>=C.finishMeters&&!this.godMode){
           this.completeRun();this.drawScene();return;
         }
+        this.snowTread?.step(dt,previousX,snowRun,snowLanding);
         // A real foot contact on the decorated floor owns encounter timing.
         while(this.nextVendorNumber<=14&&p.x-14>this.startX+(this.nextVendorNumber*C.vendorEveryMeters+C.vendorSanctuaryHalfMeters)*C.pxPerMeter)
           this.nextVendorNumber++;
@@ -3468,6 +3479,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     rescueFromAbyss(){
+      this.snowTread?.clear();
       if(this.state!=='playing')return false;
       const p=this.player;
       const fromCamera={x:this.cameraX,y:this.cameraY};
@@ -3513,6 +3525,7 @@ window.GRIM_CONFIG = Object.freeze({
       return true;
     }
     finishAbyssRespawn(){
+      this.snowTread?.clear();
       if(this.state!=='respawning')return false;
       this.state='playing';this.respawnMs=0;this.respawnCamera=null;
       this.damageFlashMs=0;this.bonesBlastMs=0;this.blastFlashMs=0;
@@ -3557,6 +3570,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showGunCooldown(0);this.resetRewindHistory();this.captureRewind();
     }
     enterUnderworld(){
+      this.snowTread?.clear();
       const p=this.player;
       this.hasTeleported=true;
       this.resetRewindHistory();
@@ -3851,6 +3865,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
       this.drawCombat();
       this.drawParticles();
+      this.snowTread?.draw();
       this.drawReaper();
       this.drawForeground();
       if(this.visuals)this.visuals.render();
@@ -3883,6 +3898,17 @@ window.GRIM_CONFIG = Object.freeze({
       const tint=(Math.round(red/total)<<16)|(Math.round(green/total)<<8)|Math.round(blue/total);
       return {tint,opacity:opacity/total};
     }
+    snowCoverAt(x){
+      const meters=(x-(this.startX??200))/C.pxPerMeter;
+      if(meters<=SNOW_FADE_START||(this.hasTeleported&&meters>=SNOW_PORTAL))return 0;
+      if(meters>=SNOW_PURE_START)return 1;
+      return this.terrainBiomeWeights(meters).tundra||0;
+    }
+    fogCrossesSnow(left,right){
+      return this.snowCoverAt(left)!==this.snowCoverAt(right)||
+        (this.hasTeleported&&left<(this.startX??200)+SNOW_PORTAL*C.pxPerMeter&&
+          right>(this.startX??200)+SNOW_FADE_START*C.pxPerMeter);
+    }
     groundFogSurfaceAt(x){
       return this.terrain.groundAt(x);
     }
@@ -3899,10 +3925,12 @@ window.GRIM_CONFIG = Object.freeze({
       }
       return opacity;
     }
-    groundFogColumns(left,width,gaps){
+    groundFogColumns(left,width,gaps,fadeSnow=false){
       const samples=Array.from({length:GROUND_FOG_COLUMNS+1},(_,i)=>i/GROUND_FOG_COLUMNS);
       const boundaries=gaps.flatMap(g=>[g.start-g.leftFade,g.start-g.leftFade*.5,g.start,
         g.end,g.end+g.rightFade*.5,g.end+g.rightFade]);
+      if(fadeSnow)for(const m of [SNOW_FADE_START,SNOW_PURE_START,SNOW_PORTAL])
+        boundaries.unshift((this.startX??200)+m*C.pxPerMeter);
       // Place explicit vertices at feather and collision boundaries. Retain
       // the fixed mesh size by replacing the nearest unused interior columns.
       const locked=new Set([0,GROUND_FOG_COLUMNS]);
@@ -4001,6 +4029,22 @@ window.GRIM_CONFIG = Object.freeze({
           gradient.addColorStop((leftFade+b-a+t*rightFade)/span,'rgba(255,255,255,'+(t*t*(3-2*t))+')');
         ctx.fillStyle=gradient;ctx.fillRect(left,top,width,height);
       }
+      if(sprite.fogFadesSnow){
+        const gradient=ctx.createLinearGradient(left,0,right,0);
+        const stops=[left,right];
+        for(let i=1;i<16;i++)stops.push(left+width*i/16);
+        for(const m of [SNOW_FADE_START,SNOW_PURE_START,SNOW_PORTAL]){
+          const edge=(this.startX??200)+m*C.pxPerMeter-camera.scrollX;
+          if(edge>left&&edge<right){
+            stops.push(edge);
+            if(m===SNOW_PORTAL)stops.push(Math.max(left,edge-.01));
+          }
+        }
+        for(const pos of stops.sort((a,b)=>a-b))
+          gradient.addColorStop((pos-left)/width,'rgba(255,255,255,'+
+            (1-this.snowCoverAt(pos+camera.scrollX))+')');
+        ctx.fillStyle=gradient;ctx.fillRect(left,top,width,height);
+      }
       ctx.restore();
       target.save();target.setTransform(1,0,0,1,0,0);
       target.globalAlpha=1;target.globalCompositeOperation='source-over';
@@ -4018,6 +4062,7 @@ window.GRIM_CONFIG = Object.freeze({
       const left=x-width*.5;
       const localGaps=gaps.filter(g=>g.start-g.leftFade<x+width*.65&&g.end+g.rightFade>x-width*.65);
       view.fogGaps=localGaps;
+      view.fogFadesSnow=this.fogCrossesSnow(x-width*.65,x+width*.65)||this.snowCoverAt(x)>0;
       view.fogWidth=width;view.fogHeight=height;
       if(view.fogPoints){
         // Texture.setFrame resets Mesh's size to the image dimensions.
@@ -4027,7 +4072,7 @@ window.GRIM_CONFIG = Object.freeze({
           view.setSize(this.width,this.height);view.setOrtho(this.width,this.height);
         }
         view.setPosition(x,ground);
-        const columns=localGaps.length?this.groundFogColumns(left,width,localGaps):null;
+        const columns=(localGaps.length||view.fogFadesSnow)?this.groundFogColumns(left,width,localGaps,view.fogFadesSnow):null;
         for(let column=0;column<=GROUND_FOG_COLUMNS;column++){
           const x=left+(columns?.[column]??column/GROUND_FOG_COLUMNS)*width;
           view.fogSamples[column]=this.groundFogSurfaceAt(x)??ground;
@@ -4038,7 +4083,8 @@ window.GRIM_CONFIG = Object.freeze({
           const dx=(u-.5)*width;
           const surface=view.fogSamples[point.column];
           v.x=dx;v.y=ground-surface-inset+(point.bottom?0:height);
-          v.alpha=this.groundFogOpacityAt(x+dx,localGaps);
+          v.alpha=this.groundFogOpacityAt(x+dx,localGaps)*
+            (view.fogFadesSnow?1-this.snowCoverAt(x+dx):1);
           v.setUVs(flip?1-u:u,point.bottom?1:0);
         }
         view.dirtyCache[9]=-1;
@@ -4061,7 +4107,13 @@ window.GRIM_CONFIG = Object.freeze({
         return;
       }
       const left=this.cameraX-400,right=this.cameraX+this.width+400;
-      mask.clear();mask.fillStyle(0xffffff,1);
+      mask.clear();
+      if(this.snowCoverAt(left-540)===1&&this.snowCoverAt(right+540)===1){
+        for(const sprite of views.values())sprite.destroy();
+        views.clear();
+        return;
+      }
+      mask.fillStyle(0xffffff,1);
       const solidSpans=this.groundFogSolidSpans=[];
       // Include enough terrain beyond the mask to feather every drifting bank.
       const fogSections=this.terrain.visibleSections(left,right);
@@ -4385,6 +4437,10 @@ window.GRIM_CONFIG = Object.freeze({
         }else if(chance>.58){
           context.fillStyle=rgba(detail,.25);context.fillRect(markX,detailY,2+chance*2,1);
         }
+      }
+      if(section.kind==='ground'){
+        scope.GRIM_WORLD_ART?.paintSnowTread(context,from,width,surfaceY,
+          x=>this.snowCoverAt(x));
       }
       context.restore();
       texture.refresh();
@@ -4927,12 +4983,16 @@ window.GRIM_CONFIG = Object.freeze({
       const {start,end,y0,y1}=section;
       const width=end-start,height=clamp(105+width*.36,142,276);
       const leftY=y0+ABYSS_FOG_INSET,rightY=y1+ABYSS_FOG_INSET;
-      const signature=[start,end,y0,y1].join(':');
+      const origin=this.startX??200;
+      const first=biome==='caves'&&this.hasTeleported?Math.max(start,origin+SNOW_PORTAL*C.pxPerMeter):start;
+      const last=biome==='foothills'?Math.min(end,origin+SNOW_PURE_START*C.pxPerMeter):end;
+      const signature=[start,end,y0,y1,first,last].join(':');
       if(view.geometrySignature!==signature){
         // The foreground at .62 and above occludes the textured rock, so
         // only the part of this envelope between the jagged faces is visible.
-        const points=[{x:start,y:leftY},{x:end,y:rightY},
-          {x:end,y:rightY+height+16},{x:start,y:leftY+height+16}];
+        const edge=x=>leftY+(rightY-leftY)*(x-start)/width;
+        const points=[{x:first,y:edge(first)},{x:last,y:edge(last)},
+          {x:last,y:edge(last)+height+16},{x:first,y:edge(first)+height+16}];
         sprite.abyssFogBounds={points};
         maskGraphics?.clear().fillStyle(0xffffff,1).fillPoints(points,true);
         sprite.setDisplaySize(width,height).setRotation(Math.atan2(y1-y0,width)).setTint(tint);
@@ -5054,7 +5114,7 @@ window.GRIM_CONFIG = Object.freeze({
         // painting (.34) and below real terrain (.62).
         for(const id of TERRAIN_BIOME_ORDER){
           const weight=Math.max(0,weights[id]||0);
-          if(weight>.003)this.abyssFogView(section,id,weight,activeAbyssFogViews);
+          if(id!=='tundra'&&weight>.003)this.abyssFogView(section,id,weight,activeAbyssFogViews);
         }
       }
       for(const section of sections){
@@ -5811,7 +5871,15 @@ window.GRIM_CONFIG = Object.freeze({
       const g=this.foreground;g.clear();
       const impactFade=this.state==='respawning'?clamp(1-(1500-this.respawnMs)/240,0,1):1;
       // Edge fog gives atmosphere without obscuring central hazards.
-      g.fillStyle(0x6f9e9c,.025);g.fillRect(0,this.groundY-20,this.width,55);
+      const firstSnow=this.snowCoverAt(this.cameraX),lastSnow=this.snowCoverAt(this.cameraX+this.width);
+      if(firstSnow===0&&lastSnow===0){
+        g.fillStyle(0x6f9e9c,.025);g.fillRect(0,this.groundY-20,this.width,55);
+      }else if(firstSnow<1||lastSnow<1){
+        for(let x=0;x<this.width;x+=12){
+          const alpha=.025*(1-this.snowCoverAt(this.cameraX+x+6));
+          if(alpha>0)g.fillStyle(0x6f9e9c,alpha).fillRect(x,this.groundY-20,12,55);
+        }
+      }
       g.fillStyle(0x030716,.22);g.fillRect(0,this.height-9,this.width,9);
       if(this.state==='playing' && this.player.slowMs>0){
         g.fillStyle(0x75dfff,.055);g.fillRect(0,0,this.width,this.height);
