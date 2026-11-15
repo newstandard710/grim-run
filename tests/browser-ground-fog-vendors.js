@@ -175,8 +175,8 @@ const server=http.createServer((req,res)=>{
         p.jumpAgeMs=250;p.velocityY=-100;p.attackMs=action.endsWith('cut')?130:0;
         p.y=(s.terrain.groundAt(p.x)??s.terrain.anchorAt(p.x))-(p.grounded?0:70);
         s.drawScene();
-        const body=[...s.motionArt.body,...s.combatArt.reaper,
-          ...Object.values(s.visuals.reaperPoseSprites||{})].filter(v=>v.visible);
+        const body=[...s.motionArt.body,...s.combatArt.reaper,s.slideArt?.sprite,
+          ...Object.values(s.visuals.reaperPoseSprites||{})].filter(v=>v?.visible);
         return {depths:body.map(v=>v.depth),alpha:body.map(v=>v.alpha),
           wingDepth:s.powerArt.wingSprites[0]?.depth,
           rear:Math.max(...[...s.groundFogViews.values()].filter(v=>v.depth<12).map(v=>v.depth)),

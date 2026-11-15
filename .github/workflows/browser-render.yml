@@ -84,6 +84,9 @@ jobs:
       - name: Verify both vendor holds and safe skip in WebGL and Canvas
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-vendor-hold.js
+      - name: Verify grounded Slide paint, fallback, input and recovery
+        if: ${{ !cancelled() && matrix.group == 'movement' }}
+        run: node tests/browser-ground-slide.js
       - name: Verify proximity plants, named wings, touch time controls and vendor timing
         if: ${{ !cancelled() && matrix.group == 'movement' }}
         run: node tests/browser-gravewing-build.js

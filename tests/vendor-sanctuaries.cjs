@@ -43,7 +43,7 @@ g.enemies=[{kind:'bat',x:g.player.x,y:g.player.y-40,dead:false}];
 g.fireballs=[{x:g.player.x,y:g.player.y-40,ageMs:0,vx:0,vy:0,dead:false}];
 g.updateCombat(34,.034);assert.equal(g.enemies.length,0);assert.equal(g.fireballs.length,0);assert.equal(g.player.hp,3,'Moving threats are removed before contact damage');
 const visual={};visual.window=visual;vm.createContext(visual);
-for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art-data|cutscene-motion|vendor-sanctuaries|power-animations)\.js/.test(src))
+for(const [,src]of html.matchAll(/<script\s+src="([^"]+)"/g))if(/\/(?:vendor-art-data|cutscene-motion|vendor-sanctuaries|power-animations)\.js|\/cutscenes\/v0197\/animation-data\.js/.test(src))
  vm.runInContext(fs.readFileSync(path.join(root,src.split('?')[0]),'utf8'),visual);
 assert(visual.GRIM_VENDOR_ART&&visual.GRIM_VENDOR_DATA,'Game HTML loads sanctuary renderer and registration data');
 const A=visual.GRIM_POWER_ART,frames=new Set();
