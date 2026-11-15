@@ -2,8 +2,8 @@
 (function(scope){
   'use strict';
   const DATA=scope.GRIM_MOTION_DATA,RUN=scope.GRIM_RUN_DATA,ROOT='assets/motion/v0180/';
-  // The sheet contains four two-step gait beats. Advance each natural stride
-  // over 188 world pixels instead of playing all four at that distance.
+  // Each gait is a full left/right cycle. The atlas and snow contacts
+  // use the same distance along the run.
   const GAITS_PER_SHEET=RUN?.gaitsPerSheet||4,PIXELS_PER_GAIT=RUN?.pixelsPerGait||188,
     STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
   const AIR_KEYS=Object.freeze([0,4,12,16,18,20,23]),AIR_STEPS=4;
@@ -131,7 +131,7 @@
     for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,ROOT+name+'.png?v=0.18.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
     s.load.image('motion-scythe',ROOT+'scythe.png?v=0.18.0');
-    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=1',
+    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=2',
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
   function queueAirDetails(s){

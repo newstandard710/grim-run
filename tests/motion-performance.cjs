@@ -14,9 +14,9 @@ for(const speed of [140,282,465,600])for(const hz of [30,60,120]){
  let distance=0;for(let i=0;i<hz;i++)distance+=speed/hz;
  assert(Math.abs(A.runFrame(distance)-A.runFrame(speed))<1e-9);
 }
-assert.equal(A.STRIDE_PX,752);assert.equal(A.PIXELS_PER_GAIT,188);assert.equal(A.GAITS_PER_SHEET,4);
-assert.equal(A.runFrame(188),6,'188px advances one gait beat, not the entire sheet');
-for(const speed of [300,362.5,425])assert(Math.abs(A.runFrame(speed)-speed/A.STRIDE_PX*24)<1e-9,'Cadence follows actual distance at every movement speed');
+assert.equal(A.STRIDE_PX,404);assert.equal(A.PIXELS_PER_GAIT,202);assert.equal(A.GAITS_PER_SHEET,2);
+assert.equal(A.runFrame(202),12,'202px advances one two-step gait cycle');
+for(const speed of [300,362.5,425])assert(Math.abs(A.runFrame(speed)-(speed/A.STRIDE_PX*24)%24)<1e-9,'Cadence follows actual distance at every movement speed');
 assert.equal(A.WEAPON_SCALE,D.weapon.scale*.60);
 assert.equal(A.runFrame(A.STRIDE_PX),0);assert(A.runFrame(-1)>=0);
 // Sample the actual renderer across every baked pose, including half-way
@@ -126,18 +126,18 @@ const packed=fs.readFileSync(path.join(root,'assets/motion/v0194/reaper-run.webp
 assert.equal(packed.toString('ascii',0,4),'RIFF');
 assert.equal(packed.toString('ascii',8,12),'WEBP');
 assert.equal(packed.readUInt32LE(4)+8,packed.length);
-assert(packed.length<solidBytes.length);
+assert(packed.length<=2047544,'The new gait stays within the previous atlas transfer budget');
 assert.equal(crypto.createHash('sha256').update(packed).digest('hex'),planted.runtime['reaper-run.webp'].sha256);
 for(const [file,record]of Object.entries(planted.sources))
  assert.equal(crypto.createHash('sha256').update(fs.readFileSync(path.join(root,file))).digest('hex'),record.sha256);
-const {contacts,supportX,groundX}=w.GRIM_RUN_DATA,step=752/192;
-assert.equal(contacts.length,8);
+const {contacts,supportX,groundX,distancePerSheet,frames:frameCount}=w.GRIM_RUN_DATA,step=distancePerSheet/frameCount;
+assert.equal(contacts.length,4);
 for(const [frame,x]of contacts){
  assert.equal(x,supportX[frame]);
- for(let i=0;i<16;i++)assert(Math.abs((frame+i)*step+supportX[frame+i]-(frame*step+x))<.001,
+ for(let i=0;i<32;i++)assert(Math.abs((frame+i)*step+supportX[frame+i]-(frame*step+x))<.001,
   'A supporting sole stays fixed in world space for the full stance');
- assert.equal(supportX[frame+16],null);
- assert(groundX.slice(frame,frame+24).every(Number.isFinite));
+ assert.equal(supportX[frame+32],null);
+ assert(groundX.slice(frame,frame+48).every(Number.isFinite));
 }
 
 console.log('PASS v0.18: distance-linked gait at four speeds/three refresh rates, jump/landing phases, 24 cutting poses, rigid point-leading blade through every active sample, swept collision envelope, dirty-only HUD, refresh-independent camera, skipped idle root masks, full PNG CRC/SHA integrity.');

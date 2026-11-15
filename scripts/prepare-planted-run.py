@@ -11,12 +11,12 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / 'assets/motion/v0194'
 SOURCE = ROOT / 'assets/motion/v0193/reaper-run.png'
-CELL, COLUMNS, FRAMES, GAITS = 192, 16, 192, 4
-STRIDE, SCALE = 188, 13/15
+CELL, COLUMNS, FRAMES, GAITS = 192, 16, 192, 2
+STRIDE, SCALE = 202, 13/15
 ANCHOR = np.array([123,168],dtype=float)
 STANCE = 1/3
 HIP = np.array([103,128],dtype=float)
-THIGH, SHIN = 27, 26
+THIGH, SHIN = 29, 28.5
 SOLE = np.array([125,166.5],dtype=float)
 SUBPIXELS = 2
 CV = cv2.INTER_LINEAR
@@ -57,7 +57,7 @@ def foot(q, hip_x):
     """Travel backward at world speed during support, then swing back to contact."""
     travel = STRIDE/SCALE
     half_stance = STANCE*travel/2
-    hip_x += 2.5
+    hip_x += 4.3
     if q<STANCE:
         return np.array([hip_x+half_stance-q*travel,ANCHOR[1]-.35]),0,True
     u = (q-STANCE)/(1-STANCE)
@@ -65,12 +65,12 @@ def foot(q, hip_x):
     # Carry the stance velocity through toe-off and touchdown. Lift the boot
     # on the return stroke with zero vertical velocity at the two contacts.
     stroke = -half_stance+2*half_stance*ease-travel*(1-STANCE)*u*(1-u)*((1-u)**11-u**11)
-    lift = math.sin(math.pi*u)**2*(19+10*(1-u))
+    lift = math.sin(math.pi*u)**2*(24+10*(1-u))
     pitch = -.38*math.sin(2*math.pi*u)*math.sin(math.pi*u)
     return np.array([hip_x+stroke,ANCHOR[1]-.35-lift]),pitch,False
 
 
-def draw_leg(out, paint, hip, contact, pitch):
+def draw_leg(out, paint, hip, contact, pitch, planted):
     upper,lower,boot = paint
     c,s = math.cos(pitch),math.sin(pitch)
     rotation = np.array([[c,-s],[s,c]])
@@ -87,7 +87,10 @@ def draw_leg(out, paint, hip, contact, pitch):
         (lower,OLD_KNEE,OLD_ANKLE,knee,ankle),
         (boot,SOLE,SOLE+np.array([16,0]),contact,contact+rotation@np.array([16,0])),
     ):
-        out.alpha_composite(warp(pixels,similarity(a,b,x,y)))
+        layer=warp(pixels,similarity(a,b,x,y))
+        if planted and pixels is lower:
+            layer.paste((0,0,0,0),(0,163*SUBPIXELS,layer.width,layer.height))
+        out.alpha_composite(layer)
 
 
 atlas = np.asarray(Image.open(SOURCE).convert('RGBA'),dtype=np.float32)/255
@@ -97,7 +100,7 @@ OLD_HIP, OLD_KNEE, OLD_ANKLE = (np.array(p,dtype=float) for p in [(103,128),(115
 upper = mask(paint,[(98,124),(107,123),(113,131),(119,139),(120,146),
                     (113,152),(106,149),(102,142),(97,136)])
 lower = mask(paint,[(111,139),(119,139),(123,146),(125,153),(130,159),
-                    (127,165),(121,166),(116,160),(114,150),(109,146)])
+                    (125,161),(121,162),(116,160),(114,150),(109,146)])
 boot = mask(paint,[(120,152),(127,152),(130,159),(140,158),(146,158),
                    (146,162),(141,165),(130,168),(119,169),(117,163)])
 near = upper,lower,boot
@@ -107,32 +110,67 @@ far = tuple(p*np.array([.67,.68,.73,1],dtype=np.float32) for p in near)
 body = mask(paint,[(0,0),(191,0),(191,130),(116,130),(110,130),(105,134),(101,140),
                    (100,148),(94,150),(91,144),(82,143),(74,144),(67,143),
                    (61,145),(54,145),(41,147),(30,148),(0,148)])
+# Keep the same painting at the shoulder and grip. The free forearm moves
+# under the pauldron, while the head and lower end of the scythe stay rigid.
+free_arm = mask(body,[(107,103),(115,106),(120,110),(125,113),(131,109),(142,110),
+                      (143,121),(134,128),(127,126),(122,122),(112,123),(105,115)])
+weapon = (
+    mask(body,[(0,79),(15,52),(39,40),(69,32),(78,25),(83,40),(97,24),(98,39),(112,38),
+               (107,58),(99,68),(85,72),(93,101),(85,104),(78,76),(73,71),(59,71)] )
+    + mask(body,[(89,113),(94,112),(101,133),(101,145),(92,139),(91,132)])
+)
 yy,xx = np.mgrid[:CELL,:CELL].astype(np.float32)
-cloth = np.clip((83-xx)/65,0,1)*np.clip((yy-67)/37,0,1)
+# Fill the narrow shaft underpaint using neighboring cloak pixels. Preserve
+# the hand and leave the space outside the hood and coat transparent.
+shaft = (weapon[:,:,3] > 0) & (yy>=72) & (xx >= 80+(yy-72)*.22) & (yy<137)
+shaft &= (yy>=93) | (xx>89)
+cut = np.maximum(free_arm[:,:,3],weapon[:,:,3])>0
+straight = np.uint8(np.clip(body[:,:,:3]/np.maximum(body[:,:,3:4],1/255)*255+.5,0,255))
+underpaint = cv2.inpaint(straight,np.uint8(shaft)*255,3,cv2.INPAINT_TELEA).astype(np.float32)/255
+body[cut] = 0
+body[shaft,:3] = underpaint[shaft]
+body[shaft,3] = 1
+cloth = np.clip((90-xx)/71,0,1)*np.clip((yy-65)/46,0,1)
+
+
+def local_rotation(parent,pivot,angle):
+    local = cv2.getRotationMatrix2D(pivot,angle,1)
+    return parent[:,:2] @ local + np.column_stack((np.zeros((2,2)),parent[:,2]))
 
 
 def draw(frame):
     cycle = FRAMES//GAITS
     phase = frame/cycle
     q = (frame%cycle)/cycle
-    # Each planted beat takes weight before rising into a short flight.
-    bob = 1.5*math.sin(4*math.pi*q+.5)
-    tilt = 1.45*math.cos(4*math.pi*q-.45)
+    # Sink over the loading boot, then rise through the push and keep the
+    # chest moving forward out of flight. The hips stay near the support path.
+    beat = 4*math.pi*q
+    stride = 2*math.pi*q
+    bob = 1.9*math.sin(beat+.26)
+    tilt = -7.0+1.8*math.cos(beat-.65)
+    pelvis = cv2.getRotationMatrix2D(tuple(HIP),-1.0+1.2*math.cos(stride),1)
+    pelvis[:,2] += [1.1*math.sin(stride-.2),bob]
     transform = cv2.getRotationMatrix2D(tuple(HIP),tilt,1)
-    transform[:,2] += np.array([.9*math.sin(2*math.pi*q),bob])
-    remap_x = xx-cloth*(2.4*np.sin(2*math.pi*phase/2-yy*.085)+.8*math.cos(2*math.pi*phase))
-    torso = cv2.remap(body,remap_x,yy,CV,borderMode=cv2.BORDER_CONSTANT)
+    transform[:,2] += pelvis[:,2]-(HIP-pelvis[:,:2]@HIP)
+    remap_x = xx-cloth*(3.4*np.sin(2*math.pi*phase/2-yy*.085-.6)
+                       +1.2*np.cos(beat-yy*.026))
+    remap_y = yy-cloth*1.7*np.sin(stride-xx*.051-.9)
+    torso = cv2.remap(body,remap_x,remap_y,CV,borderMode=cv2.BORDER_CONSTANT)
     out = Image.new('RGBA',(CELL*SUBPIXELS,CELL*SUBPIXELS))
     support = None
     for back,step,parts in [(True,((frame+cycle//2)%cycle)/cycle,far),(False,q,near)]:
         hip = HIP+[-4 if back else 2,1 if back else 0]
-        pin = transform[:,:2]@hip+transform[:,2]
+        pin = pelvis[:,:2]@hip+pelvis[:,2]
         sole,angle,planted = foot(step,hip[0])
-        draw_leg(out,parts,pin,sole,angle)
+        draw_leg(out,parts,pin,sole,angle,planted)
         if planted:
             x = round((sole[0]-ANCHOR[0])*SCALE,4)
             support = {'x':x,'foot':'far' if back else 'near'}
+    arm = local_rotation(transform,(110,108),-1.8+7.8*math.sin(stride+.65))
+    carry = local_rotation(transform,(89.5,108),-1.3*math.sin(beat-.9))
+    out.alpha_composite(warp(free_arm,arm))
     out.alpha_composite(warp(torso,transform))
+    out.alpha_composite(warp(weapon,carry))
     return out.resize((CELL,CELL),Image.Resampling.LANCZOS),support
 
 
@@ -151,7 +189,7 @@ def build():
         out.paste(tile,(i%COLUMNS*CELL,i//COLUMNS*CELL))
         support.append(plant)
     path = OUTPUT/'reaper-run.webp'
-    out.save(path,quality=86,method=5,exact=False)
+    out.save(path,quality=83,method=5,exact=False)
     contacts = [[i,support[i]['x']] for i in range(0,FRAMES,FRAMES//(GAITS*2))]
     data = {'cell':CELL,'frames':FRAMES,'columns':COLUMNS,'anchor':ANCHOR.tolist(),'scale':SCALE,
             'pixelsPerGait':STRIDE,'gaitsPerSheet':GAITS,'distancePerSheet':STRIDE*GAITS,
