@@ -22,7 +22,7 @@ const vendorState=page=>page.evaluate(()=>{
 });
 const begin=(page,k)=>page.evaluate(k=>{
   const g=window.grimRun,s=g.scene.scenes[0];
-  s.startRun();g.loop.sleep();s.practiceTimeMode=3;s.coinCount=25;s.player.hp=2;
+  s.startRun();g.loop.sleep();s.setGodMode(true);s.practiceTimeMode=3;s.coinCount=25;s.player.hp=2;
   s.triggerVendor(k);
   s.drawScene();g.step(performance.now(),0);
 },k);
@@ -92,6 +92,18 @@ async function inspect(browser,url,canvas,failed=false){
       await page.mouse.click(x,y);
       assert.notEqual((await vendorState(page)).state,'upgrade','A fresh gesture works immediately');
 
+      if(k===1){
+        await begin(page,k);await time(page,7999);
+        const touch=await page.context().newCDPSession(page);
+        const before=await vendorState(page);
+        await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:0}]});
+        await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,1));
+        await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        assert.equal((await vendorState(page)).state,'upgrade','A held touch across auto-open cannot continue');
+        assert.deepEqual(comparable(await vendorState(page)),comparable(before));
+        await touch.detach();
+      }
+
       for(const [phase,key] of [[800,'Space'],[5000,'Enter']]){
         await begin(page,k);await time(page,phase);
         const before=await vendorState(page);
@@ -114,8 +126,10 @@ async function inspect(browser,url,canvas,failed=false){
     if(!failed){
       await begin(page,1);
       await time(page,3400);
+      await page.evaluate(()=>window.grimRun.loop.wake());
       await page.setViewportSize({width:393,height:740});
       await page.waitForFunction(()=>window.grimRun.scene.scenes[0].width===393);
+      await page.evaluate(()=>window.grimRun.loop.sleep());
       const rotated=await time(page,4000),rotatedFrame=await pixels(page);
       assert(rotated.held);assert.equal(rotated.reaper,192);
       assert.deepEqual(await time(page,7340),rotated);
