@@ -13,3 +13,7 @@ The optional 18-cell air sheet uses registered source pixels and solid interpola
 The existing cliff tile is preserved. A textured snow crust is baked into the contour-following tread cache, weighted by world position as Foothills fades into Tundra. A 32-slot powder pool uses registered footfall markers from the solid run atlas and the existing ground contact event. All through-run randomness remains on the original streams.
 
 Both ground banks, the abyss layer and the legacy foreground haze omit pure Tundra. Transition masks use world X and the 5,000 m portal cut. The shared fog textures and the other biomes retain their settings.
+
+## Home input
+
+One overlay click handler covers the artwork and the accessible button. It retains a single early Home intent until the scene and menu readiness checks are installed. Focus moves to the menu heading. Pointer clicks near the Home release are briefly ignored by Start, while keyboard and assistive activations use the normal button. Global Enter and pointer Start now share the disabled-state check.

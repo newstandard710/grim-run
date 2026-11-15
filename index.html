@@ -248,7 +248,7 @@ button {cursor:pointer;}
   <div id="menu" class="modal-wrap hidden">
     <div class="modal">
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
-      <h1>GRIM <em>RUN</em></h1>
+      <h1 id="menu-title" tabindex="-1">GRIM <em>RUN</em></h1>
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
@@ -348,6 +348,32 @@ button {cursor:pointer;}
   </div>
   <div id="error" class="modal-wrap hidden"><div class="modal compact"><h2>Unable to start</h2><p id="error-message"></p></div></div>
   <!-- npm run build copies the pinned Phaser library to vendor for offline Android use. -->
+  <script>
+  (function(scope){
+    const home=document.getElementById('home-screen');
+    let activate=null, pending=false, lastPointer=null;
+    home.addEventListener('click',event=>{
+      if(home.classList.contains('hidden')||event.defaultPrevented||
+        (event.button!==undefined&&event.button!==0))return;
+      event.stopPropagation();
+      if(event.detail>0)lastPointer={x:event.clientX,y:event.clientY,time:event.timeStamp};
+      if(activate)activate();
+      else pending=true;
+    });
+    scope.GRIM_HOME_ENTRY={
+      connect(handler){
+        activate=handler;
+        if(pending){pending=false;activate();}
+        return ()=>{if(activate===handler)activate=null;};
+      },
+      blocksStart(event){
+        return Boolean(event?.detail>0&&lastPointer&&event.timeStamp>=lastPointer.time&&
+          event.timeStamp-lastPointer.time<360&&
+          Math.hypot(event.clientX-lastPointer.x,event.clientY-lastPointer.y)<44);
+      }
+    };
+  })(window);
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
   <div id="vendor-intro-screen" class="vendor-intro-scene hidden">
     <div id="vendor-intro-title">THE HEAVENLY MERCHANT</div>
@@ -1205,8 +1231,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.bindAction('practice-slow-btn','practiceSlow',()=>actions.togglePracticeSlow());
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
-      el('start-btn').addEventListener('click', () => actions.start());
-      el('home-enter-btn').addEventListener('click', () => actions.enter());
+      el('start-btn').addEventListener('click', event => this.requestMenuStart(event));
       el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
       el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
       el('reliquary-reset-btn').addEventListener('click', () => actions.openRefund());
@@ -1232,10 +1257,15 @@ window.GRIM_CONFIG = Object.freeze({
       el('teleport-confirm-cancel').addEventListener('click',()=>actions.cancelTeleport());
       el('teleport-confirm-yes').addEventListener('click',()=>actions.confirmTeleport());
       document.addEventListener('keydown', event => {
+        const home=!el('home-screen').classList.contains('hidden');
+        const menu=!el('menu').classList.contains('hidden');
+        const gameOver=!el('game-over').classList.contains('hidden');
+        if((event.code==='Enter'||event.code==='Space')&&
+          (home||menu||gameOver)&&event.target?.closest?.('button'))return;
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
-        if(!el('home-screen').classList.contains('hidden')){
+        if(home){
           if(event.code==='Enter'||event.code==='Space')actions.enter();
           return;
         }
@@ -1246,7 +1276,7 @@ window.GRIM_CONFIG = Object.freeze({
           case 'KeyR': actions.rewind(); break;
           case 'ArrowDown': case 'KeyS': actions.slideStart(); break;
           case 'Escape': case 'KeyP': actions.pause(); break;
-          case 'Enter': if (!el('menu').classList.contains('hidden') || !el('game-over').classList.contains('hidden')) actions.start(); break;
+          case 'Enter': if(menu)this.requestMenuStart();else if(gameOver)actions.start();break;
         }
       });
       document.addEventListener('keyup', event => {
@@ -1258,6 +1288,11 @@ window.GRIM_CONFIG = Object.freeze({
         this.releaseAll(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
       });
       document.addEventListener('contextmenu', event => event.preventDefault());
+    }
+    requestMenuStart(event){
+      if(el('menu').classList.contains('hidden')||el('start-btn').disabled||
+        scope.GRIM_HOME_ENTRY?.blocksStart(event))return;
+      this.actions.start();
     }
     bindAction(id, name, downAction, upAction) {
       const node = el(id);
@@ -1839,6 +1874,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.vendorArt=scope.GRIM_VENDOR_ART?new scope.GRIM_VENDOR_ART.VendorSanctuaries(this):null;
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.motionArt=scope.GRIM_MOTION_ART?new scope.GRIM_MOTION_ART.MotionAnimations(this):null;
+      const disconnectHome=scope.GRIM_HOME_ENTRY?.connect(()=>this.enterHome());
+      if(disconnectHome)this.events.once('shutdown',disconnectHome);
       this.drawScene();
       // Optional air and enemy details stream after the initial scene and controls exist.
       if(this.load?.spritesheet){
@@ -1849,7 +1886,9 @@ window.GRIM_CONFIG = Object.freeze({
     }
     enterHome(){
       if(this.state!=='home')return false;
-      this.wakeGameLoop();this.state='menu';this.ui.setMode('menu');return true;
+      this.wakeGameLoop();this.state='menu';this.ui.setMode('menu');
+      document.getElementById('menu-title')?.focus?.({preventScroll:true});
+      return true;
     }
     openReliquary(){
       if(this.state!=='menu')return;
