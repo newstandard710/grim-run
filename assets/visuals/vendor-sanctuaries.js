@@ -6,6 +6,7 @@
   const HALF_METERS=25,VENDOR_SCALE=1.75;
   const CANVAS_CELLS=24,CANVAS_WIDTH=272,CANVAS_HEIGHT=224;
   const CANVAS_URL='assets/cutscenes/v0197/vendor-canvas.webp?v=0.19.11';
+  const textureFor=kind=>kind==='devil'?'vendor-demon':'vendor-angel';
   const cinematicElapsed=s=>Math.max(0,(scope.GRIM_CONFIG.vendorIntroDurationMs-s.vendorIntroMs)/1000);
   function preload(s){
     for(const kind of ['angel','devil']){
@@ -46,21 +47,27 @@
   class VendorSanctuaries{
     constructor(scene){
       this.scene=scene;this.views=new Map();this.cinema=[];
-      const image=(key,depth,frame)=>{
+      this.image=(key,depth,frame)=>{
         if(!scene.textures.exists(key))return null;
         const v=scene.add.image(0,0,key,frame).setDepth(depth).setScrollFactor(0).setVisible(false);this.cinema.push(v);return v;
       };
       this.shade=scene.add.graphics().setScrollFactor(0).setDepth(26);
       this.back=scene.add.graphics().setScrollFactor(0).setDepth(26.1);
-      this.floor=image('sanctuary-angel-floor',27);
-      this.columns=[image('sanctuary-angel-architecture',26.3,0),image('sanctuary-angel-architecture',26.3,1)];
-      this.merchant=image('vendor-angel',28);
-      this.merchantMesh=scope.GRIM_CUTSCENES?.createMerchantMesh(scene,'vendor-angel',28);
-      this.canvasMerchant=image('vendor-canvas',28,0);
+      const initialMerchant=['angel','devil'].map(textureFor).find(key=>scene.textures.exists(key));
+      const floor=['angel','devil'].map(kind=>'sanctuary-'+kind+'-floor')
+        .find(key=>scene.textures.exists(key));
+      this.floor=floor?this.image(floor,27):null;
+      const architecture=['angel','devil'].map(kind=>'sanctuary-'+kind+'-architecture')
+        .find(key=>scene.textures.exists(key));
+      this.columns=architecture?[this.image(architecture,26.3,0),this.image(architecture,26.3,1)]:[];
+      this.merchant=initialMerchant?this.image(initialMerchant,28):null;
+      this.merchantMesh=initialMerchant?scope.GRIM_CUTSCENES?.createMerchantMesh(scene,initialMerchant,28):null;
+      this.canvasMerchant=this.image('vendor-canvas',28,0);
       this.motionPreference=scope.matchMedia?.('(prefers-reduced-motion: reduce)');
       this.introPresentation=null;
-      this.approachReady=scene.textures.exists('cutscene-vendor');
-      this.reaper=image(this.approachReady?'cutscene-vendor':'vendor-reaper-approach',29,0);
+      this.approachReady=scene.textures.exists('cutscene-vendor')&&
+        Number.isFinite(scope.GRIM_CUTSCENE_DATA?.vendor?.rig?.[0]?.travel);
+      this.reaper=this.image(this.approachReady?'cutscene-vendor':'vendor-reaper-approach',29,0);
       this.light=scene.add.graphics().setScrollFactor(0).setDepth(29.2);
       scene.events.once('shutdown',()=>this.destroy());
     }
@@ -74,7 +81,8 @@
         let view=this.views.get(k);
         if(!view){
           view={floor:s.add.image(x,y,key+'-floor').setOrigin(.5,0).setDepth(2.1),
-            columns:[0,1].map(frame=>s.add.image(0,0,key+'-architecture',frame).setOrigin(.5,740/768).setDepth(.53))};
+            columns:s.textures.exists(key+'-architecture')?[0,1].map(frame=>s.add.image(0,0,key+'-architecture',frame)
+              .setOrigin(.5,740/768).setDepth(.53)):[]};
           this.views.set(k,view);
         }
         view.floor.setPosition(x,y-3).setDisplaySize(HALF_METERS*2*scope.GRIM_CONFIG.pxPerMeter,85).setVisible(true);
@@ -87,37 +95,50 @@
       const s=this.scene,p=this.introPresentation;
       return s.state==='vendorIntro'&&p?.holdWidth===s.width&&p.holdHeight===s.height;
     }
+    beginPresentation(kind){
+      const s=this.scene,key=textureFor(kind),A=scope.GRIM_CUTSCENES;
+      const base=s.textures.exists(key);
+      const source=s.textures.exists('vendor-canvas')?s.textures.get('vendor-canvas'):null;
+      const offset=kind==='devil'?CANVAS_CELLS:0;
+      const canvas=source&&Array.from({length:CANVAS_CELLS},(_,i)=>i+offset).every(i=>source.has(i));
+      if(canvas&&!this.canvasMerchant)this.canvasMerchant=this.image('vendor-canvas',28,0);
+      if(base&&!this.merchant)this.merchant=this.image(key,28);
+      if(base&&!this.merchantMesh)this.merchantMesh=A.createMerchantMesh(s,key,28);
+      return {reduced:Boolean(this.motionPreference?.matches),approach:this.approachReady,
+        canvas:canvas?this.canvasMerchant:null,mesh:base?this.merchantMesh:null,
+        still:base?this.merchant:null,key,
+        floor:s.textures.exists('sanctuary-'+kind+'-floor')?this.floor:null,
+        columns:s.textures.exists('sanctuary-'+kind+'-architecture')?this.columns:[]};
+    }
     renderCinema(){
       const s=this.scene;this.shade.clear();this.back.clear();this.light.clear();
       this.cinema.forEach(v=>v.setVisible(false));
       this.merchantMesh?.setVisible(false);
       if(s.state!=='vendorIntro'){this.introPresentation=null;return;}
       const A=scope.GRIM_CUTSCENES;
-      this.introPresentation??={reduced:Boolean(this.motionPreference?.matches),
-        approach:this.approachReady,mesh:this.merchantMesh,canvas:this.canvasMerchant};
+      const devil=s.vendorType==='devil',kind=devil?'devil':'angel';
+      this.introPresentation??=this.beginPresentation(kind);
       const p=this.introPresentation;
       const t=A.vendorVisualTime(cinematicElapsed(s),p.reduced),motion=approachAt(t);
       if(t===A.VENDOR_ANIMATION_SECONDS){p.holdWidth=s.width;p.holdHeight=s.height;}
-      const w=s.width,h=s.height,devil=s.vendorType==='devil',kind=devil?'devil':'angel';
+      const w=s.width,h=s.height;
       const ground=h*.84,vx=w*.66,rx=w*.36-scope.GRIM_CUTSCENES.vendorTravel(h)*(1-motion.travel);
       const leftClearance=Math.min(w*.14,h*(devil?.24:.28));
       this.shade.fillStyle(devil?0x120811:0x071321,.88);this.shade.fillRect(0,0,w,h);
       this.shade.fillStyle(0x020710,.7);this.shade.fillRect(0,0,w,h*.11);this.shade.fillRect(0,h*.91,w,h*.09);
       drawAura(this.back,vx,ground,devil,A.vendorAmbientTime(t),h*.72/142*(1+motion.presence*.05));
-      this.floor?.setTexture('sanctuary-'+kind+'-floor').setOrigin(.5,0).setPosition(w*.5,ground-3)
+      p.floor?.setTexture('sanctuary-'+kind+'-floor').setOrigin(.5,0).setPosition(w*.5,ground-3)
         .setDisplaySize(w*.94,h*.19).setVisible(true);
-      this.columns.forEach((v,i)=>v?.setTexture('sanctuary-'+kind+'-architecture',i).setOrigin(.5,740/768)
+      p.columns.forEach((v,i)=>v.setTexture('sanctuary-'+kind+'-architecture',i).setOrigin(.5,740/768)
         .setPosition(vx+(i?w*.20:-w*.20-leftClearance),ground+9).setDisplaySize(w*.21,h*.82).setVisible(true));
-      this.merchant?.setTexture(devil?'vendor-demon':'vendor-angel').setOrigin(.5,1).setPosition(vx,ground+5)
-        .setDisplaySize(h*(devil?.88:.85),h*.72).setVisible(true);
-      if(A.placeMerchant(p.mesh,s,devil?'vendor-demon':'vendor-angel',
-        vx,ground+5,h*(devil?.88:.85),h*.72,t,devil))this.merchant?.setVisible(false);
+      const width=h*(devil?.88:.85);
       if(p.canvas){
         const cell=Math.floor(t/A.VENDOR_ANIMATION_SECONDS*(CANVAS_CELLS-1));
-        const width=h*(devil?.88:.85);
         p.canvas.setFrame(cell+(devil?CANVAS_CELLS:0)).setOrigin(.5,216/CANVAS_HEIGHT)
           .setPosition(vx,ground+5).setDisplaySize(width*CANVAS_WIDTH/256,h*.72*CANVAS_HEIGHT/208).setVisible(true);
-        this.merchant?.setVisible(false);
+      }else if(!A.placeMerchant(p.mesh,s,p.key,vx,ground+5,width,h*.72,t,devil)){
+        p.still?.setTexture(p.key).setOrigin(.5,1).setPosition(vx,ground+5)
+          .setDisplaySize(width,h*.72).setVisible(true);
       }
       this.reaper?.setFrame(p.approach?motion.frame:Math.min(11,Math.floor(t*4)))
         .setOrigin(p.approach?136/224:300/512,p.approach?214/224:480/512).setPosition(rx,ground)

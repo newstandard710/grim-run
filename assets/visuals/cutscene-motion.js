@@ -9,7 +9,8 @@
   function preload(s){
     for(const [key,file,cell,count] of [['cutscene-bow','reaper-bow.png',CELL,BOW_FRAMES],
       ['cutscene-vendor','reaper-vendor.webp',CELL,VENDOR_FRAMES],['cutscene-hands','bow-hands.png',64,BOW_FRAMES]])
-      s.load.spritesheet(key,ROOT+file+'?v=0.19.11',{frameWidth:cell,frameHeight:cell,endFrame:count-1});
+      s.load.spritesheet(key,ROOT+file+(key==='cutscene-vendor'?'?v=0.19.12':'?v=0.19.11'),
+        {frameWidth:cell,frameHeight:cell,endFrame:count-1});
   }
   function relicMotionAt(t){
     t=Math.max(0,t);
@@ -20,15 +21,20 @@
     return {pose,frame:t<1.65?Math.min(71,Math.round(pose)):t<HOLD_START?Math.min(167,Math.round(pose)):168,hold,grabbed:t>=1.65,
       glow:hold?smooth((t-HOLD_START)/.16)*(.90+.10*Math.sin((t-HOLD_START)*Math.PI)):0};
   }
-  const WALK_STRIDE=100/.6;
-  const vendorTravel=h=>2*WALK_STRIDE*.4*h/420;
+  const WALK_DISTANCE=400/3;
+  const vendorTravel=h=>WALK_DISTANCE*h/420;
   function approachAt(t){
     if(t>=VENDOR_ANIMATION_SECONDS)return {frame:VENDOR_SETTLED_FRAME,travel:1,presence:1};
-    const travel=smooth(t/2.2);
-    // Two complete gait cycles join the existing planted settle sequence.
-    const frame=t<2.2?Math.floor(travel*192)%96:
-      96+Math.min(95,Math.floor(smooth((t-2.2)/.8)*96));
-    return {frame,travel,presence:smooth((t-2.1)/.9)};
+    const rig=scope.GRIM_CUTSCENE_DATA?.vendor?.rig;
+    const presence=smooth((t-2.1)/.9);
+    if(!Number.isFinite(rig?.[0]?.travel))return {frame:0,travel:smooth(t/2.2),presence};
+    const sample=clamp(t/3)*VENDOR_SETTLED_FRAME,first=Math.floor(sample);
+    const frame=Math.min(VENDOR_SETTLED_FRAME-1,Math.round(sample));
+    // World travel is authored alongside the sole registration. Interpolate
+    // the root between paint samples, keeping its offset within half a pose.
+    const x=rig[first].travel,next=rig[first+1].travel;
+    const travel=(x+(next-x)*(sample-first))/WALK_DISTANCE;
+    return {frame,travel,presence};
   }
   function vendorVisualTime(elapsed,reduced=false){
     return reduced?VENDOR_ANIMATION_SECONDS:Math.min(VENDOR_ANIMATION_SECONDS,Math.max(0,elapsed));
@@ -104,5 +110,5 @@
   }
   scope.GRIM_CUTSCENES={CELL,ANCHOR,BOW_FRAMES,VENDOR_FRAMES,SHRINE_MS,HOLD_START,HOLD_SECONDS,VENDOR_ANIMATION_SECONDS,VENDOR_SETTLED_FRAME,
     vendorVisualTime,vendorAmbientTime,
-    vendorTravel,WALK_STRIDE,preload,relicMotionAt,approachAt,merchantPose,merchantPoint,createMerchantMesh,placeMerchant};
+    vendorTravel,WALK_DISTANCE,preload,relicMotionAt,approachAt,merchantPose,merchantPoint,createMerchantMesh,placeMerchant};
 })(typeof window!=='undefined'?window:globalThis);
