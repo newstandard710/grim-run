@@ -189,6 +189,30 @@
     }
   }
 
+  function paintSnowTread(ctx,from,width,surfaceY,weightAt){
+    if(weightAt(from)<=0&&weightAt(from+width)<=0)return;
+    for(let x=0;x<width;x+=4){
+      const weight=weightAt(from+x);
+      if(weight<=0)continue;
+      const y=surfaceY(x);
+      const drift=(Math.cos((from+x)*.048)+Math.sin((from+x)*.119))*.5;
+      const snow=ctx.createLinearGradient(x,y,x,y+11+drift*3);
+      snow.addColorStop(0,`rgba(207,225,237,${weight*.82})`);
+      snow.addColorStop(.32,`rgba(158,187,211,${weight*.74})`);
+      snow.addColorStop(.66,`rgba(89,115,145,${weight*.51})`);
+      snow.addColorStop(1,'rgba(89,115,145,0)');
+      ctx.fillStyle=snow;ctx.fillRect(x,y-1,Math.min(width-x,4),14);
+    }
+    for(let worldX=Math.ceil(from/9)*9;worldX<from+width-2;worldX+=9){
+      const weight=weightAt(worldX),x=worldX-from;
+      if(weight<=0)continue;
+      const n=(1+Math.sin(worldX*1.193))/2,y=surfaceY(x)+2+n*4;
+      ctx.fillStyle=n>.73?`rgba(31,46,69,${weight*.48})`:
+        `rgba(225,239,249,${weight*(.36+n*.22)})`;
+      ctx.fillRect(x,y,1.5+n*4,1+n*.7);
+    }
+  }
+
   function drawTundraGround(scene,g,from,to){
     // A few soft frost strokes sit just below the tiled material's snow crust.
     const first=Math.ceil(from/132)*132,startX=scene.startX??200;
@@ -208,7 +232,7 @@
   scope.GRIM_WORLD_ART=Object.freeze({
     openingGroundPalette,drawOpeningGround,
     foothillsGroundPalette,drawFoothillsGround,
-    tundraGroundPalette,drawTundraGround,
+    tundraGroundPalette,drawTundraGround,paintSnowTread,
     SURFACE_BIOMES,UNDERWORLD_BIOMES,WORLD_BIOMES,biomeWeights,underworldWeights,
     worldGroundPalette,underworldGroundPalette,
     drawUnderworldGround

@@ -47,17 +47,18 @@ for(const speed of [300,362.5,425])for(const hz of [30,60,120]){
  }
 }
 assert.equal(A.runAtlasFrame(A.STRIDE_PX),0);assert.equal(A.runAtlasFrame(-A.STRIDE_PX/192),191);
-assert.equal(A.jumpFrame({grounded:true,visualLandingMs:A.LAND_MS}),18);
+assert.equal(A.jumpFrame({grounded:true,visualLandingMs:A.LAND_MS}),16);
 assert.equal(A.jumpFrame({grounded:true,visualLandingMs:0}),23);
-assert.equal(A.jumpFrame({hovering:true}),11.5);
+assert.equal(A.jumpFrame({hovering:true}),4);
 const shortHop=p=>A.jumpFrame({visualLaunchVelocity:610,...p});
-assert(Math.abs(shortHop({jumpAgeMs:54.99,velocityY:-260})-
-  shortHop({jumpAgeMs:55.01,velocityY:-260}))<.01,'Early release preserves launch/rise continuity');
-assert(Math.abs(shortHop({jumpAgeMs:250,velocityY:-.01})-
-  shortHop({jumpAgeMs:250,velocityY:.01}))<.01,'Ascent, fall and hover meet at a common apex');
-assert.equal(shortHop({jumpAgeMs:0,velocityY:0}),11.5,'Walking off a lip starts a fall');
-assert.equal(shortHop({jumpAgeMs:0,velocityY:-420,airJumpUsed:true}),5,'Air jump begins in an airborne pose');
-assert.equal(shortHop({jumpAgeMs:420,velocityY:370}),17,'Landing pose is only displayed after contact');
+for(const velocityY of [-600,-310,-100])
+  assert.equal(shortHop({jumpAgeMs:160,velocityY}),4,'Rise and short hop hold one stance');
+assert.equal(shortHop({jumpAgeMs:250,velocityY:0}),4,'Ascent, fall and hover share an apex');
+assert.equal(shortHop({jumpAgeMs:0,velocityY:0}),4,'Walking off a lip starts gathered');
+assert.equal(shortHop({jumpAgeMs:0,velocityY:-420,airJumpUsed:true}),12);
+const falling=Array.from({length:501},(_,velocityY)=>shortHop({jumpAgeMs:250,velocityY}));
+assert(falling.every((pose,i)=>pose>=4&&pose<=16&&(!i||pose>=falling[i-1])));
+assert.equal(falling.at(-1),16,'Landing recovery begins only on contact');
 const frameSet=new Set();for(let t=0;t<=1;t+=.001)frameSet.add(Math.round(A.cutFrame(t)));assert.equal(frameSet.size,24);
 // The physical weapon is rigid and carry-sized; a separate spectral arc owns the unchanged damage reach.
 // Its pointed end must stay ahead of its socket along the entire active stroke.

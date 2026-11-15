@@ -221,11 +221,12 @@ async function abyssReview(browser){
   const record=async(name,distance,variant)=>{
     const {page,errors}=session;
     const gap=await page.evaluate(({distance,variant})=>window.biomeReview.stageGap(distance,variant),{distance,variant});
-    await page.waitForFunction(()=>{
+    await page.waitForFunction(isSnow=>{
       const {scene:s}=window.biomeReview;
       s.drawScene();
-      return !s.terrainMaterialLoading.size&&s.abyssFogViews.size>0&&s.abyssBackdropViews.size>0;
-    },null,{polling:100,timeout:18000});
+      return !s.terrainMaterialLoading.size&&s.abyssBackdropViews.size>0&&
+        (isSnow?s.abyssFogViews.size===0:s.abyssFogViews.size>0);
+    },name==='tundra',{polling:100,timeout:18000});
     const dir=path.join(outputs,name);fs.mkdirSync(dir,{recursive:true});
     const samples=[];
     for(let i=0;i<14;i++){

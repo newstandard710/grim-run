@@ -44,6 +44,25 @@ const server=http.createServer((req,res)=>{
    await page.waitForTimeout(i<8?154:308);
   }
   assert.equal(frames.size,16);assert(roots.every(y=>y===roots[0]),'Plant base remains fixed through its entire cycle');
+  const slope=await page.evaluate(()=>{
+   const s=window.grimRun.scene.scenes[0],o=s.obstacles[0];
+   const image=s.obstacleSpriteObjects.get(o),geometry=s.plantGeometry(o);
+   const groundAt=s.terrain.groundAt,downhill=geometry.floor+24;
+   s.terrain.groundAt=x=>x===geometry.x?downhill:groundAt(x);
+   s.drawObstacleSprite(o);
+   const root=image.plantRoot;
+   const mounted={cropped:image.isCropped&&image.plantNext.isCropped,
+    rootY:root.y+root.scaleY*36,expected:downhill+3,
+    collisionUnchanged:JSON.stringify(geometry)===JSON.stringify(s.plantGeometry(o))};
+   s.terrain.groundAt=x=>x===geometry.x?geometry.floor:groundAt(x);
+   s.drawObstacleSprite(o);
+   mounted.restored=!image.isCropped&&!image.plantNext.isCropped&&!root.visible;
+   s.terrain.groundAt=groundAt;
+   o.destroyed=true;s.cleanupObstacleSprites();mounted.disposed=!root.scene;
+   return mounted;
+  });
+  assert(slope.cropped&&slope.collisionUnchanged&&slope.restored&&slope.disposed);
+  assert(Math.abs(slope.rootY-slope.expected)<.001,'Only the shared painted root extends into a downhill surface');
   // Render all six support variants on real terrain/gaps, including rare skins.
   for(const [biome,from,to] of [['foothills',1700,2300],['tundra',2500,4600],['caves',5200,5900],['crystals',6200,6900],['ashlands',7200,7900],['lava',8200,9200]]){
    const setup=await page.evaluate(({biome,from,to})=>{
@@ -110,13 +129,17 @@ const server=http.createServer((req,res)=>{
      if(Math.abs(x-geo.x)>geo.half+30)bankPixels++;
     }
    }
-   assert(gapPixels<8,biome+' surface mist cannot span the opening: '+gapPixels);
-   assert(bankPixels>40,biome+' still renders surface fog on the solid banks: '+bankPixels);
-   console.log('Ground fog tapers at',biome,'gap');
+   if(biome==='tundra'){
+    assert.equal(gapPixels+bankPixels,0,'Pure Tundra has no surface fog in the gap or along either bank');
+   }else{
+    assert(gapPixels<8,biome+' surface mist cannot span the opening: '+gapPixels);
+    assert(bankPixels>40,biome+' still renders surface fog on the solid banks: '+bankPixels);
+   }
+   console.log('Checked surface fog and gap separation in',biome);
 
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS actual Chromium: rooted eight-pose carnivorous plant, six curved terrain supports, and foreground fog taper at real gaps in all eight biomes.');
+  console.log('PASS actual Chromium: 16 rooted carnivorous plant poses, six curved terrain supports, and surface fog checks at real gaps in all eight biomes.');
  }finally{
   const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'visual-revision-preview.webm'));
   await browser.close();await new Promise(r=>server.close(r));

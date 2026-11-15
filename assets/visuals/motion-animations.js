@@ -6,8 +6,8 @@
   // over 188 world pixels instead of playing all four at that distance.
   const GAITS_PER_SHEET=RUN?.gaitsPerSheet||4,PIXELS_PER_GAIT=RUN?.pixelsPerGait||188,
     STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
-  const JUMP_TWEENS=new Set([4,5,7,9,11,12,16,17,18,19,20,21,22]);
-  const JUMP_TWEEN_CELL=192, JUMP_TWEEN_KEY='motion-reaper-jump-inbetweens';
+  const AIR_KEYS=Object.freeze([0,4,12,16,18,20,23]),AIR_STEPS=4;
+  const JUMP_TWEEN_CELL=192, JUMP_TWEEN_KEY='motion-reaper-jump-deliberate';
   // The old 0.14-source scale was sized for the damage reach, making the
   // cutting weapon larger than the carried one. One carry-matched scale is
   // immutable throughout windup, swing and recovery; reach belongs to the arc.
@@ -24,24 +24,34 @@
     const count=RUN?.frames||COUNT;
     return Math.floor(((distance/STRIDE_PX*count)%count+count)%count);
   }
+  function ease(t){t=clamp(t);return t*t*(3-2*t);}
   function jumpFrame(p){
-    if(p.grounded)return 18+clamp(1-(p.visualLandingMs||0)/LAND_MS)*5;
-    const apex=11.5;
-    if(p.hovering)return apex;
+    if(p.grounded){
+      const elapsed=LAND_MS-(p.visualLandingMs||0);
+      if(elapsed<36)return mix(16,18,ease(elapsed/36));
+      if(elapsed<86)return mix(18,20,ease((elapsed-36)/50));
+      return mix(20,23,ease((elapsed-86)/(LAND_MS-86)));
+    }
+    if(p.hovering)return 4;
     const age=p.jumpAgeMs||0,vy=p.velocityY||0;
     if(vy<0){
-      const first=p.airJumpUsed?5:0, rise=p.airJumpUsed?6:4, launchMs=55;
-      if(age<launchMs)return mix(first,rise,age/launchMs);
-      const launchSpeed=Math.max(101,p.visualLaunchVelocity||610);
-      const target=vy < -100
-        ? mix(rise,10,clamp((launchSpeed+vy)/(launchSpeed-100)))
-        : mix(10,apex,clamp((vy+100)/100));
-      // Cutting jump velocity changes where the apex falls. Initial rise
-      // poses have time to catch up across frames rather than skipping ahead.
-      const visualCeiling=rise+(age-launchMs)/20;
-      return Math.min(target,visualCeiling);
+      // Both jump types settle into the same gathered stance and hold it.
+      // A second impulse gathers the extended airborne leg instead of
+      // replaying a ground push-off.
+      return p.airJumpUsed?mix(12,4,ease(age/110)):mix(0,4,ease(age/105));
     }
-    return mix(apex,17,clamp(vy/365));
+    // The extension is one movement. Hold at the apex and ease the reaching
+    // foot out as the fall develops, including after walking off a ledge.
+    return vy<245?mix(4,12,ease((vy-85)/160)):mix(12,16,ease((vy-245)/130));
+  }
+  function airPose(t,hasDetails){
+    const right=AIR_KEYS.findIndex(key=>key>=t);
+    if(right<=0||AIR_KEYS[right]===t)return {frame:AIR_KEYS[Math.max(0,right)],tween:false};
+    const left=right-1,a=AIR_KEYS[left],b=AIR_KEYS[right];
+    const step=Math.round((t-a)/(b-a)*AIR_STEPS);
+    if(!hasDetails||step===0||step===AIR_STEPS)
+      return {frame:step<AIR_STEPS/2?a:b,tween:false};
+    return {frame:left*(AIR_STEPS-1)+step-1,tween:true};
   }
   function cutFrame(progress){
     const t=clamp(progress);
@@ -117,8 +127,8 @@
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
   function queueAirDetails(s){
-    s.load?.spritesheet?.(JUMP_TWEEN_KEY,ROOT+'reaper-jump-inbetweens.webp?v=1',
-      {frameWidth:JUMP_TWEEN_CELL,frameHeight:JUMP_TWEEN_CELL,endFrame:22});
+    s.load?.spritesheet?.(JUMP_TWEEN_KEY,ROOT+'reaper-jump-deliberate.webp?v=1',
+      {frameWidth:JUMP_TWEEN_CELL,frameHeight:JUMP_TWEEN_CELL,endFrame:17});
   }
   class MotionAnimations{
     constructor(s){
@@ -171,11 +181,10 @@
       const rig=name==='reaper-cut-body'?cutRig(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs):null;
       const alpha=p.invulMs>0&&Math.floor((s.elapsed||0)/.083333)%2===0?.58:1;
       const solidRun=name==='reaper-run'&&this.runReady;
-      const from=Math.floor(t);
-      const tween=name==='reaper-jump'&&JUMP_TWEENS.has(from)&&Math.abs(t-from-.5)<=.25&&
-        s.textures?.exists?.(JUMP_TWEEN_KEY)&&s.textures.get(JUMP_TWEEN_KEY).has(from);
+      const air=name==='reaper-jump'?airPose(t,s.textures?.exists?.(JUMP_TWEEN_KEY)):null;
+      const tween=air?.tween;
       const atlasFrame=solidRun?runAtlasFrame(p.x-(s.startX||0)):
-        tween?from:(loop?Math.round(t)%COUNT:Math.round(t));
+        air?air.frame:(loop?Math.round(t)%COUNT:Math.round(t));
       const texture=solidRun?'motion-reaper-run-solid':tween?JUMP_TWEEN_KEY:'motion-'+name;
       const anchor=solidRun?RUN.anchor:DATA.anchor,cell=solidRun?RUN.cell:DATA.cell[0];
       // One opaque registered painting at a time, including the derived

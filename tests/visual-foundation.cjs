@@ -5,7 +5,7 @@ const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
 const html=read('index.html'),visual=read('assets/visuals/visual-system.js');
 const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
-assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=0.13.6-abyss-fog"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=snow-tread1"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
 assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=ground2"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');

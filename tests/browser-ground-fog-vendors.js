@@ -92,7 +92,7 @@ const server=http.createServer((req,res)=>{
             if(bank.fogGaps.some(g=>bank.x+v.x>=g.start&&bank.x+v.x<=g.end))errors.push(Math.abs(v.alpha));
           }
         }
-        return {fog:fog.length,onscreenFog:fog.filter(v=>
+        return {fog:fog.length,tundraAbyss:[...s.abyssFogViews.values()].filter(view=>view.biome==='tundra').length,onscreenFog:fog.filter(v=>
             v.x>=s.cameraX&&v.x<=s.cameraX+s.width).length,
           colors:[...new Set(fog.map(v=>v.tintTopLeft))],
           rearDepth:rear[0]?.depth,frontDepth:front[0]?.depth,
@@ -105,6 +105,11 @@ const server=http.createServer((req,res)=>{
           terrainDepth:s.terrainBase.depth,surfaceDepth:[...s.terrainSurfaceViews.values()][0]?.sprite.depth,
           supportDepth:.53,obstacleDepth:s.obstacleFront.depth};
       },meters);
+      if(name==='tundra'){
+        assert.equal(result.fog,0,'Pure Tundra has no surface fog in either layer');
+        assert.equal(result.tundraAbyss,0,'Pure Tundra has no abyss mist');
+        continue;
+      }
       assert(result.fog>0,name+' has visible terrain fog');
       assert(result.onscreenFog>0,name+' has a mist bank on the visible ground');
       assert(result.mask,name+' fog has a solid-terrain mask');

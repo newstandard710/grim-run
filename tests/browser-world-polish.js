@@ -62,13 +62,23 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    await stage(m);
    const roots=await page.evaluate(biome=>{
     const s=window.grimRun.scene.scenes[0],skins=window.GRIM_OBSTACLE_SPRITES.filter(v=>v.category==='cut'&&v.biome===biome),out=[];
-    // Every sprite uses a real local terrain center, including sloping ground.
+    // Every sprite uses the real local terrain at its painted foot.
     for(const [i,skin]of skins.entries()){
-     let x=s.player.x+105+i*205;for(let j=0;j<120&&s.terrain.groundAt(x+30)===null;j++)x+=6;
-     const floor=s.terrain.groundAt(x+30);const ob={type:'bramble',x,y:floor-288,width:60,height:288,variant:i,destroyed:false,reviewSkin:skin};s.obstacles.push(ob);
+     const [foot]=window.GRIM_OBSTACLE_MOUNTS[skin.id];
+     const offset=30+(foot-.5)*60*s.obstacleSpriteScaleFor(skin,'bramble').x;
+     let x=s.player.x+105+i*205;
+     for(let j=0;j<120&&s.terrain.groundAt(x+offset)===null;j++)x+=6;
+     const floor=s.terrain.groundAt(x+offset);
+     const ob={type:'bramble',x,y:floor-288,width:60,height:288,variant:i,destroyed:false,reviewSkin:skin};
+     s.obstacles.push(ob);
+     out.push({ob,expected:floor+s.obstacleVisualInset(ob,skin),footX:x+offset});
     }
-    s.drawScene();for(const ob of s.obstacles){const im=s.obstacleSpriteObjects.get(ob);out.push({id:ob.reviewSkin.id,masked:Boolean(im.mask),shouldMask:Boolean(ob.reviewSkin.buryRoots),y:im.y,expected:s.terrain.groundAt(ob.x+30)+s.obstacleVisualInset(ob,ob.reviewSkin)});}return out;
-   },biome);for(const v of roots){assert.equal(v.y,v.expected);assert.equal(v.masked,v.shouldMask);}
+    s.drawScene();return out.map(({ob,expected,footX})=>{
+     const im=s.obstacleSpriteObjects.get(ob);
+     return {id:ob.reviewSkin.id,masked:Boolean(im.mask),shouldMask:Boolean(ob.reviewSkin.buryRoots),
+      x:im.x,y:im.y,expected,footX};
+    });
+   },biome);for(const v of roots){assert.equal(v.x,v.footX);assert.equal(v.y,v.expected);assert.equal(v.masked,v.shouldMask);}
    await page.waitForTimeout(200);await page.evaluate(()=>window.grimRun.scene.scenes[0].drawScene());await shot('cut-roots-'+biome);
   }
   // Compare the same abyss with the legacy backing ablated versus restored.

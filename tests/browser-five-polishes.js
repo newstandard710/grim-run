@@ -72,6 +72,8 @@ async function opening(browser,url){
     }));
     assert.equal(boot.tableau,null,'The characters draw before all opening images settle');
     assert.equal(boot.handlers,false,'The opening is the existing view during the Phaser preload');
+    await tab.page.touchscreen.tap(21,26);
+    assert(await tab.page.locator('#home-screen').isVisible(),'Early Home tap waits for the scene');
     const pixels=()=>tab.page.evaluate(()=>{
       const c=document.getElementById('title-art'),g=c.getContext('2d');
       return [[.70,.77],[.87,.75]].map(([x,y])=>Array.from(g.getImageData(c.width*x-16,c.height*y,32,30).data));
@@ -92,10 +94,13 @@ async function opening(browser,url){
     await tab.page.emulateMedia({reducedMotion:'no-preference'});
     release.splice(0).forEach(resolve=>resolve());
     await tab.page.waitForFunction(()=>Boolean(window.grimRun?.scene.scenes[0]?.visuals?.reviewV2),null,{timeout:45000});
-    await tab.page.locator('#home-enter-btn').tap();
+    await tab.page.locator('#menu').waitFor({state:'visible'});
     const control=tab.page.locator('#start-btn');
     assert(await control.isDisabled(),'Menu waits for the first verified run pose');
     assert.match(await control.innerText(),/PREPARING REAPER/);
+    await tab.page.keyboard.press('Enter');
+    assert.equal(await tab.page.evaluate(()=>window.grimRun.scene.scenes[0].state),'menu',
+      'Keyboard Start respects loading readiness');
     assert(await tab.page.locator('#frontispiece').isVisible(),'Menu loading has the same visible tableau');
     boot.preparingReaper=true;
     releaseFirstPose();
@@ -207,9 +212,11 @@ async function gameplay(tab, older){
     assert(values.crawler.angle>.30,'Crawler tilts downhill along the footprint');
     assert.equal(values.crawler.texture,'enemy-ground-inbetweens');
     assert.equal(values.imp.texture,'enemy-ground-inbetweens');
-    assert(values.air.poses.some(([, , ,name])=>name==='motion-reaper-jump-inbetweens'));
+    assert(values.air.poses.some(([, , ,name])=>name==='motion-reaper-jump-deliberate'));
     const rise=values.air.poses.slice(0,7);
     assert(rise.every((v,i)=>i===0||v[1]-rise[i-1][1]<1.5),'Short-hop pose remains continuous');
+    assert(values.air.poses.slice(6,14).every(([,frame])=>frame===4),
+      'Short-hop legs hold the gathered posture through the apex');
   }
   assert.deepEqual(tab.errors,[]);
   return values;
