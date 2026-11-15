@@ -4,6 +4,7 @@
  */
 (function(scope){
   'use strict';
+  const TUCK_RELEASE_MS=85;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones','deathsReversal',
     'skeletalWings','infernalBoots','rapidFire','powerShot','chainShot','vitalEssence','soulMend','gravewingAscension'];
@@ -42,7 +43,7 @@
       const age=p.visualTuckMs||0;
       return age<75?0:age<140?1:1+Math.floor(age/125)%2;
     }
-    if(p.visualTuckReleaseMs>0)return 3;
+    if(p.visualTuckMs>0||p.visualTuckReleaseMs>0)return 3;
     return null;
   }
   class PowerAnimations{
@@ -98,7 +99,7 @@
     get wingsReady(){return Boolean(this.ready['power-wings']);}
     level(id){return this.scene.powerManager?.level(id)||0;}
     reset(){
-      this.bursts=[];this.sequence=0;
+      this.bursts=[];this.sequence=0;this.tuckLanding=false;
       for(const sprite of this.pool)sprite?.setVisible(false);
       for(const sprite of this.bonePool)sprite?.setVisible(false);
       this.fx?.clear();
@@ -134,9 +135,11 @@
     tick(ms){
       const s=this.scene,p=s.player;if(!p)return;
       const tuck=!p.grounded&&(p.airTuck||p.holdSlide);
+      if(!p.grounded||!p.visualLandingMs)this.tuckLanding=false;
+      else if(p.visualTuckMs>0)this.tuckLanding=true;
       if(tuck){p.visualTuckMs=(p.visualTuckMs||0)+ms;p.visualTuckReleaseMs=0;}
       else{
-        if(p.visualTuckMs>0&&!p.grounded)p.visualTuckReleaseMs=85;
+        if(p.visualTuckMs>0&&!p.grounded)p.visualTuckReleaseMs=TUCK_RELEASE_MS;
         p.visualTuckMs=0;p.visualTuckReleaseMs=Math.max(0,(p.visualTuckReleaseMs||0)-ms);
       }
       if(!s.motionArt?.ready){
@@ -397,5 +400,5 @@
       this.bursts=[];this.pool=[];this.wingSprites=[];
     }
   }
-  scope.GRIM_POWER_ART={preload,PowerAnimations,actionFrame,relicMotionAt,ORDER,COLORS,SHRINE_METERS,SHRINE_MS,MAX_BURSTS,SHEETS};
+  scope.GRIM_POWER_ART={preload,PowerAnimations,actionFrame,relicMotionAt,ORDER,COLORS,SHRINE_METERS,SHRINE_MS,MAX_BURSTS,SHEETS,TUCK_RELEASE_MS};
 })(typeof window!=='undefined'?window:globalThis);

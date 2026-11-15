@@ -21,6 +21,7 @@ const server=http.createServer((req,res)=>{
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperReady,null,{timeout:45000});
     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].visuals.reaperPoseSprites.hover,null,{timeout:45000});
+    await page.waitForFunction(()=>window.grimRun.scene.scenes[0].motionArt.airReady,null,{timeout:45000});
     await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='paused';s.ui.setMode('playing');s.obstacles=[];s.enemies=[];});
     const ready=await page.evaluate(()=>{
@@ -46,8 +47,8 @@ const server=http.createServer((req,res)=>{
       p.y=ground-25;p.grounded=false;p.onSoulPlatform=false;p.velocityY=0;p.attackMs=0;p.airTuck=false;p.holdSlide=false;
       p.invulMs=0;p.slowMs=0;p.visualFireMs=0;p.visualTuckReleaseMs=0;p.airJumpUsed=false;
       s.powerManager.levels.ravenWings=4;s.powerManager.levels.skeletalWings=4;
-      p.hovering=true;p.hoverBudgetMs=1100;p.visualTuckMs=220;
-      if(mode==='tuck'){p.airTuck=true;p.hovering=false;}
+      p.hovering=true;p.hoverBudgetMs=1100;p.visualTuckMs=0;
+      if(mode==='tuck'){p.airTuck=true;p.hovering=false;p.visualTuckMs=220;}
       if(mode==='attack'){p.attackMs=150;p.hovering=false;}
       if(mode==='tuck-attack'){p.airTuck=true;p.attackMs=150;p.hovering=false;}
       s.drawScene();window.grimRun.step(performance.now(),0);
@@ -83,10 +84,30 @@ const server=http.createServer((req,res)=>{
     for(const mode of ['tuck','attack','tuck-attack']){
       const info=await setup(mode);
       if(mode==='attack')assert(info.motion?.name==='reaper-cut-body'&&info.motionVisible&&info.weapon,'The rebuilt aerial cut and rigid blade are visible with equipped wings');
-      else {assert(info.visible,'Dedicated '+mode+' pose is visible');assert.equal(info.frame,mode==='tuck'?2:9);}
+      else if(mode==='tuck'){
+        assert(info.motionVisible&&info.motion?.name==='reaper-tuck','Dedicated registered tuck is visible with equipped wings');
+        assert.equal(info.motion.atlasFrame,28);
+        assert.equal(info.visible,false,'Only the registered tuck paints the body');
+      }else {
+        assert(info.visible,'Dedicated tuck-attack is visible');
+        assert.equal(info.frame,9);
+        assert.equal(info.motionVisible,false,'Tuck movement yields to the authored attack');
+      }
       await page.locator('#game canvas').screenshot({path:path.join(dir,'power-'+mode+'-phone.png')});
       await page.waitForTimeout(350);
     }
+    await setup('tuck');
+    const release=await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0],p=s.player;
+      p.airTuck=false;p.holdSlide=false;
+      return [0,20,20,20,25].map((dt,i)=>{
+        if(i)s.powerArt.tick(dt);
+        s.drawScene();
+        return [s.motionArt.state.atlasFrame,s.motionArt.body.filter(v=>v.visible).length,s.powerArt.action.visible];
+      });
+    });
+    assert.deepEqual(release,[[29,1,false],[30,1,false],[31,1,false],[32,1,false],[19,1,false]],
+      'Release progresses through a single registered silhouette into the current airborne pose');
     const powers=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],a=s.powerArt;
       const results=[];

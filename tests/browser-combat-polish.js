@@ -33,18 +33,27 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    for(const id of window.GRIM_POWERS.POWER_ORDER.concat(window.GRIM_POWERS.DEVIL_ORDER))s.powerManager.levels[id]=0;
    s.gunUnlocked=true;s.drawScene();
   });
-  for(const action of ['slide-cut','soul-cleave','stand-shot','slide-shot','air-shot']){
+  for(const action of ['slide-cut','soul-cleave','stand-shot','slide-shot','air-shot','tucked-shot']){
    await setup();const frames=new Set();
    for(let i=0;i<12;i++){
     const pose=await page.evaluate(({action,i})=>{
      const s=window.grimRun.scene.scenes[0],p=s.player,progress=i/12;
      if(action==='slide-cut'){p.sliding=true;p.attackMs=260*(1-progress);}
      else if(action==='soul-cleave'){s.powerManager.levels.soulCleave=4;p.attackMs=260*(1-progress);}
-     else {p.visualFireMs=260*(1-progress);p.sliding=action==='slide-shot';p.grounded=action!=='air-shot';if(!p.grounded)p.y=(s.terrain.groundAt(p.x)||s.groundY)-50;}
+     else {
+      p.visualFireMs=260*(1-progress);
+      p.sliding=action==='slide-shot';
+      p.airTuck=action==='tucked-shot';
+      p.grounded=action!=='air-shot'&&!p.airTuck;
+      if(!p.grounded)p.y=(s.terrain.groundAt(p.x)||s.groundY)-50;
+     }
      s.drawScene();window.grimRun.step(performance.now(),0);
-     const a=s.combatArt;return {name:a.reaperState?.name,frames:a.reaper.filter(v=>v.visible).map(v=>v.frame.name),old:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible)};
+     const a=s.combatArt;return {name:a.reaperState?.name,frames:a.reaper.filter(v=>v.visible).map(v=>[v.frame.name,v.alpha]),old:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible)};
     },{action,i});
-    assert(pose.name&&!pose.old,action+' exclusively displays its dedicated full-body drawings');pose.frames.forEach(f=>frames.add(Number(f)));
+    assert(pose.name&&!pose.old,action+' exclusively displays its dedicated full-body drawings');
+    assert.equal(pose.frames.length,1,action+' uses one authored body and weapon painting');
+    assert.equal(pose.frames[0][1],1,action+' keeps the body opaque outside invulnerability');
+    frames.add(Number(pose.frames[0][0]));
     if(i===5)await shot(action);await page.waitForTimeout(35);
    }
    assert(frames.size>=6,action+' visits enough distinct authored poses');
