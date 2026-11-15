@@ -208,10 +208,10 @@ button {cursor:pointer;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
-  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.19.3">
+  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.19.10">
 </head>
 <body>
-  <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="title-art"></canvas><div class="title-mist"></div></div>
+  <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
     <div class="home-edition">GRIM RUN · v0.19.9</div>
@@ -260,7 +260,7 @@ button {cursor:pointer;}
   <div id="reliquary-screen" class="modal-wrap meta-wrap hidden" aria-label="The Underworld Reliquary">
     <div class="modal meta-modal" role="dialog" aria-modal="true" aria-labelledby="reliquary-title">
       <div class="eyebrow">POWERS THAT OUTLIVE DEATH</div>
-      <h2 id="reliquary-title">THE RELIQUARY</h2>
+      <h2 id="reliquary-title" tabindex="-1">THE RELIQUARY</h2>
       <div class="meta-wallet"><span class="soul-icon">✦</span> <span id="reliquary-souls">0</span> SOULS AVAILABLE</div>
       <p class="meta-intro">Spend Souls to strengthen every future run.</p>
       <div id="reliquary-cards" class="meta-grid"></div>
@@ -1219,18 +1219,28 @@ window.GRIM_CONFIG = Object.freeze({
   const el = id => {let node=uiNodes.get(id);if(!node){node=document.getElementById(id);if(node)uiNodes.set(id,node);}return node;};
   const show = (id, on) => {const node=el(id);if(node.classList.contains('hidden')===Boolean(on))node.classList.toggle('hidden', !on);};
   const writeText=(id,value)=>{const node=el(id),text=String(value);if(node.textContent!==text)node.textContent=text;};
+  const heldAction = code => {
+    if (['Space','ArrowUp','KeyJ'].includes(code)) return 'jump';
+    if (['ArrowDown','KeyS'].includes(code)) return 'slide';
+    return null;
+  };
   class GrimUI {
     constructor(actions) {
       this.actions = actions;
       this.activePointers = new Map();
       this.heldKeys = new Set();
+      this.holdSources = {jump:new Set(),slide:new Set()};
+      this.holdActions = {
+        jump:[actions.jump,actions.jumpEnd],
+        slide:[actions.slideStart,actions.slideEnd]
+      };
       this.selecting = false;
       this.bindAction('attack-btn', 'attack', () => actions.attack());
       this.bindAction('crossbow-btn', 'crossbow', () => actions.fireCrossbow());
       this.bindAction('rewind-btn','rewind',()=>actions.rewind());
       this.bindAction('practice-slow-btn','practiceSlow',()=>actions.togglePracticeSlow());
-      this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
-      this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
+      this.bindAction('jump-btn', 'jump');
+      this.bindAction('slide-btn', 'slide');
       el('start-btn').addEventListener('pointerdown',event=>{
         if(scope.GRIM_HOME_ENTRY?.blocksStart(event))event.preventDefault();
       });
@@ -1265,6 +1275,7 @@ window.GRIM_CONFIG = Object.freeze({
         const activate=event.code==='Enter'||event.code==='Space';
         const intro=!el('vendor-intro-screen').classList.contains('hidden');
         const vendor=!el('upgrade-screen').classList.contains('hidden');
+        const reliquary=!el('reliquary-screen').classList.contains('hidden');
         if(activate&&this.vendorSkipKeys.has(event.code)){event.preventDefault();return;}
         if(activate&&intro){
           event.preventDefault();
@@ -1274,7 +1285,7 @@ window.GRIM_CONFIG = Object.freeze({
           }
           return;
         }
-        if(activate&&(home||menu||gameOver||vendor)&&event.target?.closest?.('button'))return;
+        if(activate&&(home||menu||gameOver||vendor||reliquary)&&event.target?.closest?.('button'))return;
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
@@ -1282,12 +1293,15 @@ window.GRIM_CONFIG = Object.freeze({
           if(event.code==='Enter'||event.code==='Space')actions.enter();
           return;
         }
+        const action=heldAction(event.code);
+        if(action){
+          if(!el('controls').classList.contains('hidden'))this.pressHold(action,event.code);
+          return;
+        }
         switch(event.code) {
-          case 'Space': case 'ArrowUp': case 'KeyJ': actions.jump(); break;
           case 'KeyA': actions.attack(); break;
           case 'KeyF': actions.fireCrossbow(); break;
           case 'KeyR': actions.rewind(); break;
-          case 'ArrowDown': case 'KeyS': actions.slideStart(); break;
           case 'Escape': case 'KeyP': actions.pause(); break;
           case 'Enter': if(menu)this.requestMenuStart();else if(gameOver)actions.start();break;
         }
@@ -1295,8 +1309,8 @@ window.GRIM_CONFIG = Object.freeze({
       document.addEventListener('keyup', event => {
         this.heldKeys.delete(event.code);
         if(this.vendorSkipKeys.delete(event.code)){event.preventDefault();return;}
-        if (['Space','ArrowUp','KeyJ'].includes(event.code)) actions.jumpEnd();
-        if (event.code === 'ArrowDown' || event.code === 'KeyS') actions.slideEnd();
+        const action=heldAction(event.code);
+        if(action)this.releaseHold(action,event.code);
       });
       window.addEventListener('blur', () => {
         this.releaseAll(); this.vendorSkipKeys.clear(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
@@ -1339,7 +1353,16 @@ window.GRIM_CONFIG = Object.freeze({
         scope.GRIM_HOME_ENTRY?.blocksStart(event))return;
       this.actions.start();
     }
-    bindAction(id, name, downAction, upAction) {
+    pressHold(action,source) {
+      const sources=this.holdSources[action],start=sources.size===0;
+      sources.add(source);
+      if(start)this.holdActions[action][0]();
+    }
+    releaseHold(action,source) {
+      const sources=this.holdSources[action];
+      if(sources.delete(source)&&sources.size===0)this.holdActions[action][1]();
+    }
+    bindAction(id, name, downAction) {
       const node = el(id);
       node.addEventListener('pointerdown', event => {
         event.preventDefault();
@@ -1347,18 +1370,20 @@ window.GRIM_CONFIG = Object.freeze({
         try { node.setPointerCapture(event.pointerId); } catch (_) {}
         this.activePointers.set(event.pointerId, name);
         node.classList.add('pressed');
-        downAction();
+        if(this.holdSources[name])this.pressHold(name,event.pointerId);
+        else downAction();
       });
       const end = event => {
         if (this.activePointers.get(event.pointerId) !== name) return;
         this.activePointers.delete(event.pointerId);
         node.classList.toggle('pressed', Array.from(this.activePointers.values()).includes(name));
-        if (upAction) upAction();
+        if(this.holdSources[name])this.releaseHold(name,event.pointerId);
       };
       ['pointerup','pointercancel','lostpointercapture'].forEach(type => node.addEventListener(type, end));
     }
     releaseAll() {
       this.activePointers.clear(); this.heldKeys.clear();
+      this.holdSources.jump.clear();this.holdSources.slide.clear();
       for (const id of ['attack-btn','crossbow-btn','rewind-btn','practice-slow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
@@ -1623,7 +1648,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
   <script src="assets/visuals/enemy-motion.js?v=2"></script>
   <script src="assets/visuals/combat-animations.js?v=ground2"></script>
-  <script src="assets/ui/v0160/frontispiece.js?v=breeze2"></script>
+  <script src="assets/ui/v0160/frontispiece.js?v=breeze3"></script>
   <script src="assets/visuals/visual-system.js?v=ground2"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=1"></script>
@@ -1943,12 +1968,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.state='reliquary';
       this.ui.updateReliquary(this.meta);
       this.ui.setMode('reliquary');
+      document.getElementById('reliquary-title').focus({preventScroll:true});
     }
     closeReliquary(){
       if(this.state!=='reliquary')return;
       this.state='menu';
       document.getElementById('banked-souls').textContent=String(this.meta.souls);
       this.ui.setMode('menu');
+      document.getElementById('reliquary-btn').focus({preventScroll:true});
     }
     purchaseMeta(id){
       if(this.state!=='reliquary')return;

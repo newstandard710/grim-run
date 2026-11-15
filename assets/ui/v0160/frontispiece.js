@@ -2,7 +2,8 @@
 (function(scope){
   'use strict';
   const stage=document.getElementById('frontispiece'),canvas=document.getElementById('title-art');
-  const ctx=canvas.getContext('2d'),root='assets/';
+  const canopyCanvas=document.getElementById('canopy-art');
+  const ctx=canvas.getContext('2d'),canopy=canopyCanvas.getContext('2d'),root='assets/';
   const files={forest:'ui/v0160/veil-forest.webp',reaper:'characters/illustrated-v2/reaper/reaper_idle_v1.png',
     crawler:'enemies/illustrated-v2/bone-crawler/crawler_crawl_01_v1.png',
     imp:'enemies/illustrated-v2/ember-imp/ember_imp_atlas_v1.png',
@@ -68,33 +69,63 @@
     };
   }
   const crawlerIdle=paintIdle(3.7,.34,.045),impIdle=paintIdle(2.9,1.9,.053);
-  // Canopy rectangles in the accepted painting. Their left/right edges
-  // and first/last scanlines stay fixed against the original CSS plate.
-  const crowns=[[360,2,650,134,0,6],[1160,0,500,126,1.9,5],[93,282,205,103,3.4,5]];
-  function drawCanopy(w,h){
+  // Paint only foliage. The base and these patches share the CSS shade,
+  // while the actors remain above it. A fixed feather hides the patch edges.
+  const crowns=[
+    {box:[360,2,650,170],phase:0,amp:6,edge:[[15,90],[67,42],[120,8],[522,8],
+      [598,31],[620,81],[610,111],[551,109],[504,149],[382,153],[342,105],[230,97],[119,84],[38,112]]},
+    {box:[1140,0,532,146],phase:1.9,amp:5,edge:[[28,40],[78,12],[522,8],[522,129],
+      [481,121],[419,95],[354,97],[312,73],[264,87],[228,55],[201,66],[170,41],[124,43],[97,51]]},
+    {box:[93,282,205,112],phase:3.4,amp:5,edge:[[59,30],[118,12],[162,16],[148,45],
+      [115,55],[152,76],[181,99],[123,99],[83,79],[67,58]]}
+  ];
+  function prepareCrown(crown){
+    const [, , w,h]=crown.box;
+    const make=()=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
+    crown.tile=make();crown.ctx=crown.tile.getContext('2d');crown.mask=make();
+    const mask=crown.mask.getContext('2d');
+    mask.filter='blur(6px)';
+    mask.beginPath();crown.edge.forEach(([x,y],i)=>i?mask.lineTo(x,y):mask.moveTo(x,y));
+    mask.closePath();mask.fill();
+  }
+  function drawCanopy(w,h,dpr){
     const im=images.forest;
-    if(!im||reduced)return;
+    if(!im||reduced){
+      if(canopyCanvas.width!==1||canopyCanvas.height!==1)canopyCanvas.width=canopyCanvas.height=1;
+      return;
+    }
+    resizeCanvas(canopyCanvas,w,h,dpr);
+    canopy.setTransform(dpr,0,0,dpr,0,0);canopy.clearRect(0,0,w,h);
     const scale=Math.max(w/im.width,h/im.height);
     const left=(w-im.width*scale)*.5,top=(h-im.height*scale)*.5;
-    for(const [x,y,sw,sh,phase,amp] of crowns){
+    for(const crown of crowns){
+      const {box:[x,y,sw,sh],phase,amp}=crown;
       const x0=left+x*scale,y0=top+y*scale;
       if(x0>=w||x0+sw*scale<=0||y0>=h||y0+sh*scale<=0)continue;
+      if(!crown.tile)prepareCrown(crown);
+      const g=crown.ctx,half=sw*.5;
+      g.globalCompositeOperation='source-over';g.clearRect(0,0,sw,sh);
       for(let row=0;row<8;row++){
-        const v=row/8,n=sh/8,sy=y+v*sh,dy=y0+v*sh*scale;
-        const dx=Math.sin(row*Math.PI/7)*Math.sin(clock*1.24+phase-v*1.7)*amp*scale;
-        const half=sw*.5,mid=half*scale+dx;
-        ctx.drawImage(im,x,sy,half,n,x0,dy,mid,n*scale);
-        ctx.drawImage(im,x+half,sy,half,n,x0+mid,dy,sw*scale-mid,n*scale);
+        const sy=Math.round(row*sh/8),n=Math.round((row+1)*sh/8)-sy;
+        const dx=Math.sin(row*Math.PI/7)*Math.sin(clock*1.24+phase-row/8*1.7)*amp;
+        g.drawImage(im,x,y+sy,half,n,0,sy,half+dx,n);
+        g.drawImage(im,x+half,y+sy,half,n,half+dx,sy,half-dx,n);
       }
+      g.globalCompositeOperation='destination-in';g.drawImage(crown.mask,0,0);
+      canopy.drawImage(crown.tile,x0,y0,sw*scale,sh*scale);
     }
+  }
+  function resizeCanvas(target,w,h,dpr){
+    const width=Math.round(w*dpr),height=Math.round(h*dpr);
+    if(target.width!==width||target.height!==height){target.width=width;target.height=height;}
   }
   function draw(t){
     frame=0;if(!['home','menu'].includes(mode)||document.hidden)return;
     const dt=Math.min(.06,(t-last)/1000||0);last=t;if(!reduced)clock+=dt;
     const w=stage.clientWidth,h=stage.clientHeight,dpr=Math.min(scope.devicePixelRatio||1,1.5);
-    if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
+    resizeCanvas(canvas,w,h,dpr);
     ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
-    drawCanopy(w,h);
+    drawCanopy(w,h,dpr);
     const portrait=h>w;
     const x=portrait?w*.23:w*.21,feet=portrait?h*.91:h*.92,rh=portrait?h*.43:h*.77;
     ctx.save();ctx.translate(x,feet);ctx.scale(1,.2);const shadow=ctx.createRadialGradient(0,0,0,0,0,rh*.4);shadow.addColorStop(0,'#020409cc');shadow.addColorStop(1,'#02040900');ctx.fillStyle=shadow;ctx.fillRect(-rh*.4,-rh*.4,rh*.8,rh*.8);ctx.restore();
@@ -106,8 +137,8 @@
       ctx.globalAlpha=.9;art.drawFrame(ctx,images.batFlight,clock,0,0,placement.scale);
       ctx.restore();
     }else {const bat=bats[Math.floor(clock*8/.96)%bats.length];actor(bat,w*.84,batY,batHeight,true,.9);}
-    actor('crawler',w*.86,h*.91,h*(portrait?.17:.28),false,.9,crawlerIdle);
     actor('imp',w*.69,h*.91,h*(portrait?.12:.2),true,.88,impIdle);
+    actor('crawler',w*.86,h*.91,h*(portrait?.17:.28),false,.9,crawlerIdle);
     // Dim moving motes sit below typography, independently of the run RNG.
     for(let i=0;i<19;i++){const phase=(clock*(.012+i%3*.003)+i*.173)%1,px=w*((i*.618+.07)%1),py=h*(.2+(1-phase)*.64);ctx.globalAlpha=Math.sin(phase*Math.PI)*.35;ctx.fillStyle=i%4?'#bed5c7':'#d9b275';ctx.beginPath();ctx.arc(px+Math.sin(clock*.2+i)*10,py,i%3?.8:1.25,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
     if(!reduced)frame=requestAnimationFrame(draw);
