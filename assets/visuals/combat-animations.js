@@ -2,6 +2,9 @@
 (function(scope){
   'use strict';
   const ROOT='assets/combat/v0170/',BAT=scope.GRIM_BAT_FLIGHT;
+  const TRANSITION_ROOT='assets/combat/v01912/';
+  const BAT_HANDOFF={key:'combat-cavern-bat-handoff',file:'cavern-bat-handoff.webp',
+    width:192,height:128,columns:6,frames:36,anchor:[126,65]};
   const DATA={...(scope.GRIM_COMBAT_DATA?.sheets||{})};
   if(BAT)DATA['bat-flight']=BAT.SPEC;
   const FIRE_MS=260,HURT_MS=340,DEATH_MS=880,DEFEAT_MS=760,MAX_DEFEATS=12;
@@ -14,6 +17,17 @@
     if(!s.load?.spritesheet)return;
     for(const [name,m]of Object.entries(DATA))s.load.spritesheet('combat-'+name,name==='bat-flight'?(BAT?.FILE||'assets/encounters/v0190/bat-flight.png?v=0.19.0'):ROOT+name+'.png?v=0.17.0',
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
+    queueTransition(s,BAT_HANDOFF);
+  }
+  function queueTransition(s,art){
+    s.load.spritesheet(art.key,TRANSITION_ROOT+art.file+'?v=1',
+      {frameWidth:art.width,frameHeight:art.height,endFrame:art.frames-1});
+  }
+  function transitionReady(s,art){
+    if(!s.textures.exists(art.key))return false;
+    const texture=s.textures.get(art.key),image=texture.getSourceImage?.();
+    return image?.width===art.width*art.columns&&image.height===art.height*Math.ceil(art.frames/art.columns)&&
+      Array.from({length:art.frames},(_,i)=>i).every(i=>texture.has(i));
   }
   function sample(t,count,loop=false){
     const f=loop?((t%count)+count)%count:clamp(t,0,count-1);
@@ -38,6 +52,7 @@
       if(!s.add?.image||!s.textures?.exists)return;
       for(const [name,m]of Object.entries(DATA))this.ready[name]=Boolean(s.textures.exists('combat-'+name)&&
         Array.from({length:m.frames},(_,i)=>s.textures.get('combat-'+name).has(i)).every(Boolean));
+      this.batHandoffReady=transitionReady(s,BAT_HANDOFF);
       const pair=(depth)=>[0,1].map(()=>s.add.image(0,0,'combat-reaper-slide-cut',0).setDepth(depth).setVisible(false));
       if(this.ready['reaper-slide-cut']){
         this.reaper=pair(12.05);
@@ -128,22 +143,31 @@
       for(const e of s.enemies||[]){
         if(e.kind!=='bat'||e.dead||e.x<s.cameraX-130||e.x>s.cameraX+s.width+130||n>=this.bats.length)continue;
         const pair=this.bats[n++];for(const v of pair)v.setVisible(false).setRotation(0).setFlipX(false).clearTint();if(e.visualHitMs>0&&this.ready['bat-response'])continue;
-        const f=batMotion(s.elapsed||0,e.phase||0);
-        // Dense, rigid-body poses need no crossfade: compositing two overlapping
-        // alpha sprites made even stationary body pixels pulse down to 75% opacity.
-        const m=DATA['bat-flight'];
-        pair[0].setTexture('combat-bat-flight',f.a).setOrigin(m.anchor[0]/m.cell[0],m.anchor[1]/m.cell[1])
-          .setScale(.32/(BAT?.SOURCE_SCALE||1)).setPosition(e.x,e.y).setAlpha(1).setVisible(true);
-        // Dive uses a separate pooled view; its handoff does not disturb flight phase.
-        const weight=e.mode==='dive'?clamp((e.timer||0)/.12):
-          e.mode==='recover'?1-clamp((e.timer||0)/.12):0;
-        pair[0].setAlpha(1-weight).setVisible(weight<.999);pair[1].setAlpha(0).setVisible(false);
-        if(weight>0){
-          const m=scope.GRIM_VISUALS.V2_BAT.dive;
-          pair[2].setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280).setScale(m.scale)
-            .setPosition(e.x,e.y).setAlpha(weight).setRotation(.1*weight).setVisible(true);
-        }
+        this.renderCavernBat(pair[0],e);
       }
+    }
+    renderCavernBat(view,e){
+      const elapsed=this.scene.elapsed||0,phase=e.phase||0,timer=e.timer||0;
+      const weight=e.mode==='dive'?clamp(timer/.12):e.mode==='recover'?1-clamp(timer/.12):0;
+      const pose=Math.round(weight*4);
+      // Select one solid contour. Sample the flight phase at the shared end
+      // of the handoff so the strip's starting wing pose stays consistent.
+      if(this.batHandoffReady&&BAT&&pose>0&&pose<4){
+        const boundary=elapsed+(e.mode==='dive'?-timer:.12-timer);
+        const lead=Math.round(batMotion(boundary,phase).a/8)%12;
+        const art=BAT_HANDOFF;
+        view.setTexture(art.key,lead*3+pose-1).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
+          .setScale(1).setRotation(0);
+      }else if(weight>=.5){
+        const m=scope.GRIM_VISUALS.V2_BAT.dive;
+        view.setTexture(m.key).setOrigin(m.anchor[0]/2304,m.anchor[1]/1280)
+          .setScale(m.scale).setRotation(.1*weight);
+      }else{
+        const m=DATA['bat-flight'],frame=batMotion(elapsed,phase).a;
+        view.setTexture('combat-bat-flight',frame).setOrigin(m.anchor[0]/m.cell[0],m.anchor[1]/m.cell[1])
+          .setScale(.32/(BAT?.SOURCE_SCALE||1)).setRotation(0);
+      }
+      view.setPosition(e.x,e.y).setAlpha(1).setVisible(true);
     }
     renderCrawlerResponse(pair,item,dead,progress,y,alpha){
       const scene=this.scene,motion=scope.GRIM_ENEMY_MOTION;
