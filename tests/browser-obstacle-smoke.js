@@ -113,7 +113,9 @@ const server=http.createServer((req,res)=>{
           renderMisses++;renderFailures.push({id:skin.id,expected,actual:image&&
             {width:image.displayWidth,height:image.displayHeight}});
         }
-        const visualGround=type==='bramble'?(s.terrain.groundAt(o.x+o.width/2)??o.y+o.height):o.y+o.height;
+        const reg=window.GRIM_OBSTACLE_MOUNTS[skin.id];
+        const contactX=o.x+o.width/2+((reg?.[0]??.5)-.5)*(image?.displayWidth||0);
+        const visualGround=s.terrain.groundAt(contactX)??o.y+o.height;
         if((skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&type==='bramble'))&&
           (!image||image.originY!==(skin.groundAnchorY??1)||
             image.y!==visualGround+s.obstacleVisualInset(o,skin))){
@@ -132,6 +134,7 @@ const server=http.createServer((req,res)=>{
       s.terrain.groundAt=()=>300;s.terrain.anchorAt=()=>300;
       const branch={type:'branch',x:s.startX+400*window.GRIM_CONFIG.pxPerMeter,
         y:-1700,width:74,height:1924,variant:0,destroyed:false};
+      s.cameraX=branch.x-300;
       s.drawObstacle(branch);
       const branchImage=s.obstacleSpriteObjects.get(branch);
       const branchBack=s.obstacleBackObjects.get(branch);
@@ -149,16 +152,22 @@ const server=http.createServer((req,res)=>{
         branchImage.depth!==16||branchImage.depth<=s.actor.depth){
         renderMisses++;renderFailures.push({id:'painted-slide-backing-missing'});
       }
-      if(!branchSupport||branchSupport.texture.key!==branchSkin?.supportKey||
-        branchSupport.depth!==.53||branchSupport.y!==320||
-        Math.abs(branchSupport.displayWidth-74*3.25*1.6)>.001||
-        Math.abs(branchSupport.displayHeight-307.2)>.001||
-        branchSupport.alpha!==.95){
+      const mounted=branchSupport?.mountFeet;
+      if(!mounted||branchSupport.mountSource!==branchSkin?.supportKey||
+        branchSupport.depth!==.53||mounted.length!==2||
+        mounted.some(foot=>foot.y!==313)||branchSupport.alpha!==.95){
         renderMisses++;renderFailures.push({id:'forest-slide-support-missing'});
+      }
+      s.terrain.groundAt=z=>300+(z-branch.x)*.39;
+      s.drawObstacle(branch);
+      const remounted=s.obstacleSupportObjects.get(branch);
+      if(remounted===branchSupport||remounted?.mountFeet?.some(foot=>
+        Math.abs(foot.y-s.terrain.groundAt(foot.x)-13)>.001)){
+        renderMisses++;renderFailures.push({id:'slide-support-slope-contact'});
       }
       branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
       branchBack?.destroy();s.obstacleBackObjects.delete(branch);
-      branchSupport?.destroy();s.obstacleSupportObjects.delete(branch);
+      remounted?.destroy();s.obstacleSupportObjects.delete(branch);
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       const board=[
         ['forest_jump_root-knot',106,328,'rock'],

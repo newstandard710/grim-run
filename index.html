@@ -1580,6 +1580,8 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/ui/v0160/frontispiece.js?v=breeze1"></script>
   <script src="assets/visuals/visual-system.js?v=ground2"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
+  <script src="assets/visuals/obstacle-mount-data.js?v=1"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=1"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.8"></script>
   <script src="assets/visuals/cutscene-motion.js?v=0.19.8"></script>
@@ -5342,10 +5344,18 @@ window.GRIM_CONFIG = Object.freeze({
           (skin.id==='forest_cut_thorny-young-pine'||skin.id==='forest_cut_dead-oak-sapling')
           ?Math.min(165,o.width*2.7):
         skin?.category==='cut'?Math.min(105,o.width*1.5):o.width*1.05;
-      const ground=o.type==='snappingBramble'?this.terrain.anchorAt(o.x):o.type==='bramble'
-        ?this.terrain.groundAt(o.x+o.width/2)??o.y+o.height:o.y+o.height;
+      const center=o.x+o.width/2;
+      const floor=this.terrain.groundAt(center);
+      if(floor===null)return;
+      const points=[];
+      for(let i=0;i<=8;i++){
+        const x=center-width/2+width*i/8,y=this.terrain.groundAt(x);
+        if(Number.isFinite(y)&&Math.abs(y-floor)<42)points.push({x,y,thin:Math.sin(Math.PI*i/8)*6});
+      }
+      if(points.length<2)return;
       g.fillStyle(0x0b1118,.27);
-      g.fillEllipse(o.x+o.width/2,ground+3,width,11);
+      g.fillPoints([...points.map(p=>({x:p.x,y:p.y-p.thin*.32})),
+        ...points.reverse().map(p=>({x:p.x,y:p.y+p.thin}))],true);
     }
     drawObstacleBack(o,skin,x,y,width,height,rotation){
       if(!skin?.backKey||!this.textures?.exists?.(skin.backKey))return;
@@ -5358,8 +5368,10 @@ window.GRIM_CONFIG = Object.freeze({
       image.setOrigin(.5,1).setPosition(x,y).setDisplaySize(width,height)
         .setRotation(rotation).setVisible(true);
     }
-    drawObstacleSupport(o,skin,x,underside,width,ground,rotation){
+    drawObstacleSupport(o,skin,x,underside,width,height,ground,rotation){
       if(!skin?.supportKey||!this.textures?.exists?.(skin.supportKey))return;
+      if(x+width<this.cameraX-160||x-width>this.cameraX+this.width+160)return;
+      if(scope.GRIM_OBSTACLE_ART?.drawSlideMount(this,o,skin,x,underside,width,height,rotation))return;
       let image=this.obstacleSupportObjects.get(o);
       if(image&&image.texture?.key!==skin.supportKey){image.destroy();image=null;}
       if(!image){
@@ -5367,11 +5379,12 @@ window.GRIM_CONFIG = Object.freeze({
         this.obstacleSupportObjects.set(o,image);
       }
       const bottom=ground+20;
-      const height=Math.max(210,(bottom-underside+96)*1.6);
-      image.setOrigin(.5,1).setPosition(x,bottom).setDisplaySize(width*1.6,height)
+      const fallbackHeight=Math.max(210,(bottom-underside+96)*1.6);
+      image.setOrigin(.5,1).setPosition(x,bottom).setDisplaySize(width*1.6,fallbackHeight)
         .setRotation(rotation).setTint(0xbfc6bf).setAlpha(.95).setVisible(true);
     }
     drawAirObstacleSupport(o,skin){
+      if(o.x+410<this.cameraX||o.x-410>this.cameraX+this.width)return;
       if(!skin?.supportKey||!this.textures?.exists?.(skin.supportKey))return;
       let image=this.obstacleSupportObjects.get(o);
       if(image&&image.texture?.key!==skin.supportKey){image.destroy();image=null;}
@@ -5379,12 +5392,13 @@ window.GRIM_CONFIG = Object.freeze({
         image=this.add.image(0,0,skin.supportKey).setDepth(.53);
         this.obstacleSupportObjects.set(o,image);
       }
-      const base=o.baseY??this.terrain.anchorAt(o.x);
+      const base=o.y+(o.type==='airBramble'?215:1600);
       if(o.type==='airBramble'){
-        // The tether starts inside the cliff behind the ground and joins the
-        // upper side of the foreground tangle. It never changes the hitbox.
+        if(scope.GRIM_OBSTACLE_ART?.mountBramble(this,image,o,skin,base)){
+          image.setVisible(true);return;
+        }
         image.setOrigin(0,1).setPosition(o.x-245,base+33)
-          .setDisplaySize(415,335).setTint(0x89929b).setAlpha(.79);
+          .setDisplaySize(415,335).setRotation(0).setTint(0x89929b).setAlpha(.79);
       }else{
         // Recessed chain mount disappears beyond the screen ceiling; its
         // painted lower links meet the upper part of the physical gate.
@@ -5392,7 +5406,7 @@ window.GRIM_CONFIG = Object.freeze({
         const ash=skin.biome==='ashlands';
         image.setOrigin(.5,ash?586/720:339/720)
           .setPosition(o.x+o.width/2,base-210)
-          .setDisplaySize(235,ash?180:286).setTint(0xc8c3bb).setAlpha(.95);
+          .setDisplaySize(ash?176:191,ash?180:286).setTint(0xc8c3bb).setAlpha(.95);
       }
       image.setVisible(true);
     }
@@ -5409,7 +5423,7 @@ window.GRIM_CONFIG = Object.freeze({
         image.destroy();this.obstacleBackObjects.delete(ob);
       }
       for(const [ob,image] of this.obstacleSupportObjects){
-        if(active.has(ob))continue;
+        if(active.has(ob)&&ob.x+550>=this.cameraX&&ob.x-550<=this.cameraX+this.width)continue;
         image.destroy();this.obstacleSupportObjects.delete(ob);
       }
     }
@@ -5458,7 +5472,14 @@ window.GRIM_CONFIG = Object.freeze({
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
         width=o.width*scale.x;height=o.height*scale.y;
         x=o.x+o.width/2;
-        const baseline=o.type==='bramble'?(this.terrain.groundAt(x)??o.y+o.height):o.y+o.height;
+        const contactX=x+((scope.GRIM_OBSTACLE_MOUNTS?.[skin.id]?.[0]??.5)-.5)*width;
+        const baseline=this.terrain.groundAt(contactX)??o.y+o.height;
+        if(o.type!=='bramble'){
+          const gap=Math.min(40,width*.28);
+          const left=this.terrain.groundAt(contactX-gap),right=this.terrain.groundAt(contactX+gap);
+          if(Number.isFinite(left)&&Number.isFinite(right))
+            rotation=clamp(Math.atan2(right-left,gap*2),-.24,.24);
+        }
         y=baseline+this.obstacleVisualInset(o,skin);
         originY=skin.groundAnchorY??1;
       }else{
@@ -5568,7 +5589,7 @@ window.GRIM_CONFIG = Object.freeze({
         const underside=Core.slideCeilingBottomAt(groundAt,centerX,C.slideClearancePx)
           ??(this.terrain.anchorAt(centerX)-C.slideClearancePx);
         const surface=groundAt(centerX)??this.terrain.anchorAt(centerX);
-        this.drawObstacleSupport(o,skin,centerX,underside,width,surface,rotation);
+        this.drawObstacleSupport(o,skin,centerX,underside,width,height,surface,rotation);
         this.drawObstacleBack(o,skin,centerX,underside,width,height,rotation);
         if(!this.drawObstacleSprite(o,{x:centerX,y:underside,width,height,rotation,
           originY:1})){

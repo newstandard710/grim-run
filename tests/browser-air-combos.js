@@ -59,7 +59,9 @@ const server=http.createServer((req,res)=>{
           front:{key:front?.texture.key,w:front?.displayWidth,h:front?.displayHeight,
             y:front?.y,originY:front?.originY,depth:front?.depth},
           support:{key:support?.texture.key,w:support?.displayWidth,h:support?.displayHeight,
-            y:support?.y,originY:support?.originY,depth:support?.depth,alpha:support?.alpha},
+            y:support?.y,originY:support?.originY,depth:support?.depth,alpha:support?.alpha,
+            foot:support?.mountFeet?.[0],joint:support?.mountJoint,
+            floor:support?.mountFeet&&s.terrain.groundAt(support.mountFeet[0].x)},
           reaperDepth:s.visuals?.reaper?.depth,groundDepth:s.terrainBase.depth};
         s.obstacles=saved;
         return info;
@@ -77,7 +79,13 @@ const server=http.createServer((req,res)=>{
           'illustrated lower edge aligns with the unchanged ducking line');
         assert.equal(view.support.y,view.collision.y+view.collision.h+167-210,
           'painted ceiling chains descend visibly into the upper gate');
-      }else assert(view.front.w===148&&view.front.h===218,'air attack art is larger');
+      }else {
+        assert(view.front.w===148&&view.front.h===218,'air attack art is larger');
+        assert(view.support.foot&&view.support.foot.y===view.support.floor+13,
+          'Air bramble tether roots into the actual bank');
+        assert(view.support.joint.x>view.collision.x&&view.support.joint.y<view.front.y,
+          'The far tether end joins the upper half of the bramble');
+      }
       await page.waitForTimeout(100);
       await page.locator('#game canvas').screenshot({path:path.join(dir,filename)});
       console.log(type+' screenshot',view.biome,view.front.key,view.support.key);
