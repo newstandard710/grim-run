@@ -8,6 +8,7 @@
     STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
   const AIR_KEYS=Object.freeze([0,4,12,16,18,20,23]),AIR_STEPS=4;
   const JUMP_TWEEN_CELL=192, JUMP_TWEEN_KEY='motion-reaper-jump-deliberate';
+  const CUT_HANDOFF=DATA?.visualCutHandoff,CUT_HANDOFF_KEY='motion-reaper-cut-handoffs';
   // The old 0.14-source scale was sized for the damage reach, making the
   // cutting weapon larger than the carried one. One carry-matched scale is
   // immutable throughout windup, swing and recovery; reach belongs to the arc.
@@ -81,17 +82,28 @@
       mix(.90,-1.15,clamp((progress-.79)/.21));
     return {x,y,angle,bodyX:x-gripX};
   }
-  function visualCutRig(progress){
+  function visualCutRig(progress,sharedWeapon=!!DATA.visualCutWeapon){
     const frame=cutFrame(progress),grip=DATA.visualCutGrips[Math.round(frame)];
     // The painted hand drives the rigid weapon. Keep the small weight shift
     // separate from the original grip and angle that drive the damage arc.
     const bodyX=8*ease((progress-.2)/.39)*(1-ease((progress-.68)/.32));
-    const carry=-.30;
-    const angle=progress<.2?mix(carry,0,ease(progress/.2)):
-      progress<.79?mix(0,.90,clamp((progress-.2)/.59)):
-      mix(.90,carry,ease((progress-.79)/.21));
+    const carry=sharedWeapon?0:-.30,windup=sharedWeapon?-.16:0,end=sharedWeapon?1.43:.90;
+    const angle=progress<.2?mix(carry,windup,ease(progress/.2)):
+      progress<.79?mix(windup,end,clamp((progress-.2)/.59)):
+      mix(end,carry,ease((progress-.79)/.21));
     return {frame,bodyX,angle,x:(grip[0]-DATA.anchor[0])*.38+bodyX,
       y:(grip[1]-DATA.anchor[1])*.38};
+  }
+  function cutHandoff(s,p,frame,runFrame){
+    const {edgeFrames,edgeWeights,phases,poses}=CUT_HANDOFF;
+    const edge=edgeFrames.indexOf(frame);
+    if(p.grounded&&edge<0)return null;
+    const air=p.grounded?0:jumpFrame(p);
+    const phase=(runFrame%(RUN.frames/RUN.gaitsPerSheet))/(RUN.frames/RUN.gaitsPerSheet);
+    const group=p.grounded?Math.round(phase*phases)%phases:phases+(air<3?0:air<9?1:2);
+    const index=edge<0?(phases+3)*edgeFrames.length+frame:group*edgeFrames.length+edge;
+    const rise=p.grounded?runSupportRise(s,p,runFrame)*edgeWeights[edge]:0;
+    return {index,rise,grip:poses[index]};
   }
   function weaponPoint(rig,point,scale=WEAPON_SCALE){
     const w=DATA.weapon,dx=-(point[0]-w.pivot[0])*scale,dy=(point[1]-w.pivot[1])*scale;
@@ -141,9 +153,12 @@
   function preload(s){
     if(!DATA||!s.load?.spritesheet)return;
     for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,
-      ROOT+name+'.png?v='+(name==='reaper-cut-body'?'0.19.10':'0.18.0'),
+      ROOT+name+'.png?v='+(name==='reaper-cut-body'?'0.19.10-cut2':'0.18.0'),
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
     s.load.image('motion-scythe',ROOT+'scythe.png?v=0.18.0');
+    if(DATA.visualCutWeapon)s.load.image('motion-cut-scythe',ROOT+'reaper-cut-scythe.png?v=1');
+    if(CUT_HANDOFF)s.load.spritesheet(CUT_HANDOFF_KEY,ROOT+'reaper-cut-handoffs.webp?v=1',
+      {frameWidth:CUT_HANDOFF.cell,frameHeight:CUT_HANDOFF.cell,endFrame:CUT_HANDOFF.poses.length-1});
     if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=3',
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
@@ -176,9 +191,15 @@
       if(!this.ready)return;
       this.runReady=!!RUN&&s.textures.exists('motion-reaper-run-solid')&&
         Array.from({length:RUN.frames},(_,i)=>s.textures.get('motion-reaper-run-solid').has(i)).every(Boolean);
+      this.cutHandoffReady=this.runReady&&!!CUT_HANDOFF&&s.textures.exists(CUT_HANDOFF_KEY)&&
+        CUT_HANDOFF.poses.every((_,i)=>s.textures.get(CUT_HANDOFF_KEY).has(i));
       this.body=[0,1].map(()=>s.add.image(0,0,'motion-reaper-run',0).setDepth(12.09)
         .setOrigin(DATA.anchor[0]/DATA.cell[0],DATA.anchor[1]/DATA.cell[1]).setVisible(false));
-      this.weapon=s.add.image(0,0,'motion-scythe').setOrigin(DATA.weapon.pivot[0]/384,DATA.weapon.pivot[1]/384)
+      // This visual paint is independent of the legacy collision-readiness assets.
+      this.cutWeaponReady=!!DATA.visualCutWeapon&&s.textures.exists('motion-cut-scythe');
+      const weaponPaint=this.cutWeaponReady?DATA.visualCutWeapon:DATA.weapon;
+      this.weapon=s.add.image(0,0,this.cutWeaponReady?'motion-cut-scythe':'motion-scythe')
+        .setOrigin(weaponPaint.pivot[0]/384,weaponPaint.pivot[1]/384)
         .setDepth(12.08).setVisible(false);
       this.trail=s.add.graphics().setDepth(12.07);
       s.events?.once?.('shutdown',()=>this.destroy());
@@ -193,32 +214,39 @@
       this.hide();const s=this.scene,p=s.player;
       if(!this.ready||!p||!s.visuals?.reviewV2||!['playing','paused','rewinding','countdown'].includes(s.state))return;
       if(s.lowProfile||p.sliding||p.airTuck||(p.visualFireMs>0&&p.attackMs<=0)||(p.visualHurtMs||0)>0)return;
-      let name,t,scale=.52,loop=false,rig=null,progress;
+      const distance=p.x-(s.startX||0);
+      let name,t,scale=.52,loop=false,rig=null,progress,handoff=null;
       if(p.attackMs>0){
         if(!this.handlesCut())return;
         name='reaper-cut-body';progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;
-        rig=visualCutRig(progress);t=rig.frame;scale=.38;
+        rig=visualCutRig(progress,this.cutWeaponReady);t=rig.frame;scale=DATA.visualCutBody?.scale??.38;
+        if(this.cutHandoffReady)handoff=cutHandoff(s,p,Math.round(t),runAtlasFrame(distance));
       }
       else if(!p.grounded||(p.visualLandingMs||0)>0){name='reaper-jump';t=jumpFrame(p);}
-      else {name='reaper-run';t=runFrame(p.x-(s.startX||0));loop=true;}
+      else {name='reaper-run';t=runFrame(distance);loop=true;}
       s.powerArt?.hideBase();s.powerArt?.action?.setVisible(false);
       for(const v of s.combatArt?.reaper||[])v.setVisible(false);
       const alpha=p.invulMs>0&&Math.floor((s.elapsed||0)/.083333)%2===0?.58:1;
       const solidRun=name==='reaper-run'&&this.runReady;
       const air=name==='reaper-jump'?airPose(t,s.textures?.exists?.(JUMP_TWEEN_KEY)):null;
       const tween=air?.tween;
-      const atlasFrame=solidRun?runAtlasFrame(p.x-(s.startX||0)):
+      const atlasFrame=handoff?handoff.index:solidRun?runAtlasFrame(distance):
         air?air.frame:(loop?Math.round(t)%COUNT:Math.round(t));
-      const texture=solidRun?'motion-reaper-run-solid':tween?JUMP_TWEEN_KEY:'motion-'+name;
-      const anchor=solidRun?RUN.anchor:DATA.anchor,cell=solidRun?RUN.cell:DATA.cell[0];
+      const texture=handoff?CUT_HANDOFF_KEY:solidRun?'motion-reaper-run-solid':tween?JUMP_TWEEN_KEY:'motion-'+name;
+      const anchor=handoff?CUT_HANDOFF.anchor:solidRun?RUN.anchor:(rig&&DATA.visualCutBody?.anchor)||DATA.anchor;
+      const cell=handoff?CUT_HANDOFF.cell:solidRun?RUN.cell:DATA.cell[0];
+      const rise=handoff?.rise??(solidRun?runSupportRise(s,p,atlasFrame):0);
+      const renderScale=handoff?CUT_HANDOFF.scale:solidRun?RUN.scale:tween?scale*cell/JUMP_TWEEN_CELL:scale;
       // One opaque registered painting at a time, including the derived
       // transitions. Keep the same apparent size and feet anchor.
       this.body[0].setTexture(texture,atlasFrame)
         .setOrigin(anchor[0]/cell,anchor[1]/cell)
-        .setPosition(p.x+(rig?.bodyX||0),s.feetY+(solidRun?runSupportRise(s,p,atlasFrame):0)).setScale(solidRun?RUN.scale:tween?scale*cell/JUMP_TWEEN_CELL:scale)
+        .setPosition(p.x+(rig?.bodyX||0),s.feetY+rise).setScale(renderScale)
         .setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
       if(rig){
-        this.weapon.setPosition(p.x+rig.x,s.feetY+rig.y).setRotation(rig.angle)
+        const [gripX,gripY,carryAngle]=handoff?.grip??[rig.x-rig.bodyX,rig.y,0];
+        this.weapon.setPosition(p.x+gripX+rig.bodyX,s.feetY+gripY+rise)
+          .setRotation(rig.angle+(this.cutWeaponReady?carryAngle:0))
           .setScale(-WEAPON_SCALE,WEAPON_SCALE).setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
         drawSwingArc(this.trail,s,progress,alpha);
       }
