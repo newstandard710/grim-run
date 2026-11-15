@@ -92,6 +92,39 @@ async function inspect(browser,url,canvas,failed=false){
       await page.mouse.click(x,y);
       assert.notEqual((await vendorState(page)).state,'upgrade','A fresh gesture works immediately');
 
+      const heal=page.getByRole('button',{name:/heal 1 hp/i});
+      await begin(page,k);
+      await time(page,7999);
+      const clock=await page.evaluate(()=>{
+        const s=window.grimRun.scene.scenes[0];
+        let hidden=true;
+        Object.defineProperty(document,'hidden',{configurable:true,get:()=>hidden});
+        try{
+          s.cutsceneLastAt=1000;
+          s.update(11000,10000);
+          const suspended=s.vendorIntroMs;
+          hidden=false;
+          s.update(21000,10000);
+          const resumed=s.vendorIntroMs;
+          s.update(21001,1);
+          return {suspended,resumed,state:s.state};
+        }finally{delete document.hidden;}
+      });
+      assert.deepEqual(clock,{suspended:1,resumed:1,state:'upgrade'},'Only visible, unscaled time opens the vendor');
+      const bounds=await heal.boundingBox();
+      const healX=bounds.x+bounds.width/2,healY=bounds.y+bounds.height/2;
+      await begin(page,k);
+      await time(page,7999);
+      const beforeHeal=await vendorState(page);
+      await page.mouse.move(healX,healY);await page.mouse.down();
+      await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,1));
+      await page.mouse.up();
+      assert.deepEqual(comparable(await vendorState(page)),comparable(beforeHeal),'The held press cannot pay for healing');
+      await page.mouse.click(healX,healY);
+      const healed=await vendorState(page);
+      assert.equal(healed.hp,beforeHeal.hp+1);
+      assert.equal(healed.gold,beforeHeal.gold-await page.evaluate(()=>window.GRIM_CONFIG.devilHealPrice));
+
       if(k===1){
         await begin(page,k);await time(page,7999);
         const touch=await page.context().newCDPSession(page);

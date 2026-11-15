@@ -24,3 +24,18 @@ with Pillow, NumPy and OpenCV. The original run, jump, landing, and combat
 assets stay in the repository. The runtime atlas is a 3072×2304 transparent
 WebP and its source/runtime hashes, silhouette bounds, support positions and
 footfalls are recorded in `assets/motion/v0194/manifest.json`.
+
+## Validation and release handoff
+
+The interrupted workspace was recovered with the three runtime changes already
+present on `feat/vendor-hold-planted-run`. The remote checkpoint `97a652c`
+matched the local runtime byte for byte. This checkpoint adds the v0.19.9
+release marker and checks visible-time hold onset, hidden time, and a held
+pointer over an actual healing purchase. The vendor and Home tests are in the
+Chromium movement workflow. Compare with PR #84 for baseline captures.
+
+Validation order is the focused Chromium runs, the full pull request checks,
+then the Pages build. Verify the deployed SHA and the actual Pages bytes for
+`index.html`, the Home frontispiece, both vendor modules and the two new
+atlases. A fresh public session should enter through Home, show the planted
+run, and exercise first-vendor handoffs before the release is called live.
