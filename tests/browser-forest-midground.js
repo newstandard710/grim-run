@@ -46,15 +46,14 @@ async function openGame(browser, width, height, options = {}) {
     window.GRIM_FRONTEND?.ready, null, {timeout: 90000});
   // Both captures must use the same fully loaded character poses.
   await page.evaluate(async () => { await window.grimRun.scene.scenes[0].visuals.reviewLoad; });
-  // Start through the full-screen Home hit area while the title animates.
-  await page.mouse.click(23, 43);
-  await page.locator('#start-btn').click();
+  // Home input is covered separately. Start the renderer fixture through the scene.
   await page.evaluate(() => {
     const game = window.grimRun;
     const scene = game.scene.scenes[0];
     scene.sys.sceneUpdate = () => {};
     clearInterval(scene.loopWatchdogId);
     game.loop.sleep();
+    scene.enterHome();
     scene.startRun();
     scene.setGodMode(true);
     game.loop.sleep();

@@ -8,6 +8,11 @@ const server=http.createServer((req,res)=>{
   res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[path.extname(f)]||'application/octet-stream'});res.end(fs.readFileSync(f));
  }catch(e){res.writeHead(404).end(String(e));}
 });
+const startRun=page=>page.evaluate(()=>{
+ const scene=window.grimRun.scene.scenes[0];
+ scene.enterHome();
+ scene.startRun();
+});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
@@ -18,7 +23,7 @@ const server=http.createServer((req,res)=>{
    try{
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
     await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,null,{timeout:90000});
-    await page.mouse.click(23,43);await page.locator('#start-btn').click();
+    await startRun(page);
     const eyes=await page.evaluate(()=>{
      const s=window.grimRun.scene.scenes[0],texture=s.textures.get('cutscene-bow');
      const canvas=document.createElement('canvas');canvas.width=224;canvas.height=224;const ctx=canvas.getContext('2d');
@@ -87,8 +92,7 @@ const server=http.createServer((req,res)=>{
   try{
    await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
    await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready&&window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
-   await page.mouse.click(23,43);
-   await page.locator('#start-btn').click();
+   await startRun(page);
    const marks=[];
    for(const scene of ['angel','devil','bow']){
     await page.evaluate(scene=>{
