@@ -231,20 +231,30 @@ const server=http.createServer((req,res)=>{
         const skin=window.GRIM_OBSTACLE_SPRITES.find(item=>item.id===biome+'_slide_'+name);
         document.querySelector('#menu')?.classList.add('hidden');
         for(const image of window.forestArtPreview||[])image.destroy();
-        const x=475,underside=252,bottom=348,width=74*3.25;
+        const x=475,underside=252,width=74*3.25;
         const height=Math.max(s.height*1.22,475);
+        const staged={x:x-37,width:74};
+        const oldFloor=s.terrain.groundAt;
+        s.terrain.groundAt=wx=>328+(wx-x)*.24;
+        const fit=window.GRIM_OBSTACLE_ART.drawSlideMount(s,staged,skin,x,underside,width,height,.22);
+        const support=s.obstacleSupportObjects.get(staged);
+        const contacts=support?.mountFeet?.map(foot=>foot.y-s.terrain.groundAt(foot.x));
+        s.terrain.groundAt=oldFloor;
+        s.obstacleSupportObjects.delete(staged);
         window.forestArtPreview=[
-          s.add.image(x,bottom,skin.supportKey).setOrigin(.5,1)
-            .setDisplaySize(width*1.6,(bottom-underside+96)*1.6)
-            .setDepth(.53).setScrollFactor(0).setTint(0xbfc6bf).setAlpha(.95),
+          support.setScrollFactor(0),
           s.add.image(x,underside,skin.backKey).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(.55).setScrollFactor(0),
+            .setDisplaySize(width,height).setDepth(.55).setScrollFactor(0).setRotation(.22),
           s.add.image(x,underside,skin.key).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(16).setScrollFactor(0)
+            .setDisplaySize(width,height).setDepth(16).setScrollFactor(0).setRotation(.22)
         ];
-        return window.forestArtPreview.map(image=>({key:image.texture.key,depth:image.depth}));
+        return {fit,contacts,views:window.forestArtPreview.map(image=>
+          ({key:image.mountSource||image.texture.key,depth:image.depth}))};
       },{biome,name});
-      assert.deepEqual(view,[
+      assert(view.fit,biome+' '+name+' uses the production mount');
+      assert(view.contacts?.every(y=>Math.abs(y-13)<.001),
+        biome+' '+name+' places both painted feet in the slope');
+      assert.deepEqual(view.views,[
         {key:'obstacle-support-'+biome+'_'+name,depth:.53},
         {key:'obstacle-back-'+biome+'_'+name,depth:.55},
         {key:'obstacle-'+biome+'_slide_'+name,depth:16}
@@ -295,19 +305,22 @@ const server=http.createServer((req,res)=>{
         }
         const ground=s.terrain.groundAt(worldX)??s.terrain.anchorAt(worldX);
         const underside=ground-window.GRIM_CONFIG.slideClearancePx;
-        const width=74*3.25,height=Math.max(s.height*1.22,475),bottom=ground+20;
+        const width=74*3.25,height=Math.max(s.height*1.22,475);
+        const staged={x:worldX-37,width:74};
+        const fit=window.GRIM_OBSTACLE_ART.drawSlideMount(s,staged,skin,worldX,underside,width,height,0);
+        const support=s.obstacleSupportObjects.get(staged);
+        s.obstacleSupportObjects.delete(staged);
         window.biomeArtPreview=[
-          s.add.image(worldX,bottom,skin.supportKey).setOrigin(.5,1)
-            .setDisplaySize(width*1.6,Math.max(210,(bottom-underside+96)*1.6))
-            .setDepth(.53).setTint(0xbfc6bf).setAlpha(.95),
+          support,
           s.add.image(worldX,underside,skin.backKey).setOrigin(.5,1)
             .setDisplaySize(width,height).setDepth(.55),
           s.add.image(worldX,underside,skin.key).setOrigin(.5,1)
             .setDisplaySize(width,height).setDepth(16)
         ];
-        return {biome,ground,under:underside,keys:window.biomeArtPreview.map(i=>i.texture.key)};
+        return {fit,biome,ground,under:underside,source:support.mountSource};
       },{biome,name});
-      assert.equal(view.keys[0],'obstacle-support-'+biome+'_'+name);
+      assert(view.fit);
+      assert.equal(view.source,'obstacle-support-'+biome+'_'+name);
       await page.waitForTimeout(80);
       await page.locator('#game canvas').screenshot({path:path.join(resultDir,
         biome+'-slide-in-biome-phone.png')});

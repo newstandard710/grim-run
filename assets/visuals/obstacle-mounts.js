@@ -76,6 +76,8 @@
       if(xx===from)ctx.moveTo(xx-originX,y-originY);
       else ctx.lineTo(xx-originX,y-originY);
     }
+    const edgeY=scope.GRIM_CORE.slideCeilingBottomAt(scene.terrain.groundAt,to,scope.GRIM_CONFIG.slideClearancePx)??underside;
+    ctx.lineTo(to-originX,edgeY-originY);
     ctx.lineTo(to-originX,cutH);ctx.lineTo(from-originX,cutH);ctx.closePath();ctx.fill();
     ctx.globalCompositeOperation='source-over';
     assembled.refresh();
@@ -93,7 +95,7 @@
     foothills:[.90,.19,.60,.20],tundra:[.90,.18,.65,.19],caves:[.91,.20,.62,.20],
     crystals:[.92,.18,.61,.19],ashlands:[.91,.18,.54,.18],lava:[.90,.20,.56,.18]
   });
-  function mountBramble(scene,image,ob,skin,base){
+  function mountBramble(scene,image,ob,skin){
     const [u,v,jx,jy]=BRAMBLE_JOINTS[skin.biome];
     const bank=scene.terrain.sectionAt(ob.x);
     const footX=bank?.kind==='gap'?bank.start-35:ob.x-105;

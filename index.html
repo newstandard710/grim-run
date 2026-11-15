@@ -367,7 +367,7 @@ button {cursor:pointer;}
         return ()=>{if(activate===handler)activate=null;};
       },
       blocksStart(event){
-        return Boolean(event?.detail>0&&lastPointer&&event.timeStamp>=lastPointer.time&&
+        return Boolean((event?.detail>0||event?.type==='pointerdown')&&lastPointer&&event.timeStamp>=lastPointer.time&&
           event.timeStamp-lastPointer.time<360&&
           Math.hypot(event.clientX-lastPointer.x,event.clientY-lastPointer.y)<44);
       }
@@ -1231,6 +1231,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.bindAction('practice-slow-btn','practiceSlow',()=>actions.togglePracticeSlow());
       this.bindAction('jump-btn', 'jump', () => actions.jump(), () => actions.jumpEnd());
       this.bindAction('slide-btn', 'slide', () => actions.slideStart(), () => actions.slideEnd());
+      el('start-btn').addEventListener('pointerdown',event=>{
+        if(scope.GRIM_HOME_ENTRY?.blocksStart(event))event.preventDefault();
+      });
       el('start-btn').addEventListener('click', event => this.requestMenuStart(event));
       el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
       el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
@@ -3972,6 +3975,7 @@ window.GRIM_CONFIG = Object.freeze({
         g.end,g.end+g.rightFade*.5,g.end+g.rightFade]);
       if(fadeSnow)for(const m of [SNOW_FADE_START,SNOW_PURE_START,SNOW_PORTAL])
         boundaries.unshift((this.startX??200)+m*C.pxPerMeter);
+      if(fadeSnow&&this.hasTeleported)boundaries.unshift((this.startX??200)+SNOW_PORTAL*C.pxPerMeter-.01);
       // Place explicit vertices at feather and collision boundaries. Retain
       // the fixed mesh size by replacing the nearest unused interior columns.
       const locked=new Set([0,GROUND_FOG_COLUMNS]);
@@ -5394,7 +5398,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       const base=o.y+(o.type==='airBramble'?215:1600);
       if(o.type==='airBramble'){
-        if(scope.GRIM_OBSTACLE_ART?.mountBramble(this,image,o,skin,base)){
+        if(scope.GRIM_OBSTACLE_ART?.mountBramble(this,image,o,skin)){
           image.setVisible(true);return;
         }
         image.setOrigin(0,1).setPosition(o.x-245,base+33)
@@ -5935,9 +5939,17 @@ window.GRIM_CONFIG = Object.freeze({
       if(firstSnow===0&&lastSnow===0){
         g.fillStyle(0x6f9e9c,.025);g.fillRect(0,this.groundY-20,this.width,55);
       }else if(firstSnow<1||lastSnow<1){
-        for(let x=0;x<this.width;x+=12){
-          const alpha=.025*(1-this.snowCoverAt(this.cameraX+x+6));
-          if(alpha>0)g.fillStyle(0x6f9e9c,alpha).fillRect(x,this.groundY-20,12,55);
+        const origin=this.startX??200;
+        const edges=[0,this.width];
+        for(const m of [SNOW_PURE_START,SNOW_PORTAL]){
+          const edge=origin+m*C.pxPerMeter-this.cameraX;
+          if(edge>0&&edge<this.width)edges.push(edge);
+        }
+        edges.sort((a,b)=>a-b);
+        for(let i=1;i<edges.length;i++)for(let x=edges[i-1];x<edges[i];x+=12){
+          const span=Math.min(12,edges[i]-x);
+          const alpha=.025*(1-this.snowCoverAt(this.cameraX+x+span*.5));
+          if(alpha>0)g.fillStyle(0x6f9e9c,alpha).fillRect(x,this.groundY-20,span,55);
         }
       }
       g.fillStyle(0x030716,.22);g.fillRect(0,this.height-9,this.width,9);
