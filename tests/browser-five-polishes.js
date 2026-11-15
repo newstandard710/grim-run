@@ -44,6 +44,17 @@ async function start({page,url}){
 }
 async function opening(browser,url){
   const tab=await open(browser,url);
+  await tab.page.addInitScript(()=>{
+    const draw=CanvasRenderingContext2D.prototype.drawImage;
+    CanvasRenderingContext2D.prototype.drawImage=function(source,...args){
+      if(this.canvas.id==='title-art'&&source.src?.includes('/crawler_crawl_01_v1.png')){
+        const m=this.getTransform();
+        window.homeCrawler={native:m.a>0,x:m.e/this.canvas.width,y:m.f/this.canvas.height,
+          width:this.canvas.width,height:this.canvas.height};
+      }
+      return draw.call(this,source,...args);
+    };
+  });
   const release=[];
   let held=0;
   let releaseFirstPose;
@@ -52,7 +63,7 @@ async function opening(browser,url){
     await firstPoseGate;
     await route.continue();
   });
-  await tab.page.route(/reaper_idle_v1|v0193\/reaper-run\.png/,async route=>{
+  await tab.page.route(/reaper_idle_v1|v0194\/reaper-run\.webp/,async route=>{
     held++;
     await new Promise(resolve=>release.push(resolve));
     await route.continue();
@@ -72,6 +83,20 @@ async function opening(browser,url){
     }));
     assert.equal(boot.tableau,null,'The characters draw before all opening images settle');
     assert.equal(boot.handlers,false,'The opening is the existing view during the Phaser preload');
+    const facing=async(portrait)=>{
+      await tab.page.waitForFunction(p=>{
+        const c=window.homeCrawler;
+        return c&&(c.height>c.width)===p;
+      },portrait);
+      const c=await tab.page.evaluate(()=>window.homeCrawler);
+      assert(c.native,'The original left-facing painting looks toward the Reaper');
+      assert(Math.abs(c.x-.86)<.003&&Math.abs(c.y-.91)<.003,'The crawler keeps its planted Home placement');
+    };
+    await facing(false);
+    await tab.page.setViewportSize({width:393,height:740});
+    await facing(true);
+    await tab.page.setViewportSize(viewport);
+    await facing(false);
     await tab.page.touchscreen.tap(21,26);
     assert(await tab.page.locator('#home-screen').isVisible(),'Early Home tap waits for the scene');
     const pixels=()=>tab.page.evaluate(()=>{

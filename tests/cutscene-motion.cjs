@@ -4,10 +4,11 @@ const root=path.resolve(__dirname,'..'),w={};w.window=w;vm.createContext(w);
 for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-data.js','assets/cutscenes/v0197/animation-data.js'])vm.runInContext(fs.readFileSync(path.join(root,p),'utf8'),w);
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-for(const file of ['assets/cutscenes/v0197/animation-data.js','assets/visuals/cutscene-motion.js','assets/visuals/power-animations.js'])assert(html.includes(file+'?v='+D.version),'The browser must fetch matching repaired metadata/renderer cache versions');
+for(const file of ['assets/cutscenes/v0197/animation-data.js','assets/visuals/power-animations.js'])assert(html.includes(file+'?v='+D.version),'The browser must fetch matching repaired metadata/renderer cache versions');
+assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.9'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
 assert(loaded.filter(([key])=>key!=='cutscene-vendor').every(([,url])=>url.endsWith('?v='+D.version)));
-assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.INTRO_MS,10000);
+assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.VENDOR_ANIMATION_SECONDS,3);assert.equal(A.VENDOR_SETTLED_FRAME,192);
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){
  const p=A.relicMotionAt(ms/1000);frames.add(p.frame);assert(p.frame>=last&&p.frame-last<=1);last=p.frame;
@@ -37,14 +38,24 @@ for(let i=0;i<169;i++){
  }
 }
 for(const devil of [false,true]){
- const before=A.merchantPoint(.47,.20,6,devil),after=A.merchantPoint(.47,.20,9.5,devil);
+ const before=A.merchantPoint(.47,.20,1.5,devil),after=A.merchantPoint(.47,.20,3,devil);
  assert(after.x<before.x&&after.y>before.y,'Face turns down and toward the Reaper');
- assert(A.merchantPose(9.5,devil).headAngle<-.24);assert.equal(A.merchantPose(6,devil).dip,0);
+ assert(A.merchantPose(3,devil).headAngle<-.24);assert.equal(A.merchantPose(1.5,devil).dip,0);
  for(const t of [0,1,4,8,9.9])for(const x of [.3,.5,.7])assert.equal(A.merchantPoint(x,1,t,devil).y,1,'Feet stay planted');
  for(let i=0;i<10000;i++){
   const a=A.merchantPoint(.47,.2,i/1000,devil),b=A.merchantPoint(.47,.2,(i+1)/1000,devil);
-  assert(Math.hypot(a.x-b.x,a.y-b.y)<.0002,'Head motion has no discontinuity');
+  assert(Math.hypot(a.x-b.x,a.y-b.y)<.0003,'Head motion has no discontinuity');
  }
+}
+assert(A.approachAt(2.999).frame<192);
+assert.equal(A.vendorVisualTime(0,true),3);
+const final=A.approachAt(3);
+assert.equal(final.frame,192);assert.equal(final.travel,1);assert.equal(final.presence,1);
+for(const t of [3,3.001,5,7.999]){
+ const visual=A.vendorVisualTime(t);
+ assert.equal(visual,3);assert.deepEqual(A.approachAt(visual),final);
+ assert.deepEqual(A.merchantPose(visual,true),A.merchantPose(3,true));
+ assert.equal(A.vendorAmbientTime(visual),3);
 }
 const m=JSON.parse(fs.readFileSync(path.join(root,'assets/cutscenes/v0197/manifest.json')));
 for(const [kind,entries]of Object.entries(m).filter(([k])=>['sources','runtime'].includes(k)))for(const [name,meta]of Object.entries(entries)){
@@ -53,4 +64,4 @@ for(const [kind,entries]of Object.entries(m).filter(([k])=>['sources','runtime']
  if(meta.bounds)assert(meta.bounds.every(([l,t,r,b])=>l>=2&&t>=2&&r<223&&b<223),'Every interpolated silhouette stays within its cell');
 }
 assert.equal(m.runtime['reaper-bow.png'].frames,A.BOW_FRAMES);assert.equal(m.runtime['reaper-vendor.png'].frames,A.VENDOR_FRAMES);
-console.log('PASS cutscenes: source/runtime hashes, 169 connected painted bow poses, stable elbow bend/segment lengths, actual two-hand stock span, physical reach/lift, exact one-second hold, 241 unchanged vendor poses and planted merchant feet.');
+console.log('PASS cutscenes: source/runtime hashes, 169 connected painted bow poses, stable elbow bend/segment lengths, actual two-hand stock span, physical reach/lift, exact one-second hold, 241 unchanged vendor poses and retimed planted merchant feet.');

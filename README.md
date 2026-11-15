@@ -1,3 +1,13 @@
+# Grim Run — v0.19.9
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/index.html?release=0.19.9)
+
+The Home Bone Crawler faces left toward the Reaper. Both vendor introductions settle in three seconds, hold the full scene for five seconds, and open the vendor menu automatically. A tap, Enter, or Space opens the menu early. Reduced motion shows the settled composition from entry.
+
+The Reaper run holds each boot in place through stance, then lifts it into the next step. Cadence follows traveled distance and Tundra powder uses the same contacts. [Implementation and validation notes](docs/home-vendor-run-release.md).
+
+---
+
 # Grim Run — v0.19.8 · Steady Hands
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/index.html?release=0.19.8)

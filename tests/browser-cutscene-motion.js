@@ -40,14 +40,14 @@ const server=http.createServer((req,res)=>{
       return {x:s.player.x,hp:s.player.hp,coins:s.coinCount,elapsed:s.elapsed,rng:s.rng.state,offers:JSON.stringify(s.pendingOffers)};},k);
      const used=new Set();
      for(let i=0;i<=200;i++){
-      const t=i*.0499;
-      const info=await page.evaluate(t=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=10000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
+      const t=i*.01999;
+      const info=await page.evaluate(t=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=8000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
        const a=s.vendorArt;return {frame:Number(a.reaper.frame.name),key:a.reaper.texture.key,y:a.reaper.y,mesh:a.merchantMesh.visible,dip:a.merchantMesh.cutscenePose.dip};},t);
       used.add(info.frame);assert.equal(info.key,'cutscene-vendor');assert(info.mesh);assert.equal(info.y,height*.84);
       if([20,55,100,160,195].includes(i))await page.screenshot({path:path.join(dir,`cutscene-${kind}-${width}-${i}.png`)});
       await page.waitForTimeout(20);
      }
-     assert(used.size>85,'Dense walking/settle/idle frames are actually drawn');
+     assert(used.size>85,'Dense walking/settle frames are actually drawn');
      const after=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return {x:s.player.x,hp:s.player.hp,coins:s.coinCount,elapsed:s.elapsed,rng:s.rng.state,offers:JSON.stringify(s.pendingOffers)};});
      assert.deepEqual(after,initial,'Cinema freezes gameplay and selected offers');
      await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=1;s.update(0,1);if(s.state!=='upgrade')throw Error('Vendor failed to complete');s.leaveVendor();});
@@ -97,11 +97,19 @@ const server=http.createServer((req,res)=>{
      const bow=scene==='bow';
      const finishName=bow?'finishChest':'finishVendorIntro';
      const finish=s[finishName];
-     if(bow)s.startChest();else s.triggerVendor(scene==='angel'?1:8);
+     if(bow)s.startChest();else {s.setGodMode(true);s.practiceTimeMode=3;s.triggerVendor(scene==='angel'?1:8);}
      const started=s.cutsceneLastAt;
      s.cutsceneTestDuration=null;
+     s.cutsceneTestHold=null;
+     const draw=s.drawScene;
+     if(!bow)s.drawScene=function(){
+      draw.call(this);
+      if(this.cutsceneTestHold===null&&this.vendorArt.holdingFrame())
+       this.cutsceneTestHold=performance.now()-started;
+     };
      s[finishName]=function(){
       this.cutsceneTestDuration=performance.now()-started;
+      this.drawScene=draw;
       this[finishName]=finish;
       return finish.call(this);
      };
@@ -109,8 +117,10 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration!==null,
      null,{polling:150,timeout:30000});
     const ms=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestDuration);
-    marks.push({scene,ms});
-    assert(ms>=(scene==='bow'?3900:9800)&&ms<(scene==='bow'?6500:14000),
+    const holdMs=await page.evaluate(()=>window.grimRun.scene.scenes[0].cutsceneTestHold);
+    marks.push({scene,ms,holdMs});
+    if(scene!=='bow')assert(holdMs>=3000&&holdMs<3600,`${scene} real-time frozen frame: ${holdMs} ms`);
+    assert(ms>=(scene==='bow'?3900:8000)&&ms<(scene==='bow'?6500:8600),
      `${scene} real-time cutscene: ${ms} ms`);
    }
    fs.writeFileSync(path.join(dir,'cutscene-realtime.json'),JSON.stringify(marks,null,2));
