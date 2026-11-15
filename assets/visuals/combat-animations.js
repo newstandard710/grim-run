@@ -6,6 +6,7 @@
   if(BAT)DATA['bat-flight']=BAT.SPEC;
   const FIRE_MS=260,HURT_MS=340,DEATH_MS=880,DEFEAT_MS=760,MAX_DEFEATS=12;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+  const CRAWLER_ENTRY_MS=48,CRAWLER_RESPONSE_SCALE=.30;
   const RESPONSE={bat:'bat-response',skeletalBat:'skeletal-response',crawler:'crawler-response',imp:'imp-response'};
   const FRAME_RANGES=Object.fromEntries(Object.entries(DATA).map(([name,m])=>[name,Array.from({length:m.frames},(_,i)=>i)]));
   const BAT_CYCLE_SECONDS=BAT?.CYCLE_SECONDS||.96;
@@ -54,10 +55,17 @@
     enemyHit(e,defeated){
       if(!RESPONSE[e.kind])return;
       e.visualHitMs=240;
+      if(e.kind==='crawler')e.visualCrawlerResponse=Boolean(this.ready[RESPONSE.crawler]);
       if(!defeated)return;
       const flying=e.kind==='bat'||e.kind==='skeletalBat';
       const y=flying?e.y:(this.scene.terrain.groundAt(e.x)??this.scene.terrain.anchorAt(e.x));
-      this.corpses.push({kind:e.kind,x:e.x,y,age:0,seed:++this.sequence,flying});
+      const corpse={kind:e.kind,x:e.x,y,age:0,seed:++this.sequence,flying};
+      if(e.kind==='crawler'){
+        const view=this.scene.visuals?.boneCrawlerPool?.find(v=>v.visible&&v.__grimEntity===e);
+        corpse.crawlFrame=view?.__grimCrawlerFrame??null;
+        corpse.visualCrawlerResponse=e.visualCrawlerResponse;
+      }
+      this.corpses.push(corpse);
       if(this.corpses.length>MAX_DEFEATS)this.corpses.shift();
     }
     tick(ms){
@@ -137,6 +145,26 @@
         }
       }
     }
+    renderCrawlerResponse(pair,item,dead,progress,y,alpha){
+      const scene=this.scene,motion=scope.GRIM_ENEMY_MOTION;
+      const live=dead?null:scene.visuals?.boneCrawlerPool?.find(v=>v.visible&&v.__grimEntity===item);
+      // Retain the real painted crawl at both ends of a surviving hit.
+      if(live&&(progress<=.16||progress>=.84))return;
+      const reference=motion.crawlView(scene,dead?item.crawlFrame:live?.__grimCrawlerFrame);
+      let paint;
+      if(dead&&reference&&item.age<=CRAWLER_ENTRY_MS){
+        paint=reference;
+      }else{
+        const frame=dead?2+Math.min(5,Math.floor(progress*6)):Math.min(2,Math.floor(progress*3));
+        paint={key:'combat-crawler-response',frame,width:512,height:512,scale:CRAWLER_RESPONSE_SCALE,
+          imageScale:CRAWLER_RESPONSE_SCALE,claws:motion.RESPONSE_CLAWS[frame]};
+      }
+      const pose=motion.responsePose(scene.terrain,item.x,y,paint,paint===reference?null:reference);
+      pair[0].setTexture(paint.key,paint.frame).setOrigin(.5,.5).setScale(paint.imageScale)
+        .setPosition(pose.x,pose.y).setRotation(pose.angle).setAlpha(alpha).setFlipX(true)
+        .clearTint().setVisible(alpha>0);
+      live?.setVisible(false);
+    }
     renderResponses(){
       const s=this.scene;if(!['playing','paused','rewinding','countdown','dying'].includes(s.state))return;
       let n=0;
@@ -147,23 +175,19 @@
         const progress=dead?clamp(item.age/DEFEAT_MS):1-item.visualHitMs/240;
         const y=flying?(dead?Math.min(item.y+progress*50+progress*progress*90,(s.terrain.groundAt(item.x)??item.y+200)-12):item.y)
           :dead?item.y:(s.terrain.groundAt(item.x)??s.terrain.anchorAt(item.x));
-        const scale={bat:.26,skeletalBat:.30,crawler:.43,imp:.24}[item.kind];
         const alpha=dead?clamp((1-progress)/.24):1;
-        const pair=this.responses[n++];this.blend(pair,name,progress*(frames.length-1),item.x,y,scale,alpha,0,frames);
-        if(item.kind==='crawler'){
-          const motion=scope.GRIM_ENEMY_MOTION;
-          for(const v of pair){
-            v.setFlipX(true);
-            if(dead||!motion||!v.visible)continue;
-            const contacts=motion.HIT_CLAWS[Number(v.frame.name)];
-            if(!contacts)continue;
-            const pose=motion.crawlerPose(s.terrain,item.x,y,512,512,scale,contacts);
-            v.setOrigin(.5,.5).setPosition(pose.x,pose.y).setRotation(pose.angle);
-          }
+        const pair=this.responses[n++];
+        if(item.kind==='crawler'&&scope.GRIM_ENEMY_MOTION){
+          this.renderCrawlerResponse(pair,item,dead,progress,y,alpha);
+        }else{
+          const scale={bat:.26,skeletalBat:.30,crawler:CRAWLER_RESPONSE_SCALE,imp:.24}[item.kind];
+          this.blend(pair,name,progress*(frames.length-1),item.x,y,scale,alpha,0,frames);
+          if(item.kind==='crawler')for(const view of pair)view.setFlipX(true);
         }
       };
       for(const e of s.enemies||[])if(!e.dead&&e.visualHitMs>0&&e.x>=s.cameraX-150&&e.x<=s.cameraX+s.width+150){
-        for(const pool of [s.visuals?.skeletalBatPool,s.visuals?.boneCrawlerPool,s.visuals?.emberImpPool])
+        for(const pool of [s.visuals?.skeletalBatPool,s.visuals?.emberImpPool,
+          scope.GRIM_ENEMY_MOTION?null:s.visuals?.boneCrawlerPool])
           for(const v of pool||[])if(v.__grimEntity===e&&this.ready[RESPONSE[e.kind]])v.setVisible(false);
         draw(e,false);
       }

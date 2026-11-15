@@ -7,10 +7,13 @@ closed fists. No full-character crossfade or optical-flow estimate is involved.
 import numpy as np
 import cv2
 from PIL import Image
-from scipy.interpolate import LinearNDInterpolator, CubicHermiteSpline
+from scipy.interpolate import LinearNDInterpolator, PchipInterpolator
 
 CELL=224
 ANCHOR=np.array([136.,214.])
+HINGE=.76
+NECK=np.array([142.,118.])
+ELBOW_SIDES=(-1,-1)
 
 def smooth(t):
     t=np.clip(t,0,1)
@@ -38,7 +41,7 @@ def prepare_body(path):
 def body_point(points,bend):
     p=np.asarray(points,dtype=float)
     dx,dy=p[...,0]-141,p[...,1]-161
-    angle=.85*bend
+    angle=HINGE*bend
     return np.stack([141+dx*np.cos(angle)-dy*np.sin(angle)-4*bend,
                      161+dx*np.sin(angle)+dy*np.cos(angle)+13*bend],axis=-1)
 
@@ -47,7 +50,7 @@ def body_warp(body,bend):
     upper_mask=((yy<124)|((xx>112)&(yy<169)))
     upper=body.copy();upper[~upper_mask]=0
     lower=body.copy();lower[(yy<124)|((xx>118)&(yy<154))]=0
-    angle=.85*bend;c,s=np.cos(angle),np.sin(angle)
+    angle=HINGE*bend;c,s=np.cos(angle),np.sin(angle)
     M=np.array([[c,-s,141-141*c+161*s-4*bend],
                 [s,c,161-141*s-161*c+13*bend]],dtype='float32')
     top=cv2.warpAffine(upper,M,(CELL,CELL),flags=cv2.INTER_LINEAR)
@@ -62,7 +65,7 @@ def body_warp(body,bend):
     weight=smooth((x-45)/80)*(1-smooth((y-130)/75))
     cloak_dest=points+weight[:,None]*attachment
     knee=np.sin(np.pi*np.clip((y-162)/52,0,1))
-    legs_dest=points+np.stack([6*np.tanh((x-141)/10)*bend*knee,13*bend*(1-smooth((y-162)/52))],axis=-1)
+    legs_dest=points+np.stack([8*np.tanh((x-141)/10)*bend*knee,13*bend*(1-smooth((y-162)/52))],axis=-1)
     grid=np.stack([xx,yy],axis=-1)
     out=Image.new('RGBA',(CELL,CELL))
     for image,dest in [(cloak,cloak_dest),(legs,legs_dest)]:
@@ -138,11 +141,22 @@ def ik(shoulder,hand,lengths,side):
     return shoulder+unit*a+np.array([unit[1],-unit[0]])*h*side
 
 
-T=np.array([0,.4,.7,.86,1])
-PATH=np.array([[160,187],[147,151],[137,116],[128,91],[125,70]],dtype=float)
-TANGENTS=np.zeros_like(PATH)
-for i in range(1,len(T)-1):TANGENTS[i]=(PATH[i+1]-PATH[i-1])/(T[i+1]-T[i-1])
-WRIST=CubicHermiteSpline(T,PATH,TANGENTS)
+T=np.array([0,.25,.43,.58,.70,.80,.89,1])
+PATH=np.array([[160,181],[166,164],[173,144],[173,117],[168,96],[154,78],[137,72],[125,70]],dtype=float)
+WRIST=PchipInterpolator(T,PATH,axis=0)
+TURN=PchipInterpolator(T,[0,.07,.20,.41,.52,.38,.17,.05])
+
+
+def head_transform(frame,bend):
+    # The hood leads the reach, then gives the raised stock clear room.
+    reach=min(frame/72,1)
+    lift=max((frame-72)/96,0)
+    retract=np.sin(lift*np.pi/2)**2
+    angle=HINGE*bend+.13*smooth(reach)*(1-lift)-.08*retract
+    c,s=np.cos(angle),np.sin(angle)
+    R=np.array([[c,-s],[s,c]])
+    neck=body_point(NECK,bend)+np.array([-7.,7.])*retract
+    return R,neck-R@NECK
 
 
 def pose(frame):
@@ -150,13 +164,14 @@ def pose(frame):
         q=np.clip(frame/72,0,1)
         bend=q
         near=np.array([125.,174.])*(1-q)+PATH[0]*q
-        far=np.array([160.,171.])*(1-q)+(PATH[0]+STOCK_SPAN)*q
+        support=smooth((q-.14)/.86)
+        far=np.array([160.,171.])*(1-support)+(PATH[0]+STOCK_SPAN)*support
         angle=0.0
     else:
         q=(frame-72)/96
-        bend=1-smooth(q/.65)
+        bend=1-smooth(q/.69)
         near=WRIST(q)
-        angle=.05*smooth(q)
+        angle=float(TURN(q))
         c,s=np.cos(angle),np.sin(angle)
         far=near+STOCK_SPAN@np.array([[c,s],[-s,c]])
     # The pivots remain registered to the painted shoulder armor at all times.
@@ -192,6 +207,12 @@ def measure_arm(parts,shoulder,elbow,hand):
 
 def build(body_path):
     body=prepare_body(body_path)
+    hood_mask=np.zeros((CELL,CELL),np.uint8)
+    cv2.fillPoly(hood_mask,[np.array([[111,108],[123,92],[138,85],[155,82],[162,88],
+                                    [169,104],[166,112],[154,119],[143,121],[133,116],
+                                    [120,116],[111,114]],np.int32)],1)
+    hood=body.copy();hood[hood_mask==0]=0
+    body[hood_mask>0]=0
     sources=[arm_parts(body_path.parent/'reaper-rig-arms.png',side) for side in ['near','far']]
     yy,xx=np.mgrid[:CELL,:CELL]
     cap=body.copy();cap[((xx-125)/12)**2+((yy-124)/12)**2>1]=0
@@ -199,10 +220,10 @@ def build(body_path):
     # Test the whole continuous trajectory, including between baked samples.
     for frame in np.linspace(0,168,1001):
         _,near,far,shoulders,_=pose(frame)
-        for j,hand in enumerate([near,far]):ik(shoulders[j],hand,ARM_LENGTHS,1 if j==0 else -1)
+        for j,hand in enumerate([near,far]):ik(shoulders[j],hand,ARM_LENGTHS,ELBOW_SIDES[j])
     for i in range(169):
         bend,near,far,shoulders,bow_angle=pose(i)
-        elbows=[ik(shoulders[j],hand,ARM_LENGTHS,1 if j==0 else -1) for j,hand in enumerate([near,far])]
+        elbows=[ik(shoulders[j],hand,ARM_LENGTHS,ELBOW_SIDES[j]) for j,hand in enumerate([near,far])]
         painted=[];quality=[]
         for j,hand in enumerate([near,far]):
             parts,source_shoulder,source_elbow,source_hand=sources[j]
@@ -218,12 +239,16 @@ def build(body_path):
         for p in painted[1][:2]:canvas.alpha_composite(p)
         canvas.alpha_composite(Image.fromarray(body_warp(body,bend)))
         for p in painted[0][:2]:canvas.alpha_composite(p)
-        angle=.85*bend;c,s=np.cos(angle),np.sin(angle)
+        angle=HINGE*bend;c,s=np.cos(angle),np.sin(angle)
         matrix=np.array([[c,-s,141-141*c+161*s-4*bend],[s,c,161-141*s-161*c+13*bend]],dtype='float32')
         canvas.alpha_composite(Image.fromarray(cv2.warpAffine(cap,matrix,(CELL,CELL),flags=cv2.INTER_LINEAR)))
+        head,offset=head_transform(i,bend)
+        # The hood remains in front of the upper arm as the gauntlet travels
+        # up the far side of its silhouette. The wrist and weapon stay visible.
+        canvas.alpha_composite(Image.fromarray(cv2.warpAffine(hood,np.column_stack([head,offset]),(CELL,CELL),flags=cv2.INTER_LINEAR)))
         canvas.alpha_composite(painted[1][2]);canvas.alpha_composite(painted[0][2])
         frames.append(canvas);hands.append([near.tolist(),far.tolist()])
         landmarks.append({'shoulders':shoulders.tolist(),'elbows':[e.tolist() for e in elbows],
-                          'eye':body_point([150,100],bend).tolist(),'bend':float(bend),
+                          'eye':(head@np.array([150.,100.])+offset).tolist(),'bend':float(bend),
                           'bowAngle':float(bow_angle),'paint':quality})
     return frames,hands,landmarks

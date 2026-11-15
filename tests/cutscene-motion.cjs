@@ -4,10 +4,11 @@ const root=path.resolve(__dirname,'..'),w={};w.window=w;vm.createContext(w);
 for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-data.js','assets/cutscenes/v0197/animation-data.js'])vm.runInContext(fs.readFileSync(path.join(root,p),'utf8'),w);
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-for(const file of ['assets/cutscenes/v0197/animation-data.js','assets/visuals/power-animations.js'])assert(html.includes(file+'?v='+D.version),'The browser must fetch matching repaired metadata/renderer cache versions');
-assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.9'));
+assert(html.includes('assets/cutscenes/v0197/animation-data.js?v='+D.version));
+assert(html.includes('assets/visuals/power-animations.js?v='+D.version),'Bow keeps its matched metadata and renderer cache versions');
+assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.11'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
-assert(loaded.filter(([key])=>key!=='cutscene-vendor').every(([,url])=>url.endsWith('?v='+D.version)));
+assert(loaded.every(([,url])=>url.endsWith('?v='+D.version)));
 assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.VENDOR_ANIMATION_SECONDS,3);assert.equal(A.VENDOR_SETTLED_FRAME,192);
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){
@@ -28,7 +29,7 @@ for(let i=0;i<169;i++){
   const shoulder=p.shoulders[j],elbow=p.elbows[j],hand=D.bow.hands[i][j];
   assert(Math.abs(dist(elbow,shoulder)-25)<.001&&Math.abs(dist(hand,elbow)-30)<.001,'Both painted arm segments retain fixed lengths');
   const cross=(hand[0]-shoulder[0])*(elbow[1]-shoulder[1])-(hand[1]-shoulder[1])*(elbow[0]-shoulder[0]);
-  assert(j?cross>0:cross<0,'Each elbow keeps the same bend side through the complete lift');
+  assert(cross>0,'Each elbow keeps the same bend side through the complete lift');
   const quality=p.paint[j];assert(quality.connected>.97&&quality.upperWidth>=7&&quality.upperWidth<=20&&quality.foreWidth>=7&&quality.foreWidth<=20&&quality.elbowAlpha>240&&quality.handAlpha>240,'Rasterized arms retain connected, substantial opaque paint at sleeves, bracers, elbows and fists');
   if(i)assert(dist(elbow,D.bow.rig[i-1].elbows[j])<3&&dist(hand,D.bow.hands[i-1][j])<3,'No elbow flip or hand jump between poses');
  }
@@ -60,8 +61,32 @@ for(const t of [3,3.001,5,7.999]){
 const m=JSON.parse(fs.readFileSync(path.join(root,'assets/cutscenes/v0197/manifest.json')));
 for(const [kind,entries]of Object.entries(m).filter(([k])=>['sources','runtime'].includes(k)))for(const [name,meta]of Object.entries(entries)){
  const b=fs.readFileSync(path.join(root,'assets/cutscenes/v0197',kind==='sources'?'source':'',name));
- assert.equal(b.length,meta.bytes);assert.equal(crypto.createHash('sha256').update(b).digest('hex'),meta.sha256);assert.equal(b[25],6);
+ assert.equal(b.length,meta.bytes);assert.equal(crypto.createHash('sha256').update(b).digest('hex'),meta.sha256);if(name.endsWith('.webp')){
+   assert.equal(b.toString('ascii',0,4),'RIFF');assert.equal(b.toString('ascii',8,12),'WEBP');
+ }else assert.equal(b[25],6);
  if(meta.bounds)assert(meta.bounds.every(([l,t,r,b])=>l>=2&&t>=2&&r<223&&b<223),'Every interpolated silhouette stays within its cell');
 }
-assert.equal(m.runtime['reaper-bow.png'].frames,A.BOW_FRAMES);assert.equal(m.runtime['reaper-vendor.png'].frames,A.VENDOR_FRAMES);
-console.log('PASS cutscenes: source/runtime hashes, 169 connected painted bow poses, stable elbow bend/segment lengths, actual two-hand stock span, physical reach/lift, exact one-second hold, 241 unchanged vendor poses and retimed planted merchant feet.');
+assert.equal(m.runtime['reaper-bow.png'].frames,A.BOW_FRAMES);assert.equal(m.runtime['reaper-vendor.webp'].frames,A.VENDOR_FRAMES);
+assert(m.runtime['reaper-vendor.webp'].bytes<=5252880,'Vendor approach stays within the prior transfer budget');
+assert(m.runtime['reaper-vendor.webp'].size.every(v=>v<=3584),'Vendor atlas stays inside the existing texture limit');
+assert(Object.values(m.runtime).reduce((bytes,asset)=>bytes+asset.bytes,0)<=9874079,'The three dense atlases stay within the PR87 transfer budget');
+assert(fs.statSync(path.join(root,'assets/cutscenes/v0197/vendor-canvas.webp')).size<=602944,'Canvas merchant atlas stays within the prior transfer budget');
+const vendor=D.vendor.rig, walk=vendor.slice(0,96);
+assert.equal(vendor.length,193);
+assert(Math.max(...walk.map(p=>p.pelvis[1]))-Math.min(...walk.map(p=>p.pelvis[1]))>4,'The upper body participates in both walking loads');
+for(const [i,p] of walk.entries()){
+ assert(p.feet.some(f=>f.forefoot[1]===214),'At least one boot bears weight throughout the walk');
+ for(const j of [0,1]){
+  const q=(i/96+(j===0?.5:0))%1;
+  const [x,y]=p.feet[j].forefoot;
+  if(q<=.61)assert(y===214&&Math.abs(x+q*A.WALK_STRIDE*.4-(j===0?160:174))<.002,'The loaded forefoot stays in the same stage position');
+ }
+}
+assert.deepEqual(vendor[96],vendor[0],'Settle begins in the exact last touchdown drawing');
+assert(vendor.slice(96).every(p=>p.feet[1].forefoot[0]===vendor[96].feet[1].forefoot[0]),'The lead boot brakes and holds while the trailing boot gathers');
+assert.equal(A.merchantPose(2.2,true).offer,0);
+assert(A.merchantPose(2.55,true).offer>.45);
+assert.equal(A.merchantPose(3,true).offer,1);
+assert(A.merchantPose(3,false).lantern===0);
+assert(Math.abs(A.merchantPose(2.35,false).lantern)>.005);
+console.log('PASS cutscenes: source/runtime hashes, 169 connected painted bow poses, stable elbow bend/segment lengths, actual two-hand stock span, physical reach/lift, exact one-second hold, 193 articulated vendor poses, locked toe contact, separate merchant responses and texture budgets.');

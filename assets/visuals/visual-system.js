@@ -701,6 +701,7 @@
           const tween=motion&&motion.hasTweens(s)&&part>=.25&&part<.75;
           const index=tween?from:Math.round(time)%frames.length;
           const meta=frames[index],sprite=this.boneCrawlerPool[used++];sprite.__grimEntity=e;
+          sprite.__grimCrawlerFrame=tween?index+4:index;
           const contacts=motion&&(tween?motion.CRAWL_MIDS[from]:motion.CRAWL_CLAWS[index]);
           const ground=e.y+(scope.GRIM_COMBAT?.CRAWLER_HITBOX.footOffset ?? 0);
           const pose=motion?.crawlerPose(s.terrain,e.x,ground,meta.width,meta.height,meta.scale,contacts);

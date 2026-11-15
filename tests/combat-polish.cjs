@@ -22,9 +22,31 @@ for(const grade of [-.73,0,.73]){
     }
   }
 }
+const crawlerReference={width:1477,height:1065,scale:mScale,claws:Ground.CRAWL_CLAWS[0]};
+for(const grade of [-.73,-.25,0,.42,.73]){
+  const height=x=>240+(x-180)*grade;
+  const terrain={segments:[{kind:'ground',start:0,end:400}],surfaceAt:(_,x)=>height(x)};
+  const crawl=Ground.crawlerPose(terrain,180,240,1477,1065,mScale,crawlerReference.claws);
+  for(const claws of Ground.RESPONSE_CLAWS){
+    const response={width:512,height:512,scale:.30,claws};
+    const pose=Ground.responsePose(terrain,180,240,response,crawlerReference);
+    assert(Math.abs(Ground.clawX(pose,response,0)-Ground.clawX(crawl,crawlerReference,0))<.05,
+      'A recoil or defeat painting remains pinned to the same bearing claw');
+    assert(Math.abs(pose.angle-Math.atan(grade))<.05,'The response follows the grade instead of flattening');
+    for(const j of [0,2]){
+      const x=Ground.clawX(pose,response,j);
+      const dx=(256-claws[j])*.30,dy=(claws[j+1]-256)*.30;
+      assert(Math.abs(pose.y+dx*Math.sin(pose.angle)+dy*Math.cos(pose.angle)-height(x))<.05,
+        'Both response support landmarks align to the slope');
+    }
+  }
+}
 const ledge={segments:[{kind:'ground',start:0,end:180},{kind:'gap',start:180,end:320}],
   surfaceAt:()=>240};
 assert.equal(Ground.floor(ledge,180),null);
+const edgeResponse={width:512,height:512,scale:.30,claws:Ground.RESPONSE_CLAWS[2]};
+const edge=Ground.responsePose(ledge,179,240,edgeResponse,crawlerReference);
+assert(Number.isFinite(edge.y)&&Ground.clawX(edge,edgeResponse,2)<180,'The rear claw bears a response at a ledge');
 assert(Number.isFinite(Ground.crawlerPose(ledge,179,240,1477,1065,mScale,Ground.CRAWL_CLAWS[0]).y));
 assert.equal(Ground.cycle(104,0,104),0);
 
@@ -78,4 +100,4 @@ assert.equal(abyss.state,'dying');assert.deepEqual(scroll,[abyss.cameraX,abyss.c
 const fake={player:{visualHurtMs:340},enemies:[],add:{},terrain:{groundAt(){return 300;},anchorAt(){return 300;}}};
 const v=new A.CombatAnimations(fake);const imp={kind:'imp',x:100,y:280};v.enemyHit(imp,false);assert.equal(imp.visualHitMs,240);assert.equal(v.corpses.length,0);
 for(let i=0;i<20;i++)v.enemyHit({...imp,x:i*10},true);assert.equal(v.corpses.length,12);const saved=v.snapshot();v.tick(100);assert.equal(fake.player.visualHurtMs,240);assert(v.corpses.every(c=>c.age===100));v.restore(saved);assert(v.corpses.every(c=>c.age===0));v.tick(800);assert.equal(v.corpses.length,0);
-console.log('PASS v0.17: floor-contact/airborne entry, persistent Angel/Devil cards and healing, 880ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 96-pose bat loop, detached bounded defeat views and rewind restore.');
+console.log('PASS combat polish: response scale/grade registration, floor-contact/airborne entry, persistent Angel/Devil cards and healing, 880ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 96-pose bat loop, detached bounded defeat views and rewind restore.');

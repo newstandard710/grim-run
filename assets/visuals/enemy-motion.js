@@ -10,7 +10,12 @@
   ];
   const CRAWL_MIDS=CRAWL_CLAWS.map((pair,index)=>pair.map((value,claw)=>
     (value+CRAWL_CLAWS[(index+1)%CRAWL_CLAWS.length][claw])*.5));
-  const HIT_CLAWS=[[224,441,390,437],[212,433,352,438],[222,442,392,439]];
+  // Supporting claws on the original left-facing response plates. The
+  // raised front claw in frame 1 is excluded from the support pair.
+  const RESPONSE_CLAWS=[
+    [224,441,390,437],[212,433,352,438],[222,442,392,439],[222,443,379,441],
+    [215,445,386,444],[208,447,373,446],[200,450,379,448],[198,450,366,450]
+  ];
   function queueGroundDetails(scene){
     scene.load?.spritesheet?.(KEY,'assets/enemies/illustrated-v2/ground-inbetweens.webp?v=1',
       {frameWidth:CELL,frameHeight:CELL,endFrame:7});
@@ -61,6 +66,34 @@
     return {x:pivotX-mx*c+my*s,y:pivotY-mx*s-my*c,angle};
   }
   const hasTweens=scene=>Boolean(scene.textures?.exists?.(KEY));
-  scope.GRIM_ENEMY_MOTION={KEY,CELL,CRAWLER_STRIDE,IMP_STRIDE,CRAWL_CLAWS,CRAWL_MIDS,HIT_CLAWS,
-    queueGroundDetails,cycle,floor,crawlerPose,hasTweens};
+  function crawlView(scene,index){
+    if(!scene.visuals?.boneCrawlerReady||!Number.isInteger(index)||index<0||index>=8)return null;
+    const frame=index%4,meta=scope.GRIM_VISUALS.V2_BONE_CRAWLER_FRAMES[frame];
+    const mid=index>=4&&hasTweens(scene);
+    return {key:mid?KEY:meta.key,frame:mid?frame:undefined,
+      imageScale:mid?meta.scale/(.2*.6):meta.scale,
+      width:meta.width,height:meta.height,scale:meta.scale,claws:(mid?CRAWL_MIDS:CRAWL_CLAWS)[frame]};
+  }
+  function clawX(pose,view,claw){
+    const x=(view.width*.5-view.claws[claw])*view.scale;
+    const y=(view.claws[claw+1]-view.height*.5)*view.scale;
+    return pose.x+x*Math.cos(pose.angle)-y*Math.sin(pose.angle);
+  }
+  function responsePose(terrain,x,ground,view,reference){
+    let pose=crawlerPose(terrain,x,ground,view.width,view.height,view.scale,view.claws);
+    if(!reference)return pose;
+    const start=crawlerPose(terrain,x,ground,reference.width,reference.height,reference.scale,reference.claws);
+    const front=clawX(start,reference,0);
+    const claw=floor(terrain,front)!==null?0:2;
+    const target=claw===0?front:clawX(start,reference,claw);
+    let origin=x;
+    // Re-evaluate the slope after shifting the new painting over the bearing claw.
+    for(let i=0;i<2;i++){
+      origin+=target-clawX(pose,view,claw);
+      pose=crawlerPose(terrain,origin,ground,view.width,view.height,view.scale,view.claws);
+    }
+    return pose;
+  }
+  scope.GRIM_ENEMY_MOTION={KEY,CELL,CRAWLER_STRIDE,IMP_STRIDE,CRAWL_CLAWS,CRAWL_MIDS,
+    RESPONSE_CLAWS,queueGroundDetails,cycle,floor,crawlerPose,hasTweens,crawlView,clawX,responsePose};
 })(typeof window!=='undefined'?window:globalThis);

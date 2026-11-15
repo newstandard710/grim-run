@@ -47,7 +47,7 @@ async function inspect(browser,url,canvas,failed=false){
   const page=await browser.newPage({viewport:{width:740,height:360},hasTouch:true});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   try{
-    if(failed)await page.route(/reaper-vendor\.png|vendor-canvas\.webp/,route=>route.abort());
+    if(failed)await page.route(/reaper-vendor\.webp|vendor-canvas\.webp/,route=>route.abort());
     await page.goto(url,{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
     await page.touchscreen.tap(23,43);

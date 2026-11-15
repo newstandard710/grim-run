@@ -27,6 +27,14 @@ const startRun=page=>page.evaluate(()=>{
     const eyes=await page.evaluate(()=>{
      const s=window.grimRun.scene.scenes[0],texture=s.textures.get('cutscene-bow');
      const canvas=document.createElement('canvas');canvas.width=224;canvas.height=224;const ctx=canvas.getContext('2d');
+     const weapon=s.textures.get('power-bone-crossbow').getSourceImage();
+     const mask=document.createElement('canvas');mask.width=weapon.width;mask.height=weapon.height;
+     const maskCtx=mask.getContext('2d');maskCtx.drawImage(weapon,0,0);
+     const pixels=maskCtx.getImageData(0,0,mask.width,mask.height).data,opaque=[];
+     const stock=window.GRIM_VENDOR_DATA.bowStockGrip,paintScale=370*.19;
+     for(let y=0;y<mask.height;y++)for(let x=0;x<mask.width;x++){
+      if(pixels[(y*mask.width+x)*4+3]>=128)opaque.push([(x/mask.width-stock[0])*paintScale,(y/mask.height-stock[1])*paintScale]);
+     }
      return window.GRIM_CUTSCENE_DATA.bow.rig.map((rig,i)=>{
       const f=texture.get(i);ctx.clearRect(0,0,224,224);ctx.drawImage(f.source.image,f.cutX,f.cutY,224,224,0,0,224,224);
       const p=ctx.getImageData(0,0,224,224).data;let n=0,far=0;
@@ -35,10 +43,17 @@ const startRun=page=>page.evaluate(()=>{
       const point=rig.eye,distance=(a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],u=Math.max(0,Math.min(1,((point[0]-a[0])*dx+(point[1]-a[1])*dy)/(dx*dx+dy*dy)));return Math.hypot(point[0]-a[0]-u*dx,point[1]-a[1]-u*dy);};
       const hands=window.GRIM_CUTSCENE_DATA.bow.hands[i];
       const occluded=[0,1].some(j=>distance(rig.shoulders[j],rig.elbows[j])<8||distance(rig.elbows[j],hands[j])<8);
-      return {n,far,occluded};
+      let clearsEye=true;
+      if(i>=72){
+       const c=Math.cos(rig.bowAngle),s=Math.sin(rig.bowAngle),[hx,hy]=hands[0];
+       const dx=point[0]-hx,dy=point[1]-hy,px=dx*c+dy*s,py=-dx*s+dy*c;
+       clearsEye=!opaque.some(([x,y])=>(x-px)**2+(y-py)**2<8**2);
+      }
+      return {n,far,occluded,clearsEye};
      });
     });
     assert(eyes.every(e=>(e.n>0||e.occluded)&&e.far<6),'Every decoded pose has one registered head; only modeled arm occlusion may cover its eye, with no stray second eye');
+    assert(eyes.slice(72).every(e=>e.n>0&&e.clearsEye),'The visible eye and opaque weapon stay separated throughout the grasp, lift, and hold');
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s._cutsceneRealUpdate=s.sys.sceneUpdate;s.sys.sceneUpdate=function(){};clearInterval(s.loopWatchdogId);window.grimRun.loop.sleep();s.state='playing';s.obstacles=[];s.enemies=[];s.fireballs=[];});
     for(const [kind,k]of [['angel',1],['devil',8]]){
      const initial=await page.evaluate(k=>{const s=window.grimRun.scene.scenes[0];s.triggerVendor(k);window.grimRun.loop.sleep();s.drawScene();
