@@ -47,8 +47,9 @@ const startRun=page=>page.evaluate(()=>{
      for(let i=0;i<=200;i++){
       const t=i*.01999;
       const info=await page.evaluate(t=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=8000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
-       const a=s.vendorArt;return {frame:Number(a.reaper.frame.name),key:a.reaper.texture.key,y:a.reaper.y,mesh:a.merchantMesh.visible,dip:a.merchantMesh.cutscenePose.dip};},t);
-      used.add(info.frame);assert.equal(info.key,'cutscene-vendor');assert(info.mesh);assert.equal(info.y,height*.84);
+       const a=s.vendorArt;return {frame:Number(a.reaper.frame.name),key:a.reaper.texture.key,y:a.reaper.y,sceneHeight:s.height,mesh:a.merchantMesh.visible,dip:a.merchantMesh.cutscenePose.dip};},t);
+      used.add(info.frame);assert.equal(info.key,'cutscene-vendor');assert(info.mesh);
+      assert.equal(info.y,info.sceneHeight*.84,'The approach remains planted at the rendered stage floor');
       if([20,55,100,160,195].includes(i))await page.screenshot({path:path.join(dir,`cutscene-${kind}-${width}-${i}.png`)});
       await page.waitForTimeout(20);
      }
