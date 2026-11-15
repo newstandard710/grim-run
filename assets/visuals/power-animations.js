@@ -360,6 +360,13 @@
           .setScale(cinemaScale).setVisible(true);
       }
       const g=this.cinemaFX;
+      // The lower rim stays registered while the opening light tracks its seam.
+      if(t>.12&&t<.57){
+        const seam=(t-.12)/.45,light=Math.sin(seam*Math.PI);
+        const rimY=ground+15-h*.177;
+        g.lineStyle(1.5,0xa4fff1,light*.32);
+        g.lineBetween(shrineX-h*.084,rimY-1,shrineX+h*.084,rimY-1);
+      }
       if(reveal>0){
         const dx=h*.19*.25,dy=h*.19*(.5-235/512);
         const centerX=bx+Math.cos(angle)*dx-Math.sin(angle)*dy,centerY=by+Math.sin(angle)*dx+Math.cos(angle)*dy;

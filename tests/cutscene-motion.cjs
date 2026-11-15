@@ -4,11 +4,11 @@ const root=path.resolve(__dirname,'..'),w={};w.window=w;vm.createContext(w);
 for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-data.js','assets/cutscenes/v0197/animation-data.js'])vm.runInContext(fs.readFileSync(path.join(root,p),'utf8'),w);
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-assert(html.includes('assets/cutscenes/v0197/animation-data.js?v='+D.version+'-vendor1'));
+assert(html.includes('assets/cutscenes/v0197/animation-data.js?v='+D.version));
 assert(html.includes('assets/visuals/power-animations.js?v='+D.version),'Bow keeps its matched metadata and renderer cache versions');
 assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.11'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
-assert(loaded.filter(([key])=>key!=='cutscene-vendor').every(([,url])=>url.endsWith('?v='+D.version)));
+assert(loaded.every(([,url])=>url.endsWith('?v='+D.version)));
 assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.VENDOR_ANIMATION_SECONDS,3);assert.equal(A.VENDOR_SETTLED_FRAME,192);
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){
@@ -29,7 +29,7 @@ for(let i=0;i<169;i++){
   const shoulder=p.shoulders[j],elbow=p.elbows[j],hand=D.bow.hands[i][j];
   assert(Math.abs(dist(elbow,shoulder)-25)<.001&&Math.abs(dist(hand,elbow)-30)<.001,'Both painted arm segments retain fixed lengths');
   const cross=(hand[0]-shoulder[0])*(elbow[1]-shoulder[1])-(hand[1]-shoulder[1])*(elbow[0]-shoulder[0]);
-  assert(j?cross>0:cross<0,'Each elbow keeps the same bend side through the complete lift');
+  assert(cross>0,'Each elbow keeps the same bend side through the complete lift');
   const quality=p.paint[j];assert(quality.connected>.97&&quality.upperWidth>=7&&quality.upperWidth<=20&&quality.foreWidth>=7&&quality.foreWidth<=20&&quality.elbowAlpha>240&&quality.handAlpha>240,'Rasterized arms retain connected, substantial opaque paint at sleeves, bracers, elbows and fists');
   if(i)assert(dist(elbow,D.bow.rig[i-1].elbows[j])<3&&dist(hand,D.bow.hands[i-1][j])<3,'No elbow flip or hand jump between poses');
  }
@@ -69,6 +69,7 @@ for(const [kind,entries]of Object.entries(m).filter(([k])=>['sources','runtime']
 assert.equal(m.runtime['reaper-bow.png'].frames,A.BOW_FRAMES);assert.equal(m.runtime['reaper-vendor.webp'].frames,A.VENDOR_FRAMES);
 assert(m.runtime['reaper-vendor.webp'].bytes<=5252880,'Vendor approach stays within the prior transfer budget');
 assert(m.runtime['reaper-vendor.webp'].size.every(v=>v<=3584),'Vendor atlas stays inside the existing texture limit');
+assert(Object.values(m.runtime).reduce((bytes,asset)=>bytes+asset.bytes,0)<=9874079,'The three dense atlases stay within the PR87 transfer budget');
 assert(fs.statSync(path.join(root,'assets/cutscenes/v0197/vendor-canvas.webp')).size<=602944,'Canvas merchant atlas stays within the prior transfer budget');
 const vendor=D.vendor.rig, walk=vendor.slice(0,96);
 assert.equal(vendor.length,193);

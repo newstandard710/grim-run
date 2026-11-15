@@ -1,4 +1,4 @@
-# Cutscene art — v0.19.8 arm repair, v0.19.7 vendor motion
+# Cutscene art — v0.19.11 vendor and Bow motion
 
 The first Angel and Devil introductions animate for three visible seconds and
 hold the complete composition for five. Either phase can be skipped directly
@@ -26,8 +26,9 @@ data and atlases. No source art is modified.
 The summit acquisition uses one matching painted body/hood/scythe layer and
 separate painted arm components. A continuous body hinge, knee/hip bend and
 cloak follow-through preserve the character's features, while two-link arm IK
-keeps the hands connected. The wrist path arcs around the face before arriving
-overhead. The v0.19.8 repair places pivots in the cloth elbow folds, keeps
+keeps the hands connected. The hood leads the reach. The second palm follows into the rim grip,
+then the wrists carry the stock outward before the overhead arc. The
+registered eye remains visible and clear of opaque weapon pixels. The v0.19.8 repair places pivots in the cloth elbow folds, keeps
 25px upper arms and 30px forearms, and transforms native-resolution paint with
 uniform scaling and premultiplied 4× supersampling. Neither elbow switches bend
 side. Shoulder pivots follow the armor; the two palms match the actual stock
@@ -37,10 +38,11 @@ and the chest front plus a rim mask hide the relic while it is inside the chest.
 
 | Seconds | Action |
 | --- | --- |
-| 0–0.4 | Establish and open chest |
-| 0.4–1.5 | Bend knees/hips and reach down into chest |
-| 1.5–1.8 | Settle at deepest reach; grip at 1.65s |
-| 1.8–3 | Stand and lift overhead |
+| 0–0.22 | Establish the stance |
+| 0.12–0.57 | Open the lid with a brief glint at the fixed rim |
+| 0.22–1.65 | Load into the reach and place the two palms |
+| 1.65–1.78 | Set the two-handed grasp at the rim |
+| 1.78–3 | Straighten and arc the bow clear of the face |
 | 3–4 | One still raised pose, cyan/ivory glow |
 | 4 | Resume gameplay and grant the existing Bone Crossbow reward |
 

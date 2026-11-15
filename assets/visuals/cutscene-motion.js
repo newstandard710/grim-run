@@ -9,15 +9,15 @@
   function preload(s){
     for(const [key,file,cell,count] of [['cutscene-bow','reaper-bow.png',CELL,BOW_FRAMES],
       ['cutscene-vendor','reaper-vendor.webp',CELL,VENDOR_FRAMES],['cutscene-hands','bow-hands.png',64,BOW_FRAMES]])
-      s.load.spritesheet(key,ROOT+file+'?v='+(key==='cutscene-vendor'?'0.19.11':'0.19.8'),{frameWidth:cell,frameHeight:cell,endFrame:count-1});
+      s.load.spritesheet(key,ROOT+file+'?v=0.19.11',{frameWidth:cell,frameHeight:cell,endFrame:count-1});
   }
   function relicMotionAt(t){
     t=Math.max(0,t);
-    const pose=t<.4?0:t<1.5?72*smooth((t-.4)/1.1):t<1.8?72:t<3?72+96*smooth((t-1.8)/1.2):168;
+    const pose=t<.22?0:t<1.65?72*smooth((t-.22)/1.43):t<1.78?72:t<3?72+96*smooth((t-1.78)/1.22):168;
     const hold=t>=HOLD_START&&t<HOLD_START+HOLD_SECONDS;
     // Quantization must not select the final painting early: the raised
     // drawing, glow clock and one-second exit all begin on the same boundary.
-    return {pose,frame:t<HOLD_START?Math.min(167,Math.round(pose)):168,hold,grabbed:t>=1.65,
+    return {pose,frame:t<1.65?Math.min(71,Math.round(pose)):t<HOLD_START?Math.min(167,Math.round(pose)):168,hold,grabbed:t>=1.65,
       glow:hold?smooth((t-HOLD_START)/.16)*(.90+.10*Math.sin((t-HOLD_START)*Math.PI)):0};
   }
   const WALK_STRIDE=100/.6;
