@@ -1,0 +1,22 @@
+# Reaper anatomy continuity checkpoint
+
+## Completed run stage
+
+- Base PR86 `bdf79fc7a04b457ffdcaa0515825fbc67b0adb8a`, tree `60f6df156718c67f2c2cdff159ae5a0fb75958a1`. The previous unpublished implementation could not be recovered. This is a new reconstruction from the original artwork and the saved PR86 video, pose sheet and diagnosis.
+- Shared profile landmarks are in [the pose guide](reaper-motion-pose-guide.md). The source baker moves the painted shoulder ahead of the raised pelvis, registers separate near and far leg paintings to the same stride, rolls the heel around the planted forefoot, moves the free arm from its shoulder, and carries the original weapon rigidly with the grip. The cloak follows the trunk with a limited trailing motion.
+- The 192 single-layer atlas frames advance over two 202-world-pixel cycles with footfalls every 101 world pixels. Existing support and slope metadata use the same distance-indexed interface. The atlas is 1,937,036 bytes against a 2,047,544-byte budget. The existing focused motion suite passed. Decoded atlas checks found 128 of 128 support paints, 253 minimum hood-region median alpha, 1.50 world-pixel maximum toe drift and no opaque pixels below row 168.
+- Local Chromium Canvas and SwiftShader WebGL captured 740 × 360 touch play at 1× and controlled sequences at 300, 362.5 and 425 world px/s for 1× and ¼× playback. Both leads show the knee loading over the boot, a lifted trailing heel, distinct swing and planted phases, and a forward pauldron. The coat remains attached and the carried blade and stock clear the floor in those run sequences. This is a software-browser review. Cut handoffs remain pending.
+
+## Verified local CUT checkpoint
+
+- `scripts/prepare-continuous-cut.py` derives the 24 cut paintings from the same articulated run plates. It also extracts the run's carry scythe as a separate, rigid visual layer. The standard cut keeps the legacy atlas dimensions and readiness checks. The additional visual scythe does not determine combat readiness.
+- The first 740 × 360 Canvas sequences found stable hood and cloak size, a mismatched lead leg at entry, and boots extending toward the ground during an airborne cut. The refinement blends the edge poses against twelve distance samples over both run leads and gives airborne cuts a gathered body with rising, tucked and falling handoffs. The late grip is higher and the rigid blade travels through a tighter arc. The extra visual atlas leaves the existing legacy readiness decision intact.
+- Local Chromium Canvas and SwiftShader WebGL captured fourteen 740 × 360 sequences each. The 1× and ¼× review included contact, load, toe-off and swing for both leads, a rising jump, a fall, uphill and downhill slopes, Tundra, and the Soul bridge. The hood and shoulder breadth hold through the cut and the cloak stays attached without a wide entry flare. The late scythe remains attached to the painted grip and the sampled weapon pixels cleared the tested terrain by at least 8.38 world px.
+- The 24-case PR86 parity matrix passed in both renderers at 30/60/120 Hz with ready, delayed, missing, and invalid legacy cut art. Each case exercises hit, miss, enemy damage and fireball reflection and matches readiness, sweep rectangles, trajectory, cooldown, and RNG. The delay fixture delayed initial atlas delivery; the failed assets separately exercised the fallback path. Active timing remains 52–205.4 ms, total 260 ms, cooldown 405 ms. The existing focused motion and combat Node suites and browser motion suite passed. RUN source, atlas and metadata match the reconstructed RUN checkpoint byte for byte.
+- The publisher reports remote RUN `2c117122a79703c659c66cb1c5c09affb1e437ab` with the same RUN tree as local `068f5a8`. PR86 remains the comparison baseline.
+- Bundle prerequisite is the exact reconstructed RUN head `068f5a86e6b9564749fa1e59291eebf977fd17a5`, tree `5029d63ddfe7f13e493a86c7bba96fa82d79dcab`. The standalone transport snapshot has Library ID `libfile_fde3_f-d8c9f345a43481919e990f83ad4665e8_341adfe3367c819190414eee62b400ed`. Its import manifest is `libfile_fde3_f-deac7cc7d35481918c5bff0e389af0dc_341adfe3367c819190414eee62b400ed`.
+
+## Continue from this checkpoint
+
+1. The transport worker applies the verified CUT tree onto the authorized remote RUN head and checks that the published tree matches the bundle.
+2. Use the published head for the Regression, Interface, Chromium, and WebGL budget checks. Follow the approved PR and Pages path once the affected checks pass.

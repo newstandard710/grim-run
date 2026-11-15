@@ -1,0 +1,15 @@
+# Reaper run and standard cut pose guide
+
+Source of truth for the reconstruction is PR86 at `bdf79fc`, the PR86 phone motion and pose evidence, and the existing approved character paintings. The phone-size rearward pauldron, low pelvis, overlapping swing shin, flat support boot, and narrowing at cut entry are the visual defects. The right-facing plate uses a fixed ground anchor `(123, 168)` and 13/15 world px per plate px.
+
+| Landmark | Registered run construction | Match in the cut |
+|---|---|---|
+| Hood, skull and neck | Use the accepted side-profile paint as one shape. The crown and visible cheek follow the chest and retain their outline and scale. | Register crown, brow and cheek to the chest. Preserve the skull inside the hood through windup, strike and recovery. |
+| Near pauldron and chest | Raise the pelvis to approximately `(104, 117)` and bring the painted pauldron ahead of it. Keep the lower ribs and belt connected. | Keep the same projected crown-to-pauldron and pauldron-to-belt lengths, allowing rotation around the pelvis for the lunge. |
+| Opposing arms | Release the free arm from the chest painting and pivot it at the far shoulder opposite the advancing near leg. Keep the carried scythe registered to its painted grip. | Identify the gripping hand each frame. Evaluate the entire rigid scythe and its painted edge at both ground and air handoffs. |
+| Hips, knees and boots | Keep separate near and far leg paintings and constant segment lengths within each leg. Load the front knee, pass the lifted swing knee under the body, push through the ball, and open the swing knee for contact. | Match projected hip-to-knee and knee-to-ankle proportions for both entering leads. Keep visible knees and boots separated where the camera angle permits it. |
+| Cloak | Keep the shoulder attachment and weighted lower folds. Let the loose trailing cloth follow the body with a continuous, limited wave. | Match the breadth around the shoulders, ribs and hips. Carry the attached cloak volume across entry and recovery as the tail follows the existing action. |
+
+Contact order is near, far, near, far at 0, 101, 202 and 303 world px across the 404 px atlas. Each full left/right cycle stays 202 px. The body progresses over the support before rear heel rise. The heel and ball share a stationary support trajectory while the shin and foot rotate. Reference the side view in [Vincent et al., Fig. 2 A–C](https://pmr.med.ufl.edu/wordpress/files/2022/09/Setting-standards-for-medically-based-running-analyses.pdf) and the consecutive poses in [Muybridge Plate 62](https://www.nga.gov/artworks/166565-plate-number-62-running-full-speed).
+
+Judge shared body proportions on weapon-free plates with the same anchor and scale, then in 740 × 360 motion at 1× and ¼×. Inspect both leads from contact into loading, leg passing, heel rise and toe-off. Follow the actual weapon, chest, hips and supported boot across the transitions. Keep the existing cut readiness and collision selection, animation windows, cooldown, movement, contacts, physics and RNG.
