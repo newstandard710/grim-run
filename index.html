@@ -1536,7 +1536,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/biome-midground.js?v=2"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.3"></script>
   <script src="assets/motion/v0193/animation-data.js?v=0.19.3"></script>
-  <script src="assets/visuals/motion-animations.js?v=air3"></script>
+  <script src="assets/visuals/motion-animations.js?v=air4"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
   <script src="assets/visuals/enemy-motion.js?v=2"></script>
@@ -1837,7 +1837,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.motionArt=scope.GRIM_MOTION_ART?new scope.GRIM_MOTION_ART.MotionAnimations(this):null;
       this.drawScene();
-      // Optional in-betweens stream after the initial scene and controls exist.
+      // Optional air and enemy details stream after the initial scene and controls exist.
       if(this.load?.spritesheet){
         scope.GRIM_MOTION_ART?.queueAirDetails(this);
         scope.GRIM_ENEMY_MOTION?.queueGroundDetails(this);

@@ -207,9 +207,11 @@ async function gameplay(tab, older){
     assert(values.crawler.angle>.30,'Crawler tilts downhill along the footprint');
     assert.equal(values.crawler.texture,'enemy-ground-inbetweens');
     assert.equal(values.imp.texture,'enemy-ground-inbetweens');
-    assert(values.air.poses.some(([, , ,name])=>name==='motion-reaper-jump-inbetweens'));
+    assert(values.air.poses.some(([, , ,name])=>name==='motion-reaper-jump-deliberate'));
     const rise=values.air.poses.slice(0,7);
     assert(rise.every((v,i)=>i===0||v[1]-rise[i-1][1]<1.5),'Short-hop pose remains continuous');
+    assert(values.air.poses.slice(6,14).every(([,frame])=>frame===4),
+      'Short-hop legs hold the gathered posture through the apex');
   }
   assert.deepEqual(tab.errors,[]);
   return values;

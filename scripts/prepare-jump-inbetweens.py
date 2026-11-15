@@ -13,6 +13,7 @@ SOURCE = ROOT / 'assets/motion/v0180/reaper-jump.png'
 OUT = ROOT / 'assets/motion/v0180/reaper-jump-inbetweens.webp'
 CELL, RUNTIME_CELL = 320, 192
 PAIRS = (4, 5, 7, 9, 11, 12, 16, 17, 18, 19, 20, 21, 22)
+AIR_KEYS = (0, 4, 12, 16, 18, 20, 23)
 SHEET = np.asarray(Image.open(SOURCE).convert('RGBA'), dtype=np.float32) / 255
 y, x = np.mgrid[:CELL, :CELL].astype(np.float32)
 grid = np.stack([x, y], axis=-1)
@@ -37,12 +38,12 @@ def remap(image, coords):
                      borderMode=cv2.BORDER_CONSTANT)
 
 
-def midpoint(source, target):
+def warp_toward(source, target, fraction):
     flow = flow_engine.calc(track_image(source), track_image(target), None)
     flow = cv2.GaussianBlur(flow, (0, 0), .8)
     coords = grid
     for _ in range(5):
-        coords = grid - .5*remap(flow, coords)
+        coords = grid - fraction*remap(flow, coords)
     alpha = source[:, :, 3]
     mask = alpha > .5
     signed = (distance_transform_edt(mask)-distance_transform_edt(~mask)).astype(np.float32)
@@ -50,13 +51,14 @@ def midpoint(source, target):
             remap(alpha, coords), remap(signed, coords))
 
 
-def bake_pair(a, b):
-    color_a, alpha_a, edge_a = midpoint(a, b)
-    color_b, alpha_b, edge_b = midpoint(b, a)
-    coverage = alpha_a + alpha_b
-    color = (color_a+color_b) / np.maximum(coverage[:, :, None], .0001)
-    alpha = np.clip((edge_a+edge_b)*.5+.5, 0, 1)
-    alpha[coverage < .02] = 0
+def bake_pair(a, b, fraction=.5):
+    color_a, alpha_a, edge_a = warp_toward(a, b, fraction)
+    color_b, alpha_b, edge_b = warp_toward(b, a, 1-fraction)
+    keep = 1-fraction
+    coverage = alpha_a*keep + alpha_b*fraction
+    color = (color_a*keep+color_b*fraction) / np.maximum(coverage[:, :, None], .0001)
+    alpha = np.clip(edge_a*keep+edge_b*fraction+.5, 0, 1)
+    alpha[coverage < .01] = 0
     # Remove disconnected motion specks, retaining the painted main silhouette.
     _, labels, stats, _ = cv2.connectedComponentsWithStats(np.uint8(alpha > .15), 8)
     for label in range(1, len(stats)):
@@ -73,6 +75,18 @@ def bake_jump():
         atlas.paste(tile, (index % 6 * RUNTIME_CELL, index // 6 * RUNTIME_CELL))
     atlas.save(OUT, lossless=True, method=6)
     print(f'{len(PAIRS)} solid intermediate poses, {OUT.stat().st_size:,} bytes')
+
+
+def bake_deliberate_jump():
+    atlas = Image.new('RGBA', (6*RUNTIME_CELL, 3*RUNTIME_CELL))
+    for pair, (a, b) in enumerate(zip(AIR_KEYS, AIR_KEYS[1:])):
+        for step in range(3):
+            tile = bake_pair(key_pose(a), key_pose(b), (step+1)/4)
+            index = pair*3+step
+            atlas.paste(tile, (index % 6 * RUNTIME_CELL, index // 6 * RUNTIME_CELL))
+    output = OUT.with_name('reaper-jump-deliberate.webp')
+    atlas.save(output, lossless=True, method=6)
+    print(f'18 registered air and landing transitions, {output.stat().st_size:,} bytes')
 
 
 def bake_enemies():
@@ -101,5 +115,7 @@ if __name__ == '__main__':
     import sys
     if '--enemies' in sys.argv:
         bake_enemies()
+    elif '--deliberate' in sys.argv:
+        bake_deliberate_jump()
     else:
         bake_jump()
