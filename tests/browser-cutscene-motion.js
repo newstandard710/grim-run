@@ -8,6 +8,11 @@ const server=http.createServer((req,res)=>{
   res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'})[path.extname(f)]||'application/octet-stream'});res.end(fs.readFileSync(f));
  }catch(e){res.writeHead(404).end(String(e));}
 });
+const startRun=page=>page.evaluate(()=>{
+ const scene=window.grimRun.scene.scenes[0];
+ scene.enterHome();
+ scene.startRun();
+});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
@@ -18,7 +23,7 @@ const server=http.createServer((req,res)=>{
    try{
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
     await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,null,{timeout:90000});
-    await page.locator('#home-enter-btn').click({force:true});await page.locator('#start-btn').click({force:true});
+    await startRun(page);
     const eyes=await page.evaluate(()=>{
      const s=window.grimRun.scene.scenes[0],texture=s.textures.get('cutscene-bow');
      const canvas=document.createElement('canvas');canvas.width=224;canvas.height=224;const ctx=canvas.getContext('2d');
@@ -42,8 +47,9 @@ const server=http.createServer((req,res)=>{
      for(let i=0;i<=200;i++){
       const t=i*.01999;
       const info=await page.evaluate(t=>{const s=window.grimRun.scene.scenes[0];s.vendorIntroMs=8000-t*1000;s.drawScene();window.grimRun.step(performance.now(),0);
-       const a=s.vendorArt;return {frame:Number(a.reaper.frame.name),key:a.reaper.texture.key,y:a.reaper.y,mesh:a.merchantMesh.visible,dip:a.merchantMesh.cutscenePose.dip};},t);
-      used.add(info.frame);assert.equal(info.key,'cutscene-vendor');assert(info.mesh);assert.equal(info.y,height*.84);
+       const a=s.vendorArt;return {frame:Number(a.reaper.frame.name),key:a.reaper.texture.key,y:a.reaper.y,sceneHeight:s.height,mesh:a.merchantMesh.visible,dip:a.merchantMesh.cutscenePose.dip};},t);
+      used.add(info.frame);assert.equal(info.key,'cutscene-vendor');assert(info.mesh);
+      assert.equal(info.y,info.sceneHeight*.84,'The approach remains planted at the rendered stage floor');
       if([20,55,100,160,195].includes(i))await page.screenshot({path:path.join(dir,`cutscene-${kind}-${width}-${i}.png`)});
       await page.waitForTimeout(20);
      }
@@ -87,8 +93,7 @@ const server=http.createServer((req,res)=>{
   try{
    await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
    await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready&&window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
-   await page.locator('#home-enter-btn').click({force:true});
-   await page.locator('#start-btn').click({force:true});
+   await startRun(page);
    const marks=[];
    for(const scene of ['angel','devil','bow']){
     await page.evaluate(scene=>{

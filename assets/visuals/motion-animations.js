@@ -2,8 +2,8 @@
 (function(scope){
   'use strict';
   const DATA=scope.GRIM_MOTION_DATA,RUN=scope.GRIM_RUN_DATA,ROOT='assets/motion/v0180/';
-  // The sheet contains four two-step gait beats. Advance each natural stride
-  // over 188 world pixels instead of playing all four at that distance.
+  // Each gait is a full left/right cycle. The atlas and snow contacts
+  // use the same distance along the run.
   const GAITS_PER_SHEET=RUN?.gaitsPerSheet||4,PIXELS_PER_GAIT=RUN?.pixelsPerGait||188,
     STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
   const AIR_KEYS=Object.freeze([0,4,12,16,18,20,23]),AIR_STEPS=4;
@@ -81,6 +81,18 @@
       mix(.90,-1.15,clamp((progress-.79)/.21));
     return {x,y,angle,bodyX:x-gripX};
   }
+  function visualCutRig(progress){
+    const frame=cutFrame(progress),grip=DATA.visualCutGrips[Math.round(frame)];
+    // The painted hand drives the rigid weapon. Keep the small weight shift
+    // separate from the original grip and angle that drive the damage arc.
+    const bodyX=8*ease((progress-.2)/.39)*(1-ease((progress-.68)/.32));
+    const carry=-.30;
+    const angle=progress<.2?mix(carry,0,ease(progress/.2)):
+      progress<.79?mix(0,.90,clamp((progress-.2)/.59)):
+      mix(.90,carry,ease((progress-.79)/.21));
+    return {frame,bodyX,angle,x:(grip[0]-DATA.anchor[0])*.38+bodyX,
+      y:(grip[1]-DATA.anchor[1])*.38};
+  }
   function weaponPoint(rig,point,scale=WEAPON_SCALE){
     const w=DATA.weapon,dx=-(point[0]-w.pivot[0])*scale,dy=(point[1]-w.pivot[1])*scale;
     return {x:rig.x+dx*Math.cos(rig.angle)-dy*Math.sin(rig.angle),
@@ -128,10 +140,11 @@
   }
   function preload(s){
     if(!DATA||!s.load?.spritesheet)return;
-    for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,ROOT+name+'.png?v=0.18.0',
+    for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,
+      ROOT+name+'.png?v='+(name==='reaper-cut-body'?'0.19.10':'0.18.0'),
       {frameWidth:m.cell[0],frameHeight:m.cell[1],endFrame:m.frames-1});
     s.load.image('motion-scythe',ROOT+'scythe.png?v=0.18.0');
-    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=1',
+    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=2',
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
   function queueAirDetails(s){
@@ -180,13 +193,16 @@
       this.hide();const s=this.scene,p=s.player;
       if(!this.ready||!p||!s.visuals?.reviewV2||!['playing','paused','rewinding','countdown'].includes(s.state))return;
       if(s.lowProfile||p.sliding||p.airTuck||(p.visualFireMs>0&&p.attackMs<=0)||(p.visualHurtMs||0)>0)return;
-      let name,t,scale=.52,loop=false;
-      if(p.attackMs>0){if(!this.handlesCut())return;name='reaper-cut-body';t=cutFrame(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs);scale=.38;}
+      let name,t,scale=.52,loop=false,rig=null,progress;
+      if(p.attackMs>0){
+        if(!this.handlesCut())return;
+        name='reaper-cut-body';progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;
+        rig=visualCutRig(progress);t=rig.frame;scale=.38;
+      }
       else if(!p.grounded||(p.visualLandingMs||0)>0){name='reaper-jump';t=jumpFrame(p);}
       else {name='reaper-run';t=runFrame(p.x-(s.startX||0));loop=true;}
       s.powerArt?.hideBase();s.powerArt?.action?.setVisible(false);
       for(const v of s.combatArt?.reaper||[])v.setVisible(false);
-      const rig=name==='reaper-cut-body'?cutRig(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs):null;
       const alpha=p.invulMs>0&&Math.floor((s.elapsed||0)/.083333)%2===0?.58:1;
       const solidRun=name==='reaper-run'&&this.runReady;
       const air=name==='reaper-jump'?airPose(t,s.textures?.exists?.(JUMP_TWEEN_KEY)):null;
@@ -201,8 +217,7 @@
         .setOrigin(anchor[0]/cell,anchor[1]/cell)
         .setPosition(p.x+(rig?.bodyX||0),s.feetY+(solidRun?runSupportRise(s,p,atlasFrame):0)).setScale(solidRun?RUN.scale:tween?scale*cell/JUMP_TWEEN_CELL:scale)
         .setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
-      if(name==='reaper-cut-body'){
-        const progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;
+      if(rig){
         this.weapon.setPosition(p.x+rig.x,s.feetY+rig.y).setRotation(rig.angle)
           .setScale(-WEAPON_SCALE,WEAPON_SCALE).setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
         drawSwingArc(this.trail,s,progress,alpha);
@@ -211,5 +226,5 @@
     }
     destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();}
   }
-  scope.GRIM_MOTION_ART={MotionAnimations,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
+  scope.GRIM_MOTION_ART={MotionAnimations,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,visualCutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
 })(typeof window!=='undefined'?window:globalThis);

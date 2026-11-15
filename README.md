@@ -1,6 +1,6 @@
-# Grim Run — v0.19.9
+# Grim Run — v0.19.10
 
-[Play Grim Run](https://newstandard710.github.io/grim-run/index.html?release=0.19.9)
+[Play Grim Run](https://newstandard710.github.io/grim-run/index.html?release=0.19.10)
 
 The Home Bone Crawler faces left toward the Reaper. Both vendor introductions settle in three seconds, hold the full scene for five seconds, and open the vendor menu automatically. A tap, Enter, or Space opens the menu early. Reduced motion shows the settled composition from entry.
 

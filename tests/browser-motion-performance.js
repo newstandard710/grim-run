@@ -39,19 +39,29 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     seen.add(s.motionArt.state.atlasFrame);
     g.clearRect(0,0,R.cell,R.cell);g.drawImage(source,i%R.columns*R.cell,Math.floor(i/R.columns)*R.cell,R.cell,R.cell,0,0,R.cell,R.cell);
     const bytes=g.getImageData(110,80,20,28).data,alpha=[];for(let j=3;j<bytes.length;j+=4)alpha.push(bytes[j]);alpha.sort((a,b)=>a-b);minHead=Math.min(minHead,alpha[Math.floor(alpha.length/2)]);
-    if(i<=8){
-      // The first eight frames are the same planted paint. Measure actual toe
-      // pixels in world coordinates, independent of the contact metadata.
-      const strip=g.getImageData(105,160,65,12).data;
+    if(R.supportX[i]!==null){
+      // Read the planted boot near its registered position. The other boot
+      // can cross this strip at toe-off, but lies outside this toe window.
+      const strip=g.getImageData(0,164,R.cell,6).data;
+      const sole=R.anchor[0]+R.supportX[i]/R.scale;
       let right=-1;
-      for(let j=3;j<strip.length;j+=4)if(strip[j]>=128)right=Math.max(right,105+Math.floor(j/4)%65);
+      for(let j=3;j<strip.length;j+=4){
+        const x=Math.floor(j/4)%R.cell;
+        if(strip[j]>128&&x>=sole+4&&x<sole+15)right=Math.max(right,x);
+      }
       if(right<0)throw Error('The planted boot is missing '+i);
       toe.push(i*R.distancePerSheet/R.frames+(right-R.anchor[0])*R.scale);
     }
    }
-   return {ready:s.motionArt.runReady,frames:seen.size,minHead,drift:Math.max(...toe)-Math.min(...toe)};
+   const steps=R.frames/(R.gaitsPerSheet*3),raw=toe;
+   const drift=R.contacts.map((_,i)=>{
+     const span=raw.slice(i*steps,(i+1)*steps);
+     if(span.length!==steps)throw Error('Incomplete stance '+i);
+     return Math.max(...span)-Math.min(...span);
+   });
+   return {ready:s.motionArt.runReady,frames:seen.size,minHead,drift:Math.max(...drift)};
   });assert(solid.ready);assert.equal(solid.frames,192);assert(solid.minHead>=250,'The hood remains opaque between paintings');
-  assert(solid.drift<2,'Decoded planted toe drifts less than two world pixels over the sampled support');
+  assert(solid.drift<=1.55,'Decoded planted toe meets the PR #85 world-pixel drift budget');
   const frames=new Set();
   for(let i=0;i<24;i++){
    const pose=await page.evaluate(i=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.x=s.startX+window.GRIM_MOTION_ART.STRIDE_PX*i/24;p.y=s.terrain.groundAt(p.x);p.grounded=true;p.visualLandingMs=0;s.cameraX=p.x-s.width*.32;s.cameras.main.setScroll(s.cameraX,s.cameraY);s.drawScene();return {frame:s.motionArt.state.frame,name:s.motionArt.state.name,old:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible),visible:s.motionArt.body.some(v=>v.visible)};},i);
@@ -66,7 +76,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const value=await page.evaluate(progress=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=true;p.y=s.terrain.groundAt(p.x);p.visualLandingMs=0;p.attackMs=260*(1-progress);s.drawScene();const a=s.motionArt;return {name:a.state?.name,weapon:a.weapon.visible,angle:a.weapon.rotation,scale:[a.weapon.scaleX,a.weapon.scaleY],feet:s.feetY,body:a.body.filter(v=>v.visible).map(v=>v.y)};},progress);
    assert.equal(value.name,'reaper-cut-body');assert(value.weapon&&value.scale[0]<0&&value.scale[1]>0);assert(value.body.every(y=>y===value.feet));weaponScale??=value.scale;assert.deepEqual(value.scale,weaponScale,'The scythe scale stays identical through every phase');assert(Math.abs(value.scale[1]-windowScale)<1e-9);await shot('cut-'+Math.round(progress*100));
   }
-  const cadence=await page.evaluate(()=>{const a=window.GRIM_MOTION_ART;return [300,362.5,425].map(speed=>({speed,frame:a.runFrame(speed),expected:speed/a.STRIDE_PX*24}));});
+  const cadence=await page.evaluate(()=>{const a=window.GRIM_MOTION_ART;return [300,362.5,425].map(speed=>({speed,frame:a.runFrame(speed),expected:(speed%a.STRIDE_PX)/a.STRIDE_PX*24}));});
   for(const sample of cadence)assert(Math.abs(sample.frame-sample.expected)<1e-8);
   const arc=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.attackMs=130;s.drawScene();const r=window.GRIM_MOTION_ART.cutRig(.5),D=window.GRIM_MOTION_DATA,A=window.GRIM_MOTION_ART;const tip=A.weaponPoint(r,D.weapon.tip),edge=A.sweepPoint(r,D.weapon.tip);return {drawn:s.motionArt.trail.commandBuffer.length>0,reach:Math.hypot(edge.x-r.x,edge.y-r.y)/Math.hypot(tip.x-r.x,tip.y-r.y)};});assert(arc.drawn&&Math.abs(arc.reach-1/.6)<1e-8);
   const timers=await page.evaluate(()=>{

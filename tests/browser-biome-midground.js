@@ -20,7 +20,10 @@ const server = http.createServer((req, res) => {
     if (!file.startsWith(root + path.sep)) return res.writeHead(403).end();
     res.writeHead(200, {'Content-Type': mime[path.extname(file)] || 'application/octet-stream'});
     const frozenForest = pathname === '/assets/visuals/forest-midground.js' && req.url.endsWith('?v=2');
-    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest ? pathname.slice(1) : null;
+    // The historical HTML must load its own frontispiece and its matching one-canvas layout.
+    const frozenHome = ['/assets/ui/v0160/frontispiece.js', '/assets/ui/v0160/interface.css'].includes(pathname) &&
+      req.url.endsWith('?v=0.19.3');
+    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest || frozenHome ? pathname.slice(1) : null;
     res.end(original ? execFileSync('git', ['show', baseline + ':' + original], {cwd: root}) : fs.readFileSync(file));
   } catch {
     if (!res.headersSent) res.writeHead(404);
@@ -37,6 +40,10 @@ async function setup(browser, viewport, options = {}) {
   const page = await browser.newPage({viewport, hasTouch: true});
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
+  if (options.baseline) await page.route('https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js',
+    route => route.fulfill({
+      path: path.join(root, 'assets/vendor/phaser-3.90.0/phaser.min.js'), contentType: 'application/javascript'
+    }));
   if (options.routes) await options.routes(page);
   await page.goto(`http://127.0.0.1:${server.address().port}/${options.baseline ? 'forest-baseline.html' : ''}?seed=33${options.off ? '&biomeMidground=0' : ''}`);
   await page.waitForFunction(() => window.grimRun?.scene.scenes[0]?.visuals?.reaperReady &&
@@ -279,11 +286,16 @@ async function parity(browser) {
   };
   const forest = async page => page.evaluate(() => {
     const b = window.biomeReview;
-    // Compare the complete Forest scene with the revised slide support layer
-    // isolated. The obstacle suite exercises the production supports separately.
+    // Compare the Forest scenery independently of revised supports and Reaper art.
+    // The obstacle and motion suites exercise those layers at their own entry points.
     for (const sprite of b.scene.obstacleSupportObjects.values()) sprite.destroy();
     b.scene.obstacleSupportObjects.clear();
     b.scene.drawObstacleSupport = () => {};
+    b.game.events.on(Phaser.Core.Events.PRE_RENDER, () => {
+      b.scene.motionArt?.hide();
+      b.scene.powerArt?.hideBase();
+      b.scene.actor.clear();
+    });
     for (const section of b.scene.terrain.segments) section.y0 = section.y1 = b.scene.groundY;
     b.place(300);
     return Array.from({length: 10}, () => {
