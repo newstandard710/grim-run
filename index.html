@@ -1642,13 +1642,13 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/biome-midground.js?v=2"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
-  <script src="assets/visuals/motion-animations.js?v=0.19.12-ankle"></script>
+  <script src="assets/visuals/motion-animations.js?v=0.19.13-air"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=0.19.12"></script>
   <script src="assets/visuals/slide-animations.js?v=0.19.12"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
   <script src="assets/visuals/enemy-motion.js?v=0.19.11"></script>
-  <script src="assets/visuals/combat-animations.js?v=0.19.12"></script>
+  <script src="assets/visuals/combat-animations.js?v=0.19.13-opaque"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=breeze3"></script>
   <script src="assets/visuals/visual-system.js?v=0.19.11"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
@@ -1657,7 +1657,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.12"></script>
   <script src="assets/visuals/cutscene-motion.js?v=0.19.12"></script>
-  <script src="assets/visuals/power-animations.js?v=0.19.11"></script>
+  <script src="assets/visuals/power-animations.js?v=0.19.13-air"></script>
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
@@ -5820,10 +5820,19 @@ window.GRIM_CONFIG = Object.freeze({
       for(const p of this.particles){g.fillStyle(p.color,clamp(p.life/p.maxLife,0,1));g.fillCircle(p.x,p.y,p.radius);}
     }
     drawGroundSlide(){
-      const sliding=this.player.sliding&&['playing','paused','rewinding','countdown'].includes(this.state);
-      const higherAction=sliding&&(this.powerArt?.action?.visible||
-        this.combatArt?.reaper?.some(sprite=>sprite.visible));
+      const live=['playing','paused','rewinding','countdown'].includes(this.state);
+      const sliding=this.player.sliding&&live;
+      const airLow=live&&!this.onGround&&this.lowProfile;
+      const action=this.powerArt?.action?.visible||this.combatArt?.reaper?.some(sprite=>sprite.visible);
+      const higherAction=sliding&&(action||this.motionArt?.state?.name==='reaper-tuck-slide');
       const presentation=this.slideArt?.render(sliding,higherAction);
+      if(airLow&&!action&&!this.motionArt?.body[0]?.visible&&this.visuals?.reaperReady){
+        // Both action atlases can be unavailable. Keep the low collision
+        // profile legible, just as the ground slide's procedural fallback does.
+        this.powerArt?.hideBase();
+        this.drawReaper(true);
+        return;
+      }
       if(!sliding||higherAction||presentation==='painted')return;
       const base=this.visuals?.reaperPoseSprites;
       if(presentation!=='procedural'&&base?.slide?.visible)return;

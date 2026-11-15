@@ -108,6 +108,18 @@
     hideReaper(){
       const s=this.scene;s.powerArt?.hideBase();s.powerArt?.action?.setVisible(false);s.powerArt?.weapon?.setVisible(false);
     }
+    renderSolidAction(name,t,x,y,scale,alpha,frames){
+      const {anchor,cell}=DATA[name],span=frames||FRAME_RANGES[name];
+      const frame=span[Math.round(clamp(t,0,span.length-1))];
+      // These authored Reaper frames include their weapons. Keep the nearest
+      // drawing whole. Blending two misaligned drawings thins the body and
+      // draws two partly visible cutting edges or crossbow muzzles.
+      this.reaper[0].setTexture('combat-'+name,frame)
+        .setOrigin(anchor[0]/cell[0],anchor[1]/cell[1])
+        .setScale(scale).setPosition(x,y).setRotation(0).setFlipX(false)
+        .clearTint().setAlpha(alpha).setVisible(alpha>0);
+      this.reaper[1].setVisible(false);
+    }
     renderHurtDeath(t,x,y,alpha,death=false){
       const count=death?8:4,first=death?4:0,part=clamp(t,0,count-1);
       const slot=Math.floor(part*3),offset=slot%3;
@@ -157,7 +169,7 @@
       if(name&&this.ready[name]){
         this.hideReaper();const alpha=p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1;
         if(name==='reaper-hurt-death')this.renderHurtDeath(t,p.x,s.feetY,alpha);
-        else this.blend(this.reaper,name,t,p.x,s.feetY,scale,alpha,0,frames);
+        else this.renderSolidAction(name,t,p.x,s.feetY,scale,alpha,frames);
         this.reaperState={name,frame:t};
       }
     }

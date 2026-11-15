@@ -7,7 +7,19 @@
   const GAITS_PER_SHEET=RUN?.gaitsPerSheet||4,PIXELS_PER_GAIT=RUN?.pixelsPerGait||188,
     STRIDE_PX=GAITS_PER_SHEET*PIXELS_PER_GAIT,LAND_MS=175,COUNT=24;
   const AIR_KEYS=Object.freeze([0,4,12,16,18,20,23]),AIR_STEPS=4;
-  const JUMP_TWEEN_CELL=192, JUMP_TWEEN_KEY='motion-reaper-jump-deliberate';
+  const AIR_ART={
+    key:'motion-reaper-jump-deliberate',url:ROOT+'reaper-air-registration.webp?v=2',
+    width:224,height:184,columns:8,frames:48,anchor:[125,168],scale:13/15
+  };
+  const AIR_CUT_ART={
+    key:'motion-reaper-air-cut-joins',url:ROOT+'reaper-air-cut-joins.webp?v=2',
+    width:192,height:160,columns:6,frames:18,anchor:[125,148],scale:13/15
+  };
+  // Pommel-side fingers in each source air band. prepare-air-cut-joins.py
+  // registers the matching painted body to these world-space grips.
+  const AIR_CUT_HANDS=[[-46,-54],[-43,-53],[-43,-53]];
+  const AIR_KEY_START=18,AIR_CONTACT=25,TUCK_START=26,TUCK_RELEASE=29,
+    TUCK_EXIT_START=30,TUCK_ENTRY_START=39,TUCK_TOUCHDOWN=45,TUCK_TO_SLIDE=47;
   const CUT_HANDOFF=DATA?.visualCutHandoff,CUT_HANDOFF_KEY='motion-reaper-cut-handoffs';
   // The old 0.14-source scale was sized for the damage reach, making the
   // cutting weapon larger than the carried one. One carry-matched scale is
@@ -62,6 +74,20 @@
       return {frame:step<AIR_STEPS/2?a:b,tween:false};
     return {frame:left*(AIR_STEPS-1)+step-1,tween:true};
   }
+  function airBand(t){return t<8?0:t<14?1:2;}
+  function tuckPose(s,t,tucked,release){
+    const p=s.player;
+    if(tucked){
+      const hold=scope.GRIM_POWER_ART.actionFrame(s);
+      // A latched takeoff already starts in a low action. An airborne press
+      // begins with a low registered join from the current jump band.
+      const age=p.visualTuckMs||0;
+      if(!p.airTuck&&age<40)return TUCK_ENTRY_START+airBand(t)*2+(age>=20?1:0);
+      return TUCK_START+hold;
+    }
+    const step=Math.min(3,Math.floor((scope.GRIM_POWER_ART.TUCK_RELEASE_MS-release)/20));
+    return step===0?TUCK_RELEASE:TUCK_EXIT_START+airBand(t)*3+step-1;
+  }
   function cutFrame(progress){
     const t=clamp(progress);
     return t<.20?t/.20*6:t<.79?6+(t-.20)/.59*12:18+(t-.79)/.21*5;
@@ -104,6 +130,14 @@
     const index=edge<0?(phases+3)*edgeFrames.length+frame:group*edgeFrames.length+edge;
     const rise=p.grounded?runSupportRise(s,p,runFrame)*edgeWeights[edge]:0;
     return {index,rise,grip:poses[index]};
+  }
+  function registeredCutJoin(handoff){
+    const {phases,edgeWeights}=CUT_HANDOFF,n=edgeWeights.length;
+    const index=handoff.index-phases*n;
+    if(index<0||index>=AIR_CUT_ART.frames)return handoff;
+    const [x,y]=AIR_CUT_HANDS[Math.floor(index/n)],w=edgeWeights[index%n];
+    const [baseX,baseY,angle]=handoff.grip;
+    return {index,rise:0,art:AIR_CUT_ART,grip:[mix(baseX,x,w),mix(baseY,y,w),mix(angle,.54,w)]};
   }
   function weaponPoint(rig,point,scale=WEAPON_SCALE){
     const w=DATA.weapon,dx=-(point[0]-w.pivot[0])*scale,dy=(point[1]-w.pivot[1])*scale;
@@ -163,12 +197,15 @@
       {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
   }
   function queueAirDetails(s){
-    s.load?.spritesheet?.(JUMP_TWEEN_KEY,ROOT+'reaper-jump-deliberate.webp?v=1',
-      {frameWidth:JUMP_TWEEN_CELL,frameHeight:JUMP_TWEEN_CELL,endFrame:17});
+    const motion=s.motionArt,loader=scope.GRIM_ACTOR_TEXTURES;
+    if(!motion||!loader)return;
+    loader.load(s,AIR_ART,()=>{motion.airReady=motion.airDetailsValid(AIR_ART);});
+    loader.load(s,AIR_CUT_ART,()=>{motion.airCutReady=motion.airDetailsValid(AIR_CUT_ART);});
   }
   class MotionAnimations{
     constructor(s){
       this.scene=s;this.body=[];this.ready=false;this.state=null;
+      this.airReady=false;this.registeredAir=null;
       if(!DATA||!s.add?.image||!s.textures?.exists)return;
       this.ready=Object.keys(DATA.sheets).every(name=>s.textures.exists('motion-'+name)&&
         Array.from({length:COUNT},(_,i)=>s.textures.get('motion-'+name).has(i)).every(Boolean))&&s.textures.exists('motion-scythe');
@@ -204,6 +241,40 @@
       this.trail=s.add.graphics().setDepth(12.07);
       s.events?.once?.('shutdown',()=>this.destroy());
     }
+    airDetailsValid(art){
+      const {key,width,height,columns,frames}=art;
+      const texture=this.scene.textures.get(key),image=texture?.getSourceImage?.();
+      const rows=Math.ceil(frames/columns);
+      if(image?.width!==width*columns||image.height!==height*rows||
+         !Array.from({length:frames},(_,i)=>texture.has(i)).every(Boolean))return false;
+      try{
+        // Check occupancy once. A valid-looking response with blank or solid
+        // tiles cannot replace the original key poses. This is cosmetic only.
+        const sample=document.createElement('canvas'),w=width/8,h=height/8;
+        sample.width=w*columns;sample.height=h*rows;
+        const g=sample.getContext('2d',{willReadFrequently:true});
+        g.drawImage(image,0,0,sample.width,sample.height);
+        for(let i=0;i<frames;i++){
+          const {data}=g.getImageData(i%columns*w,Math.floor(i/columns)*h,w,h);
+          let opaque=0;
+          for(let k=3;k<data.length;k+=4)if(data[k]>64)opaque++;
+          if(opaque<25||opaque>280)return false;
+        }
+        return true;
+      }catch(_){return false;}
+    }
+    airSequence(p){
+      const active=!p.grounded||(p.visualLandingMs||0)>0;
+      if(this.airPlayer!==p||!active){
+        this.airPlayer=p;
+        this.registeredAir=null;
+      }
+      if(active&&this.registeredAir===null){
+        this.registeredAir=this.airReady;
+        this.registeredAirCut=this.airReady&&this.airCutReady&&this.cutWeaponReady;
+      }
+      return this.registeredAir;
+    }
     hide(){for(const v of this.body)v.setVisible(false);this.weapon?.setVisible(false);this.trail?.clear();this.state=null;}
     handlesCut(){
       const s=this.scene,p=s.player;
@@ -213,34 +284,59 @@
     render(){
       this.hide();const s=this.scene,p=s.player;
       if(!this.ready||!p||!s.visuals?.reviewV2||!['playing','paused','rewinding','countdown'].includes(s.state))return;
-      if(s.lowProfile||p.sliding||p.airTuck||(p.visualFireMs>0&&p.attackMs<=0)||(p.visualHurtMs||0)>0)return;
+      const registered=this.airSequence(p);
+      const tucked=!p.grounded&&(p.airTuck||p.holdSlide)&&p.onSoulPlatform===false;
+      const release=!tucked&&!p.grounded&&p.onSoulPlatform===false&&
+        (p.visualTuckMs>0?scope.GRIM_POWER_ART.TUCK_RELEASE_MS:p.visualTuckReleaseMs||0);
+      const landAge=LAND_MS-p.visualLandingMs;
+      const tuckLanding=registered&&p.grounded&&s.powerArt?.tuckLanding&&landAge<36&&p.attackMs<=0;
+      const registeredTuck=registered&&tucked&&p.attackMs<=0;
+      if(((s.lowProfile||p.airTuck)&&!registeredTuck&&!tuckLanding)||(p.sliding&&!tuckLanding)||
+         (p.visualFireMs>0&&p.attackMs<=0)||(p.visualHurtMs||0)>0)return;
       const distance=p.x-(s.startX||0);
       let name,t,scale=.52,loop=false,rig=null,progress,handoff=null;
       if(p.attackMs>0){
         if(!this.handlesCut())return;
         name='reaper-cut-body';progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;
         rig=visualCutRig(progress,this.cutWeaponReady);t=rig.frame;scale=DATA.visualCutBody?.scale??.38;
-        if(this.cutHandoffReady)handoff=cutHandoff(s,p,Math.round(t),runAtlasFrame(distance));
+        if(this.cutHandoffReady){
+          handoff=cutHandoff(s,p,Math.round(t),runAtlasFrame(distance));
+          if(this.registeredAirCut&&!p.grounded&&handoff)handoff=registeredCutJoin(handoff);
+        }
       }
-      else if(!p.grounded||(p.visualLandingMs||0)>0){name='reaper-jump';t=jumpFrame(p);}
+      else if(!p.grounded||(p.visualLandingMs||0)>0){
+        // When details are absent, leave the authored PowerAnimations
+        // release visible. An available strip draws the whole handoff here.
+        if(release&&!registered&&s.powerArt?.action?.visible)return;
+        name=tuckLanding&&p.sliding?'reaper-tuck-slide':tucked?'reaper-tuck':'reaper-jump';
+        t=jumpFrame(p);
+      }
       else {name='reaper-run';t=runFrame(distance);loop=true;}
       s.powerArt?.hideBase();s.powerArt?.action?.setVisible(false);
       for(const v of s.combatArt?.reaper||[])v.setVisible(false);
-      const alpha=p.invulMs>0&&Math.floor((s.elapsed||0)/.083333)%2===0?.58:1;
+      const lowFlicker=tucked||name==='reaper-tuck-slide'||(release&&name==='reaper-jump');
+      const flicker=lowFlicker?Math.floor(s.frame/5):Math.floor((s.elapsed||0)/.083333);
+      const alpha=p.invulMs>0&&flicker%2===0?.58:1;
       const solidRun=name==='reaper-run'&&this.runReady;
-      const air=name==='reaper-jump'?airPose(t,s.textures?.exists?.(JUMP_TWEEN_KEY)):null;
-      const tween=air?.tween;
+      const air=name==='reaper-jump'||name==='reaper-tuck'||name==='reaper-tuck-slide'?airPose(t,registered):null;
+      const registeredFrame=registered&&air?(tuckLanding?
+        p.sliding?TUCK_TO_SLIDE:landAge<12?TUCK_RELEASE:TUCK_TOUCHDOWN+(landAge>=24?1:0):
+        tucked||release?tuckPose(s,t,tucked,release):air.tween?air.frame:p.grounded&&air.frame===16?AIR_CONTACT:
+        AIR_KEY_START+AIR_KEYS.indexOf(air.frame)):null;
       const atlasFrame=handoff?handoff.index:solidRun?runAtlasFrame(distance):
-        air?air.frame:(loop?Math.round(t)%COUNT:Math.round(t));
-      const texture=handoff?CUT_HANDOFF_KEY:solidRun?'motion-reaper-run-solid':tween?JUMP_TWEEN_KEY:'motion-'+name;
-      const anchor=handoff?CUT_HANDOFF.anchor:solidRun?RUN.anchor:(rig&&DATA.visualCutBody?.anchor)||DATA.anchor;
+        registeredFrame??(air?air.frame:(loop?Math.round(t)%COUNT:Math.round(t)));
+      const texture=handoff?(handoff.art?.key||CUT_HANDOFF_KEY):solidRun?'motion-reaper-run-solid':
+        registeredFrame!==null?AIR_ART.key:'motion-'+name;
+      const anchor=handoff?(handoff.art?.anchor||CUT_HANDOFF.anchor):solidRun?RUN.anchor:
+        registeredFrame!==null?AIR_ART.anchor:(rig&&DATA.visualCutBody?.anchor)||DATA.anchor;
       const cell=handoff?CUT_HANDOFF.cell:solidRun?RUN.cell:DATA.cell[0];
+      const sizedArt=handoff?.art||(registeredFrame!==null?AIR_ART:null);
       const rise=handoff?.rise??(solidRun?runSupportRise(s,p,atlasFrame):0);
-      const renderScale=handoff?CUT_HANDOFF.scale:solidRun?RUN.scale:tween?scale*cell/JUMP_TWEEN_CELL:scale;
+      const renderScale=handoff?CUT_HANDOFF.scale:solidRun?RUN.scale:registeredFrame!==null?AIR_ART.scale:scale;
       // One opaque registered painting at a time, including the derived
       // transitions. Keep the same apparent size and feet anchor.
       this.body[0].setTexture(texture,atlasFrame)
-        .setOrigin(anchor[0]/cell,anchor[1]/cell)
+        .setOrigin(anchor[0]/(sizedArt?.width||cell),anchor[1]/(sizedArt?.height||cell))
         .setPosition(p.x+(rig?.bodyX||0),s.feetY+rise).setScale(renderScale)
         .setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
       if(rig){
