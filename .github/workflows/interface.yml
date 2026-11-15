@@ -42,6 +42,11 @@ jobs:
       - name: Verify four screen sizes, two thumbs, finger swipes and resurrection scenes
         if: steps.scope.outputs.interface == 'true'
         run: node tests/browser-beyond-death.js
+      - name: Verify hosted startup retry, Home and Reliquary focus, and combined controls
+        if: steps.scope.outputs.interface == 'true'
+        run: |
+          node tests/browser-home-startup-input.js
+          GRIM_HOME_CANVAS=1 node tests/browser-home-startup-input.js
       - name: Verify remaining obstacle, combo and fog regressions on the release branch
         if: github.ref == 'refs/heads/feature/veil-and-reliquary'
         run: |

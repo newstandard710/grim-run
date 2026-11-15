@@ -60,6 +60,14 @@ const falling=Array.from({length:501},(_,velocityY)=>shortHop({jumpAgeMs:250,vel
 assert(falling.every((pose,i)=>pose>=4&&pose<=16&&(!i||pose>=falling[i-1])));
 assert.equal(falling.at(-1),16,'Landing recovery begins only on contact');
 const frameSet=new Set();for(let t=0;t<=1;t+=.001)frameSet.add(Math.round(A.cutFrame(t)));assert.equal(frameSet.size,24);
+assert.equal(D.visualCutGrips.length,24);
+for(let i=0;i<=260;i++){
+ const rig=A.visualCutRig(i/260),grip=D.visualCutGrips[Math.round(rig.frame)];
+ assert(Math.abs((rig.x-rig.bodyX)/.38+D.anchor[0]-grip[0])<1e-9);
+ assert(Math.abs(rig.y/.38+D.anchor[1]-grip[1])<1e-9);
+ assert(rig.bodyX>=0&&rig.bodyX<=8);
+}
+assert(Math.abs(A.visualCutRig(0).angle-A.visualCutRig(1).angle)<1e-9);
 // The physical weapon is rigid and carry-sized; a separate spectral arc owns the unchanged damage reach.
 // Its pointed end must stay ahead of its socket along the entire active stroke.
 let bladeLength;
@@ -106,6 +114,7 @@ assert.equal(contours,0);
 // whose decoder can otherwise accept a partially drawn sprite sheet.
 function crc32(b){let c=0xffffffff;for(const byte of b){c^=byte;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
 const manifest=JSON.parse(read('assets/motion/v0180/manifest.json'));
+assert(manifest.runtime['reaper-cut-body.png'].bytes<=2097240,'The cut uses one atlas within the existing transfer budget');
 for(const [group,folder]of [['sources','source/'],['runtime','']])for(const [name,m]of Object.entries(manifest[group])){
  const b=fs.readFileSync(path.join(root,'assets/motion/v0180',folder+name));assert.equal(b.length,m.bytes,name);assert.equal(crypto.createHash('sha256').update(b).digest('hex'),m.sha256,name);
  let p=8,ended=false,idat=[];while(p<b.length){const n=b.readUInt32BE(p),type=b.toString('ascii',p+4,p+8);assert(p+n+12<=b.length,name+' chunk boundary');assert.equal(crc32(b.subarray(p+4,p+n+8)),b.readUInt32BE(p+n+8),name+' '+type);if(type==='IDAT')idat.push(b.subarray(p+8,p+8+n));if(type==='IEND')ended=true;p+=n+12;}

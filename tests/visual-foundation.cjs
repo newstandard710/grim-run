@@ -168,6 +168,7 @@ const scope={window:{innerWidth:950,innerHeight:430,GRIM_VISUALS:V,addEventListe
  localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,String(v))},
  location:{search:'?seed=19'},URLSearchParams,
  Phaser:{Scene:class{},Game:class{},AUTO:1,Scale:{RESIZE:1,CENTER_BOTH:1}}};
+scope.window.Phaser=scope.Phaser;
 vm.createContext(scope);
 for(const [,attrs,code] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(code,scope,{filename:'index.html'});
