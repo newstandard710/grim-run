@@ -85,6 +85,7 @@ const server=http.createServer((req,res)=>{
       const checked=[];
       const renderFailures=[];
       let selectorMisses=0,renderMisses=0;
+      const oldGroundAt=s.terrain.groundAt,oldAnchorAt=s.terrain.anchorAt;
       for(const skin of skins){
         const range=biomeRange[skin.biome],base=s.startX+((range[0]+range[1])/2)*window.GRIM_CONFIG.pxPerMeter;
         const type=obstacleType[skin.category];
@@ -101,6 +102,8 @@ const server=http.createServer((req,res)=>{
         const scale=s.obstacleSpriteScaleFor(skin,type);
         const placement=type==='branch'?{x:skin.gameW/2,y:180,
           width:skin.gameW*scale.x,height:Math.max(s.height*1.22,475),originY:1}:null;
+        const grounded=['jump','cut','fire'].includes(skin.category);
+        if(grounded)s.terrain.groundAt=x=>300+(x-o.x)*.32;
         const ok=s.drawObstacleSprite(o,placement),image=s.obstacleSpriteObjects.get(o);
         const expected=placement?{width:placement.width,height:placement.height}:
           type==='tuckGate'?{width:skin.biome==='ashlands'?196:176,height:400}:
@@ -116,13 +119,16 @@ const server=http.createServer((req,res)=>{
         const reg=window.GRIM_OBSTACLE_MOUNTS[skin.id];
         const contactX=o.x+o.width/2+((reg?.[0]??.5)-.5)*(image?.displayWidth||0);
         const visualGround=s.terrain.groundAt(contactX)??o.y+o.height;
-        if((skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&type==='bramble'))&&
-          (!image||image.originY!==(skin.groundAnchorY??1)||
-            image.y!==visualGround+s.obstacleVisualInset(o,skin))){
-          renderMisses++;renderFailures.push({id:skin.id,anchor:{originY:image?.originY,y:image?.y},
-            expectedAnchor:{originY:skin.groundAnchorY??1,
+        if(grounded&&(!image||image.originX!==reg[0]||Math.abs(image.x-contactX)>.001||
+            image.originY!==(skin.groundAnchorY??1)||
+            Math.abs(image.rotation-(type==='bramble'?0:.24))>.001||
+            Math.abs(image.y-visualGround-s.obstacleVisualInset(o,skin))>.001)){
+          renderMisses++;renderFailures.push({id:skin.id,anchor:{originX:image?.originX,
+            originY:image?.originY,x:image?.x,y:image?.y,rotation:image?.rotation},
+            expectedAnchor:{originX:reg[0],originY:skin.groundAnchorY??1,x:contactX,
               y:visualGround+s.obstacleVisualInset(o,skin)}});
         }
+        s.terrain.groundAt=oldGroundAt;
         if(placement&&(!image||image.originY!==placement.originY||image.y!==placement.y)){
           renderMisses++;renderFailures.push({id:skin.id,placement:{originY:image?.originY,y:image?.y},
             expectedPlacement:{originY:placement.originY,y:placement.y}});
@@ -130,7 +136,6 @@ const server=http.createServer((req,res)=>{
         image?.destroy();s.obstacleSpriteObjects.delete(o);
         checked.push(skin.id);
       }
-      const oldGroundAt=s.terrain.groundAt,oldAnchorAt=s.terrain.anchorAt;
       s.terrain.groundAt=()=>300;s.terrain.anchorAt=()=>300;
       const branch={type:'branch',x:s.startX+400*window.GRIM_CONFIG.pxPerMeter,
         y:-1700,width:74,height:1924,variant:0,destroyed:false};
@@ -165,9 +170,18 @@ const server=http.createServer((req,res)=>{
         Math.abs(foot.y-s.terrain.groundAt(foot.x)-13)>.001)){
         renderMisses++;renderFailures.push({id:'slide-support-slope-contact'});
       }
-      branchImage?.destroy();s.obstacleSpriteObjects.delete(branch);
-      branchBack?.destroy();s.obstacleBackObjects.delete(branch);
-      remounted?.destroy();s.obstacleSupportObjects.delete(branch);
+      const mountKey=remounted?.texture.key;
+      const oldObstacles=s.obstacles,oldCamera=s.cameraX;
+      s.obstacles=[branch];s.cameraX=branch.x+1200;
+      s.cleanupObstacleSprites();
+      const removedOffscreen=!s.textures.exists(mountKey)&&!s.obstacleSupportObjects.has(branch);
+      s.cameraX=oldCamera;s.drawObstacle(branch);
+      const rebuilt=s.textures.exists(mountKey)&&s.obstacleSupportObjects.has(branch);
+      branch.destroyed=true;s.cleanupObstacleSprites();
+      if(!removedOffscreen||!rebuilt||s.textures.exists(mountKey)||s.obstacleSupportObjects.has(branch)){
+        renderMisses++;renderFailures.push({id:'slide-support-texture-lifecycle',removedOffscreen,rebuilt});
+      }
+      s.obstacles=oldObstacles;
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       const board=[
         ['forest_jump_root-knot',106,328,'rock'],

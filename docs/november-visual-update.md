@@ -14,6 +14,8 @@ The existing cliff tile is preserved. A textured snow crust is baked into the co
 
 Both ground banks, the abyss layer and the legacy foreground haze omit pure Tundra. Transition masks use world X and the 5,000 m portal cut. The shared fog textures and the other biomes retain their settings.
 
+The backdrop and canyon paintings were reviewed together. The cool atmospheric depth follows the painted snow and ridgelines. No separate white mist was identified in those source paintings.
+
 ## Home input
 
 One overlay click handler covers the artwork and the accessible button. It retains a single early Home intent until the scene and menu readiness checks are installed. Focus moves to the menu heading. Pointer clicks near the Home release are briefly ignored by Start, while keyboard and assistive activations use the normal button. Global Enter and pointer Start now share the disabled-state check.
@@ -22,4 +24,4 @@ One overlay click handler covers the artwork and the accessible button. It retai
 
 The 24 slide variants use alpha-registered support feet. Their back plates are assembled against the upper hazard joint and two independent terrain contacts. The existing hazard and backing remain a matched pair. Canvas textures are cached by obstacle geometry and discarded when the mount leaves view, its obstacle disappears, or the scene ends. Rebuild the measured contact metadata with `python scripts/register-obstacle-mounts.py`.
 
-Air-bramble tethers share the two painted endpoints with the solid bank and the top of each bramble. Tuck mounting uses the current obstacle height after resize, with chain spans matched to their foreground gate. Low obstacles sample the real ground at their painted foot patch and follow the local slope. Upright cut trees and plants preserve the existing sprites and strike timing.
+Air-bramble tethers share the two painted endpoints with the solid bank and the top of each bramble. Tuck mounting uses the current obstacle height after resize, with chain spans matched to their foreground gate. Low obstacles sample the real ground at their painted foot patch and pivot around that same point on slopes. Upright cut trees and plants preserve the existing sprites and strike timing.

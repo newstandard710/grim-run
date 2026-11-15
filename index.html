@@ -5442,7 +5442,7 @@ window.GRIM_CONFIG = Object.freeze({
         image=this.add.image(0,0,textureKey).setOrigin(.5).setDepth(16);
         this.obstacleSpriteObjects.set(o,image);
       }
-      let x,y,width,height,originY=.5,rotation=0;
+      let x,y,width,height,originX=.5,originY=.5,rotation=0;
       if(placement){
         ({x,y,width,height}=placement);
         originY=placement.originY??skin.groundAnchorY??.5;
@@ -5475,12 +5475,12 @@ window.GRIM_CONFIG = Object.freeze({
       }else if(skin.category==='jump'||skin.category==='fire'||(skin.category==='cut'&&o.type==='bramble')){
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
         width=o.width*scale.x;height=o.height*scale.y;
-        x=o.x+o.width/2;
-        const contactX=x+((scope.GRIM_OBSTACLE_MOUNTS?.[skin.id]?.[0]??.5)-.5)*width;
-        const baseline=this.terrain.groundAt(contactX)??o.y+o.height;
+        originX=scope.GRIM_OBSTACLE_MOUNTS?.[skin.id]?.[0]??.5;
+        x=o.x+o.width/2+(originX-.5)*width;
+        const baseline=this.terrain.groundAt(x)??o.y+o.height;
         if(o.type!=='bramble'){
           const gap=Math.min(40,width*.28);
-          const left=this.terrain.groundAt(contactX-gap),right=this.terrain.groundAt(contactX+gap);
+          const left=this.terrain.groundAt(x-gap),right=this.terrain.groundAt(x+gap);
           if(Number.isFinite(left)&&Number.isFinite(right))
             rotation=clamp(Math.atan2(right-left,gap*2),-.24,.24);
         }
@@ -5491,7 +5491,7 @@ window.GRIM_CONFIG = Object.freeze({
         width=o.width*scale.x;height=o.height*scale.y;
         x=o.x+o.width/2;y=o.y+o.height/2+this.obstacleVisualInset(o);
       }
-      image.setOrigin(plant?(scope.GRIM_ENCOUNTER_DATA?.plant.anchor[0]||245)/384:.5,originY).setPosition(x,y).setDisplaySize(width,height)
+      image.setOrigin(plant?(scope.GRIM_ENCOUNTER_DATA?.plant.anchor[0]||245)/384:originX,originY).setPosition(x,y).setDisplaySize(width,height)
         .setRotation(rotation).setVisible(true);
       this.worldPolish?.maskRoots(image,o,skin);
       if(o.type==='fire')image.setAlpha(.96+.04*Math.sin(this.elapsed*11+o.x*.017));
