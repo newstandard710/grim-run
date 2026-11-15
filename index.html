@@ -209,6 +209,7 @@ button {cursor:pointer;}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
   <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=0.19.10">
+  <link rel="preload" as="script" href="assets/vendor/phaser-3.90.0/phaser.min.js">
 </head>
 <body>
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
@@ -346,8 +347,10 @@ button {cursor:pointer;}
       <button id="menu-btn" class="secondary">MAIN MENU</button>
     </div>
   </div>
-  <div id="error" class="modal-wrap hidden"><div class="modal compact"><h2>Unable to start</h2><p id="error-message"></p></div></div>
-  <!-- npm run build copies the pinned Phaser library to vendor for offline Android use. -->
+  <div id="error" class="modal-wrap hidden"><div class="modal compact" role="dialog" aria-modal="true" aria-labelledby="engine-error-title">
+    <h2 id="engine-error-title">Unable to start</h2><p id="error-message"></p>
+    <button id="engine-retry-btn" class="primary">TRY AGAIN</button>
+  </div></div>
   <script>
   (function(scope){
     const home=document.getElementById('home-screen');
@@ -374,16 +377,12 @@ button {cursor:pointer;}
     };
   })(window);
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"></script>
+  <script src="assets/ui/v0160/startup.js?v=1"></script>
   <div id="vendor-intro-screen" class="vendor-intro-scene hidden" role="dialog" aria-modal="true" aria-labelledby="vendor-intro-title">
     <div id="vendor-intro-title">THE HEAVENLY MERCHANT</div>
     <div id="vendor-intro-caption">A MOMENT OF SANCTUARY</div>
     <button id="vendor-intro-skip" class="primary" aria-label="Skip vendor introduction">SKIP ▶</button>
   </div>
-  <script>
-    // When opening the unbuilt source directly on a phone, load Phaser from its pinned CDN.
-    if (!window.Phaser) document.write('<script src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"><\/script>');
-  </script>
   <script>
 window.GRIM_CONFIG = Object.freeze({
   version: '0.19.9',
@@ -1664,8 +1663,12 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/world-polish.js?v=0.19.3"></script>
   <script>
-(function(scope) {
+(function defineScene(scope,Phaser) {
   'use strict';
+  if(!Phaser){
+    scope.GRIM_STARTUP.defineScene=engine=>defineScene(scope,engine);
+    return;
+  }
   const C = scope.GRIM_CONFIG;
   const Core = scope.GRIM_CORE;
   const Powers = scope.GRIM_POWERS;
@@ -6063,28 +6066,26 @@ window.GRIM_CONFIG = Object.freeze({
     }
   }
   scope.GrimGameScene = GameScene;
-})(window);
+})(window,window.Phaser);
 
 </script>
   <script>
 (function () {
   'use strict';
-  if (!window.Phaser) {
-    document.getElementById('error-message').textContent = 'The Phaser game library could not load. Connect to the internet and reopen the prototype, or use the built release from GitHub Pages / Android, which bundles Phaser for offline play.';
-    document.getElementById('error').classList.remove('hidden');
-    document.getElementById('menu').classList.add('hidden');
-    return;
+  function launch(Phaser){
+    window.GRIM_STARTUP?.defineScene?.(Phaser);
+    window.grimRun = new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: 'game',
+      backgroundColor: '#0a1022',
+      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH, width: window.innerWidth, height: window.innerHeight },
+      input: { activePointers: 3, touch: { capture: true } },
+      render: { antialias: true, pixelArt: false, roundPixels: false },
+      scene: [window.GrimGameScene]
+    });
   }
-  // Responsive layout + DOM touch buttons allow thumb input across phone aspect ratios.
-  window.grimRun = new Phaser.Game({
-    type: Phaser.AUTO,
-    parent: 'game',
-    backgroundColor: '#0a1022',
-    scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH, width: window.innerWidth, height: window.innerHeight },
-    input: { activePointers: 3, touch: { capture: true } },
-    render: { antialias: true, pixelArt: false, roundPixels: false },
-    scene: [window.GrimGameScene]
-  });
+  if(window.Phaser)launch(window.Phaser);
+  else window.GRIM_STARTUP.start(launch);
 })();
 
 </script>
