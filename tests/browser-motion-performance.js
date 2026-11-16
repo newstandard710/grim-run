@@ -79,6 +79,21 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const [name,vy,age,landing]of [['launch',-610,15,0],['rise',-400,130,0],['apex',0,390,0],['fall',450,650,0],['contact',0,0,175],['compress',0,0,100],['recover',0,0,20]]){
    const value=await page.evaluate(({vy,age,landing})=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=landing>0;p.jumpAgeMs=age;p.velocityY=vy;p.visualLandingMs=landing;p.y=s.terrain.groundAt(p.x)-(p.grounded?0:65);s.drawScene();return s.motionArt.state;},{vy,age,landing});assert.equal(value.name,'reaper-jump');await shot(name);
   }
+  const airJoin=await page.evaluate(()=>{
+   const s=grimRun.scene.scenes[0],p=s.player,a=s.motionArt;
+   Object.assign(p,{grounded:false,jumpAgeMs:390,velocityY:0,visualLandingMs:0,attackMs:0});
+   s.drawScene();
+   const carry=Number(a.body[0].frame.name);
+   p.attackMs=260;s.swingSequence++;
+   s.drawScene();
+   const palm=[a.weapon.x-p.x,a.weapon.y-s.feetY];
+   const angle=a.weapon.rotation;
+   p.attackMs=0;
+   return {carry,palm,angle};
+  });
+  assert.equal(airJoin.carry,115,'The middle air carry owns the apex');
+  assert(Math.hypot(airJoin.palm[0]+22,airJoin.palm[1]+56)<.001,'Cut starts on the apex carry palm');
+  assert(Math.abs(airJoin.angle-Math.PI/10)<.000001,'Cut starts on the apex carry shaft angle');
   const windowScale=await page.evaluate(()=>window.GRIM_MOTION_ART.WEAPON_SCALE);
   let weaponScale;
   for(const progress of [0,.10,.20,.35,.50,.65,.79,.92,.999]){

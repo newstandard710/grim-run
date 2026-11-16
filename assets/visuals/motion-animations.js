@@ -121,13 +121,14 @@
     return {frame,bodyX,angle,x:(grip[0]-DATA.anchor[0])*.38+bodyX,
       y:(grip[1]-DATA.anchor[1])*.38};
   }
+  function cutAirBand(t){return t<3?0:t<9?1:2;}
   function cutHandoff(s,p,frame,runFrame){
     const {edgeFrames,edgeWeights,phases,poses}=CUT_HANDOFF;
     const edge=edgeFrames.indexOf(frame);
     if(p.grounded&&edge<0)return null;
     const air=p.grounded?0:jumpFrame(p);
     const phase=(runFrame%(RUN.frames/RUN.gaitsPerSheet))/(RUN.frames/RUN.gaitsPerSheet);
-    const group=p.grounded?Math.round(phase*phases)%phases:phases+(air<3?0:air<9?1:2);
+    const group=p.grounded?Math.round(phase*phases)%phases:phases+cutAirBand(air);
     const index=edge<0?(phases+3)*edgeFrames.length+frame:group*edgeFrames.length+edge;
     const rise=p.grounded?runSupportRise(s,p,runFrame)*edgeWeights[edge]:0;
     return {index,rise,grip:poses[index]};
@@ -320,7 +321,7 @@
       if(name!=='reaper-cut-body'||!this.forwardAttack)return null;
       const step=clamp(Math.round(progress*scope.GRIM_CONFIG.attackDurationMs/FORWARD.stepMs),0,FORWARD.ground.length-1);
       const options=(p.grounded?FORWARD.ground:FORWARD.air)[step];
-      const phase=p.grounded?Math.round((runCell%96)/8)%12:Math.min(2,airBand(jumpFrame(p)));
+      const phase=p.grounded?Math.round((runCell%96)/8)%12:cutAirBand(jumpFrame(p));
       const frame=options.length===1?options[0]:options[phase];
       return {art:FORWARD.cut,frame,grip:FORWARD.grips[frame]};
     }
