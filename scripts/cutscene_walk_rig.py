@@ -47,6 +47,30 @@ def segment(paint, a, b, start, end):
     return warp(paint, matrix, start - matrix @ a)
 
 
+def near_greave_amount(frame):
+    return .10 * max(
+        ease((frame - start) / (full_in - start)) *
+        ease((end - frame) / (end - full_out))
+        for start, full_in, full_out, end in (
+            (8, 14, 18, 25), (65, 72, 79, 86), (106, 113, 123, 130))
+    )
+
+
+def near_greave(paint, knee, ankle, frame):
+    """Soften the broad front plate only as the two legs pass."""
+    amount = near_greave_amount(frame)
+    if not amount:
+        return paint
+    y, x = np.indices(paint.shape[:2], dtype=np.float32)
+    dx, dy = ankle - knee
+    along = ((x - knee[0]) * dx + (y - knee[1]) * dy) / (dx**2 + dy**2)
+    fade = np.clip(along / .3, 0, 1) * np.clip((1 - along) / .3, 0, 1)
+    width = 1 - amount * fade**2 * (3 - 2 * fade)
+    axis_x, axis_y = knee[0] + along * dx, knee[1] + along * dy
+    return cv2.remap(paint, (axis_x + (x - axis_x) / width).astype(np.float32),
+                     (axis_y + (y - axis_y) / width).astype(np.float32), cv2.INTER_LINEAR)
+
+
 def leather_joins(hip, knee, ankle):
     """Repaint the undersuit exposed when the gold plates change angle."""
     leg = Image.new('RGBA', (CELL*2, CELL*2))
@@ -199,7 +223,8 @@ def make_walk(base):
             knee = hip + unit * along + np.array([unit[1], -unit[0]]) * bend
             leg = leather_joins(hip, knee, ankle)
             leg.alpha_composite(segment(paints[0], old_hip, old_knee, hip, knee))
-            leg.alpha_composite(segment(paints[1], old_knee, old_ankle, knee, ankle))
+            shin_paint = near_greave(paints[1], old_knee, old_ankle, i) if j else paints[1]
+            leg.alpha_composite(segment(shin_paint, old_knee, old_ankle, knee, ankle))
             leg.alpha_composite(warp(paints[2], shoe, shift))
             if j == 0:
                 pixels = np.array(leg)

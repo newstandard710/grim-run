@@ -166,6 +166,39 @@ def foot(q):
     return point(x, 167.2 - lift), pitch, False
 
 
+def run_swing(frame, far, sole):
+    """Lower the late swing while leaving the contact and recovery paths intact."""
+    start, full_in, full_out, end = (16, 27, 32, 40) if far else (68, 79, 85, 91)
+    weight = ease((frame - start) / (full_in - start)) * ease((end - frame) / (end - full_out))
+    return sole + weight * point(-2.4, 3.6)
+
+
+def taper_plate(paint, start, end, amount):
+    """Narrow a donor across its axis while leaving both painted sockets full."""
+    y, x = np.indices((paint.height, paint.width), dtype=np.float32)
+    delta = end - start
+    along = ((x - start[0]) * delta[0] + (y - start[1]) * delta[1]) / (delta @ delta)
+    fade = np.clip(along / .28, 0, 1) * np.clip((1 - along) / .28, 0, 1)
+    fade = fade**2 * (3 - 2 * fade)
+    axis_x, axis_y = start[0] + along * delta[0], start[1] + along * delta[1]
+    width = 1 - amount * fade
+    coords = [axis_y + (y - axis_y) / width, axis_x + (x - axis_x) / width]
+    source = np.asarray(paint, dtype=np.float32) / 255
+    source[:, :, :3] *= source[:, :, 3:]
+    sample = np.stack([map_coordinates(channel, coords, order=1) for channel in source.transpose(2, 0, 1)], axis=-1)
+    sample[:, :, :3] /= np.maximum(sample[:, :, 3:], 1 / 255)
+    return Image.fromarray(np.uint8(np.clip(sample * 255 + .5, 0, 255)))
+
+
+def run_plates(plates):
+    (hip, knee, ankle), thigh, greave, boot, heel, ball = plates
+    return ((hip, knee, ankle), taper_plate(thigh, hip, knee, .06),
+            taper_plate(greave, knee, ankle, .12), boot, heel, ball)
+
+
+RUN_FAR, RUN_NEAR = run_plates(FAR), run_plates(NEAR)
+
+
 def ankle_trim(phase, far):
     """Taper the cuff correction in and out around the bulky swing poses."""
     frame = phase * (FRAMES // GAITS)
@@ -228,7 +261,7 @@ def draw_leg(out, plates, hip, sole, pitch, planted, far, cuff_trim=0):
     return None
 
 
-def draw(frame, with_weapon=True):
+def draw(frame, with_weapon=True, *, run_anatomy=False):
     cycle = FRAMES // GAITS
     q = (frame % cycle) / cycle
     beat = 2 * math.pi * q
@@ -236,10 +269,13 @@ def draw(frame, with_weapon=True):
                    2.6 * math.cos(2 * beat) + .68 * math.sin(2 * beat))
     out = Image.new('RGBA', (CELL * SUPERSAMPLE,) * 2)
     support = None
-    for far, phase, plates in ((True, (q + .5) % 1, FAR), (False, q, NEAR)):
+    far_plates, near_plates = (RUN_FAR, RUN_NEAR) if run_anatomy else (FAR, NEAR)
+    for far, phase, plates in ((True, (q + .5) % 1, far_plates), (False, q, near_plates)):
         hip = point(102 if far else 105, 117 if far else 118) + offset
-        foot_pose = foot(phase)
-        contact = draw_leg(out, plates, hip, *foot_pose, far, ankle_trim(q, far))
+        sole, pitch, planted = foot(phase)
+        if run_anatomy and not planted:
+            sole = run_swing(frame % cycle, far, sole)
+        contact = draw_leg(out, plates, hip, sole, pitch, planted, far, ankle_trim(q, far))
         if contact:
             support = contact
 
@@ -270,7 +306,7 @@ def build():
     support = []
     bounds = []
     for i in range(FRAMES):
-        tile,plant = draw(i)
+        tile,plant = draw(i, run_anatomy=True)
         bounds.append(tile.getchannel('A').point(lambda p:255 if p>64 else 0).getbbox())
         out.paste(tile,(i%COLUMNS*CELL,i//COLUMNS*CELL))
         support.append(plant)
