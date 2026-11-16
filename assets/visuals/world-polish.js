@@ -60,12 +60,19 @@
       // Only the five lowered, long-rooted skins use this mask. Buried paint
       // disappears under the exact physical surface, including on hills.
       const top=s.cameraY-s.height*3,left=s.cameraX-300,right=s.cameraX+s.width+300;
+      // Canvas GeometryMask clips the current path once. Keep every terrain
+      // section in that path so later sections cannot hide an earlier root.
+      g.beginPath();
       for(const section of s.terrain.visibleSections(left,right)){
         const from=Math.max(left,section.start),to=Math.min(right,section.end);if(to<=from)continue;
         const edge=section.kind==='gap'?[{x:from,y:s.cameraY+s.height*3},{x:to,y:s.cameraY+s.height*3}]
           :s.terrainContour(section,from,to).map(p=>({x:p.x,y:p.y+2}));
-        g.fillPoints([{x:from,y:top},{x:to,y:top},...edge.reverse()],true);
+        g.moveTo(from,top);
+        g.lineTo(to,top);
+        for(let i=edge.length-1;i>=0;i--)g.lineTo(edge[i].x,edge[i].y);
+        g.closePath();
       }
+      g.fillPath();
     }
     maskRoots(image,ob,skin){
       if(ob.type==='bramble'&&skin.buryRoots&&this.rootMask)image.setMask(this.rootMask);

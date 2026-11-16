@@ -40,10 +40,10 @@ async function setup(browser, viewport, options = {}) {
   await page.goto(`http://127.0.0.1:${server.address().port}/${options.baseline ? 'forest-baseline.html' : ''}?seed=33${options.off ? '&biomeMidground=0' : ''}`);
   await page.waitForFunction(() => window.grimRun?.scene.scenes[0]?.visuals?.reaperReady &&
     window.GRIM_FRONTEND?.ready, null, {timeout: 90000});
-  await page.evaluate(async () => {
+  await page.evaluate(async lightweight => {
     const game = window.grimRun;
     const scene = game.scene.scenes[0];
-    await scene.visuals.reviewLoad;
+    if(!lightweight)await scene.visuals.reviewLoad;
     scene.sys.sceneUpdate = () => {};
     clearInterval(scene.loopWatchdogId);
     scene.enterHome();
@@ -69,16 +69,13 @@ async function setup(browser, viewport, options = {}) {
       const target=scene.startX+distance*config.pxPerMeter;
       scene.terrain.advance(target+3000);
       const gaps=scene.terrain.segments.filter(g=>g.kind==='gap'&&Math.abs((g.start+g.end)*.5-target)<7500&&((g.start>=scene.terrain.portalExitX)===(distance>=5000)));
+      const bankY=gap=>scene.terrain.segments[scene.terrain.segments.indexOf(gap)+1]?.y0;
       const ordered=gaps.sort((a,b)=>variant==='wide'?(b.end-b.start)-(a.end-a.start):
         variant==='narrow'?(a.end-a.start)-(b.end-b.start):
-        variant==='slope'?Math.abs(b.y1-b.y0)-Math.abs(a.y1-a.y0):
+        variant==='slope'?Math.abs(bankY(b)-b.y0)-Math.abs(bankY(a)-a.y0):
         Math.abs((a.start+a.end)*.5-target)-Math.abs((b.start+b.end)*.5-target));
       const gap=ordered[0];
       if(!gap)throw Error('No gap around '+distance);
-      if(variant==='slope'&&gap.y0===gap.y1){
-        const bank=scene.terrain.segments[scene.terrain.segments.indexOf(gap)+1];
-        gap.y1-=30;bank.y0=gap.y1;
-      }
       place((gap.start-scene.startX-74)/config.pxPerMeter);
       scene.state='playing';
       scene.distance=distance;
@@ -86,6 +83,16 @@ async function setup(browser, viewport, options = {}) {
       scene.cameraY=Math.min(gap.y0,gap.y1)-scene.height*.53;
       scene.cameras.main.setScroll(scene.cameraX,scene.cameraY);
       scene.drawScene();
+      if(variant==='slope'){
+        const y1=bankY(gap);
+        const visual=scene.drawGround().find(section=>section.start===gap.start);
+        const edge=scene.abyssBackdropTopEdge(visual,34);
+        const shape=scene.abyssGapPolygon(visual);
+        if(gap.y0!==gap.y1||y1===gap.y1||visual.y1!==y1||
+          edge.right.y!==y1+34||shape.right[0].y!==y1||shape.right.at(-1).y!==shape.bottom)
+          throw Error('Native unequal bank must own the visual lip and polygon order');
+        return {...gap,y1};
+      }
       return gap;
     };
     const snapshot = () => JSON.stringify({
@@ -101,8 +108,8 @@ async function setup(browser, viewport, options = {}) {
       game.step(renderTime, 1000 / 15);
       return game.canvas.toDataURL('image/png');
     };
-    window.biomeReview = {game, scene, stageGap, snapshot, frame};
-  });
+    window.biomeReview = {game, scene, place, stageGap, snapshot, frame};
+  },options.lightweight===true);
   return {page, errors};
 }
 
@@ -274,6 +281,72 @@ async function abyssReview(browser){
   }
 }
 
+async function portalReadiness(browser){
+  for(const missing of [false,true]){
+    let caves=0,ground=0;
+    let releaseCaves,releaseBoss;
+    const caveGate=new Promise(resolve=>{releaseCaves=resolve;});
+    const bossGate=new Promise(resolve=>{releaseBoss=resolve;});
+    const {page,errors}=await setup(browser,{width:740,height:360},{lightweight:true,routes:async page=>{
+      await page.route('**/assets/visuals/biomes/underground-caves.webp',async route=>{
+        caves++;
+        await caveGate;
+        if(missing)await route.fulfill({status:404,body:''});
+        else await route.continue();
+      });
+      await page.route('**/assets/visuals/biomes/boss-castle.webp',async route=>{
+        await bossGate;
+        await route.continue();
+      });
+      await page.route('**/assets/visuals/terrain/ground-caves-v1.webp',route=>{
+        ground++;
+        return route.continue();
+      });
+    }});
+    try{
+      await page.evaluate(()=>{
+        const b=window.biomeReview;
+        b.place(4790);
+        b.scene.state='paused';
+        b.game.loop.wake();
+      });
+      await page.waitForFunction(()=>{
+        const s=window.biomeReview.scene;
+        return s.cavesBackdropLoad&&s.terrainMaterialIds.has('caves')&&s.biomeBackdrops.tundra?.visible;
+      });
+      releaseCaves();
+      await page.waitForFunction(missing=>{
+        const s=window.biomeReview.scene;
+        return missing?s.cavesBackdropFailed:s.textures.exists('biome-caves');
+      },missing);
+      const result=await page.evaluate(()=>{
+        const {game,scene:s,place}=window.biomeReview;
+        game.loop.sleep();
+        place(4999.9);
+        s.shrineClaimed=true;
+        s.update(0,1000/60);
+        const arrival={state:s.state,ms:s.portalMs,caves:Boolean(s.biomeBackdrops.caves?.visible),
+          caveGround:s.terrainMaterialIds.has('caves'),boss:Boolean(s.biomeBackdrops.boss),
+          tundra:s.textures.exists('biome-tundra')};
+        for(let i=0;i<5;i++)s.update(0,250);
+        s.update(0,199);
+        const before=s.state;
+        s.update(0,1);
+        return {arrival,before,after:s.state,bow:s.gunUnlocked};
+      });
+      assert.deepEqual(result,{arrival:{state:'portal',ms:1450,caves:!missing,caveGround:true,
+        boss:false,tundra:false},before:'portal',after:'playing',bow:true});
+      assert.deepEqual([caves,ground],[1,1]);
+      assert.deepEqual(errors,[]);
+      console.log('PASS summit Caves staging and independent portal',missing?'optional missing art':'ready art');
+    }finally{
+      releaseCaves();
+      releaseBoss();
+      await page.close();
+    }
+  }
+}
+
 async function measureDraw(browser){
   const results={};
   for(const baseline of [true,false]){
@@ -312,10 +385,11 @@ async function main(){
   fs.mkdirSync(outputs,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const canvas=process.env.GRIM_ABYSS_RENDERER==='canvas';
-  const browser=await chromium.launch({headless:true,args:['--no-sandbox',
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage',
     canvas?'--disable-webgl':'--use-angle=swiftshader']});
   try{
-    if(process.env.GRIM_ABYSS_PERF==='1')await measureDraw(browser);
+    if(process.env.GRIM_ABYSS_PORTAL==='1')await portalReadiness(browser);
+    else if(process.env.GRIM_ABYSS_PERF==='1')await measureDraw(browser);
     else if(process.env.GRIM_ABYSS_PIXELS==='1'){
       const session=await setup(browser,{width:740,height:360});
       try{
@@ -323,8 +397,11 @@ async function main(){
         assert.equal(result.webgl,!canvas);
         assert.deepEqual(session.errors,[]);
         console.log('PASS isolated surface and abyss fog',result);
+        const slope=await session.page.evaluate(()=>window.biomeReview.stageGap(1800,'slope'));
+        console.log('PASS native unequal abyss lips',slope.y1-slope.y0);
       }
       finally{await session.page.close();}
+      await portalReadiness(browser);
     }else if(process.env.GRIM_ABYSS_PARITY==='1'){
       const parity=await abyssParity(browser);
       fs.writeFileSync(path.join(outputs,'parity.json'),JSON.stringify(parity,null,2));

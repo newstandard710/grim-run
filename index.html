@@ -1679,7 +1679,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=0.20.1-reaction"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=1"></script>
-  <script src="assets/visuals/obstacle-mounts.js?v=2"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=3"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.12"></script>
   <script src="assets/visuals/cutscene-motion.js?v=0.19.12-greave"></script>
@@ -1689,7 +1689,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
   <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.12"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
-  <script src="assets/visuals/world-polish.js?v=0.19.3"></script>
+  <script src="assets/visuals/world-polish.js?v=0.19.3-root-mask"></script>
   <script>
 (function defineScene(scope,Phaser) {
   'use strict';
@@ -1706,6 +1706,8 @@ window.GRIM_CONFIG = Object.freeze({
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const CAVES_BACKDROP=['caves','underground-caves.webp'];
+  const CAVES_PREFETCH_METERS=4750;
   const BIOME_BACKDROP_GROUPS={
     surface:[
       ['forest','forest.webp'],
@@ -1713,7 +1715,7 @@ window.GRIM_CONFIG = Object.freeze({
       ['tundra','tundra.webp']
     ],
     underworld:[
-      ['caves','underground-caves.webp'],
+      CAVES_BACKDROP,
       ['crystals','deep-underground.webp'],
       ['ashlands','ashlands.webp'],
       ['lava','lava.webp'],
@@ -1742,6 +1744,7 @@ window.GRIM_CONFIG = Object.freeze({
   const ABYSS_FOG_LAYER_ALPHA=.24;
   const ABYSS_FOG_INSET=68;
   const GROUND_FOG_TAPER=44;
+  const CANVAS_FOG_TINT_LIMIT=32;
   const SNOW_FADE_START=2120,SNOW_PURE_START=2480,SNOW_PORTAL=5000;
   const ABYSS_FOG_TINTS=Object.freeze({
     forest:0xa6c0b5,foothills:0xaab8c2,tundra:0xd1e0ed,caves:0x8596c4,
@@ -1825,6 +1828,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.biomeBackdrops={};
       this.biomeBackdropReady=this.createBiomeBackdropSet('surface');
+      this.events?.once?.('shutdown',()=>this.cancelCavesBackdropLoad());
       const forestArt=scope.GRIM_FOREST_MIDGROUND;
       if(forestArt)this.forestMidground=new forestArt.ForestMidground(this);
       const biomeArt=scope.GRIM_BIOME_MIDGROUND;
@@ -1875,6 +1879,7 @@ window.GRIM_CONFIG = Object.freeze({
         for(const sprite of this.vendorSpriteObjects.values())sprite.destroy();
         this.vendorSpriteObjects.clear();
         for(const sprite of this.groundFogViews.values())sprite.destroy();
+        this.canvasFogTints?.clear();
         this.groundFogViews.clear();
         this.groundFogMaskGraphics?.destroy?.();
         this.groundFogCanvas=null;
@@ -3876,8 +3881,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(!hidden)this.particles.push({x,y,vx:Math.cos(theta)*velocity,vy:Math.sin(theta)*velocity-35,life,maxLife:life,color,radius});
       }
     }
-    createBiomeBackdropSet(group){
-      const files=BIOME_BACKDROP_GROUPS[group];
+    createBiomeBackdropSet(group,files=BIOME_BACKDROP_GROUPS[group]){
       if(!files)return false;
       if(!this.textures||typeof this.textures.exists!=='function'||!this.add?.image)return false;
       if(!this.biomeBackdrops)this.biomeBackdrops={};
@@ -3890,9 +3894,9 @@ window.GRIM_CONFIG = Object.freeze({
           this.biomeBackdrops[biome.id]=this.add.image(this.width*.5,this.height*.5,key)
             .setOrigin(.5).setScrollFactor(0).setDepth(-30+biome.start/100000)
             .setAlpha(0).setVisible(false);
+          this.sizeBiomeBackdrop(this.biomeBackdrops[biome.id]);
         }
       }
-      this.biomeBackdropGroup=group;
       return files.every(([id])=>Boolean(this.biomeBackdrops[id]));
     }
     destroyBiomeBackdropSet(group){
@@ -3903,45 +3907,90 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.textures.exists(key))this.textures.remove(key);
       }
     }
+    cancelCavesBackdropLoad(){
+      const image=this.cavesBackdropLoad;
+      if(!image)return;
+      this.cavesBackdropLoad=null;
+      image.onload=image.onerror=null;
+      image.removeAttribute('src');
+    }
+    prepareCavesBackdrop(){
+      const [id,file]=CAVES_BACKDROP,key='biome-'+id;
+      const keep=this.hasTeleported||this.distance>=CAVES_PREFETCH_METERS;
+      if(!keep){
+        this.cancelCavesBackdropLoad();
+        if(!this.biomeBackdrops[id]&&this.textures.exists(key))this.textures.remove(key);
+        return;
+      }
+      if(!this.hasTeleported||this.distance<=6180)this.requestTerrainMaterial(id);
+      if(this.textures.exists(key)||this.cavesBackdropLoad||this.cavesBackdropFailed||
+        typeof scope.Image!=='function')return;
+      // Use an independent image request so the first Caves frame cannot be
+      // held up by another biome's artwork in the Phaser loader.
+      const image=new scope.Image();
+      this.cavesBackdropLoad=image;
+      image.onload=()=>{
+        this.cavesBackdropLoad=null;
+        image.onload=image.onerror=null;
+        this.textures.addImage(key,image);
+        if(this.hasTeleported)this.drawScene();
+      };
+      image.onerror=()=>{
+        this.cavesBackdropLoad=null;
+        image.onload=image.onerror=null;
+        this.cavesBackdropFailed=true;
+      };
+      image.src='assets/visuals/biomes/'+file;
+    }
     ensureBiomeBackdropGroup(group){
       const files=BIOME_BACKDROP_GROUPS[group];
-      if(!files)return false;
-      if(!this.textures||typeof this.textures.exists!=='function'||!this.load?.image)return false;
-      if(this.biomeBackdropGroup===group&&this.biomeBackdropReady)return true;
-      if(this.biomeBackdropPendingGroup||this.biomeBackdropFailedGroups.has(group))return false;
-      const missing=files.filter(([id])=>!this.textures.exists('biome-'+id));
-      if(missing.length===0){
-        const previous=this.biomeBackdropGroup;
-        if(previous!==group)this.destroyBiomeBackdropSet(previous);
-        this.biomeBackdropReady=this.createBiomeBackdropSet(group);
-        this.resizeBiomeBackdrops();
+      if(!files||!this.textures?.exists||!this.load?.image)return false;
+      if(this.biomeBackdropGroup!==group){
+        this.destroyBiomeBackdropSet(this.biomeBackdropGroup);
+        this.biomeBackdropGroup=group;
+        this.biomeBackdropReady=false;
+      }
+      this.prepareCavesBackdrop();
+      const underworld=group==='underworld';
+      if(underworld&&!this.biomeBackdrops.caves&&this.textures.exists('biome-caves')&&
+        this.createBiomeBackdropSet(group,[CAVES_BACKDROP]))
+        this.biomeBackdropReady=true;
+      const groupFiles=underworld?files.slice(1):files;
+      if(groupFiles.every(([id])=>this.biomeBackdrops[id]))return this.biomeBackdropReady;
+      if(this.biomeBackdropPendingGroup||this.biomeBackdropFailedGroups.has(group))
+        return this.biomeBackdropReady;
+      const missing=groupFiles.filter(([id])=>!this.textures.exists('biome-'+id));
+      if(!missing.length){
+        const ready=this.createBiomeBackdropSet(group,groupFiles);
+        this.biomeBackdropReady=this.biomeBackdropReady||ready;
         return this.biomeBackdropReady;
       }
       this.biomeBackdropPendingGroup=group;
-      this.biomeBackdropReady=false;
       for(const [id,file] of missing)
         this.load.image('biome-'+id,'assets/visuals/biomes/'+file);
       this.load.once('complete',()=>{
         this.biomeBackdropPendingGroup=null;
-        if(!files.every(([id])=>this.textures.exists('biome-'+id))){
+        if(!groupFiles.every(([id])=>this.textures.exists('biome-'+id)))
           this.biomeBackdropFailedGroups.add(group);
-          return;
+        // A restart or practice teleport can change the active group mid-load.
+        if(this.biomeBackdropGroup!==group){
+          for(const [id] of missing){
+            const key='biome-'+id;
+            if(this.textures.exists(key))this.textures.remove(key);
+          }
         }
-        const previous=this.biomeBackdropGroup;
-        if(previous!==group)this.destroyBiomeBackdropSet(previous);
-        this.biomeBackdropReady=this.createBiomeBackdropSet(group);
-        if(!this.biomeBackdropReady)this.biomeBackdropFailedGroups.add(group);
-        this.resizeBiomeBackdrops();
         this.drawScene();
       });
       if(!this.load.isLoading())this.load.start();
-      return false;
+      return this.biomeBackdropReady;
+    }
+    sizeBiomeBackdrop(image){
+      const scale=Math.max(this.width/1536,this.height/864)*1.25;
+      image.setDisplaySize(1536*scale,864*scale);
     }
     resizeBiomeBackdrops(){
       if(!this.biomeBackdrops)return;
-      const scale=Math.max(this.width/1536,this.height/864)*1.25;
-      for(const image of Object.values(this.biomeBackdrops))
-        image.setDisplaySize(1536*scale,864*scale);
+      for(const image of Object.values(this.biomeBackdrops))this.sizeBiomeBackdrop(image);
       this.resizeBackdropGroundVeil();
     }
     createBackdropGroundVeil(){
@@ -4152,6 +4201,36 @@ window.GRIM_CONFIG = Object.freeze({
       // Two equal layers: 1-(1-alpha)^2 = original single-layer opacity.
       return 1-Math.sqrt(1-clamp(original,0,1));
     }
+    canvasFogSource(sprite){
+      const source=sprite.texture.getSourceImage();
+      const tint=sprite.tintTopLeft??0xffffff;
+      if(tint===0xffffff||!source)return source;
+      const cache=this.canvasFogTints??=new Map();
+      const key=sprite.texture.key+':'+tint;
+      const cached=cache.get(key);
+      if(cached?.source===source){
+        cache.delete(key);
+        cache.set(key,cached);
+        return cached.canvas;
+      }
+      const canvas=scope.document.createElement('canvas');
+      canvas.width=source.width;canvas.height=source.height;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      if(!ctx)return source;
+      ctx.drawImage(source,0,0);
+      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+      const red=((tint>>16)&255)/255,green=((tint>>8)&255)/255,blue=(tint&255)/255;
+      // Multiply RGB as WebGL does. The painting's original alpha is used
+      // by both renderers for the existing two-bank and opening masks.
+      for(let i=0;i<pixels.data.length;i+=4){
+        pixels.data[i]*=red;pixels.data[i+1]*=green;pixels.data[i+2]*=blue;
+      }
+      ctx.putImageData(pixels,0,0);
+      cache.delete(key);
+      if(cache.size>=CANVAS_FOG_TINT_LIMIT)cache.delete(cache.keys().next().value);
+      cache.set(key,{source,canvas});
+      return canvas;
+    }
     renderGroundFogCanvas(renderer,sprite,camera){
       const target=renderer.currentContext;
       const canvas=this.groundFogCanvas??=scope.document.createElement('canvas');
@@ -4167,7 +4246,7 @@ window.GRIM_CONFIG = Object.freeze({
       const bottom=Math.min(canvas.height,Math.ceil(y+sprite.fogWidth*.35));
       if(right<=left||bottom<=top)return;
       const width=right-left,height=bottom-top;
-      const source=sprite.texture.getSourceImage();
+      const source=this.canvasFogSource(sprite);
       ctx.clearRect(left,top,width,height);
       ctx.save();
       // Trace the same solid spans as the scene mask onto the isolated
@@ -4694,12 +4773,13 @@ window.GRIM_CONFIG = Object.freeze({
       context.closePath();
       context.clip();
       const scale=TUNDRA_TERRAIN_TILE_SCALE,tileWidth=source.width*scale,tileHeight=source.height*scale;
-      const mod=(value,size)=>((value%size)+size)%size;
-      const offsetX=-mod(x0*scale,tileWidth),offsetY=-mod(top*scale,tileHeight);
-      for(let y=offsetY;y<height;y+=tileHeight){
-        const row=Math.floor((top+y)*scale/tileHeight),flipY=Math.abs(row%2)===1;
-        for(let x=offsetX;x<width;x+=tileWidth){
-          const column=Math.floor((x0+x)*scale/tileWidth),flipX=Math.abs(column%2)===1;
+      const firstColumn=Math.floor(x0/tileWidth),firstRow=Math.floor(top/tileHeight);
+      // Use the same world-pixel grid and mirror parity for every clipped
+      // composite, including adjacent solid sections and negative heights.
+      for(let row=firstRow;row*tileHeight<top+height;row++){
+        const y=row*tileHeight-top,flipY=row%2!==0;
+        for(let column=firstColumn;column*tileWidth<x0+width;column++){
+          const x=column*tileWidth-x0,flipX=column%2!==0;
           context.save();
           context.translate(x+(flipX?tileWidth:0),y+(flipY?tileHeight:0));
           context.scale(flipX?-1:1,flipY?-1:1);
@@ -4974,7 +5054,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       // Preserve exact generated surface endpoints; the visual-only lip above
       // them never changes the walkable profile or collision geometry.
-      const points=[...left,...right.reverse()];
+      const points=[...left,...right.slice().reverse()];
       const shape={points,left,right,top,bottom,width,
         signature:points.map(p=>p.x.toFixed(2)+','+p.y.toFixed(2)).join(';')};
       if(this.abyssGeometryCache?.size>=64)
@@ -5128,7 +5208,7 @@ window.GRIM_CONFIG = Object.freeze({
       ctx.rotate(sprite.rotation);
       ctx.globalCompositeOperation='source-over';
       ctx.globalAlpha=sprite.alpha*camera.alpha;
-      ctx.drawImage(sprite.texture.getSourceImage(),-sprite.displayWidth*.5,0,
+      ctx.drawImage(this.canvasFogSource(sprite),-sprite.displayWidth*.5,0,
         sprite.displayWidth,sprite.displayHeight);
       ctx.restore();
     }
@@ -5238,30 +5318,40 @@ window.GRIM_CONFIG = Object.freeze({
       const activeTerrainViews=new Set(),activeSurfaceViews=new Set();
       const activeAbyssViews=new Set(),activeAbyssFogViews=new Set();
       const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
+      if(!this.hasTeleported&&this.distance>=CAVES_PREFETCH_METERS)keepTerrainMaterials.add('caves');
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       // Keep both neighbors available when a wall projects into the view
       // before the underlying bank does.
       const sections=this.terrain.visibleSections(left,right);
       this.boneBridges?.prune(sections);
-      const neighbors=(this.terrain.segments||sections).filter(s=>s.end>=left-52&&s.start<=right+52);
+      const generated=this.terrain.segments||sections;
       const startX=this.startX??200;
       this.abyssWallArt?.clear();
-      const walls=new Map();
-      for(let i=0;i<neighbors.length;i++){
-        const gap=neighbors[i];
-        if(gap.kind!=='gap'||!Number.isFinite(gap.y0)||!Number.isFinite(gap.y1))continue;
-        const leftBank=neighbors[i-1],rightBank=neighbors[i+1];
-        if(leftBank&&leftBank.kind!=='gap'&&leftBank.end===gap.start){
+      const walls=new Map(),gapViews=new Map();
+      for(let i=0;i<generated.length;i++){
+        const section=generated[i];
+        if(section.start>right+52)break;
+        if(section.end<left-52||section.kind!=='gap'||
+          !Number.isFinite(section.y0)||!Number.isFinite(section.y1))continue;
+        const previous=generated[i-1],next=generated[i+1];
+        const leftBank=previous?.kind!=='gap'&&previous?.end===section.start?previous:null;
+        const rightBank=next?.kind!=='gap'&&next?.start===section.end?next:null;
+        // The generator stores the takeoff elevation in the gap. Only the
+        // adjacent solid sections carry both real rim heights.
+        const gap={...section,y0:leftBank?.y1??section.y0,y1:rightBank?.y0??section.y1};
+        gapViews.set(section,gap);
+        if(leftBank){
           if(!walls.has(leftBank))walls.set(leftBank,{});
           walls.get(leftBank).end=this.abyssWallProfile(gap,leftBank,'left');
         }
-        if(rightBank&&rightBank.kind!=='gap'&&rightBank.start===gap.end){
+        if(rightBank){
           if(!walls.has(rightBank))walls.set(rightBank,{});
           walls.get(rightBank).start=this.abyssWallProfile(gap,rightBank,'right');
         }
       }
-      for(const section of sections){
-        if(section.kind!=='gap')continue;
+      for(const nativeSection of sections){
+        if(nativeSection.kind!=='gap')continue;
+        const section=gapViews.get(nativeSection)??nativeSection;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
         const meters=(section.start+section.end-2*startX)/(2*C.pxPerMeter);
@@ -5385,7 +5475,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.pruneTerrainTextureViews(activeTerrainViews);
       this.pruneTerrainSurfaceViews(activeSurfaceViews);
       this.releaseInactiveTerrainMaterials(keepTerrainMaterials);
-      return sections;
+      // Both midground masks receive the same visual rims as the abyss.
+      return sections.map(section=>gapViews.get(section)??section);
     }
     drawCoin(c) {
       if(this.worldPolish?.drawPickup(c,'coin'))return;
@@ -5563,7 +5654,9 @@ window.GRIM_CONFIG = Object.freeze({
       const plant=o.type==='snappingBramble'&&this.textures.exists('revision-plant');
       const textureKey=plant?'revision-plant':skin.key;
       let image=this.obstacleSpriteObjects.get(o);
-      if(image&&image.texture?.key!==textureKey){image.destroy();this.obstacleSpriteObjects.delete(o);image=null;}
+      if(image&&(image.slideFront?.source??image.texture?.key)!==textureKey){
+        image.destroy();this.obstacleSpriteObjects.delete(o);image=null;
+      }
       if(!image){
         image=this.add.image(0,0,textureKey).setOrigin(.5).setDepth(16);
         this.obstacleSpriteObjects.set(o,image);
@@ -5722,8 +5815,10 @@ window.GRIM_CONFIG = Object.freeze({
         const surface=groundAt(centerX)??this.terrain.anchorAt(centerX);
         this.drawObstacleSupport(o,skin,centerX,underside,width,height,surface,rotation);
         this.drawObstacleBack(o,skin,centerX,underside,width,height,rotation);
-        if(!this.drawObstacleSprite(o,{x:centerX,y:underside,width,height,rotation,
-          originY:1})){
+        const placement={x:centerX,y:underside,width,height,rotation,originY:1};
+        if(this.drawObstacleSprite(o,placement)){
+          scope.GRIM_OBSTACLE_ART?.registerSlideFront?.(this,o,skin,this.obstacleSpriteObjects.get(o),placement);
+        }else{
           // Texture loading fallback stays a short overhead ledge without
           // restoring the old full-height pillar.
           g.fillStyle(0x3b4652,.98);g.fillRoundedRect(x,underside-20,o.width,20,5);
