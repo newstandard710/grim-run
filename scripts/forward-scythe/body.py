@@ -194,7 +194,7 @@ def action(age,scene,row):
     invariant=bool(np.array_equal(np.array(out)[toe_rows:168],np.array(ready)[toe_rows:168]))
     assert invariant
     return out,[*P.tolist(),angle]
-def carried(f):
+def carried(f, *, run_anatomy=False):
     target=R.point(87,107)
     original=R.weapon
     try:
@@ -206,7 +206,7 @@ def carried(f):
         m=target-M@PIV
         R.weapon=weapon.transform((R.CELL,R.CELL),Image.Transform.AFFINE,np.c_[inv,-inv@m].ravel(),
                                    Image.Resampling.BICUBIC)
-        change=R.draw(f)[0]
+        change=R.draw(f, run_anatomy=run_anatomy)[0]
     finally:R.weapon=original
     dst=Image.new('RGBA',(W,H));dst.paste(change,tuple(anchor_delta))
     return dst

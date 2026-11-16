@@ -7,11 +7,12 @@ from pathlib import Path
 import argparse
 import json
 import hashlib
+from io import BytesIO
 import cv2
 import numpy as np
 from PIL import Image
 from scipy.ndimage import label, distance_transform_edt
-from cutscene_walk_rig import make_walk
+from cutscene_walk_rig import make_walk, near_greave_amount
 from bow_rig import build as build_bow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,7 +67,48 @@ def register(name):
         records[i] = {'pose': i, 'foot': foot, 'sourceBounds': bounds}
     return poses, hands, records
 
-def build(kind):
+def webp_chunks(payload):
+    assert payload[:4] == b'RIFF' and payload[8:12] == b'WEBP'
+    offset = 12
+    while offset < len(payload):
+        size = int.from_bytes(payload[offset + 4:offset + 8], 'little')
+        end = offset + 8 + size + size % 2
+        yield payload[offset:offset + 4], payload[offset:end]
+        offset = end
+    assert offset == len(payload)
+
+
+def narrow_vendor_contour(path, sheet, frames):
+    """Preserve the released VP8 color and narrow only the approved contours."""
+    released = path.read_bytes()
+    with Image.open(BytesIO(released)) as image:
+        assert image.size == sheet.size
+        alpha = image.getchannel('A')
+    target = sheet.getchannel('A')
+    for frame in range(frames):
+        if not near_greave_amount(frame):
+            continue
+        x, y = frame % COLS * CELL, frame // COLS * CELL
+        box = (x, y, x + CELL, y + CELL)
+        inset = np.minimum(np.asarray(alpha.crop(box)), np.asarray(target.crop(box)))
+        alpha.paste(Image.fromarray(inset), (x, y))
+    mask = Image.new('RGBA', sheet.size)
+    mask.putalpha(alpha)
+    encoded = BytesIO()
+    mask.save(encoded, format='WEBP', quality=92, alpha_quality=100, method=6)
+    alpha_chunk = dict(webp_chunks(encoded.getvalue()))[b'ALPH']
+    body = b'WEBP' + b''.join(alpha_chunk if key == b'ALPH' else chunk
+                             for key, chunk in webp_chunks(released))
+    payload = b'RIFF' + len(body).to_bytes(4, 'little') + body
+    with Image.open(BytesIO(payload)) as image:
+        assert np.array_equal(np.asarray(image.getchannel('A')), np.asarray(alpha))
+    path.write_bytes(payload)
+    return [alpha.crop((i % COLS * CELL, i // COLS * CELL,
+                       (i % COLS + 1) * CELL, (i // COLS + 1) * CELL)).getbbox()
+            for i in range(frames)]
+
+
+def build(kind, *, preserve_vendor_color=False):
     name = 'reaper-' + kind + '-keyposes.png'
     poses, hands, registration = register(name)
     frames, grips = [], []
@@ -105,6 +147,8 @@ def build(kind):
     file = OUT / ('reaper-bow.png' if kind == 'bow' else 'reaper-vendor.webp')
     if kind == 'bow':
         sheet.save(file, optimize=True)
+    elif preserve_vendor_color:
+        bounds = narrow_vendor_contour(file, sheet, len(frames))
     else:
         sheet.save(file, quality=92, alpha_quality=100, method=6)
     meta = {**digest(file), 'size': sheet.size, 'frames': len(frames), 'cell': [CELL,CELL], 'anchor': ANCHOR.tolist(), 'bounds': bounds}
@@ -139,7 +183,7 @@ def main():
         vendor_data=prior_data['vendor']
         assert digest(OUT/'reaper-vendor.webp')['sha256']==vendor['sha256']
     else:
-        vendor, _, vendor_data = build('vendor')
+        vendor, _, vendor_data = build('vendor', preserve_vendor_color=args.vendor_only)
     manifest = {'version':'0.19.11', 'sources': {p.name:digest(p) for p in (OUT/'source').glob('*.png')},
                 'runtime': {'reaper-bow.png':bow, 'reaper-vendor.webp':vendor, 'bow-hands.png':overlay}}
     (OUT/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')

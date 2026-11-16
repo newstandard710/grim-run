@@ -1,5 +1,6 @@
 """Bake the forward RUN, ordinary air, and phase-registered upright Cut family."""
 
+import argparse
 import hashlib
 import importlib.util
 import json
@@ -92,6 +93,59 @@ def forward_slide_rise(body, pose):
         (body.R.SCALE,0,x,0,body.R.SCALE,y), resample=Image.Resampling.BICUBIC)
 
 
+def bake_run():
+    """Replace only the RUN cels in the released carry layout."""
+    data_path = ART / 'animation-data.js'
+    text = data_path.read_text()
+    header, _, assignment = text.partition('window.GRIM_FORWARD_SCYTHE=')
+    data = json.loads(assignment.strip().rstrip(';'))
+    carry = data['carry']
+    width, height, columns = carry['width'], carry['height'], carry['columns']
+    assert data['slideRise'] == [122, 123] and carry['frames'] == 124
+
+    manifest_path = ART / 'manifest.json'
+    manifest = json.loads(manifest_path.read_text())
+    path = ART / 'reaper-forward-carry.webp'
+    assert manifest['carry']['sha256'] == hashlib.sha256(path.read_bytes()).hexdigest()
+    with Image.open(path) as decoded:
+        released = decoded.convert('RGBA')
+    sheet = released.copy()
+    assert sheet.size == (width * columns, height * math.ceil(carry['frames'] / columns))
+
+    with tempfile.TemporaryDirectory(prefix='grim-forward-run-') as temp:
+        os.environ['GRIM_FORWARD_BAKE'] = temp
+        import weapon
+        import body
+
+        left, top = (int(a - b) for a, b in zip(body.ANCHOR, carry['anchor']))
+        box = (left, top, left + width, top + height)
+        for index in range(96):
+            x, y = index % columns * width, index // columns * height
+            tile = body.carried(index, run_anatomy=True)
+            bounds = tile.getbbox()
+            assert left <= bounds[0] and top <= bounds[1]
+            assert bounds[2] <= box[2] and bounds[3] <= box[3]
+            edited = tile.crop(box)
+            original = body.carried(index).crop(box)
+            changed = np.any(np.asarray(edited) != np.asarray(original), axis=-1)
+            sheet.paste(edited, (x, y), Image.fromarray(changed))
+
+        pending = Path(temp) / path.name
+        sheet.save(pending, lossless=True, quality=100, method=6, exact=True)
+        with Image.open(pending) as decoded:
+            assert np.array_equal(np.asarray(sheet), np.asarray(decoded.convert('RGBA')))
+        payload = pending.read_bytes()
+
+    digest = hashlib.sha256(payload).hexdigest()
+    carry['url'] = carry['url'].partition('?')[0] + '?v=' + digest[:12]
+    manifest['carry'].update(bytes=len(payload), sha256=digest)
+    path.write_bytes(payload)
+    data_path.write_text(header + 'window.GRIM_FORWARD_SCYTHE=' +
+                         json.dumps(data, separators=(',', ':')) + ';\n')
+    manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
+    print(f'{path.name}: {len(payload):,} bytes, exact protected cels 96–123', flush=True)
+
+
 def bake():
     with tempfile.TemporaryDirectory(prefix='grim-forward-bake-') as temp:
         os.environ['GRIM_FORWARD_BAKE'] = temp
@@ -149,4 +203,10 @@ def bake():
 
 
 if __name__ == '__main__':
-    bake()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run-only', action='store_true',
+                        help='Replace RUN in the carry pack and retain the released air, Slide, and Cut')
+    if parser.parse_args().run_only:
+        bake_run()
+    else:
+        bake()
