@@ -25,7 +25,10 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const [name,counts]of Object.entries(pixels))assert(counts.length===24&&counts.every(v=>v.n>10000&&v.n<60000),name+' has 24 decoded complete transparent poses');
   assert(pixels['reaper-run'].every(v=>v.bottom<=280),'No running boot penetrates the floor');
   assert(pixels['reaper-jump'].slice(18).every(v=>Math.abs(v.bottom-279)<=1),'All grounded landing drawings register to the same foot line');
-  await page.waitForFunction(()=>window.grimRun.scene.scenes[0].motionArt.forwardReady,null,{timeout:45000});
+  await page.waitForFunction(()=>{
+    const art=window.grimRun.scene.scenes[0].motionArt;
+    return art.forwardReady&&art.airReady&&art.airCutReady;
+  },null,{timeout:45000});
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');s.player.invulMs=0;s.player.visualHurtMs=0;s.obstacles=[];s.enemies=[];s.powerManager.levels.soulCleave=0;});
   // Exercise the solid run path at every subpose, not just authored keyframes.

@@ -291,7 +291,8 @@
         this.forwardPlayer=p;
         // Pin one visual family for this run. A slow optional image cannot
         // flip the carried weapon between two existing frames.
-        this.forwardActive=Boolean(this.forwardReady&&this.cutHandoffReady&&this.cutWeaponReady);
+        this.forwardActive=Boolean(this.forwardReady&&this.cutHandoffReady&&this.cutWeaponReady&&
+          this.airReady&&this.airCutReady);
         this.forwardAir=null;
         this.forwardSwing=null;
       }

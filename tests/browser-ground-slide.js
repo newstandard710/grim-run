@@ -49,7 +49,10 @@ const step=(page,count,ms=16)=>page.evaluate(({count,ms})=>{
 },{count,ms});
 
 async function testReady(page){
-  await page.waitForFunction(()=>grimRun.scene.scenes[0].motionArt.forwardReady,null,{timeout:45000});
+  await page.waitForFunction(()=>{
+    const art=window.grimRun.scene.scenes[0].motionArt;
+    return art.forwardReady&&art.airReady&&art.airCutReady;
+  },null,{timeout:45000});
   await setup(page);
   const pixels=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],src=s.textures.get('ground-slide-paint').getSourceImage();
