@@ -4,7 +4,7 @@
  */
 (function(scope){
   'use strict';
-  const TUCK_RELEASE_MS=85;
+  const TUCK_RELEASE_MS=85,CROSSBOW_FLASH_SECONDS=.075;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones','deathsReversal',
     'skeletalWings','infernalBoots','rapidFire','powerShot','chainShot','vitalEssence','soulMend','gravewingAscension'];
@@ -29,6 +29,13 @@
   }
   function relicMotionAt(t){
     return scope.GRIM_CUTSCENES.relicMotionAt(t);
+  }
+
+  function soulCleaveActivePhase(s){
+    const {attackDurationMs,attackActiveStart,attackActiveEnd}=scope.GRIM_CONFIG;
+    const remaining=s.player.attackMs;
+    if(!scope.GRIM_CORE.attackActive(remaining,attackDurationMs,attackActiveStart,attackActiveEnd))return null;
+    return clamp((1-remaining/attackDurationMs-attackActiveStart)/(attackActiveEnd-attackActiveStart),0,1);
   }
 
   function actionFrame(s){
@@ -100,9 +107,25 @@
     level(id){return this.scene.powerManager?.level(id)||0;}
     reset(){
       this.bursts=[];this.sequence=0;this.tuckLanding=false;
+      this.crossbowFlash=null;
       for(const sprite of this.pool)sprite?.setVisible(false);
       for(const sprite of this.bonePool)sprite?.setVisible(false);
       this.fx?.clear();
+    }
+    flashCrossbow(x,y){
+      this.crossbowFlash={x,y,started:this.scene.elapsed};
+    }
+    renderCrossbowFlash(){
+      const s=this.scene,flash=this.crossbowFlash;
+      if(!flash||s.state!=='playing')return;
+      const age=(s.elapsed-flash.started)/CROSSBOW_FLASH_SECONDS;
+      if(age<0||age>=1)return;
+      const {x,y}=flash,g=this.fx,alpha=1-age;
+      g.fillStyle(0x86eddb,.29*alpha);g.fillEllipse(x,y,26+age*10,13+age*5);
+      g.fillStyle(0xd8fff0,.92*alpha);g.fillEllipse(x,y,15+age*9,4);
+      g.lineStyle(1.5,0xd8fff0,.8*alpha);
+      g.lineBetween(x-4,y-7-age*4,x+6,y-2);
+      g.lineBetween(x-4,y+7+age*4,x+6,y+2);
     }
     trigger(id,x,y,kind='use',level){
       if(!this.enabled||this.scene.state==='rewinding')return;
@@ -273,9 +296,13 @@
           continue;
         }
         if(s.combatArt?.handlesEffect(b))continue;
-        const t=b.age/b.duration,a=Math.sin(Math.PI*t)*.7;
+        const cleave=b.id==='soulCleave'&&b.kind==='use';
+        const t=cleave?soulCleaveActivePhase(s):b.age/b.duration;
+        if(t===null)continue;
+        const a=Math.sin(Math.PI*t)*.7;
         const purchase=b.kind==='purchase',blast=b.kind==='blast';
-        const x=purchase?p.x:b.x,y=purchase?s.feetY-60-t*20:b.y;
+        const x=purchase?p.x:cleave?p.x+35:b.x;
+        const y=purchase?s.feetY-60-t*20:cleave?s.feetY-(s.lowProfile?30:65):b.y;
         const size=purchase?42:blast?115:b.id==='brittleBones'?82:30;
         const sprite=this.pool[used++];
         if(sprite)sprite.setTexture('power-effects',b.index).setDepth(14.7).setOrigin(.5).setPosition(x,y).setDisplaySize(size*(.75+t*.5),size*(.75+t*.5))
@@ -390,7 +417,7 @@
     }
     render(){
       if(!this.enabled||this.disposed)return;
-      this.fx.clear();this.renderAction();this.renderWings();this.renderEffects();this.renderShrine();
+      this.fx.clear();this.renderAction();this.renderWings();this.renderEffects();this.renderCrossbowFlash();this.renderShrine();
     }
     destroy(){
       if(this.disposed)return;this.disposed=true;
@@ -400,5 +427,5 @@
       this.bursts=[];this.pool=[];this.wingSprites=[];
     }
   }
-  scope.GRIM_POWER_ART={preload,PowerAnimations,actionFrame,relicMotionAt,ORDER,COLORS,SHRINE_METERS,SHRINE_MS,MAX_BURSTS,SHEETS,TUCK_RELEASE_MS};
+  scope.GRIM_POWER_ART={preload,PowerAnimations,actionFrame,soulCleaveActivePhase,relicMotionAt,ORDER,COLORS,SHRINE_METERS,SHRINE_MS,MAX_BURSTS,SHEETS,TUCK_RELEASE_MS};
 })(typeof window!=='undefined'?window:globalThis);

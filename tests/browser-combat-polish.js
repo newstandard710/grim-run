@@ -15,14 +15,24 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   await shot('home-bat');await page.waitForTimeout(650);await shot('home-bat-next');
   const coverage=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],out={};
-   for(const [name,m]of Object.entries({...window.GRIM_COMBAT_DATA.sheets,'bat-flight':window.GRIM_BAT_FLIGHT.SPEC})){
-    if(!s.combatArt.ready[name])throw Error('Missing atlas '+name);
+   const sheets={...window.GRIM_COMBAT_DATA.sheets,'bat-flight':window.GRIM_BAT_FLIGHT.SPEC};
+   delete sheets['reaper-hurt-death'];
+   const defeat=window.GRIM_DEFEAT_DATA;
+   if(!s.reactionArt?.ready)throw Error('Missing required Reaper defeat atlas');
+   if(s.textures.exists('combat-reaper-hurt-death'))throw Error('Retired Reaper atlas was loaded');
+   sheets['reaper-defeat']={cell:[defeat.width,defeat.height],frames:defeat.frames};
+   for(const [name,m]of Object.entries(sheets)){
+    if(name!=='reaper-defeat'&&!s.combatArt.ready[name])throw Error('Missing atlas '+name);
     const c=document.createElement('canvas');c.width=m.cell[0];c.height=m.cell[1];const g=c.getContext('2d');out[name]=[];
     for(let i=0;i<m.frames;i++){g.clearRect(0,0,c.width,c.height);const f=s.textures.getFrame('combat-'+name,i);g.drawImage(f.source.image,f.cutX,f.cutY,f.cutWidth,f.cutHeight,0,0,c.width,c.height);const d=g.getImageData(0,0,c.width,c.height).data;let opaque=0;for(let p=3;p<d.length;p+=4)if(d[p]>90)opaque++;out[name].push(opaque);}
    }
    return out;
   });
-  for(const [name,counts]of Object.entries(coverage))assert(counts.every(n=>n>250&&n<512*512*.65),name+' has visible transparent drawings');
+  for(const [name,counts]of Object.entries(coverage)){
+   const defeat=name==='reaper-defeat',spec=defeat?await page.evaluate(()=>window.GRIM_DEFEAT_DATA):null;
+   const area=defeat?spec.width*spec.height:512*512;
+   assert(counts.every(n=>n>(defeat?1400:250)&&n<area*.65),name+' has visible transparent drawings');
+  }
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   const setup=async()=>page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],p=s.player;s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');
@@ -84,8 +94,8 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   await setup();await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.godMode=false;s.player.hp=3;s.takeDamage(1,'rock');s.combatArt.tick(100);s.drawScene();});await shot('reaper-hurt');
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='playing';s.player.hp=1;s.freeLifeAvailable=false;s.takeDamage(1,'rock');});
   assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');
-  for(let i=0;i<8;i++){await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,100));if([1,4,7].includes(i))await shot('reaper-death-'+i);await page.waitForTimeout(65);}
-  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,80));assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'revive');
+  for(let i=0;i<23;i++){await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,100));if([1,6,13,22].includes(i))await shot('reaper-death-'+i);await page.waitForTimeout(65);}
+  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,100));assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'revive');
   await setup();const abyss=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='playing';s.freeLifeAvailable=false;s.player.hp=1;s.player.x=s.terrain.sequences[0].startX+30;s.player.y=s.terrain.anchorAt(s.player.x)+500;s.rescueFromAbyss();s.drawScene();return {state:s.state,camera:[s.cameras.main.scrollX,s.cameras.main.scrollY],expected:[s.cameraX,s.cameraY]};});
   assert.equal(abyss.state,'dying');assert.deepEqual(abyss.camera,abyss.expected);await shot('abyss-defeat');
   for(const [kind,k]of [['angel',1],['devil',8]]){

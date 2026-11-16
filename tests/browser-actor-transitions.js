@@ -71,68 +71,70 @@ async function inspect(page,available){
     'All transitions have a solid painted interior and an antialiased contour');
 }
 
-async function inspectReaper(page,available){
+async function inspectReaper(page){
   const result=await page.evaluate(()=>{
-    const g=window.grimRun,s=g.scene.scenes[0],a=s.combatArt;
+    const g=window.grimRun,s=g.scene.scenes[0],art=s.reactionArt;
     s.startRun();g.loop.sleep();s.sys.sceneUpdate=()=>{};clearInterval(s.loopWatchdogId);
-    s.state='playing';s.ui.setMode('playing');s.enemies=[];s.obstacles=[];
-    const p=s.player,rng=s.rng.state,rows=[];
-    const record=(phase,ms,alpha)=>{
-      s.drawScene();
-      const views=a.reaper.filter(v=>v.visible).map(v=>[v.alpha,v.texture.key,Number(v.frame.name),v.x,v.y]);
-      rows.push({phase,ms,alpha,views,rng:s.rng.state,position:[p.x,s.feetY]});
+    s.enemies=[];s.obstacles=[];s.fireballs=[];
+    const p=s.player,rows=[];
+    const read=(track,age)=>{
+      const v=art.body;
+      rows.push({track,age,visible:v.visible,key:v.texture.key,frame:Number(v.frame.name),
+        scale:v.scaleX,alpha:v.alpha,x:v.x,rotation:v.rotation,rng:s.rng.state});
     };
     for(const rate of [30,60,120]){
-      const step=1000/rate;
-      for(const ms of [...new Set([0,step,step*2,56.7,113.34,210,339])]){
-        p.visualHurtMs=340-ms;p.invulMs=0;record('hurt',ms,1);
-        p.invulMs=1000;s.frame=0;record('hurt',ms,.58);
-        s.frame=5;record('hurt',ms,1);
+      for(const age of [1000/rate,2000/rate,48,92,132,239,339]){
+        p.visualHurtMs=340-age;p.invulMs=0;s.drawScene();read('hurt',age);
+        p.invulMs=1000;s.frame=0;s.drawScene();read('flicker',age);
       }
     }
-    p.invulMs=0;p.visualHurtMs=0;s.die();
-    for(const ms of [0,41.7,62.9,125.72,227,430,600,760,879,880]){
-      s.deathPoseMs=ms;record('death',ms,1);
+    p.visualHurtMs=0;p.invulMs=0;p.hp=1;s.drawScene();
+    s.takeDamage(1,'rock');
+    const lethalRng=s.rng.state;
+    const hud=document.getElementById('hearts').textContent.trim();
+    for(const age of [0,42,65,125,300,630,900,1280,1920,2399]){
+      s.deathPoseMs=age;s.drawScene();read('death',age);
     }
-    s.deathPoseMs=879;s.update(0,.5);
-    const before=s.state;
-    s.update(0,.5);const after=s.state;
-    const opaqueCounts=[];
-    if(a.reaperHandoffReady){
-      const c=document.createElement('canvas');c.width=224;c.height=168;
-      const ctx=c.getContext('2d',{willReadFrequently:true});
-      const src=s.textures.get('combat-reaper-hurt-death-handoff').getSourceImage();
-      for(let i=0;i<20;i++){
-        ctx.clearRect(0,0,224,168);ctx.drawImage(src,i%5*224,Math.floor(i/5)*168,224,168,0,0,224,168);
-        const data=ctx.getImageData(0,0,224,168).data;
-        let solid=0,paint=0,below=false;
-        for(let j=3;j<data.length;j+=4){
-          if(data[j]>64)paint++;
-          if(data[j]===255)solid++;
-          if(data[j]>80&&Math.floor(j/4/224)>158)below=true;
-        }
-        opaqueCounts.push({paint,solid,below});
+    s.deathPoseMs=2399;s.update(0,.5);
+    const before=s.state,early=s.revive();
+    s.update(0,.5);const after=s.state,focus=document.activeElement.id;
+    const paidBefore=s.meta.souls;
+    s.meta.souls=paidBefore+3;s.revive();
+    const cleared=p.visualHurtMs,respawn=s.state;
+    const coverage=[];
+    const spec=window.GRIM_DEFEAT_DATA;
+    const src=s.textures.get('combat-reaper-defeat').getSourceImage();
+    const c=document.createElement('canvas');c.width=spec.width;c.height=spec.height;
+    const ctx=c.getContext('2d',{willReadFrequently:true});
+    for(let i=0;i<spec.frames;i++){
+      const {width:w,height:h,columns,anchor}=spec;
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(src,i%columns*w,Math.floor(i/columns)*h,w,h,0,0,w,h);
+      const bytes=ctx.getImageData(0,0,w,h).data;
+      let solid=0,paint=0,bottom=0;
+      for(let j=3;j<bytes.length;j+=4){
+        if(bytes[j]>64){paint++;bottom=Math.max(bottom,Math.floor(j/4/w)-anchor[1]);}
+        if(bytes[j]>=250)solid++;
       }
+      coverage.push({paint,solid,bottom});
     }
-    return {rows,ready:a.reaperHandoffReady,rng,before,after,opaqueCounts};
+    return {rows,ready:art.ready,before,after,early,hud,focus,cleared,respawn,coverage,lethalRng};
   });
-  assert.equal(result.ready,available);
+  assert.equal(result.ready,true);
   assert.equal(result.before,'dying');assert.equal(result.after,'revive');
-  for(const row of result.rows){
-    assert.equal(row.views.length,1,'Only one Reaper actor is visible');
-    const [alpha,key,tile,x,y]=row.views[0];
-    assert.equal(alpha,row.alpha,'Apply the existing flicker once to the selected actor');
-    assert.deepEqual([x,y],row.position);
-    assert.equal(row.rng,result.rng);
-    if(row.ms===0||row.ms===880){
-      assert.equal(key,'combat-reaper-hurt-death');
-      assert.equal(tile,row.ms===880?11:row.phase==='hurt'?0:4);
-    }
-    if(row.phase==='hurt'&&row.ms===56.7||row.phase==='death'&&row.ms===62.9)
-      assert.equal(key,available?'combat-reaper-hurt-death-handoff':'combat-reaper-hurt-death');
+  assert.equal(result.focus,'revive-title');assert.equal(result.early,false);
+  assert.equal(result.cleared,0);assert.equal(result.respawn,'respawning');
+  assert.equal(result.hud,'♡ ♡ ♡');
+  const death=result.rows.filter(v=>v.track==='death');
+  assert(death.every(v=>v.visible&&v.alpha===1&&v.rng===result.lethalRng));
+  assert(death.slice(2).every(v=>v.scale===1&&v.key==='combat-reaper-defeat'));
+  assert.equal(death.at(-2).frame,death.at(-1).frame,'The last defeated pose holds before the offer');
+  assert(new Set(death.slice(2).map(v=>v.frame)).size>=6,'The collapse uses distinct poses');
+  for(const row of result.rows.filter(v=>v.track!=='death')){
+    assert.equal(row.visible,true);
+    assert.equal(row.alpha,row.track==='flicker'?.58:1);
   }
-  if(available)assert(result.opaqueCounts.every(v=>v.paint>1900&&v.solid/v.paint>.8&&!v.below),
-    'Handoff drawings preserve the opaque body and foot line');
+  assert(result.coverage.every(v=>v.paint>1400&&v.solid/v.paint>.67&&v.bottom<=3),'Solid registered cel interiors and floor contact');
 }
 
 (async()=>{
@@ -147,11 +149,11 @@ async function inspectReaper(page,available){
         const errors=[];page.on('pageerror',e=>errors.push(e.message));
         let release;
         try{
-          if(mode==='invalid')await page.route(/(?:cavern-bat|reaper-hurt-death)-handoff\.webp/,r=>
+          if(mode==='invalid')await page.route(/cavern-bat-handoff\.webp/,r=>
             r.fulfill({body:'invalid actor WebP',contentType:'image/webp'}));
           if(mode==='delayed'){
             const gate=new Promise(resolve=>{release=resolve;});
-            await page.route(/(?:cavern-bat|reaper-hurt-death)-handoff\.webp/,async r=>{
+            await page.route(/cavern-bat-handoff\.webp/,async r=>{
               await gate;
               await r.continue();
             });
@@ -160,16 +162,16 @@ async function inspectReaper(page,available){
           await page.waitForFunction(()=>{const s=window.grimRun?.scene.scenes[0];
             return s?.visuals?.loaded&&s.visuals.batReady&&s.combatArt.ready['bat-flight'];},null,{timeout:55000});
           if(mode==='ready')await page.waitForFunction(()=>{const a=window.grimRun.scene.scenes[0].combatArt;
-            return a.batHandoffReady&&a.reaperHandoffReady;});
+            return a.batHandoffReady;});
           assert.equal(await page.evaluate(()=>window.grimRun.renderer.type),renderer==='canvas'?1:2);
           await inspect(page,mode==='ready');
-          await inspectReaper(page,mode==='ready');
+          if(mode==='ready')await inspectReaper(page);
           if(mode==='delayed'){
             release();
             await page.waitForFunction(()=>{const a=window.grimRun.scene.scenes[0].combatArt;
-              return a.batHandoffReady&&a.reaperHandoffReady;});
+              return a.batHandoffReady;});
             await inspect(page,true);
-            await inspectReaper(page,true);
+
           }
           assert.deepEqual(errors,[]);
           console.log('PASS Cavern Bat and Reaper solid handoffs',renderer,width+'x'+height,mode);
@@ -177,4 +179,16 @@ async function inspectReaper(page,available){
       }
     }finally{await browser.close();}
   }
+  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-webgl']});
+  try{
+    const page=await browser.newPage({viewport:{width:740,height:360}});
+    await page.route('**/reaper-defeat.webp*',route=>route.abort());
+    await page.goto(url);
+    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.state==='home');
+    await page.locator('#home-enter-btn').click();
+    assert(await page.locator('#reaction-load-error').isVisible());
+    assert(await page.locator('#start-btn').isDisabled());
+    assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].startRun()),false);
+    console.log('PASS failed required defeat art is reported at startup');
+  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>server.close());

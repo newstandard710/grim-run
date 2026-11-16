@@ -358,7 +358,7 @@
       const tuckLanding=registered&&p.grounded&&s.powerArt?.tuckLanding&&landAge<36&&p.attackMs<=0;
       const registeredTuck=registered&&tucked&&p.attackMs<=0;
       if(((s.lowProfile||p.airTuck)&&!registeredTuck&&!tuckLanding)||(p.sliding&&!tuckLanding)||
-         (p.visualFireMs>0&&p.attackMs<=0)||(p.visualHurtMs||0)>0)return;
+         (p.visualFireMs>0&&p.attackMs<=0))return;
       const distance=p.x-(s.startX||0);
       let name,t,scale=.52,loop=false,rig=null,progress,handoff=null;
       if(p.attackMs>0){
@@ -370,7 +370,7 @@
           if(this.registeredAirCut&&!p.grounded&&handoff)handoff=registeredCutJoin(handoff);
         }
       }
-      else if(!p.grounded||(p.visualLandingMs||0)>0){
+      else if(!p.grounded||((p.visualLandingMs||0)>0&&!(this.runReady&&s.slideArt?.rejoinsRun))){
         // When details are absent, leave the authored PowerAnimations
         // release visible. An available strip draws the whole handoff here.
         if(release&&!registered&&s.powerArt?.action?.visible)return;

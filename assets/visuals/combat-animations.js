@@ -5,11 +5,10 @@
   const TRANSITION_ROOT='assets/combat/v01912/';
   const BAT_HANDOFF={key:'combat-cavern-bat-handoff',url:TRANSITION_ROOT+'cavern-bat-handoff.webp?v=1',
     width:192,height:128,columns:6,frames:36,anchor:[126,65]};
-  const REAPER_HANDOFF={key:'combat-reaper-hurt-death-handoff',url:TRANSITION_ROOT+'reaper-hurt-death-handoff.webp?v=1',
-    width:224,height:168,columns:5,frames:20,anchor:[112,157]};
   const DATA={...(scope.GRIM_COMBAT_DATA?.sheets||{})};
+  delete DATA['reaper-hurt-death'];
   if(BAT)DATA['bat-flight']=BAT.SPEC;
-  const FIRE_MS=260,HURT_MS=340,DEATH_MS=880,DEFEAT_MS=760,MAX_DEFEATS=12;
+  const FIRE_MS=260,DEFEAT_MS=760,MAX_DEFEATS=12;
   const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
   const CRAWLER_ENTRY_MS=48,CRAWLER_RESPONSE_SCALE=.30;
   const RESPONSE={bat:'bat-response',skeletalBat:'skeletal-response',crawler:'crawler-response',imp:'imp-response'};
@@ -45,15 +44,13 @@
   class CombatAnimations{
     constructor(s){
       this.scene=s;this.ready={};this.corpses=[];this.sequence=0;this.reaperState=null;
-      this.batHandoffs=new WeakMap();this.reaperHandoff=null;
+      this.batHandoffs=new WeakMap();
       this.reaper=[];this.bats=[];this.responses=[];this.effects=[];this.echoes=[];
       if(!s.add?.image||!s.textures?.exists)return;
       for(const [name,m]of Object.entries(DATA))this.ready[name]=Boolean(s.textures.exists('combat-'+name)&&
         Array.from({length:m.frames},(_,i)=>s.textures.get('combat-'+name).has(i)).every(Boolean));
       this.batHandoffReady=transitionReady(s,BAT_HANDOFF);
-      this.reaperHandoffReady=transitionReady(s,REAPER_HANDOFF);
       scope.GRIM_ACTOR_TEXTURES?.load(s,BAT_HANDOFF,()=>{this.batHandoffReady=transitionReady(s,BAT_HANDOFF);});
-      scope.GRIM_ACTOR_TEXTURES?.load(s,REAPER_HANDOFF,()=>{this.reaperHandoffReady=transitionReady(s,REAPER_HANDOFF);});
       const pair=(depth)=>[0,1].map(()=>s.add.image(0,0,'combat-reaper-slide-cut',0).setDepth(depth).setVisible(false));
       if(this.ready['reaper-slide-cut']){
         this.reaper=pair(12.05);
@@ -66,7 +63,7 @@
     }
     all(){return this.views||(this.views=[...this.reaper,...this.bats.flat(),...this.responses.flat(),...this.effects.flat(),...this.echoes.flat()]);}
     reset(){
-      this.corpses=[];this.sequence=0;this.reaperState=null;this.reaperHandoff=null;
+      this.corpses=[];this.sequence=0;this.reaperState=null;
       this.batHandoffs=new WeakMap();for(const v of this.all())v.setVisible(false);
     }
     snapshot(){return this.corpses.map(v=>({...v}));}
@@ -120,42 +117,11 @@
         .clearTint().setAlpha(alpha).setVisible(alpha>0);
       this.reaper[1].setVisible(false);
     }
-    renderHurtDeath(t,x,y,alpha,death=false){
-      const count=death?8:4,first=death?4:0,part=clamp(t,0,count-1);
-      const slot=Math.floor(part*3),offset=slot%3;
-      const view=this.reaper[0];
-      if(!this.reaperHandoff||this.reaperHandoff.death!==death||part<this.reaperHandoff.part)
-        this.reaperHandoff={death,ready:this.reaperHandoffReady,part};
-      this.reaperHandoff.part=part;
-      if(offset&&this.reaperHandoff.ready){
-        const art=REAPER_HANDOFF,segment=Math.floor(slot/3)+(death?3:0);
-        view.setTexture(art.key,segment*2+offset-1)
-          .setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height).setScale(1);
-      }else{
-        const key='reaper-hurt-death',art=DATA[key];
-        view.setTexture('combat-'+key,first+Math.round(part))
-          .setOrigin(art.anchor[0]/art.cell[0],art.anchor[1]/art.cell[1]).setScale(.45);
-      }
-      this.reaper[1].setVisible(false);
-      view.setPosition(x,y).setRotation(0).setFlipX(false).clearTint().setAlpha(alpha).setVisible(alpha>0);
-    }
     renderReaper(){
       const s=this.scene,p=s.player;if(!p||!s.visuals?.reaperReady||!this.reaper.length)return;
-      const dead=['dying','dead','revive'].includes(s.state);
-      if(!dead&&(!(p.visualHurtMs>0)||s.lowProfile))this.reaperHandoff=null;
-      if(dead&&this.ready['reaper-hurt-death']){
-        const progress=s.state==='dying'?clamp((s.deathPoseMs||0)/DEATH_MS):1;
-        const floor=s.terrain.groundAt(p.x),fall=Number.isFinite(floor)&&floor>s.feetY?clamp(progress*1.5)**2:0;
-        const y=s.feetY+(Number.isFinite(floor)?floor-s.feetY:0)*fall;
-        this.hideReaper();this.renderHurtDeath(progress*7,p.x,y,1,true);
-        this.reaperState={name:'death',progress};return;
-      }
       if(!['playing','paused','rewinding','countdown'].includes(s.state))return;
       let name,t,scale,frames;
-      if((p.visualHurtMs||0)>0){
-        if(s.lowProfile){name='reaper-slide-cut';frames=[0];t=0;scale=.385;}
-        else {name='reaper-hurt-death';t=(1-p.visualHurtMs/HURT_MS)*3;}
-      }else if(p.sliding&&p.attackMs>0){
+      if(p.sliding&&p.attackMs>0){
         name='reaper-slide-cut';t=attackFrame(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs,DATA[name].frames);scale=.385;
       }else if(p.grounded&&p.attackMs>0&&s.powerManager.level('soulCleave')>0&&this.ready['reaper-soul-cleave']){
         name='reaper-soul-cleave';t=attackFrame(1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs,DATA[name].frames);scale=.52;
@@ -168,8 +134,7 @@
       }
       if(name&&this.ready[name]){
         this.hideReaper();const alpha=p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1;
-        if(name==='reaper-hurt-death')this.renderHurtDeath(t,p.x,s.feetY,alpha);
-        else this.renderSolidAction(name,t,p.x,s.feetY,scale,alpha,frames);
+        this.renderSolidAction(name,t,p.x,s.feetY,scale,alpha,frames);
         this.reaperState={name,frame:t};
       }
     }
@@ -269,13 +234,15 @@
       let used=0;
       for(const b of s.powerArt?.bursts||[]){
         if(!this.handlesEffect(b)||used>=this.effects.length)continue;
+        const progress=b.id==='soulCleave'?scope.GRIM_POWER_ART.soulCleaveActivePhase(s):clamp(b.age/b.duration);
+        if(progress===null)continue;
         let start=0,count=4,w=65,h=55,x=b.x,y=b.y;
         if(b.id==='soulCleave'){count=8;w=180*(1+s.powerManager.attackBonus());h=w*.58;x=s.player.x+w*.30;y=s.feetY-(s.lowProfile?31:65);}
         if(b.id==='rapidFire'){start=8;w=65;h=34;}
         if(b.id==='powerShot'){start=12;w=b.kind==='blast'?s.width*.65:80+b.level*9;h=w*.66;}
         if(b.id==='chainShot'){start=16;w=64+b.level*5;h=w;}
         if(b.id==='infernalBoots'){start=20;w=90;h=65;}
-        const frames=Array.from({length:count},(_,i)=>start+i),progress=clamp(b.age/b.duration);
+        const frames=Array.from({length:count},(_,i)=>start+i);
         const pair=this.effects[used++];this.blend(pair,'combat-effects',progress*(count-1),x,y,1,1-progress*.5,0,frames);
         for(const v of pair)v.setDisplaySize(w,h);
       }
@@ -290,7 +257,14 @@
     renderTimeEchoes(){
       const s=this.scene,p=s.player;
       if(!p||!['playing','paused','rewinding'].includes(s.state)||!(p.slowMs>0||s.state==='rewinding'))return;
-      const base=s.motionArt?.body?.find(v=>v.visible&&v.alpha>.1)||this.reaper.find(v=>v.visible&&v.alpha>.1)||
+      // Keep the echoes on contact and early recovery when Slide covers
+      // the landing pose that previously supplied them.
+      const slide=s.slideArt;
+      const coveredLanding=slide?.fromTuck&&slide.sprite?.visible&&
+        (s.motionArt?.state?.name==='reaper-tuck-slide'||(!p.sliding&&p.visualLandingMs>0));
+      const reaction=s.reactionArt?.body;
+      const base=(reaction?.visible&&reaction.alpha>.1&&reaction)||s.motionArt?.body?.find(v=>v.visible&&v.alpha>.1)||(coveredLanding&&slide.sprite)||
+        this.reaper.find(v=>v.visible&&v.alpha>.1)||
         Object.values(s.visuals?.reaperPoseSprites||{}).find(v=>v.visible);if(!base)return;
       for(let i=0;i<3;i++){
         const v=this.echoes[i]?.[0];if(!v)continue;
@@ -305,5 +279,5 @@
     }
     destroy(){for(const v of this.all())v.destroy();this.corpses=[];}
   }
-  scope.GRIM_COMBAT_ART={CombatAnimations,preload,sample,batMotion,muzzle,attackFrame,FIRE_MS,HURT_MS,DEATH_MS,DEFEAT_MS,MAX_DEFEATS,BAT_CYCLE_SECONDS};
+  scope.GRIM_COMBAT_ART={CombatAnimations,preload,sample,batMotion,muzzle,attackFrame,FIRE_MS,DEFEAT_MS,MAX_DEFEATS,BAT_CYCLE_SECONDS};
 })(typeof window!=='undefined'?window:globalThis);
