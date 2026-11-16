@@ -161,17 +161,26 @@ function compareFrames(before, after) {
 }
 
 async function reviewAdvance(page) {
-  return page.evaluate(() => {
+  const viewport = page.viewportSize();
+  return page.evaluate(({width, height}) => {
     const {scene, game, place} = window.forestTest;
     scene.startRun();
     game.loop.sleep();
+    // Restart can briefly measure the container before the HUD settles.
+    // Both rim captures must use the requested viewport in world pixels.
+    if (game.canvas.width !== width || game.canvas.height !== height ||
+        scene.width !== width || scene.height !== height) {
+      game.scale.resize(width, height);
+    }
     const frames = [];
     for (let i = 0; i < 38; i++) {
       place(742 + i * 1.5, true);
+      if (game.canvas.width !== width || game.canvas.height !== height)
+        throw Error('Forest rim capture changed size after viewport registration');
       frames.push(game.canvas.toDataURL('image/png'));
     }
     return frames;
-  });
+  }, viewport);
 }
 
 async function screenshotAt(page, distance) {
