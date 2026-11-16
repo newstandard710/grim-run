@@ -74,14 +74,14 @@ for(const k of [1,8]){
 }
 // A real renderer delays only presentation of death; the world and game RNG
 // stay frozen, and free/paid resurrection still have their original costs.
-const life=game();life.combatArt={ready:{'reaper-hurt-death':true},reset(){},tick(){},snapshot(){return [];}};
+const life=game();
 life.freeLifeAvailable=true;life.player.hp=1;life.takeDamage(1,'rock');assert.equal(life.state,'dying');
 const frozen={x:life.player.x,elapsed:life.elapsed,rng:life.rng.state};w.document.hidden=true;life.update(0,250);assert.equal(life.deathPoseMs,0);w.document.hidden=false;
-for(let i=0;i<3;i++)life.update(0,250);assert.equal(life.state,'dying');assert.equal(life.freeLifeUsed,false);
-assert.deepEqual({x:life.player.x,elapsed:life.elapsed,rng:life.rng.state},frozen);life.update(0,130);
+for(let i=0;i<9;i++)life.update(0,250);life.update(0,149);assert.equal(life.state,'dying');assert.equal(life.freeLifeUsed,false);
+assert.deepEqual({x:life.player.x,elapsed:life.elapsed,rng:life.rng.state},frozen);assert.equal(life.deathPoseMs,2399);assert.equal(life.revive(),false);life.update(0,1);
 assert.equal(life.state,'respawning');assert(life.freeLifeUsed);assert.equal(life.respawnMs,1500);assert.equal(life.respawnNextMode,'countdown');
-life.state='playing';life.player.hp=1;life.takeDamage(1,'rock');for(const d of [250,250,250,130])life.update(0,d);assert.equal(life.state,'revive');
-life.reviveUsed=true;life.state='playing';life.player.hp=1;life.takeDamage(1,'rock');for(const d of [250,250,250,130])life.update(0,d);assert.equal(life.state,'dead');
+life.state='playing';life.player.hp=1;life.takeDamage(1,'rock');for(let i=0;i<12;i++)life.update(0,200);assert.equal(life.state,'revive');
+life.reviveUsed=true;life.state='playing';life.player.hp=1;life.takeDamage(1,'rock');for(let i=0;i<12;i++)life.update(0,200);assert.equal(life.state,'dead');
 // Original source bytes and all runtime PNG chunks must survive export/push.
 const m=JSON.parse(read('assets/combat/v0170/manifest.json'));
 function crc32(b){let c=0xffffffff;for(const byte of b){c^=byte;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return (c^0xffffffff)>>>0;}
@@ -94,10 +94,10 @@ assert.equal(m.registration['bat-flight'].frames,16);assert(m.registration['reap
 const art={};art.window=art;vm.createContext(art);vm.runInContext(read('assets/combat/v0170/animation-data.js'),art);vm.runInContext(read('assets/visuals/bat-flight.js'),art);vm.runInContext(read('assets/visuals/combat-animations.js'),art);
 const A=art.GRIM_COMBAT_ART,frames=new Set();for(let i=0;i<160;i++)frames.add(A.batMotion(i/160*A.BAT_CYCLE_SECONDS).a);assert.equal(frames.size,96);assert.equal(A.batMotion(A.BAT_CYCLE_SECONDS).a,0);
 for(const count of [10,12]){assert.equal(A.attackFrame(.20,count),3);assert.equal(A.attackFrame(.79,count),count-4);assert.equal(A.attackFrame(1,count),count-1);}
-const abyss=game();abyss.combatArt={ready:{'reaper-hurt-death':true},reset(){},tick(){},snapshot(){return [];}};
+const abyss=game();
 let scroll;abyss.cameras.main.setScroll=(x,y)=>{scroll=[x,y];};abyss.player.hp=1;abyss.player.x=abyss.terrain.sequences[0].startX+30;abyss.rescueFromAbyss();
 assert.equal(abyss.state,'dying');assert.deepEqual(scroll,[abyss.cameraX,abyss.cameraY],'Lethal abyss defeat is visible at the safe recovery camera');
 const fake={player:{visualHurtMs:340},enemies:[],add:{},terrain:{groundAt(){return 300;},anchorAt(){return 300;}}};
 const v=new A.CombatAnimations(fake);const imp={kind:'imp',x:100,y:280};v.enemyHit(imp,false);assert.equal(imp.visualHitMs,240);assert.equal(v.corpses.length,0);
 for(let i=0;i<20;i++)v.enemyHit({...imp,x:i*10},true);assert.equal(v.corpses.length,12);const saved=v.snapshot();v.tick(100);assert.equal(fake.player.visualHurtMs,240);assert(v.corpses.every(c=>c.age===100));v.restore(saved);assert(v.corpses.every(c=>c.age===0));v.tick(800);assert.equal(v.corpses.length,0);
-console.log('PASS combat polish: response scale/grade registration, floor-contact/airborne entry, persistent Angel/Devil cards and healing, 880ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 96-pose bat loop, detached bounded defeat views and rewind restore.');
+console.log('PASS combat polish: response scale/grade registration, floor-contact/airborne entry, persistent Angel/Devil cards and healing, 2,400ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 96-pose bat loop, detached bounded defeat views and rewind restore.');

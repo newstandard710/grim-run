@@ -34,12 +34,13 @@ function game(seed=22){
  s.create();s.drawScene=()=>{};s.startRun();return s;
 }
 const tick=(s,count,d=34)=>{for(let i=0;i<count;i++)s.update(0,d)};
+const defeat=s=>{assert.equal(s.state,'dying');tick(s,9,250);s.update(0,150);};
 const a=game();assert.equal(a.player.hp,3);assert.equal(a.gunUnlocked,false);
 assert.equal(M.slideDuration(850,a.meta),1300);
 a.collectSoul();a.collectSoul();const before=a.meta.souls;
 a.player.maxHp=7;a.player.hp=1;
 a.powerManager.apply('rapidFire',a.player,()=>{},1);
-a.takeDamage(1,'rock');
+a.takeDamage(1,'rock');defeat(a);
 assert.equal(a.state,'revive');assert.equal(get('revive-yes-btn').disabled,false);
 assert.equal(a.revive(),true);assert.equal(a.state,'respawning');
 assert.equal(a.player.hp,3);assert.equal(a.player.maxHp,3);
@@ -48,7 +49,7 @@ assert.equal(a.lastRevivePayment.currentRun,2);assert.equal(a.lastRevivePayment.
 assert.equal(a.runSoulsAvailable,0);assert.equal(a.meta.souls,before-3);
 assert.equal(M.load().souls,before-3);assert.equal(a.revive(),false);
 tick(a,6,250);assert.equal(a.state,'countdown');tick(a,13,250);assert.equal(a.state,'playing');
-a.player.invulMs=0;a.takeDamage(3,'bat');assert.equal(a.state,'dead');
+a.player.invulMs=0;a.takeDamage(3,'bat');defeat(a);assert.equal(a.state,'dead');
 
 const b=game(23);
 b.player.x=b.startX+4899*C.pxPerMeter;b.distance=4899;
@@ -81,12 +82,12 @@ assert.equal(Combat.pickTarget(b.enemies,[],b.player.x,b.cameraX,b.cameraX+b.wid
 b.fireCrossbow();assert.equal(b.bullets.at(-1).ref,bat);
 
 const prior=game(26);prior.meta.souls=10;prior.player.hp=1;
-prior.takeDamage(1,'rock');assert.equal(prior.revive(),true);
+prior.takeDamage(1,'rock');defeat(prior);assert.equal(prior.revive(),true);
 assert.equal(prior.lastRevivePayment.currentRun,0);
 assert.equal(prior.lastRevivePayment.priorRuns,3);
 const allNew=game(27);allNew.meta.souls=0;
 allNew.collectSoul();allNew.collectSoul();allNew.collectSoul();allNew.player.hp=1;
-allNew.takeDamage(1,'rock');assert.equal(allNew.revive(),true);
+allNew.takeDamage(1,'rock');defeat(allNew);assert.equal(allNew.revive(),true);
 assert.equal(allNew.lastRevivePayment.currentRun,3);
 assert.equal(allNew.lastRevivePayment.priorRuns,0);
 assert.equal(allNew.meta.souls,0);
@@ -97,7 +98,7 @@ w.document.hidden=false;
 tick(auto,16,250);
 assert.equal(auto.state,'playing','Shrine must auto-continue after its animation');
 assert.equal(auto.gunUnlocked,true);
-const poor=game(24);poor.meta.souls=2;poor.player.hp=1;poor.takeDamage(1,'rock');
+const poor=game(24);poor.meta.souls=2;poor.player.hp=1;poor.takeDamage(1,'rock');defeat(poor);
 assert.equal(poor.state,'revive');assert.equal(get('revive-yes-btn').disabled,true);
 assert.equal(poor.revive(),false);poor.declineRevive();assert.equal(poor.state,'dead');
 assert.equal(game(25).reviveUsed,false,'New run resets revive quota');

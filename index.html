@@ -251,6 +251,7 @@ button {cursor:pointer;}
       <div class="eyebrow">THE SOULS HAVE ESCAPED</div>
       <h1 id="menu-title" tabindex="-1">GRIM <em>RUN</em></h1>
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
+      <p id="reaction-load-error" role="alert" class="hidden">Reaper animation failed to load. Refresh to retry.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
       <div class="mini">v0.19.12</div>
@@ -328,7 +329,7 @@ button {cursor:pointer;}
   <div id="revive-screen" class="modal-wrap revive-wrap hidden" aria-label="Resurrection offer">
     <div class="modal compact revive-modal" role="dialog" aria-modal="true" aria-labelledby="revive-title">
       <div class="eyebrow">DEATH IS NOT THE END</div>
-      <h2 id="revive-title">ONE MORE CHANCE</h2>
+      <h2 id="revive-title" tabindex="-1">ONE MORE CHANCE</h2>
       <p>Offer 3 Souls. Return with 3 HP and keep your powers.</p>
       <div class="revive-hearts">♥ ♥ ♥</div>
       <div class="revive-wallet" id="revive-wallet">SOULS AVAILABLE: 0</div>
@@ -415,6 +416,7 @@ window.GRIM_CONFIG = Object.freeze({
   upgradeSafetyAfterMeters: 50, // retain the existing post-vendor protection
   vendorSanctuaryHalfMeters: 25,
   resumeCountdownMs: 3000,
+  deathSequenceMs: 2400,
   slowCooldownMs: 3300,
   slideReleaseComboMs: 500, // tap JUMP within half a second after releasing SLIDE to latch air tuck
   coyoteMs: 95,
@@ -1228,6 +1230,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.actions = actions;
       this.activePointers = new Map();
       this.heldKeys = new Set();
+      this.deathActivationKeys = new Set();
       this.holdSources = {jump:new Set(),slide:new Set()};
       this.holdActions = {
         jump:[actions.jump,actions.jumpEnd],
@@ -1272,6 +1275,13 @@ window.GRIM_CONFIG = Object.freeze({
         const menu=!el('menu').classList.contains('hidden');
         const gameOver=!el('game-over').classList.contains('hidden');
         const activate=event.code==='Enter'||event.code==='Space';
+        if(activate&&(this.deathActivationKeys.has(event.code)||this.mode==='dying')){
+          this.deathActivationKeys.add(event.code);event.preventDefault();return;
+        }
+        if(activate&&this.mode==='revive'&&event.target?.closest?.('button')){
+          if(event.repeat)event.preventDefault();
+          return;
+        }
         const intro=!el('vendor-intro-screen').classList.contains('hidden');
         const vendor=!el('upgrade-screen').classList.contains('hidden');
         const reliquary=!el('reliquary-screen').classList.contains('hidden');
@@ -1306,13 +1316,13 @@ window.GRIM_CONFIG = Object.freeze({
         }
       });
       document.addEventListener('keyup', event => {
-        this.heldKeys.delete(event.code);
+        this.heldKeys.delete(event.code);this.deathActivationKeys.delete(event.code);
         if(this.vendorSkipKeys.delete(event.code)){event.preventDefault();return;}
         const action=heldAction(event.code);
         if(action)this.releaseHold(action,event.code);
       });
       window.addEventListener('blur', () => {
-        this.releaseAll(); this.vendorSkipKeys.clear(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
+        this.releaseAll(); this.vendorSkipKeys.clear(); this.deathActivationKeys.clear(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
       });
       document.addEventListener('contextmenu', event => event.preventDefault());
     }
@@ -1386,6 +1396,14 @@ window.GRIM_CONFIG = Object.freeze({
       for (const id of ['attack-btn','crossbow-btn','rewind-btn','practice-slow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
+      this.mode=mode;
+      if(mode==='dying'){
+        for(const code of ['Enter','Space'])if(this.heldKeys.has(code))this.deathActivationKeys.add(code);
+        for(const [pointer,action] of this.activePointers){
+          const button=el(action==='practiceSlow'?'practice-slow-btn':action+'-btn');
+          if(button?.hasPointerCapture?.(pointer))button.releasePointerCapture(pointer);
+        }
+      }
       show('home-screen',mode==='home');
       scope.GRIM_FRONTEND?.setMode(mode);
       show('countdown-overlay', mode === 'countdown');
@@ -1557,12 +1575,16 @@ window.GRIM_CONFIG = Object.freeze({
       el('reset-description').textContent='Refund '+invested+' Souls. Fee: 1 Soul. New balance: '+(balance+invested-1)+'.';
       this.setMode('refundConfirm');
     }
-    update(hp,maxHp,distance,souls,coins,score,powerSummary=[]) {
+    updateHealth(hp,maxHp) {
       const previous=this.hudValues||(this.hudValues={});
       if(previous.hp!==hp||previous.maxHp!==maxHp){
         writeText('hearts',maxHp>5 ? `♥ ${hp}/${maxHp}` : '♥ '.repeat(Math.max(0,hp)).trim() + ' ♡'.repeat(Math.max(0,maxHp-hp)));
         previous.hp=hp;previous.maxHp=maxHp;
       }
+    }
+    update(hp,maxHp,distance,souls,coins,score,powerSummary=[]) {
+      this.updateHealth(hp,maxHp);
+      const previous=this.hudValues;
       for(const [id,value]of [['distance',Math.floor(distance)],['souls',souls],['coins',coins],['score',score]]){
         if(previous[id]!==value){writeText(id,value.toLocaleString());previous[id]=value;}
       }
@@ -1574,6 +1596,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('revive-wallet').textContent=`SOULS AVAILABLE: ${balance} · EARNED THIS RUN: ${earned}`;
       el('revive-yes-btn').disabled=balance<3;
       this.setMode('revive');
+      el('revive-title').focus?.({preventScroll:true});
     }
     gameOver(distance, souls, coins, score, best, summary=[],victory=false) {
       el('end-eyebrow').textContent=victory?'THE SOULS RETURN TO THE UNDERWORLD':'THE GRIM REAPER HAS FALLEN';
@@ -1643,22 +1666,24 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=2"></script>
-  <script src="assets/visuals/motion-animations.js?v=0.20.0-run-anatomy"></script>
+  <script src="assets/visuals/motion-animations.js?v=0.20.1-slide-reaction"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=0.19.12"></script>
-  <script src="assets/visuals/slide-animations.js?v=0.20.0-forward"></script>
+  <script src="assets/visuals/slide-animations.js?v=0.20.0-slide-contact"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
   <script src="assets/visuals/enemy-motion.js?v=0.19.11"></script>
-  <script src="assets/visuals/combat-animations.js?v=0.19.13-opaque"></script>
+  <script src="assets/visuals/combat-animations.js?v=0.20.1-cleave-reaction"></script>
+  <script src="assets/combat/v0201/animation-data.js?v=1"></script>
+  <script src="assets/visuals/reaper-reaction.js?v=1"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=breeze3"></script>
-  <script src="assets/visuals/visual-system.js?v=0.19.11"></script>
+  <script src="assets/visuals/visual-system.js?v=0.20.1-reaction"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=1"></script>
   <script src="assets/visuals/obstacle-mounts.js?v=2"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.12"></script>
   <script src="assets/visuals/cutscene-motion.js?v=0.19.12-greave"></script>
-  <script src="assets/visuals/power-animations.js?v=0.19.13-air"></script>
+  <script src="assets/visuals/power-animations.js?v=0.19.13-air-cues"></script>
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
@@ -1751,6 +1776,7 @@ window.GRIM_CONFIG = Object.freeze({
       scope.GRIM_MOTION_ART?.preload(this);
       scope.GRIM_POWER_ART?.preload(this);
       scope.GRIM_COMBAT_ART?.preload(this);
+      scope.GRIM_REAPER_REACTION?.preload(this);
       scope.GRIM_VENDOR_ART?.preload(this);
       scope.GRIM_WORLD_POLISH?.preload(this);
       scope.GRIM_FOREST_MIDGROUND?.preload(this);
@@ -1954,6 +1980,13 @@ window.GRIM_CONFIG = Object.freeze({
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.motionArt=scope.GRIM_MOTION_ART?new scope.GRIM_MOTION_ART.MotionAnimations(this):null;
       this.slideArt=scope.GRIM_SLIDE_ART?new scope.GRIM_SLIDE_ART.GroundSlideAnimations(this):null;
+      this.reactionArt=scope.GRIM_REAPER_REACTION?new scope.GRIM_REAPER_REACTION.ReaperReaction(this):null;
+      this.reactionLoadFailed=Boolean(this.load?.spritesheet)&&!this.reactionArt?.ready;
+      if(this.reactionLoadFailed){
+        document.getElementById('reaction-load-error').classList.remove('hidden');
+        document.getElementById('start-btn').disabled=true;
+        if(!this.reactionArt)console.error('Grim Run: Reaper reaction script failed to load');
+      }
       const disconnectHome=scope.GRIM_HOME_ENTRY?.connect(()=>this.enterHome());
       if(disconnectHome)this.events.once('shutdown',disconnectHome);
       this.drawScene();
@@ -2152,6 +2185,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const ball of this.fireballs)ball.y+=dy;
       for(const arc of this.chainArcs){arc.y1+=dy;arc.y2+=dy;}
       this.player.y+=dy;
+      this.reactionArt?.resize(dy);
       this.cameraY+=dy;
       if(this.respawnCamera){
         this.respawnCamera.fromY+=dy;this.respawnCamera.toY=this.player.y-this.groundY;
@@ -2402,6 +2436,8 @@ window.GRIM_CONFIG = Object.freeze({
       return true;
     }
     startRun() {
+      if(this.reactionLoadFailed)return false;
+      this.reactionArt?.reset();this.deathPoseMs=0;
       this.snowTread?.clear();
       this.wakeGameLoop();
       this.lastUpdateHeartbeatAt=Date.now();
@@ -2478,6 +2514,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     goToMenu() {
+      this.reactionArt?.reset();this.deathPoseMs=0;
       this.snowTread?.clear();
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.wakeGameLoop();
@@ -2559,6 +2596,8 @@ window.GRIM_CONFIG = Object.freeze({
       if (this.state!=='playing' || this.practiceScale()===0 || p.attackCooldownMs > 0) return;
       p.attackMs = C.attackDurationMs;
       p.previousAttackMs=p.attackMs;p.visualLandingMs=0;
+      // Cut owns the body from this input forward. A launched bolt keeps its cue.
+      if(p.visualFireMs>0)p.visualFireMs=0;
       p.attackCooldownMs = C.attackCooldownMs;
       this.swingSequence++;
       if(this.powerManager.level('soulCleave')>0)this.powerArt?.trigger('soulCleave',p.x+35,this.feetY-(this.lowProfile?30:65));
@@ -3076,10 +3115,12 @@ window.GRIM_CONFIG = Object.freeze({
       else if(this.state==='dying'){
         if(!document.hidden){
           const visualMs=Math.min(250,Math.max(0,deltaMs));
-          this.deathPoseMs=Math.min(880,(this.deathPoseMs||0)+visualMs);
+          const age=this.deathPoseMs+visualMs;
+          this.deathPoseMs=age>=C.deathSequenceMs-1e-7?C.deathSequenceMs:age;
+          if(this.fallFeedbackMs>0&&this.deathPoseMs>=1550)this.ui.showFallNotice(false);
           this.damageFlashMs=Math.max(0,this.damageFlashMs-visualMs);
         }
-        if(this.deathPoseMs>=880)this.resolveDeath();
+        if(this.deathPoseMs>=C.deathSequenceMs)this.resolveDeath();
         this.drawScene();return;
       }
       else if(this.state==='vendorIntro'){
@@ -3305,7 +3346,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.powerManager.level('powerShot'),0);
       this.fireSoulcaster(target);
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
-      this.player.visualFireMs=scope.GRIM_COMBAT_ART?.FIRE_MS||180;
+      p.visualFireMs=p.attackMs>0?0:(scope.GRIM_COMBAT_ART?.FIRE_MS||180);
       if(this.powerManager.level('rapidFire'))this.powerArt?.trigger('rapidFire',this.player.x+52,this.player.y-(this.lowProfile?36:65));
       if(this.powerManager.level('powerShot'))this.powerArt?.trigger('powerShot',this.player.x+52,this.player.y-(this.lowProfile?36:65));
       this.ui.showGunCooldown(this.gunCooldownMs);
@@ -3316,6 +3357,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.bullets.push({x:originX,y:originY,
         ref:target?target.ref:null,kind:target?target.kind:'free',
         damage:this.powerManager.level('powerShot')>=1?2:1,ageMs:0,dead:false});
+      this.powerArt?.flashCrossbow?.(originX,originY);
       this.puff(originX,originY,0xd8ffe9,6);
     }
     blastSoulcaster(){
@@ -3563,16 +3605,17 @@ window.GRIM_CONFIG = Object.freeze({
       this.puff(p.x,p.y-30,0xffcf7c,15);
       return true;
     }
-    takeDamage(amount,kind){
+    takeDamage(amount,kind,lipX){
       // Called only on a new hazard hit / fall, not for purchase costs.
+      const impactStart=this.particles?.length;
       this.impactFeedback();
       // God Mode prevents HP loss and death, not the on-damage effects.
       // This retains reliable test feedback for Brittle Bones and future powers.
       this.triggerBrittleBones();
       if(this.godMode)return false;
       this.player.hp=Math.max(0,this.player.hp-amount);
-      if(amount>0)this.player.visualHurtMs=scope.GRIM_COMBAT_ART?.HURT_MS||340;
-      if(this.player.hp<=0)this.die();
+      if(amount>0)this.player.visualHurtMs=scope.GRIM_REAPER_REACTION?.HURT_MS||340;
+      if(this.player.hp<=0)this.die(kind,lipX,impactStart);
       return true;
     }
     checkHazards() {
@@ -3615,7 +3658,7 @@ window.GRIM_CONFIG = Object.freeze({
       document.getElementById('fall-notice').textContent=this.godMode?'GOD MODE · FALL RECOVERED':
         hell?`LAVA · −${damage} HP`:'ABYSS · −1 HP';
       p.x=group.respawnX;
-      this.takeDamage(damage,hell?'lava':'abyss');
+      this.takeDamage(damage,hell?'lava':'abyss',group.endX);
       // Free resurrection owns its landing, invulnerability and smoke scene.
       // Do not overwrite them with the surviving-fall recovery below.
       if(this.state==='respawning')return false;
@@ -3639,7 +3682,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.cameras.main.setScroll(this.cameraX,this.cameraY);
         return false;
       }
-      p.slideConsumed=false;p.jumpAgeMs=0;p.visualLandingMs=0;p.visualFireMs=0;
+      p.slideConsumed=false;p.jumpAgeMs=0;p.visualLandingMs=0;p.visualFireMs=0;p.visualHurtMs=0;
       this.state='respawning';this.respawnMs=1500;
       this.respawnNextMode='playing';
       this.respawnCamera={fromX:fromCamera.x,fromY:fromCamera.y,
@@ -3737,19 +3780,19 @@ window.GRIM_CONFIG = Object.freeze({
       catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
     }
-    die(){
+    die(kind,lipX,impactStart){
       if(['dying','dead','revive'].includes(this.state))return;
+      this.reactionArt?.beginDefeat(kind,lipX,impactStart);
       this.resetRewindHistory();
       this.countdownMs=0;this.goFlashMs=0;
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
-      if(this.combatArt?.ready['reaper-hurt-death']){
-        this.state='dying';this.deathPoseMs=0;
-        this.player.attackMs=0;this.player.visualFireMs=0;this.player.jumpHeld=false;this.player.holdSlide=false;
-        this.ui.setMode('dying');return;
-      }
-      this.resolveDeath();
+      this.state='dying';this.deathPoseMs=0;
+      this.player.attackMs=0;this.player.visualFireMs=0;this.player.jumpHeld=false;this.player.holdSlide=false;
+      this.ui.updateHealth?.(this.player.hp,this.player.maxHp);
+      this.ui.setMode('dying');
     }
     resolveDeath(){
+      if(this.state!=='dying'||this.deathPoseMs<C.deathSequenceMs)return;
       if(this.freeLifeAvailable&&!this.freeLifeUsed){
         this.freeLifeUsed=true;this.lastResurrection='free';this.resurrect();return;
       }
@@ -3770,6 +3813,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastResurrection='paid';this.resurrect();return true;
     }
     resurrect(){
+      this.reactionArt?.finishDefeat();
       this.resetRewindHistory();
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
@@ -3786,7 +3830,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.sliding=false;p.holdSlide=false;p.slideConsumed=false;p.airTuck=false;
       p.jumpHeld=false;p.airJumpUsed=false;p.jumpsUsed=0;p.hovering=false;
       p.hoverHoldMs=0;p.hoverPressKind='none';p.hoverBudgetMs=this.powerManager.skeletalHoverMs();
-      p.attackMs=0;p.attackCooldownMs=0;p.slideReleaseBufferMs=0;
+      p.attackMs=0;p.attackCooldownMs=0;p.slideReleaseBufferMs=0;p.visualHurtMs=0;
       this.bullets=[];this.fireballs=[];this.chainArcs=[];
       // Clear only the immediate revive landing/launch area, not world spawns.
       const left=p.x-110,right=p.x+360;
@@ -3997,6 +4041,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.combatArt?.render();
       this.motionArt?.render();
       this.drawGroundSlide();
+      this.reactionArt?.render();
       this.combatArt?.renderTimeEchoes();
       this.vendorArt?.renderCinema();
       this.worldPolish?.endFrame();
@@ -5805,6 +5850,7 @@ window.GRIM_CONFIG = Object.freeze({
           b.x-ux*6*k+uy*4*k,b.y-uy*6*k-ux*4*k);
       }
       for(const ball of this.fireballs){
+        if(ball.dead)continue;
         g.fillStyle(ball.reflected?0x71ffff:0xff7a37,.21);g.fillCircle(ball.x,ball.y,16);
         g.fillStyle(ball.reflected?0xb4ffff:0xffb358,.96);g.fillCircle(ball.x,ball.y,8);
         g.fillStyle(0xffffff,.85);g.fillCircle(ball.x-2,ball.y-2,2.5);
@@ -5818,15 +5864,18 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawParticles() {
       const g=this.fx;g.clear();
-      for(const p of this.particles){g.fillStyle(p.color,clamp(p.life/p.maxLife,0,1));g.fillCircle(p.x,p.y,p.radius);}
+      for(const p of this.particles){
+        const alpha=clamp(p.life/p.maxLife,0,1)*(this.reactionArt?.impactAlpha(p)??1);
+        if(alpha>0){g.fillStyle(p.color,alpha);g.fillCircle(p.x,p.y,p.radius);}
+      }
     }
     drawGroundSlide(){
       const live=['playing','paused','rewinding','countdown'].includes(this.state);
       const sliding=this.player.sliding&&live;
       const airLow=live&&!this.onGround&&this.lowProfile;
       const action=this.powerArt?.action?.visible||this.combatArt?.reaper?.some(sprite=>sprite.visible);
-      const higherAction=sliding&&(action||this.motionArt?.state?.name==='reaper-tuck-slide');
-      const presentation=this.slideArt?.render(sliding,higherAction);
+      const tuckLanding=sliding&&this.motionArt?.state?.name==='reaper-tuck-slide';
+      const presentation=this.slideArt?.render(sliding,sliding&&action,tuckLanding);
       if(airLow&&!action&&!this.motionArt?.body[0]?.visible&&this.visuals?.reaperReady){
         // Both action atlases can be unavailable. Keep the low collision
         // profile legible, just as the ground slide's procedural fallback does.
@@ -5834,7 +5883,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.drawReaper(true);
         return;
       }
-      if(!sliding||higherAction||presentation==='painted')return;
+      if(!sliding||action||tuckLanding||presentation==='painted')return;
       const base=this.visuals?.reaperPoseSprites;
       if(presentation!=='procedural'&&base?.slide?.visible)return;
       // Even when the optional motion layer or both paintings fail, the
@@ -6062,7 +6111,9 @@ window.GRIM_CONFIG = Object.freeze({
         g.fillStyle(0x75dfff,.055);g.fillRect(0,0,this.width,this.height);
       }
       if(this.fallFeedbackMs>0){
-        g.fillStyle(0xef4969,.085*(this.fallFeedbackMs/1550)*impactFade);g.fillRect(0,0,this.width,this.height);
+        const fallAge=this.state==='dying'||this.state==='revive'||this.state==='dead'?this.deathPoseMs:0;
+        const flash=clamp((this.fallFeedbackMs-fallAge)/1550,0,1);
+        g.fillStyle(0xef4969,.085*flash*impactFade);g.fillRect(0,0,this.width,this.height);
       }
       if(this.state==='playing' && this.player.hp<=2){
         const low=this.player.hp===1?.30:.12;

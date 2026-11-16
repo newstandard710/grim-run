@@ -431,7 +431,7 @@
       const originalStartHTML=startButton?.innerHTML;
       const setStartReady=ready=>{
         if(!startButton)return;
-        startButton.disabled=!ready;
+        startButton.disabled=!ready||s.reactionLoadFailed===true;
         if(ready){if(originalStartHTML!==undefined)startButton.innerHTML=originalStartHTML;}
         else startButton.textContent='PREPARING REAPER…';
       };

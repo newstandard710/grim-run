@@ -15,6 +15,7 @@
       this.previousSlideMs=0;
       this.recoveryAt=null;
       this.painted=false;
+      this.fromTuck=false;
       scene.events?.once?.('shutdown',()=>this.sprite?.destroy());
       scope.GRIM_ACTOR_TEXTURES?.load(scene,ART,()=>{});
     }
@@ -30,11 +31,17 @@
       if(this.sprite)return 'strip';
       return s.visuals?.reaperPoseSprites?.slide?'original':'procedural';
     }
-    draw(frame,runner=null){
+    get rejoinsRun(){
+      const s=this.scene,p=s.player;
+      return this.player===p&&this.fromTuck&&p.grounded&&!s.lowProfile&&s.state==='playing'&&
+        (this.painted||this.recoveryAt!==null);
+    }
+    draw(frame,runner=null,covered=null){
       const s=this.scene,p=s.player;
       for(const v of Object.values(s.visuals?.reaperPoseSprites||{}))v.setVisible(false);
       s.visuals?.reaper?.setVisible(false);
       runner?.setVisible(false);
+      covered?.setVisible(false);
       const forward=scope.GRIM_FORWARD_SCYTHE;
       const recovery=frame-ENTRY-BRACE;
       const rising=runner?.texture.key===forward?.carry.key&&recovery>=0&&recovery%RECOVERY===RECOVERY-1;
@@ -48,7 +55,7 @@
         .setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
       return 'painted';
     }
-    render(sliding,higherAction){
+    render(sliding,higherAction,tuckLanding){
       const s=this.scene,p=s.player,now=s.elapsed*1000;
       this.sprite?.setVisible(false);
       if(this.player!==p){
@@ -56,11 +63,13 @@
         this.source=null;
         this.recoveryAt=null;
         this.painted=false;
+        this.fromTuck=false;
       }
       if(sliding){
         if(!this.source||p.slideMs<this.previousSlideMs){
           this.source=this.chooseSource();
           this.painted=false;
+          this.fromTuck=tuckLanding&&this.source==='strip';
         }
         this.previousSlideMs=p.slideMs;
         this.recoveryAt=null;
@@ -72,7 +81,9 @@
         const frame=age<96?Math.min(ENTRY-1,Math.floor(age/16)):
           ENTRY+Math.floor((age-96)/68)%BRACE;
         this.painted=true;
-        return this.draw(frame);
+        // The registered tuck contact is the fallback. A ready strip can
+        // continue straight into low Slide paint on the contact tick.
+        return this.draw(frame,null,tuckLanding?s.motionArt.body[0]:null);
       }
       if(this.source){
         this.source=null;

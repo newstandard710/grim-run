@@ -14,7 +14,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const context=await browser.newContext({viewport,hasTouch:true,deviceScaleFactor:1,...(viewport.width===950?{recordVideo:{dir,size:viewport}}:{})});
    await context.addInitScript(()=>localStorage.setItem('grim-run-v07-meta',JSON.stringify({version:1,souls:100,levels:{boneheart:0,graveWealth:1,deathsLeap:0,graveGlide:0}})));
    const page=await context.newPage();page.on('pageerror',e=>errors.push(label+': '+e));page.on('response',r=>{if(r.status()>=400)failures.push(r.url());});
-   const completeDefeat=async()=>{assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');for(const dt of [250,250,250,130])await page.evaluate(dt=>window.grimRun.scene.scenes[0].update(0,dt),dt);};
+   const completeDefeat=async()=>{assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');for(const dt of [...Array(9).fill(250),150])await page.evaluate(dt=>window.grimRun.scene.scenes[0].update(0,dt),dt);};
    const shot=async name=>{await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({path:path.join(dir,'beyond-'+label+'-'+name+'.png')});};
    await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump&&window.GRIM_FRONTEND?.ready,null,{timeout:45000});await page.evaluate(()=>document.fonts.ready);
