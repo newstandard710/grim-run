@@ -35,7 +35,15 @@
       for(const v of Object.values(s.visuals?.reaperPoseSprites||{}))v.setVisible(false);
       s.visuals?.reaper?.setVisible(false);
       runner?.setVisible(false);
-      this.sprite.setFrame(frame).setPosition(p.x,runner?.y??s.feetY)
+      const forward=scope.GRIM_FORWARD_SCYTHE;
+      const recovery=frame-ENTRY-BRACE;
+      const rising=runner?.texture.key===forward?.carry.key&&recovery>=0&&recovery%RECOVERY===RECOVERY-1;
+      if(rising){
+        const art=forward.carry;
+        this.sprite.setTexture(art.key,forward.slideRise[Math.floor(recovery/RECOVERY)])
+          .setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height).setScale(forward.scale);
+      }else this.sprite.setTexture(KEY,frame).setOrigin(180/WIDTH,132/HEIGHT).setScale(1);
+      this.sprite.setPosition(p.x,runner?.y??s.feetY)
         .setAlpha(runner?.alpha??(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1))
         .setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
       return 'painted';
@@ -73,13 +81,15 @@
       }
       if(this.recoveryAt===null)return null;
       const age=now-this.recoveryAt,runner=s.motionArt?.body?.[0];
+      const texture=runner?.texture.key;
+      const forward=scope.GRIM_FORWARD_SCYTHE;
       if(age<0||age>=RECOVERY_MS||s.state!=='playing'||s.lowProfile||higherAction||
          p.attackMs>0||p.visualFireMs>0||p.visualHurtMs>0||!runner?.visible||
-         runner.texture.key!=='motion-reaper-run-solid'){
+         (texture!=='motion-reaper-run-solid'&&texture!==forward?.carry.key)){
         this.recoveryAt=null;
         return null;
       }
-      const lead=Math.floor(Number(runner.frame.name)/48)%2;
+      const lead=Math.floor(s.motionArt.state.atlasFrame/48)%2;
       return this.draw(ENTRY+BRACE+lead*RECOVERY+Math.floor(age/22),runner);
     }
   }

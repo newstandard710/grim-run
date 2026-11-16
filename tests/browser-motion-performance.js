@@ -25,19 +25,28 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const [name,counts]of Object.entries(pixels))assert(counts.length===24&&counts.every(v=>v.n>10000&&v.n<60000),name+' has 24 decoded complete transparent poses');
   assert(pixels['reaper-run'].every(v=>v.bottom<=280),'No running boot penetrates the floor');
   assert(pixels['reaper-jump'].slice(18).every(v=>Math.abs(v.bottom-279)<=1),'All grounded landing drawings register to the same foot line');
+  await page.waitForFunction(()=>{
+    const art=window.grimRun.scene.scenes[0].motionArt;
+    return art.forwardReady&&art.airReady&&art.airCutReady;
+  },null,{timeout:45000});
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');s.player.invulMs=0;s.player.visualHurtMs=0;s.obstacles=[];s.enemies=[];s.powerManager.levels.soulCleave=0;});
   // Exercise the solid run path at every subpose, not just authored keyframes.
   const solid=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],R=window.GRIM_RUN_DATA,A=window.GRIM_MOTION_ART;
    const c=document.createElement('canvas');c.width=c.height=R.cell;const g=c.getContext('2d');
-   const source=s.textures.get('motion-reaper-run-solid').getSourceImage();let minHead=255,seen=new Set(),toe=[];
+   const art=window.GRIM_FORWARD_SCYTHE.carry,source=s.textures.get(art.key).getSourceImage();
+   let minHead=255,seen=new Set(),toe=[];
    for(let i=0;i<R.frames;i++){
     s.player.x=s.startX+A.STRIDE_PX*(i+.1)/R.frames;s.player.grounded=true;s.player.visualLandingMs=0;
     s.drawScene();const visible=s.motionArt.body.filter(v=>v.visible);
-    if(visible.length!==1||visible[0].alpha!==1||visible[0].texture.key!=='motion-reaper-run-solid')throw Error('Faded or doubled Reaper '+i);
+    const frame=i%(R.frames/R.gaitsPerSheet);
+    if(visible.length!==1||visible[0].alpha!==1||visible[0].texture.key!==art.key
+        ||Number(visible[0].frame.name)!==frame)throw Error('Incorrect forward gait cel '+i);
     seen.add(s.motionArt.state.atlasFrame);
-    g.clearRect(0,0,R.cell,R.cell);g.drawImage(source,i%R.columns*R.cell,Math.floor(i/R.columns)*R.cell,R.cell,R.cell,0,0,R.cell,R.cell);
+    g.clearRect(0,0,R.cell,R.cell);
+    g.drawImage(source,frame%art.columns*art.width,Math.floor(frame/art.columns)*art.height,
+      art.width,art.height,R.anchor[0]-art.anchor[0],R.anchor[1]-art.anchor[1],art.width,art.height);
     const bytes=g.getImageData(110,80,20,28).data,alpha=[];for(let j=3;j<bytes.length;j+=4)alpha.push(bytes[j]);alpha.sort((a,b)=>a-b);minHead=Math.min(minHead,alpha[Math.floor(alpha.length/2)]);
     if(R.supportX[i]!==null){
       // Read the planted boot near its registered position. The other boot
@@ -70,11 +79,26 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const [name,vy,age,landing]of [['launch',-610,15,0],['rise',-400,130,0],['apex',0,390,0],['fall',450,650,0],['contact',0,0,175],['compress',0,0,100],['recover',0,0,20]]){
    const value=await page.evaluate(({vy,age,landing})=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=landing>0;p.jumpAgeMs=age;p.velocityY=vy;p.visualLandingMs=landing;p.y=s.terrain.groundAt(p.x)-(p.grounded?0:65);s.drawScene();return s.motionArt.state;},{vy,age,landing});assert.equal(value.name,'reaper-jump');await shot(name);
   }
+  const airJoin=await page.evaluate(()=>{
+   const s=grimRun.scene.scenes[0],p=s.player,a=s.motionArt;
+   Object.assign(p,{grounded:false,jumpAgeMs:390,velocityY:0,visualLandingMs:0,attackMs:0});
+   s.drawScene();
+   const carry=Number(a.body[0].frame.name);
+   p.attackMs=260;s.swingSequence++;
+   s.drawScene();
+   const palm=[a.weapon.x-p.x,a.weapon.y-s.feetY];
+   const angle=a.weapon.rotation;
+   p.attackMs=0;
+   return {carry,palm,angle};
+  });
+  assert.equal(airJoin.carry,115,'The middle air carry owns the apex');
+  assert(Math.hypot(airJoin.palm[0]+22,airJoin.palm[1]+56)<.001,'Cut starts on the apex carry palm');
+  assert(Math.abs(airJoin.angle-Math.PI/10)<.000001,'Cut starts on the apex carry shaft angle');
   const windowScale=await page.evaluate(()=>window.GRIM_MOTION_ART.WEAPON_SCALE);
   let weaponScale;
   for(const progress of [0,.10,.20,.35,.50,.65,.79,.92,.999]){
-   const value=await page.evaluate(progress=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=true;p.y=s.terrain.groundAt(p.x);p.visualLandingMs=0;p.attackMs=260*(1-progress);s.drawScene();const a=s.motionArt;return {name:a.state?.name,weapon:a.weapon.visible,angle:a.weapon.rotation,scale:[a.weapon.scaleX,a.weapon.scaleY],feet:s.feetY,body:a.body.filter(v=>v.visible).map(v=>v.y)};},progress);
-   assert.equal(value.name,'reaper-cut-body');assert(value.weapon&&value.scale[0]<0&&value.scale[1]>0);assert(value.body.every(y=>y===value.feet));weaponScale??=value.scale;assert.deepEqual(value.scale,weaponScale,'The scythe scale stays identical through every phase');assert(Math.abs(value.scale[1]-windowScale)<1e-9);await shot('cut-'+Math.round(progress*100));
+   const value=await page.evaluate(progress=>{const s=window.grimRun.scene.scenes[0],p=s.player;p.grounded=true;p.y=s.terrain.groundAt(p.x);p.visualLandingMs=0;p.attackMs=260*(1-progress);s.drawScene();const a=s.motionArt;return {name:a.state?.name,weapon:a.weapon.visible,angle:a.weapon.rotation,texture:a.weapon.texture.key,scale:[a.weapon.scaleX,a.weapon.scaleY],feet:s.feetY,body:a.body.filter(v=>v.visible).map(v=>v.y)};},progress);
+   assert.equal(value.name,'reaper-cut-body');assert(value.weapon&&value.texture==='motion-reaper-forward-scythe');assert(Math.abs(value.scale[0]-windowScale)<1e-9);assert(value.body.every(y=>y===value.feet));weaponScale??=value.scale;assert.deepEqual(value.scale,weaponScale,'The scythe scale stays identical through every phase');assert(Math.abs(value.scale[1]-windowScale)<1e-9);await shot('cut-'+Math.round(progress*100));
   }
   const cadence=await page.evaluate(()=>{const a=window.GRIM_MOTION_ART;return [300,362.5,425].map(speed=>({speed,frame:a.runFrame(speed),expected:(speed%a.STRIDE_PX)/a.STRIDE_PX*24}));});
   for(const sample of cadence)assert(Math.abs(sample.frame-sample.expected)<1e-8);

@@ -1,0 +1,29 @@
+{
+  "carry": {
+    "bytes": 1385580,
+    "sha256": "43626d47a0154da868f33185aa5e008b422f0f21d3e5a28bcb0c4082192e9631",
+    "rgbaBytes": 18547200,
+    "dimensions": [
+      1800,
+      2576
+    ]
+  },
+  "cut": {
+    "bytes": 1309648,
+    "sha256": "3166f2134c39776df06e7e58b1ecf0ce7a50cad0828bec9533784565e15ccd1d",
+    "rgbaBytes": 21504000,
+    "dimensions": [
+      2400,
+      2240
+    ]
+  },
+  "weapon": {
+    "bytes": 52408,
+    "sha256": "adb23fd8529278d2fddd19264c7b1bbf0e82151fa66eb99d46b09500940a54cb",
+    "rgbaBytes": 486628,
+    "dimensions": [
+      337,
+      361
+    ]
+  }
+}
