@@ -828,9 +828,17 @@ const server=http.createServer((req,res)=>{
         return Math.abs(am-targetMeters)-Math.abs(bm-targetMeters);
       })[0];
       const sections=scene.terrain.visibleSections(group.startX,group.endX);
-      const gap=sections.filter(section=>section.kind==='gap')
+      const nativeGap=sections.filter(section=>section.kind==='gap')
         .sort((a,b)=>Math.abs((a.start+a.end)/2-(group.startX+group.endX)/2)-
           Math.abs((b.start+b.end)/2-(group.startX+group.endX)/2))[0];
+      // The solid sections are authoritative even when the native gap's
+      // generator record stores the takeoff height at both endpoints.
+      const index=scene.terrain.segments.indexOf(nativeGap);
+      const left=scene.terrain.segments[index-1],right=scene.terrain.segments[index+1];
+      if(left?.end!==nativeGap.start||right?.start!==nativeGap.end||
+        left.kind==='gap'||right.kind==='gap')
+        throw Error('Expected two solid banks for the selected abyss');
+      const gap={...nativeGap,y0:left.y1,y1:right.y0};
       const meters=(gap.start+gap.end-2*scene.startX)/(2*ppm);
       scene.distance=meters;scene.hasTeleported=meters>=5000;
       scene.player.x=gap.start-52;
@@ -942,9 +950,9 @@ const server=http.createServer((req,res)=>{
       const mask=scene.abyssBackdropPolygon(gap,shape,view?.bleedPx||36,
         view?.artTopInsetPx||34);
       const topLeft=shape.left[0],leftLip=shape.left[1],leftReturn=shape.left[2];
-      const topRight=shape.right.at(-1),rightLip=shape.right.at(-2),rightReturn=shape.right.at(-3);
+      const [topRight,rightLip,rightReturn]=shape.right;
       const topWidth=topRight.x-topLeft.x;
-      const bottomWidth=shape.right[0].x-shape.left.at(-1).x;
+      const bottomWidth=shape.right.at(-1).x-shape.left.at(-1).x;
       const visibleDepth=Math.max(0,Math.min(shape.bottom-shape.top,
         scene.cameraY+scene.height-shape.top));
       const xAtY=(points,y)=>{
@@ -958,7 +966,7 @@ const server=http.createServer((req,res)=>{
         return points.at(-1).x;
       };
       const visibleY=shape.top+visibleDepth;
-      const visibleWidth=xAtY(shape.right.slice().reverse(),visibleY)-xAtY(shape.left,visibleY);
+      const visibleWidth=xAtY(shape.right,visibleY)-xAtY(shape.left,visibleY);
       const visibleSections=scene.terrain.visibleSections(scene.cameraX-140,
         scene.cameraX+scene.width+170);
       const platform=visibleSections.find(section=>section.kind==='platform');
