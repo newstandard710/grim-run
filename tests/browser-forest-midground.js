@@ -166,20 +166,31 @@ async function reviewAdvance(page) {
     const {scene, game, place} = window.forestTest;
     scene.startRun();
     game.loop.sleep();
-    // Restart can briefly measure the container before the HUD settles.
-    // Both rim captures must use the requested viewport in world pixels.
-    if (game.canvas.width !== width || game.canvas.height !== height ||
-        scene.width !== width || scene.height !== height) {
+    const style = game.scale.parent.style;
+    const previousWidth = style.width, previousHeight = style.height;
+    // In RESIZE mode Phaser refreshes the backing canvas from the parent
+    // bounds, including during a manual game step. Give both captures the
+    // same layout bounds for the duration of the comparison.
+    style.width = width + 'px';
+    style.height = height + 'px';
+    try {
+      game.scale.getParentBounds();
       game.scale.resize(width, height);
+      const frames = [];
+      for (let i = 0; i < 38; i++) {
+        place(742 + i * 1.5, true);
+        if (game.canvas.width !== width || game.canvas.height !== height ||
+            scene.width !== width || scene.height !== height)
+          throw Error('Forest rim capture changed size after viewport registration');
+        frames.push(game.canvas.toDataURL('image/png'));
+      }
+      return frames;
+    } finally {
+      style.width = previousWidth;
+      style.height = previousHeight;
+      game.scale.getParentBounds();
+      game.scale.refresh();
     }
-    const frames = [];
-    for (let i = 0; i < 38; i++) {
-      place(742 + i * 1.5, true);
-      if (game.canvas.width !== width || game.canvas.height !== height)
-        throw Error('Forest rim capture changed size after viewport registration');
-      frames.push(game.canvas.toDataURL('image/png'));
-    }
-    return frames;
   }, viewport);
 }
 
