@@ -237,7 +237,8 @@ async function gameplay(tab, older){
     assert(values.crawler.angle>.30,'Crawler tilts downhill along the footprint');
     assert.equal(values.crawler.texture,'enemy-ground-inbetweens');
     assert.equal(values.imp.texture,'enemy-ground-inbetweens');
-    assert(values.air.poses.some(([, , ,name])=>name==='motion-reaper-jump-deliberate'));
+    assert(values.air.poses.some(([, , ,name])=>name==='motion-reaper-jump-deliberate' ||
+      name==='motion-reaper-forward-carry'),'The registered air family owns the ordinary jump');
     const rise=values.air.poses.slice(0,7);
     assert(rise.every((v,i)=>i===0||v[1]-rise[i-1][1]<1.5),'Short-hop pose remains continuous');
     assert(values.air.poses.slice(6,14).every(([,frame])=>frame===4),

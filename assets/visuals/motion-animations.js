@@ -2,6 +2,7 @@
 (function(scope){
   'use strict';
   const DATA=scope.GRIM_MOTION_DATA,RUN=scope.GRIM_RUN_DATA,ROOT='assets/motion/v0180/';
+  const FORWARD=scope.GRIM_FORWARD_SCYTHE;
   // Each gait is a full left/right cycle. The atlas and snow contacts
   // use the same distance along the run.
   const GAITS_PER_SHEET=RUN?.gaitsPerSheet||4,PIXELS_PER_GAIT=RUN?.pixelsPerGait||188,
@@ -201,6 +202,14 @@
     if(!motion||!loader)return;
     loader.load(s,AIR_ART,()=>{motion.airReady=motion.airDetailsValid(AIR_ART);});
     loader.load(s,AIR_CUT_ART,()=>{motion.airCutReady=motion.airDetailsValid(AIR_CUT_ART);});
+    if(FORWARD){
+      const stages=[FORWARD.carry,FORWARD.cut,FORWARD.weapon],available=new Set();
+      for(const art of stages)loader.load(s,art,()=>{
+        const isWeapon=art===FORWARD.weapon;
+        if(motion.airDetailsValid(art,isWeapon?100:25,isWeapon?850:280))available.add(art.key);
+        motion.forwardReady=available.size===stages.length;
+      });
+    }
   }
   class MotionAnimations{
     constructor(s){
@@ -241,7 +250,7 @@
       this.trail=s.add.graphics().setDepth(12.07);
       s.events?.once?.('shutdown',()=>this.destroy());
     }
-    airDetailsValid(art){
+    airDetailsValid(art,minOpaque=25,maxOpaque=280){
       const {key,width,height,columns,frames}=art;
       const texture=this.scene.textures.get(key),image=texture?.getSourceImage?.();
       const rows=Math.ceil(frames/columns);
@@ -258,7 +267,7 @@
           const {data}=g.getImageData(i%columns*w,Math.floor(i/columns)*h,w,h);
           let opaque=0;
           for(let k=3;k<data.length;k+=4)if(data[k]>64)opaque++;
-          if(opaque<25||opaque>280)return false;
+          if(opaque<minOpaque||opaque>maxOpaque)return false;
         }
         return true;
       }catch(_){return false;}
@@ -275,6 +284,60 @@
       }
       return this.registeredAir;
     }
+    forwardSequence(p,tucked,release,registered){
+      // Optional paint never participates in the game or Cut readiness gates.
+      // Keep the stock pose owner for the whole air sequence once Slide enters.
+      if(this.forwardPlayer!==p){
+        this.forwardPlayer=p;
+        // Pin one visual family for this run. A slow optional image cannot
+        // flip the carried weapon between two existing frames.
+        this.forwardActive=Boolean(this.forwardReady&&this.cutHandoffReady&&this.cutWeaponReady);
+        this.forwardAir=null;
+        this.forwardSwing=null;
+      }
+      const airSequence=!p.grounded||(p.visualLandingMs||0)>0;
+      if(airSequence){
+        if(this.forwardAir===null)this.forwardAir=Boolean(this.forwardActive&&registered);
+        if(tucked||release)this.forwardAir=false;
+      }else this.forwardAir=null;
+      if(p.attackMs>0){
+        const s=this.scene;
+        if(this.forwardSwing!==s.swingSequence){
+          this.forwardSwing=s.swingSequence;
+          this.forwardAttack=Boolean(this.forwardActive&&!s.lowProfile&&!p.sliding&&
+            (p.grounded||this.forwardAir&&this.registeredAirCut));
+        }
+        if(tucked||release)this.forwardAttack=false;
+      }
+    }
+    forwardPose(p,name,progress,runCell,registeredFrame,solidRun){
+      if(!this.forwardActive)return null;
+      const body=FORWARD.carry;
+      if(name==='reaper-run'&&solidRun)return {art:body,frame:runCell%(RUN.frames/RUN.gaitsPerSheet)};
+      if(name==='reaper-jump'&&this.forwardAir&&registeredFrame!==null&&registeredFrame<26)
+        return {art:body,frame:96+registeredFrame};
+      if(name!=='reaper-cut-body'||!this.forwardAttack)return null;
+      const step=clamp(Math.round(progress*scope.GRIM_CONFIG.attackDurationMs/FORWARD.stepMs),0,FORWARD.ground.length-1);
+      const options=(p.grounded?FORWARD.ground:FORWARD.air)[step];
+      const phase=p.grounded?Math.round((runCell%96)/8)%12:Math.min(2,airBand(jumpFrame(p)));
+      const frame=options.length===1?options[0]:options[phase];
+      return {art:FORWARD.cut,frame,grip:FORWARD.grips[frame]};
+    }
+    showForwardWeapon(grip,rise,alpha,tint){
+      const s=this.scene,art=FORWARD.weapon;
+      const [x,y,angle]=grip;
+      this.weapon.setTexture(art.key,0).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
+        .setPosition(s.player.x+x,s.feetY+y+rise).setRotation(angle).setScale(art.scale)
+        .setAlpha(alpha).setTint(tint).setVisible(true);
+      this.forwardWeapon=true;
+    }
+    restoreWeaponPaint(){
+      if(!this.forwardWeapon)return;
+      const paint=this.cutWeaponReady?DATA.visualCutWeapon:DATA.weapon;
+      this.weapon.setTexture(this.cutWeaponReady?'motion-cut-scythe':'motion-scythe')
+        .setOrigin(paint.pivot[0]/384,paint.pivot[1]/384);
+      this.forwardWeapon=false;
+    }
     hide(){for(const v of this.body)v.setVisible(false);this.weapon?.setVisible(false);this.trail?.clear();this.state=null;}
     handlesCut(){
       const s=this.scene,p=s.player;
@@ -288,6 +351,7 @@
       const tucked=!p.grounded&&(p.airTuck||p.holdSlide)&&p.onSoulPlatform===false;
       const release=!tucked&&!p.grounded&&p.onSoulPlatform===false&&
         (p.visualTuckMs>0?scope.GRIM_POWER_ART.TUCK_RELEASE_MS:p.visualTuckReleaseMs||0);
+      if(FORWARD)this.forwardSequence(p,tucked,release,registered);
       const landAge=LAND_MS-p.visualLandingMs;
       const tuckLanding=registered&&p.grounded&&s.powerArt?.tuckLanding&&landAge<36&&p.attackMs<=0;
       const registeredTuck=registered&&tucked&&p.attackMs<=0;
@@ -332,18 +396,32 @@
       const cell=handoff?CUT_HANDOFF.cell:solidRun?RUN.cell:DATA.cell[0];
       const sizedArt=handoff?.art||(registeredFrame!==null?AIR_ART:null);
       const rise=handoff?.rise??(solidRun?runSupportRise(s,p,atlasFrame):0);
+      const tint=p.slowMs>0?0xb9ecff:0xffffff;
+      const forward=FORWARD?this.forwardPose(p,name,progress,runAtlasFrame(distance),registeredFrame,solidRun):null;
+      if(forward){
+        const {art,frame,grip}=forward;
+        this.body[0].setTexture(art.key,frame).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
+          .setPosition(p.x,s.feetY+rise).setScale(FORWARD.scale).setAlpha(alpha).setTint(tint).setVisible(true);
+        if(grip){
+          this.showForwardWeapon(grip,rise,alpha,tint);
+          drawSwingArc(this.trail,s,progress,alpha);
+        }
+        this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture:art.key};
+        return;
+      }
       const renderScale=handoff?CUT_HANDOFF.scale:solidRun?RUN.scale:registeredFrame!==null?AIR_ART.scale:scale;
       // One opaque registered painting at a time, including the derived
       // transitions. Keep the same apparent size and feet anchor.
       this.body[0].setTexture(texture,atlasFrame)
         .setOrigin(anchor[0]/(sizedArt?.width||cell),anchor[1]/(sizedArt?.height||cell))
         .setPosition(p.x+(rig?.bodyX||0),s.feetY+rise).setScale(renderScale)
-        .setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
+        .setAlpha(alpha).setTint(tint).setVisible(true);
       if(rig){
+        this.restoreWeaponPaint();
         const [gripX,gripY,carryAngle]=handoff?.grip??[rig.x-rig.bodyX,rig.y,0];
         this.weapon.setPosition(p.x+gripX+rig.bodyX,s.feetY+gripY+rise)
           .setRotation(rig.angle+(this.cutWeaponReady?carryAngle:0))
-          .setScale(-WEAPON_SCALE,WEAPON_SCALE).setAlpha(alpha).setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
+          .setScale(-WEAPON_SCALE,WEAPON_SCALE).setAlpha(alpha).setTint(tint).setVisible(true);
         drawSwingArc(this.trail,s,progress,alpha);
       }
       this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture};

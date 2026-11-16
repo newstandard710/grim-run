@@ -49,6 +49,7 @@ const step=(page,count,ms=16)=>page.evaluate(({count,ms})=>{
 },{count,ms});
 
 async function testReady(page){
+  await page.waitForFunction(()=>grimRun.scene.scenes[0].motionArt.forwardReady,null,{timeout:45000});
   await setup(page);
   const pixels=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],src=s.textures.get('ground-slide-paint').getSourceImage();
@@ -85,7 +86,11 @@ async function testReady(page){
   await step(page,1);
   const release=await frame(page);
   assert(!release.low&&release.tile>=10&&release.tile<=15&&release.contact===79);
-  await step(page,5);
+  await step(page,3);
+  const rising=await frame(page);
+  assert.equal(rising.key,'motion-reaper-forward-carry','The final Slide rise reaches the forward RUN carry');
+  assert([122,123].includes(rising.tile)&&rising.sole===0);
+  await step(page,2);
   assert.equal((await frame(page)).tile,null,'The recovery has yielded to the existing run');
   await touch.detach();
 
