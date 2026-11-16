@@ -26,6 +26,19 @@
     {name: 'far', rate: .16, depth: -24, stride: 230, floor: .86, ceiling: .10, salt: 179},
     {name: 'near', rate: .42, depth: -22, stride: 295, floor: .93, ceiling: .075, salt: 313}
   ];
+  const CROSSING_TEXTURE = 'biome-crossing-marks-v1';
+  const CROSSING_SIZE = {w: 128, h: 64};
+  const CROSSING_FRAMES = {
+    'near-rock-shoulder': {frame: {x: 0, y: 0, w: 32, h: 16}, x: 162, y: 56},
+    'near-slate-bed': {frame: {x: 32, y: 0, w: 32, h: 16}, x: 186, y: 51},
+    'near-slate-twins': {frame: {x: 64, y: 0, w: 32, h: 16}, x: 125, y: 77},
+    'near-buttress': {frame: {x: 96, y: 0, w: 32, h: 16}, x: 106, y: 57},
+    'near-joined-columns': {frame: {x: 0, y: 16, w: 32, h: 16}, x: 83, y: 97}
+  };
+  const CROSSING_SITES = {
+    foothills: {preferred: 1610, windows: [[1105, 1290], [1380, 1935], [2040, 2100]]},
+    caves: {preferred: 5500, windows: [[5390, 5770]]}
+  };
 
   const clamp = (n, low, high) => Math.max(low, Math.min(n, high));
   const mix = (a, b, t) => a + (b - a) * t;
@@ -85,7 +98,12 @@
     }
     if (bands.some(frames => !frames.length)) throw new Error('Empty scenery band');
 
-    const artwork = await scope.fetch(ROOT + id + '.webp', {signal});
+    const image = await loadAtlasImage(id + '.webp', w, h, signal);
+    return {data, bands, image};
+  }
+
+  async function loadAtlasImage(file, w, h, signal) {
+    const artwork = await scope.fetch(ROOT + file, {signal});
     if (!artwork.ok) throw new Error('Scenery texture unavailable');
     const blob = await artwork.blob();
     signal.throwIfAborted();
@@ -101,7 +119,7 @@
         image.width = w;
         image.height = h;
         image.getContext('2d').drawImage(bitmap, 0, 0);
-        return {data, bands, image};
+        return image;
       } finally {
         bitmap.close();
       }
@@ -130,7 +148,7 @@
     }
     if (image.naturalWidth !== w || image.naturalHeight !== h)
       throw new Error('Scenery texture dimensions disagree');
-    return {data, bands, image};
+    return image;
   }
 
   class AtlasStream {
@@ -257,6 +275,33 @@
     return {frame, x, y, scale, direction, alpha, supports, profile};
   }
 
+  function crossingSite(id, seed, frames, {pxPerMeter, reaperXRatio}) {
+    const rule = CROSSING_SITES[id];
+    if (!rule) return null;
+    const band = BANDS[1], width = 840;
+    const bandPixelsPerMeter = band.rate * pxPerMeter;
+    const centerOffset = width * (.5 - reaperXRatio * band.rate);
+    const camera = {width, height: 360, travel: 0, project: () => 0};
+    let site = null;
+    for (const [start, end] of rule.windows) {
+      const first = Math.floor((start * bandPixelsPerMeter + centerOffset) / band.stride);
+      const last = Math.floor((end * bandPixelsPerMeter + centerOffset) / band.stride);
+      for (let cell = first; cell <= last; cell++) {
+        // Center the sample in this cell. This samples the original visual
+        // choice without querying terrain or depending on the actual viewport.
+        const offset = (cell + .5) * band.stride - width * .5;
+        camera.travel = offset / band.rate;
+        const piece = formation(band, seed, cell, frames, STYLES[id][1], camera, 1);
+        if (!piece || !CROSSING_FRAMES[piece.frame.name]) continue;
+        const meters = (offset + piece.x - centerOffset) / bandPixelsPerMeter;
+        if (meters < start || meters > end) continue;
+        if (!site || Math.abs(meters - rule.preferred) < Math.abs(site.meters - rule.preferred))
+          site = {cell, meters, frame: piece.frame.name};
+      }
+    }
+    return site;
+  }
+
   function rimContour(sections, camera) {
     const {width, height, cameraX, cameraY} = camera;
     const gaps = sections.filter(s => s.kind === 'gap' && s.start < cameraX + width && s.end > cameraX);
@@ -277,6 +322,7 @@
     constructor(scene) {
       this.scene = scene;
       this.groups = [];
+      this.crossingSites = new Map();
       this.stream = new AtlasStream(scene.textures, id => this.detach(id));
       scene.events.once('shutdown', () => this.destroy());
     }
@@ -300,9 +346,11 @@
 
     hide(release = false) {
       for (const group of this.groups) this.hideGroup(group);
+      this.crossingMark?.setVisible(false);
       if (release) {
         this.practiceArrival = undefined;
         this.stream.request([]);
+        this.releaseCrossingMarks();
       }
     }
 
@@ -311,6 +359,8 @@
     }
 
     detach(id) {
+      this.crossingSites.delete(id);
+      if (this.crossingHostBiome === id) this.detachCrossingMark();
       for (const group of this.groups) {
         if (group.id !== id) continue;
         this.hideGroup(group);
@@ -318,6 +368,75 @@
           for (const image of images) image.setTexture(EMPTY_TEXTURE);
         group.id = null;
       }
+    }
+
+    async prepareCrossingMarks() {
+      const request = new AbortController();
+      this.crossingRequest = request;
+      try {
+        const image = await loadAtlasImage('crossing-marks-v1.webp', CROSSING_SIZE.w, CROSSING_SIZE.h, request.signal);
+        if (request.signal.aborted) return;
+        const texture = this.scene.textures.addAtlas(CROSSING_TEXTURE, image, {
+          frames: CROSSING_FRAMES, meta: {size: CROSSING_SIZE}
+        });
+        if (texture) this.crossingReadyDistance = this.scene.distance;
+      } catch {
+        // Optional paint never delays the host scenery or the run.
+      }
+    }
+
+    detachCrossingMark() {
+      this.crossingMark?.setVisible(false).clearMask().setTexture(EMPTY_TEXTURE);
+      this.crossingHost = null;
+      this.crossingHostBiome = null;
+    }
+
+    releaseCrossingMarks() {
+      if (!this.crossingRequest) return;
+      this.crossingRequest.abort();
+      this.crossingRequest = null;
+      this.crossingReadyDistance = undefined;
+      this.detachCrossingMark();
+      if (this.scene.textures.exists(CROSSING_TEXTURE)) this.scene.textures.remove(CROSSING_TEXTURE);
+    }
+
+    markForBand(id, band, seed, frames) {
+      if (this.crossingReadyDistance === undefined || band !== BANDS[1] || !CROSSING_SITES[id])
+        return null;
+      const previous = this.crossingSites.get(id);
+      let site = previous?.site;
+      if (previous?.seed !== seed) {
+        site = crossingSite(id, seed, frames, scope.GRIM_CONFIG);
+        this.crossingSites.set(id, {seed, site});
+      }
+      // Keep slow optional art from appearing on a rock already crossing the view.
+      return site && this.crossingReadyDistance < site.meters - 180 ? site : null;
+    }
+
+    drawCrossingMark(id, host, piece) {
+      const {frame, x, y, scale, direction, alpha} = piece;
+      const paint = CROSSING_FRAMES[frame.name];
+      const left = x + (paint.x - frame.contact[0] * frame.frame.w) * direction * scale;
+      const top = y + (paint.y - frame.contact[1] * frame.frame.h) * scale;
+      const right = left + paint.frame.w * direction * scale;
+      if (Math.max(left, right) <= 0 || Math.min(left, right) >= this.scene.width ||
+          top + paint.frame.h * scale <= 0 || top >= this.scene.height) return;
+      const mark = this.crossingMark ?? (this.crossingMark = this.scene.add.image(0, 0, EMPTY_TEXTURE)
+        .setScrollFactor(0).setDepth(BANDS[1].depth).setOrigin(0, 0));
+      if (this.crossingHost !== host) {
+        // Match the host's draw order within this depth, even if another
+        // formation overlaps it. setAbove only guarantees relative order.
+        const list = this.scene.sys.displayList;
+        const index = list.getIndex(host);
+        list.moveTo(mark, list.getIndex(mark) < index ? index : index + 1);
+        this.crossingHost = host;
+      }
+      this.crossingHostBiome = id;
+      if (mark.texture.key !== CROSSING_TEXTURE || mark.frame.name !== frame.name)
+        mark.setTexture(CROSSING_TEXTURE, frame.name);
+      mark.setPosition(left, top).setScale(direction * scale, scale).setAlpha(alpha).setVisible(true);
+      if (this.clip) mark.setMask(this.rimMask);
+      else if (mark.mask) mark.clearMask();
     }
 
     render(sections, project) {
@@ -332,6 +451,10 @@
       // The same call follows a confirmed teleport, before the next simulation
       // step. Replacing the whole priority list cancels obsolete prefetches.
       this.stream.request(wanted);
+      if (scene.distance === 0 && this.crossingReadyDistance !== undefined)
+        this.crossingReadyDistance = 0;
+      if (!this.crossingRequest && wanted.some(id => CROSSING_SITES[id]))
+        void this.prepareCrossingMarks();
       if (CONCEALED.has(scene.state)) {
         this.hide();
         return;
@@ -344,6 +467,7 @@
         return;
       }
       this.updateMask(sections, camera);
+      this.crossingMark?.setVisible(false);
       for (const [index, [id, weight]] of ready.entries()) {
         const group = this.groups[index] ?? (this.groups[index] = this.createGroup());
         if (group.id !== id) {
@@ -379,6 +503,7 @@
       const first = Math.floor((offset - margin) / band.stride);
       const last = Math.floor((offset + camera.width + margin) / band.stride);
       const key = textureKey(id);
+      const mark = this.markForBand(id, band, seed, frames);
       let used = 0;
       bank.clear().setVisible(true);
       if (this.clip) bank.setMask(this.rimMask);
@@ -394,6 +519,7 @@
           .setAlpha(alpha).setVisible(true);
         if (this.clip) image.setMask(this.rimMask);
         else if (image.mask) image.clearMask();
+        if (mark?.cell === cell && mark.frame === frame.name) this.drawCrossingMark(id, image, piece);
 
         for (const support of supports)
           this.drawSupport(bank, support, profile, x, STYLES[id][2], alpha);
@@ -417,6 +543,8 @@
     }
 
     destroy() {
+      this.releaseCrossingMarks();
+      this.crossingMark?.destroy();
       for (const group of this.groups)
         for (const {bank, images} of group.layers) {
           bank.destroy();
@@ -430,5 +558,5 @@
   }
 
   scope.GRIM_BIOME_MIDGROUND = {BiomeMidground, AtlasStream, planAtlases, formation,
-    rimContour, loadAtlas, BANDS, STYLES};
+    rimContour, loadAtlas, crossingSite, BANDS, STYLES};
 })(typeof window !== 'undefined' ? window : globalThis);

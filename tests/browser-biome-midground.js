@@ -45,13 +45,13 @@ async function setup(browser, viewport, options = {}) {
       path: path.join(root, 'assets/vendor/phaser-3.90.0/phaser.min.js'), contentType: 'application/javascript'
     }));
   if (options.routes) await options.routes(page);
-  await page.goto(`http://127.0.0.1:${server.address().port}/${options.baseline ? 'forest-baseline.html' : ''}?seed=33${options.off ? '&biomeMidground=0' : ''}`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/${options.baseline ? 'forest-baseline.html' : ''}?seed=${options.seed ?? 33}${options.off ? '&biomeMidground=0' : ''}`);
   await page.waitForFunction(() => window.grimRun?.scene.scenes[0]?.visuals?.reaperReady &&
     window.GRIM_FRONTEND?.ready, null, {timeout: 90000});
-  await page.evaluate(async () => {
+  await page.evaluate(async lightweight => {
     const game = window.grimRun;
     const scene = game.scene.scenes[0];
-    await scene.visuals.reviewLoad;
+    if (!lightweight) await scene.visuals.reviewLoad;
     scene.sys.sceneUpdate = () => {};
     clearInterval(scene.loopWatchdogId);
     scene.enterHome();
@@ -114,7 +114,7 @@ async function setup(browser, viewport, options = {}) {
       return game.canvas.toDataURL('image/png');
     };
     window.biomeReview = {game, scene, place, teleport, snapshot, art, tick, frame};
-  });
+  }, options.lightweight === true);
   return {page, errors};
 }
 
@@ -303,7 +303,10 @@ async function parity(browser) {
       return b.frame();
     });
   });
-  const first = await use({}, forest), old = await use({baseline: true}, forest);
+  // Both builds use the original far plate so this remains a pixel check of the Forest renderer.
+  const first = await use({routes: page => page.route('**/biomes/forest-ravine-v1.webp',
+    route => route.fulfill({path: path.join(root, 'assets/visuals/biomes/forest.webp'), contentType: 'image/webp'}))}, forest);
+  const old = await use({baseline: true}, forest);
   for (const [i, frame] of first.entries()) {
     writeFrame(path.join(outputs, 'forest-current-' + i + '.png'), frame);
     writeFrame(path.join(outputs, 'forest-baseline-' + i + '.png'), old[i]);
@@ -449,6 +452,146 @@ async function lifecycle(page) {
   return checks;
 }
 
+async function crossingReview(browser) {
+  const viewport = {width: 740, height: 360};
+  const cases = [
+    {id: 'foothills', seed: 41, checkpoint: 1500, start: 1555, frame: 'near-rock-shoulder', source: [162, 56]},
+    {id: 'caves', seed: 33, checkpoint: 5000, start: 5445, frame: 'near-buttress', source: [106, 57]}
+  ];
+  let ticks = 0;
+  for (const test of cases) {
+    const {page, errors} = await setup(browser, viewport, {seed: test.seed, lightweight: true});
+    try {
+      await page.evaluate(() => biomeReview.place(600));
+      await page.waitForFunction(() => biomeReview.scene.biomeMidground.crossingReadyDistance === 600);
+      let markedRun;
+      for (const enabled of [true, false]) {
+        await page.evaluate(({checkpoint, enabled}) => {
+          const b = biomeReview, s = b.scene;
+          if (!enabled) s.biomeMidground.markForBand = () => null;
+          s.startRun(); s.setGodMode(true); b.teleport(checkpoint);
+        }, {...test, enabled});
+        await settled(page, test.start, [test.id]);
+        const run = await page.evaluate(({source, frame}) => {
+          const b = biomeReview, s = b.scene, layer = s.biomeMidground;
+          let seen = 0, mirrored = false, masked = false;
+          const states = [];
+          for (let i = 0; i < 180; i++) {
+            b.tick(i);
+            const mark = layer.crossingMark, host = layer.crossingHost;
+            if (mark?.visible) {
+              seen++;
+              mirrored ||= host.scaleX < 0;
+              masked ||= Boolean(host.mask);
+              const x = host.x + (source[0] - host.displayOriginX) * host.scaleX;
+              const y = host.y + (source[1] - host.displayOriginY) * host.scaleY;
+              const list = s.sys.displayList;
+              if (mark.frame.name !== frame || Math.abs(x - mark.x) > 1e-7 || Math.abs(y - mark.y) > 1e-7 ||
+                  mark.scaleX !== host.scaleX || mark.scaleY !== host.scaleY || mark.alpha !== host.alpha ||
+                  mark.mask !== host.mask || mark.depth !== host.depth || list.getIndex(mark) !== list.getIndex(host) + 1)
+                throw Error('Crossing mark diverged from its host frame or draw order');
+            }
+            states.push([b.snapshot(), s.gunCooldownMs, s.blastCooldownMs, s.rewindClockMs, s.portalMs,
+              s.damageFlashMs, s.nextEnemySpawnX, s.nextGroundSpawnX, s.nextSnapSpawnX]);
+          }
+          return {seen, mirrored, masked, states};
+        }, test);
+        if (enabled) {
+          assert(run.seen > 0 && run.masked);
+          if (test.id === 'foothills') assert(run.mirrored);
+          markedRun = run.states;
+        } else {
+          assert.equal(run.seen, 0);
+          assert.deepEqual(run.states, markedRun, test.id + ' mark changed game or RNG state');
+          ticks += run.states.length;
+        }
+      }
+      await page.setViewportSize({width: 950, height: 430});
+      await waitForResize(page, 950, 430);
+      const lifecycle = await page.evaluate(({start, frame}) => {
+        const b = biomeReview, s = b.scene, layer = s.biomeMidground;
+        delete layer.markForBand;
+        b.place(start);
+        const mark = layer.crossingMark;
+        const resized = mark.visible && mark.frame.name === frame;
+        s.togglePause();
+        s.drawScene();
+        const paused = mark.visible && s.state === 'paused';
+        s.resume();
+        s.resetRewindHistory();
+        for (let i = 0; i <= 8; i++) {
+          s.rewindClockMs = i * 1000;
+          b.place(start + i * 2);
+          s.captureRewind();
+        }
+        const before = s.distance;
+        const rewinding = s.rewind();
+        for (let i = 0; i < 170 && s.state === 'rewinding'; i++) s.update(0, 1000 / 60);
+        const rewound = rewinding && s.state !== 'rewinding' && s.distance < before;
+        b.place(start);
+        const reused = layer.crossingMark === mark && mark.visible && mark.frame.name === frame;
+        s.state = 'portal';
+        s.drawScene();
+        const concealed = !mark.visible;
+        s.goToMenu();
+        const released = !s.textures.exists('biome-crossing-marks-v1') && !layer.crossingMark.visible &&
+          layer.crossingHost === null && !layer.crossingMark.mask;
+        return {resized, paused, rewound, reused, concealed, released};
+      }, test);
+      assert(Object.values(lifecycle).every(Boolean), JSON.stringify(lifecycle));
+      assert.deepEqual(errors, []);
+    } finally {
+      await page.close();
+    }
+  }
+  return {ticks};
+}
+
+async function crossingFaults(browser) {
+  for (const fault of ['missing', 'corrupt', 'late']) {
+    let release;
+    let requests = 0;
+    const {page, errors} = await setup(browser, {width: 740, height: 360}, {seed: 41, lightweight: true, routes: async page => {
+      await page.route('**/crossing-marks-v1.webp', async route => {
+        requests++;
+        if (fault === 'missing') return route.fulfill({status: 404});
+        if (fault === 'corrupt') return route.fulfill({contentType: 'image/webp', body: 'invalid'});
+        await new Promise(resolve => { release = resolve; });
+        await route.continue().catch(() => {});
+      });
+    }});
+    try {
+      await page.evaluate(() => biomeReview.place(600));
+      await settled(page, 1575, ['foothills']);
+      assert.equal(requests, 1);
+      if (fault === 'late') {
+        release();
+        await page.waitForFunction(() => biomeReview.scene.biomeMidground.crossingReadyDistance === 1575);
+      }
+      const view = await page.evaluate(() => {
+        const b = biomeReview, layer = b.scene.biomeMidground;
+        for (let i = 0; i < 10; i++) b.tick(i);
+        return [Boolean(layer.crossingMark?.visible), b.art().visible > 0, b.scene.distance > 1575];
+      });
+      assert.deepEqual(view, [false, true, true], fault);
+      if (fault === 'late') {
+        await page.evaluate(() => {
+          const b = biomeReview;
+          b.scene.startRun();
+          b.game.loop.sleep();
+        });
+        await settled(page, 1575, ['foothills']);
+        assert(await page.evaluate(() => biomeReview.scene.biomeMidground.crossingMark.visible));
+      }
+      assert.deepEqual(errors, []);
+    } finally {
+      release?.();
+      await page.close();
+    }
+  }
+  return ['missing', 'corrupt', 'late'];
+}
+
 async function main() {
   fs.mkdirSync(outputs, {recursive: true});
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -457,6 +600,11 @@ async function main() {
   const metrics = {};
   try {
     const mode = process.env.GRIM_BIOME_MODE;
+    if (!mode || mode === 'crossing') {
+      metrics.crossing = await crossingReview(browser);
+      metrics.crossingFaults = await crossingFaults(browser);
+      console.log('PASS crossing marks: registration, masking, parity, release and optional art failure');
+    }
     if (!mode || mode === 'hillside') {
       metrics.hillside = await hillside(browser);
       console.log('PASS live terrain projection on Forest and Caves descents and a Tundra climb');

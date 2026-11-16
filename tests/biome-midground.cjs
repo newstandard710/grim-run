@@ -13,7 +13,7 @@ vm.runInContext('Math.random = () => { throw Error("ambient randomness accessed"
 for (const file of ['world-art.js', 'midground-terrain.js', 'biome-midground.js'])
   vm.runInContext(read('assets', 'visuals', file), scope, {filename: file});
 
-const {AtlasStream, BiomeMidground, BANDS, STYLES, formation, planAtlases, rimContour, loadAtlas} =
+const {AtlasStream, BiomeMidground, BANDS, STYLES, formation, planAtlases, rimContour, loadAtlas, crossingSite} =
   scope.GRIM_BIOME_MIDGROUND;
 const {createProjection} = scope.GRIM_MIDGROUND_TERRAIN;
 const copy = value => JSON.parse(JSON.stringify(value));
@@ -26,6 +26,29 @@ const payloadFor = id => {
     .filter(([, frame]) => frame.band === band.name).map(([name, frame]) => ({name, ...frame})));
   return {data, bands, image: {}};
 };
+
+function crossingSites() {
+  const config = {pxPerMeter: 12, reaperXRatio: .32};
+  const sites = (id, seed) => {
+    const frames = payloadFor(id).bands[1];
+    const salt = scope.GRIM_WORLD_ART.WORLD_BIOMES.findIndex(biome => biome.id === id);
+    const visualSeed = seed ^ Math.imul(salt, 0x51ab4e2d);
+    const result = crossingSite(id, visualSeed, frames, config);
+    assert.deepEqual(copy(crossingSite(id, visualSeed, frames, config)), copy(result));
+    return result;
+  };
+  const shoulder = sites('foothills', 41);
+  assert.equal(shoulder.frame, 'near-rock-shoulder');
+  assert.equal(shoulder.cell, 28);
+  const buttress = sites('caves', 33);
+  assert.equal(buttress.frame, 'near-buttress');
+  assert.equal(buttress.cell, 94);
+  assert.equal(sites('caves', 41).frame, 'near-joined-columns');
+  assert.equal(sites('foothills', 33), null, 'low talus is ineligible');
+  assert.equal(sites('caves', 42), null, 'a run can omit an echo');
+  assert.equal(sites('boss', 33), null);
+  console.log('PASS deterministic crossing sites, no low talus, optional echo, and no Boss placement');
+}
 
 function flatScene(cameraY = 0, height = 440, groundY = 348) {
   return {
@@ -369,6 +392,7 @@ async function transfers() {
 (async () => {
   hillsideProjection();
   weightsAndGeometry();
+  crossingSites();
   await lifecycle();
   await renderer();
   await transfers();

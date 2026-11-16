@@ -1659,10 +1659,11 @@ window.GRIM_CONFIG = Object.freeze({
   </script>
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=snow-tread1"></script>
+  <script src="assets/visuals/lavafall-detail.js?v=1"></script>
   <script src="assets/visuals/snow-tread.js?v=planted1"></script>
   <script src="assets/visuals/midground-terrain.js?v=1"></script>
   <script src="assets/visuals/forest-midground.js?v=3"></script>
-  <script src="assets/visuals/biome-midground.js?v=2"></script>
+  <script src="assets/visuals/biome-midground.js?v=3"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=2"></script>
@@ -1706,20 +1707,20 @@ window.GRIM_CONFIG = Object.freeze({
   const CYAN = 0x8cebe7;
   const GOLD = 0xffcf68;
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-  const CAVES_BACKDROP=['caves','underground-caves.webp'];
+  const CAVES_BACKDROP=['caves','underground-caves-ravine-v1.webp'];
   const CAVES_PREFETCH_METERS=4750;
   const BIOME_BACKDROP_GROUPS={
     surface:[
-      ['forest','forest.webp'],
-      ['foothills','foothills.webp'],
+      ['forest','forest-ravine-v1.webp'],
+      ['foothills','foothills-ravine-v1.webp'],
       ['tundra','tundra.webp']
     ],
     underworld:[
       CAVES_BACKDROP,
-      ['crystals','deep-underground.webp'],
-      ['ashlands','ashlands.webp'],
-      ['lava','lava.webp'],
-      ['boss','boss-castle.webp']
+      ['crystals','deep-underground-ravine-v1.webp'],
+      ['ashlands','ashlands-ravine-v1.webp'],
+      ['lava','lava-ravine-v1.webp'],
+      ['boss','boss-castle-ravine-v1.webp']
     ]
   };
   const BIOME_TERRAIN_FILES=Object.freeze({
@@ -1828,6 +1829,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.bg = this.add.graphics().setScrollFactor(0).setDepth(-20);
       this.biomeBackdrops={};
       this.biomeBackdropReady=this.createBiomeBackdropSet('surface');
+      const lavafallArt=scope.GRIM_LAVAFALL_DETAIL;
+      if(lavafallArt)this.lavafallDetail=new lavafallArt.LavafallDetail(this);
       this.events?.once?.('shutdown',()=>this.cancelCavesBackdropLoad());
       const forestArt=scope.GRIM_FOREST_MIDGROUND;
       if(forestArt)this.forestMidground=new forestArt.ForestMidground(this);
@@ -2519,6 +2522,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     goToMenu() {
+      this.lavafallDetail?.release();
       this.reactionArt?.reset();this.deathPoseMs=0;
       this.snowTread?.clear();
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
@@ -3900,6 +3904,7 @@ window.GRIM_CONFIG = Object.freeze({
       return files.every(([id])=>Boolean(this.biomeBackdrops[id]));
     }
     destroyBiomeBackdropSet(group){
+      if(group==='underworld')this.lavafallDetail?.release();
       for(const [id] of BIOME_BACKDROP_GROUPS[group]||[]){
         this.biomeBackdrops[id]?.destroy();
         delete this.biomeBackdrops[id];
@@ -4047,6 +4052,7 @@ window.GRIM_CONFIG = Object.freeze({
         image.setPosition(this.width*.5-drift,this.height*.5+float);
         image.setAlpha(alpha).setVisible(true);
       }
+      this.lavafallDetail?.sync(this.biomeBackdrops.lava,weights.lava||0);
     }
     drawScene() {
       if (!this.bg||this.vendorArt?.holdingFrame()) return;
