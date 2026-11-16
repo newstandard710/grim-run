@@ -284,18 +284,18 @@ async function abyssReview(browser){
 async function portalReadiness(browser){
   for(const missing of [false,true]){
     let caves=0,ground=0;
-    let releaseCaves,releaseBoss;
+    let releaseCaves,releaseLaterBackdrops;
     const caveGate=new Promise(resolve=>{releaseCaves=resolve;});
-    const bossGate=new Promise(resolve=>{releaseBoss=resolve;});
+    const laterBackdropsGate=new Promise(resolve=>{releaseLaterBackdrops=resolve;});
     const {page,errors}=await setup(browser,{width:740,height:360},{lightweight:true,routes:async page=>{
-      await page.route('**/assets/visuals/biomes/underground-caves.webp',async route=>{
+      await page.route('**/assets/visuals/biomes/underground-caves-ravine-v1.webp',async route=>{
         caves++;
         await caveGate;
         if(missing)await route.fulfill({status:404,body:''});
         else await route.continue();
       });
-      await page.route('**/assets/visuals/biomes/boss-castle.webp',async route=>{
-        await bossGate;
+      await page.route(/\/assets\/visuals\/biomes\/(?:lava|boss-castle)-ravine-v1\.webp$/,async route=>{
+        await laterBackdropsGate;
         await route.continue();
       });
       await page.route('**/assets/visuals/terrain/ground-caves-v1.webp',route=>{
@@ -326,7 +326,8 @@ async function portalReadiness(browser){
         s.shrineClaimed=true;
         s.update(0,1000/60);
         const arrival={state:s.state,ms:s.portalMs,caves:Boolean(s.biomeBackdrops.caves?.visible),
-          caveGround:s.terrainMaterialIds.has('caves'),boss:Boolean(s.biomeBackdrops.boss),
+          caveGround:s.terrainMaterialIds.has('caves'),
+          lava:Boolean(s.biomeBackdrops.lava),boss:Boolean(s.biomeBackdrops.boss),
           tundra:s.textures.exists('biome-tundra')};
         for(let i=0;i<5;i++)s.update(0,250);
         s.update(0,199);
@@ -335,13 +336,13 @@ async function portalReadiness(browser){
         return {arrival,before,after:s.state,bow:s.gunUnlocked};
       });
       assert.deepEqual(result,{arrival:{state:'portal',ms:1450,caves:!missing,caveGround:true,
-        boss:false,tundra:false},before:'portal',after:'playing',bow:true});
+        lava:false,boss:false,tundra:false},before:'portal',after:'playing',bow:true});
       assert.deepEqual([caves,ground],[1,1]);
       assert.deepEqual(errors,[]);
       console.log('PASS summit Caves staging and independent portal',missing?'optional missing art':'ready art');
     }finally{
       releaseCaves();
-      releaseBoss();
+      releaseLaterBackdrops();
       await page.close();
     }
   }
