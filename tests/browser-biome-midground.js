@@ -657,12 +657,22 @@ async function main() {
 async function waitForResize(page, width, height) {
   await page.waitForFunction(([w, h]) => {
     const {game, scene} = window.biomeReview;
-    // The fixture sleeps the native loop. Service Phaser's pending resize
-    // with a zero-delta frame while the scene simulation stays disabled.
-    if (!game.loop.running) game.step(performance.now(), 0);
+    // The fixture sleeps the native loop. Refresh its measured parent bounds
+    // before Phaser projects them into the canvas and emits the resize event.
+    game.scale.getParentBounds();
     game.scale.refresh();
     return game.canvas.width === w && game.canvas.height === h && scene.width === w && scene.height === h;
-  }, [width, height], {polling: 150, timeout: 10000});
+  }, [width, height], {polling: 150, timeout: 10000}).catch(async error => {
+    console.error('Resize state', await page.evaluate(() => {
+      const {game, scene} = biomeReview;
+      const parent = game.scale.parent.getBoundingClientRect();
+      return {window:[innerWidth,innerHeight],canvas:[game.canvas.width,game.canvas.height],
+        scene:[scene.width,scene.height],parent:[parent.width,parent.height],
+        gameSize:[game.scale.gameSize.width,game.scale.gameSize.height],
+        state:scene.state,loop:game.loop.running};
+    }));
+    throw error;
+  });
 }
 main().catch(error => {
   console.error(error);
