@@ -47,7 +47,7 @@ const pick=scene();assert.equal(pick.coins.length,105);assert.equal(pick.souls.l
 const coin=pick.coins[0];pick.player.x=coin.x;pick.player.y=coin.baseY;pick.checkCollectibles();assert(coin.taken);assert.equal(pick.coinCount,1);
 const soul=pick.souls[0];pick.player.x=soul.x;pick.player.y=soul.baseY+soul.offset+43;pick.checkCollectibles();assert(soul.taken);assert.equal(pick.soulCount,1);
 // Each destruction path removes its collider immediately and uses one shared hook.
-const cut=scene();let effects=0;cut.worldPolish={ready:{'polish-fragments':true},destroyObstacle(){effects++;}};
+const cut=scene();let effects=0;cut.worldPolish={ready:{'polish-fragments':true},destroyObstacle(_ob,cutBox){assert.equal(Boolean(cutBox),effects===0);effects++;}};
 const makeOb=()=>({type:'bramble',x:cut.player.x+65,y:cut.player.y-288,width:60,height:288,destroyed:false,variant:0});
 let ob=makeOb();cut.obstacles=[ob];cut.cutNearby();assert(ob.destroyed);assert.equal(effects,1);cut.cutNearby();assert.equal(effects,1);
 ob=makeOb();cut.obstacles=[ob];cut.gunUnlocked=true;cut.bullets=[{kind:'obstacle',ref:ob,x:ob.x,y:ob.y+45,damage:2,ageMs:0}];cut.updateCombat(34,.034);assert(ob.destroyed);assert.equal(effects,2);
@@ -56,6 +56,12 @@ cut.powerManager.apply('brittleBones',cut.player,()=>{},1);ob=makeOb();cut.obsta
 // Validate production alpha atlases and pure motion math independently of Phaser.
 vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals/world-polish-data.js'),'utf8'),w);vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals/world-polish.js'),'utf8'),w);
 const A=w.GRIM_WORLD_POLISH;assert(Math.abs(w.GRIM_POLISH_DATA.respawnWorldScale*254-(1420-666)*120/1111)<.001);assert.equal(A.COIN_HEIGHT,19*1.75);assert.equal(A.SOUL_HEIGHT,23*1.75*2);
+const expectedMaterials=[0,0,0,0,0,1,0,4,4,0,0,1,2,2,2,3,3,3,3,3,3,1,0,1,0,2,3,4,0,3,4];
+const cutSkins=w.GRIM_OBSTACLE_SPRITES.filter(s=>['cut','air-bramble','snapping-bramble'].includes(s.category));
+assert.deepEqual(Array.from(cutSkins,s=>A.cutMaterialFor(s)),expectedMaterials);
+assert.equal(A.cutMaterialFor(null,'snappingBramble'),4);assert.equal(A.cutMaterialFor(null,'airBramble'),0);
+const fragments=fs.readFileSync(path.join(root,'assets/world-polish/v0153/cut-fragments-v2.png'));
+assert.deepEqual([fragments.readUInt32BE(16),fragments.readUInt32BE(20)],[384,480]);assert.equal(fragments[25],6);
 let min=100,max=0;const frames=new Set();for(let i=0;i<160;i++){const m=A.coinMotion(i/100,400);min=Math.min(min,m.width);max=Math.max(max,m.width);frames.add(m.frame);assert.equal(m.height,33.25);}assert(max/min>6);assert.equal(frames.size,12);
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'assets/world-polish/v0153/manifest.json')));assert.equal(Object.keys(manifest.sources).length,12);assert.equal(Object.keys(manifest.runtime).length,12);
 for(const group of [manifest.sources,manifest.runtime])for(const [file,meta]of Object.entries(group)){const bytes=fs.readFileSync(path.join(root,file));assert.equal(bytes.length,meta.bytes);assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),meta.sha256);assert.equal(bytes[25],6);assert.deepEqual([bytes.readUInt32BE(16),bytes.readUInt32BE(20)],meta.size);}

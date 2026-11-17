@@ -98,13 +98,14 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    assert(changed>80,biome+' removal visibly restores atmosphere above the canyon, changed '+changed);
   }
   // Run the real scythe path for each material, then animate its bounded pool.
-  for(const [biome,m,material]of [['forest',400,0],['caves',5500,1],['crystals',6500,2],['lava',8500,3]]){
+  for(const [biome,m,material]of [['forest',400,0],['caves',5500,1],['crystals',6500,2],['lava',8500,3],['tundra',3400,4]]){
    await stage(m);
    const event=await page.evaluate(({biome,material})=>{
-    const s=window.grimRun.scene.scenes[0],skin=window.GRIM_OBSTACLE_SPRITES.find(v=>v.category==='cut'&&v.biome===biome&&(material!==1||/fossil/.test(v.name)));
+    const s=window.grimRun.scene.scenes[0],skin=window.GRIM_OBSTACLE_SPRITES.find(v=>v.category==='cut'&&v.biome===biome&&GRIM_WORLD_POLISH.cutMaterialFor(v,'bramble')===material);
     const x=s.player.x+70,ob={type:'bramble',x,y:s.player.y-288,width:60,height:288,variant:0,destroyed:false,reviewSkin:skin};s.obstacles=[ob];s.drawScene();s.cutNearby();s.drawScene();
-    return {destroyed:ob.destroyed,material:s.worldPolish.effects[0]?.material,particles:s.worldPolish.fragments.length,ghosts:s.worldPolish.ghosts.length};
-   },{biome,material});assert(event.destroyed);assert.equal(event.material,material);assert.equal(event.particles,64);assert.equal(event.ghosts,1);
+    return {destroyed:ob.destroyed,material:s.worldPolish.effects[0]?.material,particles:s.worldPolish.fragments.length,
+      visible:s.worldPolish.fragments.filter(v=>v.visible).length,ghosts:s.worldPolish.ghosts.length};
+   },{biome,material});assert.deepEqual(event,{destroyed:true,material,particles:64,visible:6,ghosts:1});
    for(let i=0;i<20;i++){await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.worldPolish.tick(30);s.drawScene();});if([2,7,14].includes(i))await shot('cut-'+biome+'-'+i);await page.waitForTimeout(15);}
    const done=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.worldPolish.tick(100);s.drawScene();return {effects:s.worldPolish.effects.length,ghosts:s.worldPolish.ghosts.length,visible:s.worldPolish.fragments.filter(v=>v.visible).length};});assert.deepEqual(done,{effects:0,ghosts:0,visible:0});
   }

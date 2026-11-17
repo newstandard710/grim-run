@@ -71,6 +71,42 @@ for(const first of ['ravenWings','skeletalWings']){
  m.apply('skeletalWings',{},()=>{});assert(m.summary()[0].detail.includes('Skeletal 2'));
 }
 
+// Each merchant keeps its existing wing and grants the other wing's effect.
+const powers=w.GRIM_POWERS;
+const advanceUntil=(s,predicate)=>{
+ for(let frame=0;frame<300&&!predicate();frame++)s.update(0,10);
+ assert(predicate(),'The expected flight transition occurs');
+};
+for(let rank=1;rank<=4;rank++){
+ const raven=game(),bone=game();
+ raven.powerManager.apply('ravenWings',raven.player,()=>{},rank);
+ bone.powerManager.apply('skeletalWings',bone.player,()=>{},rank);
+ const capacity=[700,1050,1400,1750][rank-1],velocity=[-610,-665,-720,-775][rank-1];
+ assert.equal(powers.describePowerRank('ravenWings',rank).stats.hoverMs,capacity);
+ assert.equal(powers.describePowerRank('skeletalWings',rank).stats.secondJumpVelocityPxPerSecond,velocity);
+ raven.jump();assert.equal(raven.player.hoverBudgetMs,capacity);
+ advanceUntil(raven,()=>raven.player.hovering);
+ for(let frame=0;frame<10;frame++)raven.update(0,10);
+ assert.equal(raven.player.hoverBudgetMs,capacity-100);
+ raven.jumpEnd();assert.equal(raven.player.hovering,false);
+ raven.jump();assert(raven.player.hovering);assert.equal(raven.player.airJumpUsed,false);
+ assert.equal(raven.player.hoverBudgetMs,capacity-100);
+ advanceUntil(raven,()=>raven.player.hoverBudgetMs===0);
+ advanceUntil(raven,()=>raven.player.grounded);assert.equal(raven.player.hoverBudgetMs,capacity);
+ bone.jump();assert.equal(bone.player.hoverBudgetMs,0);
+ bone.update(0,20);bone.jumpEnd();bone.jump();assert.equal(bone.player.velocityY,velocity);
+ assert(bone.player.airJumpUsed);bone.jumpEnd();const releasedVelocity=bone.player.velocityY;
+ bone.jump();assert.equal(bone.player.velocityY,releasedVelocity);assert(!bone.player.hovering);
+}
+const mixed=game();
+mixed.powerManager.apply('ravenWings',mixed.player,()=>{},3);
+mixed.powerManager.apply('skeletalWings',mixed.player,()=>{},1);
+mixed.jump();mixed.update(0,20);mixed.jumpEnd();mixed.jump();
+assert.equal(mixed.player.velocityY,-610);assert.equal(mixed.player.hoverBudgetMs,1400);
+for(let frame=0;frame<14;frame++)mixed.update(0,10);
+assert(!mixed.player.hovering);mixed.update(0,10);assert(mixed.player.hovering);
+assert.equal(mixed.player.hoverBudgetMs,1400);mixed.update(0,10);assert.equal(mixed.player.hoverBudgetMs,1390);
+
 // Every generated gap has a conservative held base jump at the new speed.
 let gaps=0;
 for(let seed=1;seed<=40;seed++){

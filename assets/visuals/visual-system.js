@@ -431,7 +431,7 @@
       const originalStartHTML=startButton?.innerHTML;
       const setStartReady=ready=>{
         if(!startButton)return;
-        startButton.disabled=!ready||s.reactionLoadFailed===true;
+        startButton.disabled=!ready||s.reactionLoadFailed===true||s.portalArtLoadFailed===true;
         if(ready){if(originalStartHTML!==undefined)startButton.innerHTML=originalStartHTML;}
         else startButton.textContent='PREPARING REAPER…';
       };
@@ -604,7 +604,7 @@
       const s=this.scene,p=s.player;
       if(!p)return 'idle';
       if(s.state==='dead'||s.state==='revive')return 'death';
-      if(s.state==='respawning')return 'idle';
+      if(s.state==='respawning'||s.state==='portal')return 'idle';
       if(s.state==='won')return 'idle';
       if(p.sliding||p.airTuck)return 'slide';
       if(p.attackMs>0)return 'scythe_attack';
@@ -648,6 +648,8 @@
           const name=e.mode==='dive'?'dive':ILLUSTRATED_BAT_FLAP[flapFrame];
           const meta=ILLUSTRATED.bat[name],sprite=this.batPool[used++];
           const [ax,ay]=meta.anchor;
+          sprite.__grimEntity=e;
+          sprite.__grimBatOffsetX=-ax*meta.scale;sprite.__grimBatOffsetY=-ay*meta.scale;
           sprite.setTexture(meta.key).setOrigin(0,0).setScale(meta.scale)
             .setPosition(e.x-ax*meta.scale,e.y-ay*meta.scale).setVisible(true)
             .setAlpha(e.hp<1?.5:1).setRotation(e.mode==='dive'?.10:0);
@@ -663,25 +665,27 @@
         const left=s.cameraX-100,right=s.cameraX+s.width+100,now=Math.max(0,s.elapsed||0);
         for(const e of s.enemies||[]){
           if(e.kind!=='skeletalBat'||e.x<left||e.x>right||used>=this.skeletalBatPool.length)continue;
-          let state=this.skeletalBatVisualState.get(e);
-          if(!state){state={hp:e.hp,hitUntil:-1,deathUntil:-1};this.skeletalBatVisualState.set(e,state);}
-          if(e.dead&&state.deathUntil<0)state.deathUntil=now+.34;
-          else if(!e.dead&&e.hp<state.hp)state.hitUntil=now+.20;
-          state.hp=e.hp;
-          if(e.dead&&now>state.deathUntil)continue;
+          if(e.dead){
+            if(e.visualDefeatOwned)continue;
+            let deathUntil=this.skeletalBatVisualState.get(e);
+            if(deathUntil===undefined){deathUntil=now+.34;this.skeletalBatVisualState.set(e,deathUntil);}
+            if(now>deathUntil)continue;
+          }
           let frame='flap_raised';
           if(e.dead)frame='death';
-          else if(now<state.hitUntil)frame='hit';
           else if(e.mode==='telegraph')frame='telegraph';
           else if(e.mode==='dive')frame='dive';
           else frame=V2_SKELETAL_BAT_FLAP[
             Math.floor(now*V2_SKELETAL_BAT_FLAP_FPS+(e.phase||0))%V2_SKELETAL_BAT_FLAP.length
           ];
           const sprite=this.skeletalBatPool[used++],meta=V2_SKELETAL_BAT_ATLAS;sprite.__grimEntity=e;
+          if(sprite.texture.key!==meta.key)sprite.setTexture(meta.key,frame);
+          else sprite.setFrame(frame);
           sprite.setOrigin(meta.origin[0],meta.origin[1]).setScale(meta.scale)
-            .setPosition(e.x,e.y).setFrame(frame).setVisible(true)
+            .setPosition(e.x,e.y).setVisible(true)
             .setAlpha(1)
             .setRotation(e.mode==='dive'?.10:0);
+          if(s.combatArt?.enemyFlashing(e))s.combatArt.paintEnemyFlash(sprite,V2_SKELETAL_BAT_FRAMES.findIndex(v=>v.name===frame));
         }
       }
       for(let i=used;i<this.skeletalBatPool.length;i++)this.skeletalBatPool[i].setVisible(false);
@@ -736,6 +740,10 @@
           else sprite.setFrame(frame);
           sprite.setOrigin(meta.origin[0],tween?(245+32)/320:meta.origin[1]).setScale(tween?meta.scale/.6:meta.scale)
             .setPosition(e.x,e.y+22).setVisible(true).setAlpha(1).setRotation(0);
+          if(s.combatArt?.enemyFlashing(e)){
+            const slot=tween?12+from:6+V2_EMBER_IMP_FRAMES.findIndex(v=>v.name===frame);
+            s.combatArt.paintEnemyFlash(sprite,slot);
+          }
         }
       }
       for(let i=used;i<this.emberImpPool.length;i++)this.emberImpPool[i].setVisible(false);
@@ -777,6 +785,8 @@
             (e.phase||0))%V2_BAT_FLAP.length;
           const name=e.mode==='dive'?'dive':V2_BAT_FLAP[flapFrame];
           const bm=V2_BAT[name],sprite=this.batPool[used++],[ax,ay]=bm.anchor;
+          sprite.__grimEntity=e;
+          sprite.__grimBatOffsetX=-ax*bm.scale;sprite.__grimBatOffsetY=-ay*bm.scale;
           sprite.setTexture(bm.key).setOrigin(0,0).setScale(bm.scale)
             .setPosition(e.x-ax*bm.scale,e.y-ay*bm.scale).setVisible(true)
             .setAlpha(e.hp<1?.5:1).setRotation(e.mode==='dive'?.10:0);
@@ -818,6 +828,7 @@
           if(e.kind!=='bat'||e.dead||e.x<left||e.x>right)continue;
           if(used>=this.batPool.length)break;
           const sprite=this.batPool[used++];
+          sprite.__grimEntity=e;
           sprite.setVisible(true).setPosition(e.x,e.y);
           sprite.setFrame(cavernBatFrame(e,s.elapsed));
           sprite.setAlpha(e.hp<1?.5:1);

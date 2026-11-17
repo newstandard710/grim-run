@@ -97,7 +97,14 @@ for(const count of [10,12]){assert.equal(A.attackFrame(.20,count),3);assert.equa
 const abyss=game();
 let scroll;abyss.cameras.main.setScroll=(x,y)=>{scroll=[x,y];};abyss.player.hp=1;abyss.player.x=abyss.terrain.sequences[0].startX+30;abyss.rescueFromAbyss();
 assert.equal(abyss.state,'dying');assert.deepEqual(scroll,[abyss.cameraX,abyss.cameraY],'Lethal abyss defeat is visible at the safe recovery camera');
-const fake={player:{visualHurtMs:340},enemies:[],add:{},terrain:{groundAt(){return 300;},anchorAt(){return 300;}}};
-const v=new A.CombatAnimations(fake);const imp={kind:'imp',x:100,y:280};v.enemyHit(imp,false);assert.equal(imp.visualHitMs,240);assert.equal(v.corpses.length,0);
+const fake={player:{visualHurtMs:340},enemies:[],elapsed:0,add:{},terrain:{groundAt(){return 300;},anchorAt(){return 300;}}};
+const v=new A.CombatAnimations(fake),imp={kind:'imp',hp:1,x:100,y:280};
+assert.equal(v.enemyHit(imp,false),true);assert.equal(imp.visualHitUntil,.105);assert.equal(v.corpses.length,0);
+fake.elapsed=.104;assert(v.enemyFlashing(imp));fake.elapsed=.105;assert(!v.enemyFlashing(imp));
+assert.equal(v.enemyHit({kind:'bat',hp:1},false),false);
+assert.equal(v.enemyHit({kind:'crawler',hp:1},false),false);
+fake.visuals={emberImpReady:true};assert.equal(v.enemyHit(imp,false),false,'An unavailable flash does not select a different pose');
+v.enemyFlashReady=true;v.reducedMotion={matches:true};fake.elapsed=0;
+assert.equal(v.enemyHit(imp,false),true);assert.equal(imp.visualHitUntil,.075);
 for(let i=0;i<20;i++)v.enemyHit({...imp,x:i*10},true);assert.equal(v.corpses.length,12);const saved=v.snapshot();v.tick(100);assert.equal(fake.player.visualHurtMs,240);assert(v.corpses.every(c=>c.age===100));v.restore(saved);assert(v.corpses.every(c=>c.age===0));v.tick(800);assert.equal(v.corpses.length,0);
-console.log('PASS combat polish: response scale/grade registration, floor-contact/airborne entry, persistent Angel/Devil cards and healing, 2,400ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 96-pose bat loop, detached bounded defeat views and rewind restore.');
+console.log('PASS combat polish: response scale/grade registration, floor-contact/airborne entry, persistent Angel/Devil cards and healing, 2,400ms frozen death before free/paid/results, complete source/runtime PNG CRC/SHA, 96-pose bat loop, surviving 2HP flash and bounded rewindable defeats.');

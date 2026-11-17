@@ -1,0 +1,105 @@
+{
+  "source": [
+    {
+      "path": "assets/characters/illustrated-v2/reaper/reaper_idle_v1.png",
+      "bytes": 1306891,
+      "sha256": "253cddc5467f3dd914e679ad64d1a95060181538174cc5621a0f1f8436474cca"
+    },
+    {
+      "path": "assets/ui/v0160/veil-forest.webp",
+      "bytes": 333352,
+      "sha256": "4b953b2d052163b724b1906cb716b90a43eb70e19906ec0485cc56186b63d153"
+    }
+  ],
+  "exports": [
+    {
+      "path": "assets/ui/v0160/home-v1/reaper-plate.webp",
+      "bytes": 81000,
+      "sha256": "2d6509b521ba401c6b557d3c6852da537a4afef87c8070744565c76b5ed5e8ae"
+    },
+    {
+      "path": "assets/ui/v0160/home-v1/cloak.webp",
+      "bytes": 659804,
+      "sha256": "dbd275cec03a1b85a2d35a9b6fb8f0c6d71f1d269f12c9aba71ca6397205f460"
+    },
+    {
+      "path": "assets/ui/v0160/home-v1/tread.webp",
+      "bytes": 47454,
+      "sha256": "b1d53b644e3093ba577a512d96246623d8b69e823d06bc4c553b69e4f4c6376b"
+    }
+  ],
+  "bodyRect": [
+    346,
+    228,
+    1454,
+    1428
+  ],
+  "cloakRect": [
+    346,
+    752,
+    976,
+    1400
+  ],
+  "treadRect": [
+    0,
+    626,
+    1672,
+    850
+  ],
+  "treadContact": [
+    [
+      0,
+      672
+    ],
+    [
+      170,
+      674
+    ],
+    [
+      308,
+      688
+    ],
+    [
+      493,
+      699
+    ],
+    [
+      638,
+      711
+    ],
+    [
+      798,
+      722
+    ],
+    [
+      969,
+      735
+    ],
+    [
+      1124,
+      744
+    ],
+    [
+      1307,
+      749
+    ],
+    [
+      1497,
+      755
+    ],
+    [
+      1672,
+      765
+    ]
+  ],
+  "cell": 192,
+  "gutter": 2,
+  "columns": 12,
+  "frames": 96,
+  "fps": 30,
+  "seconds": 3.2,
+  "maxSourcePixelDisplacement": [
+    68.98,
+    39.99
+  ]
+}
