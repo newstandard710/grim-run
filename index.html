@@ -1667,16 +1667,18 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/biome-midground.js?v=downhill1"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
-  <script src="assets/motion/v0200/animation-data.js?v=2"></script>
-  <script src="assets/visuals/motion-animations.js?v=0.20.1-slide-reaction"></script>
+  <script src="assets/motion/v0200/animation-data.js?v=rear-carry1"></script>
+  <script src="assets/motion/v0200/rising-cut-data.js?v=1"></script>
+  <script src="assets/visuals/rising-cut.js?v=2"></script>
+  <script src="assets/visuals/motion-animations.js?v=rear-carry2"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=0.19.12"></script>
-  <script src="assets/visuals/slide-animations.js?v=0.20.0-slide-contact"></script>
+  <script src="assets/visuals/slide-animations.js?v=rear-carry1"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
   <script src="assets/visuals/enemy-motion.js?v=0.19.11"></script>
-  <script src="assets/visuals/combat-animations.js?v=0.20.1-cleave-reaction"></script>
+  <script src="assets/visuals/combat-animations.js?v=rear-carry1"></script>
   <script src="assets/combat/v0201/animation-data.js?v=1"></script>
-  <script src="assets/visuals/reaper-reaction.js?v=1"></script>
+  <script src="assets/visuals/reaper-reaction.js?v=rear-carry1"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=breeze3"></script>
   <script src="assets/visuals/visual-system.js?v=0.20.1-reaction"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3-tree-roots"></script>
@@ -1685,7 +1687,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.12"></script>
   <script src="assets/visuals/cutscene-motion.js?v=0.19.12-vendor-hood"></script>
-  <script src="assets/visuals/power-animations.js?v=0.19.13-air-cues"></script>
+  <script src="assets/visuals/power-animations.js?v=rear-carry1"></script>
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
@@ -2624,6 +2626,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(p.visualFireMs>0)p.visualFireMs=0;
       p.attackCooldownMs = C.attackCooldownMs;
       this.swingSequence++;
+      this.motionArt?.rising?.acceptCut();
       if(this.powerManager.level('soulCleave')>0)this.powerArt?.trigger('soulCleave',p.x+35,this.feetY-(this.lowProfile?30:65));
       // Damage is applied only during the visible scythe swing, in update().
     }
@@ -2639,6 +2642,7 @@ window.GRIM_CONFIG = Object.freeze({
       const p=this.player;
       if(this.state!=='playing' || this.practiceScale()===0 || p.holdSlide) return;
       p.holdSlide=true;
+      this.motionArt?.rising?.acceptSlide();
       if(!p.slideConsumed){
         p.slideConsumed=true;
         if(this.onGround){p.sliding=true;p.slideMs=0;this.puff(p.x-10,this.feetY-3,0x8790ad,4);}
@@ -2834,8 +2838,9 @@ window.GRIM_CONFIG = Object.freeze({
     cutNearby() {
       const bonus=126*this.powerManager.attackBonus();
       const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
-      const sweep=this.motionArt?.attackBoxes(this.player.previousAttackMs);
-      const hits=target=>sweep?sweep.some(edge=>Core.overlaps(edge,target)):Core.overlaps(box,target);
+      const rising=this.motionArt?.rising?.contactTest();
+      const sweep=rising?null:this.motionArt?.attackBoxes(this.player.previousAttackMs);
+      const hits=rising||(target=>sweep?sweep.some(edge=>Core.overlaps(edge,target)):Core.overlaps(box,target));
       for (const ob of this.obstacles) {
         if (!Combat.cuttable(ob) || ob.destroyed || !hits(ob.type==='snappingBramble'?this.snappingBox(ob):ob)) continue;
         this.destroyObstacle(ob);
@@ -2852,7 +2857,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       for(const ball of this.fireballs){
         if(ball.reflected||ball.dead)continue;
-        if(!hits({x:ball.x-9,y:ball.y-9,width:18,height:18}))continue;
+        if(!hits({x:ball.x-9,y:ball.y-9,width:18,height:18},ball))continue;
         ball.reflected=true;ball.ageMs=0;
         this.puff(ball.x,ball.y,0x9aefff,9);
       }
@@ -3373,6 +3378,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.fireSoulcaster(target);
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
       p.visualFireMs=p.attackMs>0?0:(scope.GRIM_COMBAT_ART?.FIRE_MS||180);
+      this.motionArt?.rising?.acceptBow();
       if(this.powerManager.level('rapidFire'))this.powerArt?.trigger('rapidFire',this.player.x+52,this.player.y-(this.lowProfile?36:65));
       if(this.powerManager.level('powerShot'))this.powerArt?.trigger('powerShot',this.player.x+52,this.player.y-(this.lowProfile?36:65));
       this.ui.showGunCooldown(this.gunCooldownMs);
@@ -6020,7 +6026,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(!proceduralSlide&&this.visuals&&this.visuals.reaperReady){
         // Art is drawn by a Phaser sprite. Keep combat arcs and hover indicators
         // on this separate FX layer and leave every collision box unchanged.
-        if(p.attackMs>0&&!this.motionArt?.handlesCut()&&Core.attackActive(p.attackMs,C.attackDurationMs,
+        if(p.attackMs>0&&!this.motionArt?.handlesCut()&&!this.motionArt?.rising?.compactFrame()&&Core.attackActive(p.attackMs,C.attackDurationMs,
              C.attackActiveStart,C.attackActiveEnd)){
           const progress=1-p.attackMs/C.attackDurationMs;
           const reach=94*(1+this.powerManager.attackBonus());

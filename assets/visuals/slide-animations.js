@@ -53,6 +53,9 @@
       this.sprite.setPosition(p.x,runner?.y??s.feetY)
         .setAlpha(runner?.alpha??(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1))
         .setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
+      s.motionArt?.hideRearCarry?.();
+      if(rising)s.motionArt?.showRearCarry?.(forward.slideRise[Math.floor(recovery/RECOVERY)],this.sprite.y,
+                                          this.sprite.alpha,this.sprite.tintTopLeft,this.sprite);
       return 'painted';
     }
     render(sliding,higherAction,tuckLanding){
