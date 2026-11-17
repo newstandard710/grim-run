@@ -171,9 +171,9 @@ const server=http.createServer((req,res)=>{
   await skeletalPage.goto(origin+'/?seed=33',
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>{
-    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return v?.loaded===true&&v.skeletalBatReady===true&&
-      v.boneCrawlerReady===true&&v.emberImpReady===true;
+      v.boneCrawlerReady===true&&v.emberImpReady===true&&s.combatArt.enemyFlashReady;
   },null,{timeout:45000});
   const skeletalLoaded=await skeletalPage.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS,m=V.V2_SKELETAL_BAT_ATLAS;
@@ -218,19 +218,25 @@ const server=http.createServer((req,res)=>{
     {elapsed:3/12,mode:'glide',hp:2,dead:false,frame:'flap_mid_up'},
     {elapsed:1,mode:'telegraph',hp:2,dead:false,frame:'telegraph'},
     {elapsed:1.1,mode:'dive',hp:2,dead:false,frame:'dive'},
-    {elapsed:1.2,mode:'glide',hp:1,dead:false,frame:'hit'},
-    {elapsed:1.3,mode:'glide',hp:1,dead:true,frame:'death'}
+    {elapsed:1.2,mode:'glide',hp:1,dead:false,frame:2},
+    {elapsed:1.3,mode:'glide',hp:0,dead:true,frame:'flap_mid_up'}
   ];
   const skeletalCropHashes=[];
   for(let i=0;i<skeletalStates.length;i++){
     const state=skeletalStates[i];
     const rendered=await skeletalPage.evaluate(({elapsed,mode,hp,dead})=>{
-      const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.skeletalBatPool[0];
-      s.elapsed=elapsed;Object.assign(enemy,{mode,hp,dead});s.drawScene();g.step(performance.now(),0);
-      return {frame:sprite.frame.name,visible:sprite.visible};
+      const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0];
+      s.elapsed=elapsed;enemy.mode=mode;s.drawScene();
+      if(hp<enemy.hp)s.hitEnemy(enemy,enemy.hp-hp);
+      s.drawScene();g.step(performance.now(),0);
+      const live=s.visuals.skeletalBatPool.filter(v=>v.visible);
+      const detached=s.combatArt.responses.flat().filter(v=>v.visible);
+      const sprite=dead?detached[0]:live[0];
+      return {frame:sprite.frame.name,visible:sprite.visible,views:live.length+detached.length,
+        flash:sprite.texture.key==='combat-enemy-hit-flash'};
     },state);
-    assert.deepEqual(rendered,{frame:state.frame,visible:true},
-      'Phaser selects and displays the '+state.frame+' frame');
+    assert.deepEqual(rendered,{frame:state.frame,visible:true,views:1,flash:i===6},
+      'Phaser paints one current pose, red hit flash or detached defeat entry');
     const canvas=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({
       path:path.join(skeletalArtifactDir,'skeletal-bat-canvas-'+String(i+1).padStart(2,'0')+'.png')}));
     const x=Math.max(0,Math.floor(skeletalRect.screenX)),y=Math.max(0,Math.floor(skeletalRect.screenY));
@@ -251,12 +257,14 @@ const server=http.createServer((req,res)=>{
     skeletalCropHashes.push(crypto.createHash('sha256').update(crop).digest('hex'));
   }
   assert.equal(new Set(skeletalCropHashes).size,8,
-    'All four flight drawings and four action drawings produce distinct phone-scale pixels');
+    'All four flight drawings, warning, dive, red flash and detached defeat produce distinct phone-scale pixels');
   const afterDeath=await skeletalPage.evaluate(()=>{
-    const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.skeletalBatPool[0];
-    s.elapsed=1.7;s.drawScene();g.step(performance.now(),0);return sprite.visible;
+    const g=window.grimRun,s=g.scene.scenes[0];
+    const visible=()=>s.visuals.skeletalBatPool.concat(s.combatArt.responses.flat()).some(v=>v.visible);
+    s.combatArt.tick(759);s.drawScene();g.step(performance.now(),0);const before=visible();
+    s.combatArt.tick(1);s.drawScene();g.step(performance.now(),0);return {before,after:visible()};
   });
-  assert.equal(afterDeath,false,'Defeat art clears after its short visual hold');
+  assert.deepEqual(afterDeath,{before:true,after:false},'Detached defeat art clears at the approved 760 ms boundary');
 
   // Exercise all four approved Bone Crawler drawings through real Phaser at
   // 950x430 and compare their actual rendered phone-scale pixels.
