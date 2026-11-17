@@ -41,7 +41,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    await page.setViewportSize({width,height});
    for(const i of [0,24,48,72]){await page.evaluate(i=>{window._batClock=(i+.1)/96*1.6;},i);await present();await page.screenshot({path:path.join(dir,`bat-home-${width}-${i}.png`)});}
   }
-  await page.setViewportSize({width:950,height:430});await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+  await page.setViewportSize({width:950,height:430});await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');s.obstacles=[];s.enemies=[{kind:'bat',x:s.player.x+260,y:s.player.y-130,mode:'glide',phase:0,hp:4,dead:false}];});
   for(let i=0;i<96;i++){
    const v=await page.evaluate(i=>{const s=window.grimRun.scene.scenes[0];s.elapsed=(i+.1)/96*1.6;s.drawScene();return s.combatArt.bats.flat().filter(v=>v.visible).map(v=>({alpha:v.alpha,frame:Number(v.frame.name),key:v.texture.key,origin:[v.originX,v.originY]}));},i);

@@ -36,6 +36,47 @@ for(const healFirst of [true,false]){
 const healOnly=game();healOnly.coinCount=8;healOnly.player.hp=1;vendor(healOnly,1);assert(healOnly.healFromVendor());assert.equal(healOnly.player.hp,2);assert.equal(healOnly.vendorPurchased,false);assert.equal(healOnly.healFromVendor(),false);healOnly.leaveVendor();
 const skip=game();vendor(skip,1);const skipped=skip.coinCount;skip.leaveVendor();assert.equal(skip.coinCount,skipped);
 const full=game();full.coinCount=20;vendor(full,1);assert.equal(full.healFromVendor(),false);assert.equal(full.coinCount,20);
+// Comparisons, quotes and outcomes use the same capped ranks and live HP.
+const rankCheck=game();
+const snapshot=s=>JSON.stringify({player:s.player,gold:s.coinCount,offers:s.pendingOffers,levels:s.powerManager.levels,
+  rng:s.rng.state,rewind:s.rewindFrames,rerolls:s.rerollsRemaining,purchased:s.vendorPurchased,save:[...store]});
+const raven=rankCheck.powerManager.eligible().find(o=>o.id==='ravenWings');
+const rare=P.addRarity(raven,{next:()=>.05});
+assert.equal(rare.levelTo,2);assert.match(P.compareOffer(rare,rankCheck.player).join(' '),/0 s → 1\.05 s/);
+rankCheck.powerManager.levels.ravenWings=3;
+const capped=P.addRarity(rankCheck.powerManager.eligible().find(o=>o.id==='ravenWings'),{next:()=>0});
+assert.equal(capped.levelsGained,1);assert.equal(capped.levelTo,4);
+assert.match(P.compareOffer(capped,rankCheck.player).join(' '),/1\.40 s → 1\.75 s/);
+for(const id of [...P.POWER_ORDER,...P.DEVIL_ORDER]){
+ const cap=rankCheck.powerManager.maxFor(id);
+ for(let rank=0;rank<=cap;rank++)assert.equal(P.describePowerRank(id,rank).rank,rank);
+ assert.equal(P.describePowerRank(id,cap+1),null);
+}
+assert.equal(P.describePowerRank('gravewingAscension',1),null);
+rankCheck.coinCount=4;vendor(rankCheck,1);
+rankCheck.pendingOffers=[capped];rankCheck.showVendor();
+let frozenOffer=snapshot(rankCheck);
+rankCheck.chooseUpgrade('ravenWings');rankCheck.chooseUpgrade('ravenWings');
+assert.equal(snapshot(rankCheck),frozenOffer);assert.match(get('vendor-feedback').textContent,/Not enough gold.*You have 4/);
+rankCheck.coinCount=5;rankCheck.chooseUpgrade('ravenWings');
+assert.equal(rankCheck.player.hoverBudgetMs,1750);assert.equal(rankCheck.coinCount,0);
+assert.equal(get('vendor-feedback').textContent,'');rankCheck.leaveVendor();
+rankCheck.player.hp=2;rankCheck.coinCount=7;vendor(rankCheck,8);
+rankCheck.pendingOffers=[rankCheck.powerManager.devilEligible().find(o=>o.id==='skeletalWings')];rankCheck.showVendor();
+frozenOffer=snapshot(rankCheck);rankCheck.chooseUpgrade('skeletalWings');
+assert.equal(snapshot(rankCheck),frozenOffer);assert.match(get('vendor-feedback').textContent,/Not enough health.*keep 1 HP/);
+assert.equal(rankCheck.healFromVendor(),false);assert.match(get('vendor-feedback').textContent,/Need 8 gold/);
+assert.equal(snapshot(rankCheck),frozenOffer);rankCheck.coinCount=8;assert(rankCheck.healFromVendor());
+rankCheck.chooseUpgrade('skeletalWings');assert.equal(rankCheck.player.hp,1);assert.equal(rankCheck.coinCount,0);
+assert.equal(rankCheck.powerManager.secondJumpVelocity(),-610);
+assert.equal(rankCheck.powerManager.level('ravenWings'),4);assert.equal(rankCheck.powerManager.level('skeletalWings'),1);
+const healing=game();healing.coinCount=13;Object.assign(healing.player,{hp:8,maxHp:9});vendor(healing,1);
+const mend={...P.FALLBACKS.soulMend,type:'recovery'},essence={...P.HEALTH,type:'health'};
+healing.pendingOffers=[mend,essence];healing.showVendor();
+for(const o of healing.pendingOffers)assert.match(P.compareOffer(o,healing.player).join(' '),/8\/9 → 9\/9 HP/);
+assert(healing.healFromVendor());frozenOffer=snapshot(healing);
+for(const o of healing.pendingOffers)healing.chooseUpgrade(o.id);
+assert.equal(snapshot(healing),frozenOffer);assert.match(get('vendor-feedback').textContent,/Health is already full/);
 // One pool spans Angel and Devil merchants; rerolls are fresh and not refunded by Rewind.
 const reroll=game({fatesBargain:3,graveWealth:3,deathDenied:1});assert.equal(reroll.coinCount,6);assert.equal(reroll.goldCollected,0);assert.equal(reroll.points,0);
 vendor(reroll,1);const first=reroll.pendingOffers.map(v=>v.id),gold=reroll.coinCount,hp=reroll.player.hp;assert(reroll.rerollVendor());assert.equal(reroll.rerollsRemaining,2);assert(reroll.pendingOffers.every(v=>!first.includes(v.id)));assert.equal(reroll.coinCount,gold);assert.equal(reroll.player.hp,hp);

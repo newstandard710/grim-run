@@ -7,7 +7,7 @@ const worldArt=read('assets/visuals/world-art.js');
 const reaper=read('assets/characters/reaper/reaper-sheet.svg'),bat=read('assets/enemies/cavern-bat/bat-sheet.svg');
 assert.ok(html.includes('<script src="assets/visuals/world-art.js?v=snow-tread1"></script>'),
  'Versioned world-art JS avoids stale mobile cached art');
-assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=0.20.1-reaction"></script>'),
+assert.ok(html.includes('<script src="assets/visuals/visual-system.js?v=ae-scythe1"></script>'),
  'Versioned character-art JS avoids stale mobile cached loader');
 assert.ok(html.includes('ABYSS_BACKDROP_FILES')&&
  html.includes("this.load.image(key,'assets/visuals/terrain/'+key+'.webp?v=0.13.6-abyss-fog')"),
@@ -307,7 +307,7 @@ staticRenderer.shutdown();
 
 const skeletalEnemy={kind:'skeletalBat',x:450,y:120,mode:'glide',hp:2,phase:0,dead:false};
 const skeletalScene={state:'playing',cameraX:0,width:950,elapsed:0,enemies:[skeletalEnemy]};
-const skeletonFrame=()=>({setOrigin(){return this},setScale(v){this.scale=v;return this},
+const skeletonFrame=()=>({texture:{key:V.V2_SKELETAL_BAT_ATLAS.key},setOrigin(){return this},setScale(v){this.scale=v;return this},
  setPosition(x,y){this.x=x;this.y=y;return this},setFrame(v){this.frame=v;return this},
  setVisible(v){this.visible=v;return this},setAlpha(v){this.alpha=v;return this},
  setRotation(v){this.rotation=v;return this},destroy(){this.destroyed=true}});
@@ -322,7 +322,10 @@ assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'telegraph');
 skeletalEnemy.mode='dive';skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'dive');
 skeletalEnemy.hp=1;skeletalScene.elapsed=.04;skeletalRenderer.renderSkeletalBats();
-assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'hit');
+assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'dive','A surviving hit retains the real flight pose');
+skeletalEnemy.visualDefeatOwned=true;skeletalEnemy.dead=true;skeletalRenderer.renderSkeletalBats();
+assert.equal(skeletalRenderer.skeletalBatPool[0].visible,false,'A detached defeat owns the only death image');
+skeletalEnemy.visualDefeatOwned=false;
 skeletalEnemy.dead=true;skeletalScene.elapsed=.06;skeletalRenderer.renderSkeletalBats();
 assert.equal(skeletalRenderer.skeletalBatPool[0].frame,'death');
 skeletalScene.elapsed=.5;skeletalRenderer.renderSkeletalBats();

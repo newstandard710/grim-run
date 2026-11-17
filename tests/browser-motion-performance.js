@@ -29,7 +29,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     const art=window.grimRun.scene.scenes[0].motionArt;
     return art.forwardReady&&art.airReady&&art.airCutReady;
   },null,{timeout:45000});
-  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');s.player.invulMs=0;s.player.visualHurtMs=0;s.obstacles=[];s.enemies=[];s.powerManager.levels.soulCleave=0;});
   // Exercise the solid run path at every subpose, not just authored keyframes.
   const solid=await page.evaluate(()=>{

@@ -23,7 +23,9 @@ const server = http.createServer((req, res) => {
     // The historical HTML must load its own frontispiece and its matching one-canvas layout.
     const frozenHome = ['/assets/ui/v0160/frontispiece.js', '/assets/ui/v0160/interface.css'].includes(pathname) &&
       req.url.endsWith('?v=0.19.3');
-    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest || frozenHome ? pathname.slice(1) : null;
+    // The historical power API must use its own renderer.
+    const frozenPower = pathname === '/assets/visuals/power-animations.js' && req.url.endsWith('?v=0.19.8');
+    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest || frozenHome || frozenPower ? pathname.slice(1) : null;
     res.end(original ? execFileSync('git', ['show', baseline + ':' + original], {cwd: root}) : fs.readFileSync(file));
   } catch {
     if (!res.headersSent) res.writeHead(404);
@@ -657,9 +659,22 @@ async function main() {
 async function waitForResize(page, width, height) {
   await page.waitForFunction(([w, h]) => {
     const {game, scene} = window.biomeReview;
+    // The fixture sleeps the native loop. Refresh its measured parent bounds
+    // before Phaser projects them into the canvas and emits the resize event.
+    game.scale.getParentBounds();
     game.scale.refresh();
     return game.canvas.width === w && game.canvas.height === h && scene.width === w && scene.height === h;
-  }, [width, height], {polling: 150, timeout: 10000});
+  }, [width, height], {polling: 150, timeout: 10000}).catch(async error => {
+    console.error('Resize state', await page.evaluate(() => {
+      const {game, scene} = biomeReview;
+      const parent = game.scale.parent.getBoundingClientRect();
+      return {window:[innerWidth,innerHeight],canvas:[game.canvas.width,game.canvas.height],
+        scene:[scene.width,scene.height],parent:[parent.width,parent.height],
+        gameSize:[game.scale.gameSize.width,game.scale.gameSize.height],
+        state:scene.state,loop:game.loop.running};
+    }));
+    throw error;
+  });
 }
 main().catch(error => {
   console.error(error);

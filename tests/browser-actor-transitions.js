@@ -20,7 +20,7 @@ async function inspect(page,available){
     const g=window.grimRun,s=g.scene.scenes[0],a=s.combatArt;
     s.startRun();g.loop.sleep();s.sys.sceneUpdate=()=>{};clearInterval(s.loopWatchdogId);
     s.enemies=[];s.obstacles=[];s.state='playing';s.ui.setMode('playing');
-    const e={kind:'bat',x:s.player.x+175,y:s.player.y-83,phase:.7,timer:0};
+    const e={kind:'bat',hp:1,x:s.player.x+175,y:s.player.y-83,phase:.7,timer:0};
     s.enemies.push(e);
     const traces=[];
     for(const mode of ['telegraph','dive','recover']){
@@ -34,8 +34,12 @@ async function inspect(page,available){
         }
       }
     }
-    e.visualHitMs=200;s.drawScene();
-    const response={flight:a.bats[0].some(v=>v.visible),hurt:a.responses[0].some(v=>v.visible)};
+    const live=a.bats[0][0];
+    const pose=[live.texture.key,live.frame.name,live.rotation,live.alpha];
+    s.hitEnemy(e,1);s.drawScene();
+    const detached=a.responses.flat().filter(v=>v.visible);
+    const response={flight:a.bats[0].some(v=>v.visible),defeats:detached.length,
+      entry:detached.map(v=>[v.texture.key,v.frame.name,v.rotation,v.alpha]),pose};
     const opaqueCounts=[];
     if(a.batHandoffReady){
       const c=document.createElement('canvas');c.width=192;c.height=128;
@@ -52,7 +56,8 @@ async function inspect(page,available){
     return {traces,ready:a.batHandoffReady,response,opaqueCounts};
   });
   assert.equal(result.ready,available);
-  assert.deepEqual(result.response,{flight:false,hurt:true},'The separate hurt effect retains priority');
+  assert.deepEqual(result.response,{flight:false,defeats:1,entry:[result.response.pose],pose:result.response.pose},
+    'A lethal hit carries the last flight pose into exactly one detached view');
   const flight='combat-bat-flight',dive='gr_v2_bat_dive',bridge='combat-cavern-bat-handoff';
   const rng=new Set();
   for(const {age,mode,s,views} of result.traces){

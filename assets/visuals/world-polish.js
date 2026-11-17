@@ -10,7 +10,7 @@
   const COIN_HEIGHT=19*1.75,COIN_WIDTH=17*1.75,SOUL_HEIGHT=23*1.75*2,SOUL_WIDTH=16*1.75*2;
   const SHEETS=[['polish-coin','coin-spin.png',128,128,12],
     ['polish-soul','soul-light.png',192,192,8],
-    ['polish-fragments','cut-fragments.png',96,96,16],
+    ['polish-fragments','cut-fragments-v2.png',96,96,20],
     ['polish-respawn','reaper-respawn.png',384,384,12]];
   function preload(s){
     if(!s.load?.spritesheet)return;
@@ -33,10 +33,22 @@
     if(biome==='boss'||/(?:bone|antler|fossil)/.test(name))return 1;
     return 0;
   }
+  const FROST_SKINS=new Set([
+    'tundra_cut_frostthorn-bush','tundra_cut_winter-reeds',
+    'tundra_air-bramble_frostthorn-knot','tundra_snapping-bramble_frost-snap-vine'
+  ]);
+  function cutMaterialFor(skin,type){
+    if(!skin)return type==='snappingBramble'?4:0;
+    if(FROST_SKINS.has(skin.id))return 4;
+    if(skin.id==='boss_cut_castle-creeper')return 0;
+    return materialFor(skin,skin.biome);
+  }
   class WorldPolish{
     constructor(scene){
       this.scene=scene;this.pickups=new Map();this.platforms=new Map();this.effects=[];this.sequence=0;
       this.fragments=[];this.ghosts=[];this.respawn=[];this.ready={};
+      this.visibleFragments=0;
+      this.reducedMotion=scope.matchMedia?.('(prefers-reduced-motion: reduce)');
       if(!scene.add?.image||!scene.textures?.exists)return;
       for(const [key,,,,count]of SHEETS)this.ready[key]=Boolean(scene.textures.exists(key)&&
         Array.from({length:count},(_,i)=>scene.textures.get(key).has(i)).every(Boolean));
@@ -122,54 +134,93 @@
         .setDisplaySize(plat.width,plat.width*192/768).setVisible(true);
       this.activePlatforms.add(plat);return true;
     }
-    destroyObstacle(ob){
+    destroyObstacle(ob,cutBox){
       const s=this.scene;
       if(!this.ready['polish-fragments']||!this.visible(ob.x,ob.width))return;
-      const skin=s.obstacleSkinFor(ob),biome=s.obstacleBiomeFor(ob),material=materialFor(skin,biome);
-      const ground=ob.type==='snappingBramble'?s.terrain.anchorAt(ob.x):ob.y+ob.height;
-      const y=ob.type==='airBramble'?ob.y+ob.height*.55:ground-38;
-      const effect={x:ob.x+ob.width/2,y,age:0,material,seed:++this.sequence,parts:[]};
+      const cut=Boolean(cutBox),snap=ob.type==='snappingBramble',reduced=cut&&this.reducedMotion?.matches;
+      const skin=s.obstacleSkinFor(ob),material=cut?cutMaterialFor(skin,ob.type):materialFor(skin,s.obstacleBiomeFor(ob));
+      const x=cut&&snap?cutBox.x+cutBox.width/2:ob.x+ob.width/2;
+      const y=ob.type==='airBramble'?ob.y+ob.height*.55:cut&&snap?cutBox.y+cutBox.height/2:
+        (snap?s.terrain.anchorAt(ob.x):ob.y+ob.height)-38;
+      const seed=++this.sequence;
+      if(cut&&!this.cutBurstVisible(x,y))return;
+      const effect={x,y,age:0,material,cut,duration:reduced?220:cut?360:650,parts:[]};
       // At most eight small effects / sixty-four fragments, including mass clears.
       if(this.effects.length>=8)this.effects.shift();
-      for(let i=0;i<8;i++){
-        const n=effect.seed*17+i,angle=-Math.PI*.85+hash(n,1)*Math.PI*.85;
-        const speed=50+hash(n,2)*105;
-        effect.parts.push({frame:material*4+i%4,x:(hash(n,3)-.5)*24,y:(hash(n,4)-.5)*24,
-          vx:Math.cos(angle)*speed+25,vy:Math.sin(angle)*speed-15,
-          spin:(hash(n,5)-.5)*8,size:6+hash(n,6)*9,life:.38+hash(n,7)*.23});
+      const count=reduced?3:cut?6:8,spread=cut?16:24;
+      const travel=reduced?.5:1;
+      for(let i=0;i<count;i++){
+        const n=seed*17+i;
+        const angle=cut?-Math.PI*(.91-.82*(i+.25+hash(n,1)*.5)/count):-Math.PI*.85+hash(n,1)*Math.PI*.85;
+        const speed=cut?65+hash(n,2)*45:50+hash(n,2)*105;
+        effect.parts.push({frame:material*4+i%4,x:(hash(n,3)-.5)*spread,y:(hash(n,4)-.5)*spread,
+          vx:(Math.cos(angle)*speed+(cut?0:25))*travel,vy:(Math.sin(angle)*speed-(cut?0:15))*travel,
+          gravity:210*travel,spin:(hash(n,5)-.5)*8*travel,
+          size:cut?4+hash(n,6)*(reduced?3:6):6+hash(n,6)*9,
+          life:reduced?.16+hash(n,7)*.06:cut?.24+hash(n,7)*.12:.38+hash(n,7)*.23});
       }
       this.effects.push(effect);
       const source=s.obstacleSpriteObjects?.get(ob);
-      if(source&&this.ghosts.length<4){
+      if(source&&this.ghosts.length<4&&!reduced&&!(cut&&snap)){
         // The cut crown gives a short lean/sink; the collider is already gone.
+        const alpha=cut?.40:.8;
         const image=s.add.image(source.x,source.y,source.texture.key,source.frame.name)
           .setOrigin(source.originX,source.originY).setScale(source.scaleX,source.scaleY)
-          .setRotation(source.rotation).setDepth(16.1).setAlpha(.8);
+          .setRotation(source.rotation).setDepth(16.1).setAlpha(alpha);
         if(source.mask)image.setMask(source.mask);
-        this.ghosts.push({image,x:source.x,y:source.y,rotation:source.rotation,age:0,material});
+        this.ghosts.push({image,x:source.x,y:source.y,rotation:source.rotation,age:0,material,cut,
+          duration:cut?120:260,alpha});
+      }
+    }
+    cutBurstVisible(x,y){
+      const s=this.scene,top=s.renderCameraY??s.cameraY,pad=72;
+      return x+pad>=s.cameraX&&x-pad<=s.cameraX+s.width&&y+pad>=top&&y-pad<=top+s.height;
+    }
+    resizeCutEffects(dy){
+      for(const effect of this.effects)if(effect.cut)effect.y+=dy;
+      // The copied crowns still point at the old terrain mask until redraw.
+      this.clearCutCrowns();
+    }
+    clearCutCrowns(){
+      for(let i=this.ghosts.length-1;i>=0;i--){
+        const ghost=this.ghosts[i];
+        if(ghost.cut){ghost.image.destroy();this.ghosts.splice(i,1);}
       }
     }
     tick(ms){
-      for(const effect of this.effects)effect.age+=ms;
-      this.effects=this.effects.filter(v=>v.age<650);
-      for(const ghost of this.ghosts)ghost.age+=ms;
-      this.ghosts=this.ghosts.filter(g=>{if(g.age<260)return true;g.image.destroy();return false;});
+      for(let i=this.effects.length-1;i>=0;i--){
+        const effect=this.effects[i];effect.age+=ms;
+        if(effect.age>=effect.duration)this.effects.splice(i,1);
+      }
+      for(let i=this.ghosts.length-1;i>=0;i--){
+        const ghost=this.ghosts[i];ghost.age+=ms;
+        if(ghost.age>=ghost.duration){ghost.image.destroy();this.ghosts.splice(i,1);}
+      }
     }
     renderEffects(){
+      const state=this.scene.state;
+      if((this.effects.length||this.ghosts.length)&&(state==='portal'||state==='vendorIntro'||state==='upgrade')){
+        for(let i=this.effects.length-1;i>=0;i--)if(this.effects[i].cut)this.effects.splice(i,1);
+        this.clearCutCrowns();
+      }
       let used=0;
       for(const effect of this.effects){
+        if(effect.cut&&!this.cutBurstVisible(effect.x,effect.y))continue;
         const t=effect.age/1000;
         for(const p of effect.parts){
           if(t>=p.life||used>=this.fragments.length)continue;
+          // About a quarter of a fragment cel is transparent padding.
+          const size=p.size*(effect.cut?1.28:1);
           this.fragments[used++].setFrame(p.frame).setPosition(effect.x+p.x+p.vx*t,
-            effect.y+p.y+p.vy*t+210*t*t).setRotation(p.spin*t)
-            .setDisplaySize(p.size,p.size).setAlpha(1-ease((t/p.life-.45)/.55)).setVisible(true);
+            effect.y+p.y+p.vy*t+p.gravity*t*t).setRotation(p.spin*t)
+            .setDisplaySize(size,size).setAlpha(1-ease((t/p.life-.45)/.55)).setVisible(true);
         }
       }
-      for(let i=used;i<this.fragments.length;i++)this.fragments[i].setVisible(false);
-      for(const g of this.ghosts){const t=g.age/260;
+      for(let i=used;i<this.visibleFragments;i++)this.fragments[i].setVisible(false);
+      this.visibleFragments=used;
+      for(const g of this.ghosts){const t=g.age/g.duration;
         g.image.setPosition(g.x+8*t,g.y+16*t*t).setRotation(g.rotation+(g.material===2?.06:.12)*t)
-          .setAlpha(.8*(1-ease(t)));
+          .setAlpha(g.alpha*(1-ease(t)));
       }
     }
     renderRespawn(){
@@ -179,6 +230,7 @@
       const time=1500-s.respawnMs,t=time/1500;
       // A brief dip conceals the old location while the camera eases to safety.
       this.veil?.fillStyle(0x090e1b,.38*(1-ease(t/.42))).fillRect(0,0,s.width,s.height);
+      if(s.reaperFormation?.ownsFall())return;
       if(!this.respawn.length){
         // Missing optional art still gets a visible smoke gather and exact timing.
         s.powerArt?.hideBase();const g=this.light;
@@ -205,11 +257,12 @@
     }
     reset(){
       this.effects=[];this.sequence=0;
+      this.visibleFragments=0;
       for(const ghost of this.ghosts)ghost.image.destroy();this.ghosts=[];
       for(const image of [...this.fragments,...this.respawn])image.setVisible(false);
       this.veil?.clear();this.light?.clear();
     }
     destroy(){this.reset();for(const image of [...this.pickups.values(),...this.platforms.values(),...this.fragments,...this.respawn])image.destroy();this.pickups.clear();this.platforms.clear();this.light?.destroy();this.veil?.destroy();this.rootMask?.destroy();this.rootMaskGraphics?.destroy();}
   }
-  scope.GRIM_WORLD_POLISH={WorldPolish,preload,coinMotion,soulMotion,materialFor,BIOMES,COIN_HEIGHT,COIN_WIDTH,SOUL_HEIGHT,SOUL_WIDTH,RESPAWN_MS:1500};
+  scope.GRIM_WORLD_POLISH={WorldPolish,preload,coinMotion,soulMotion,materialFor,cutMaterialFor,BIOMES,COIN_HEIGHT,COIN_WIDTH,SOUL_HEIGHT,SOUL_WIDTH,RESPAWN_MS:1500};
 })(typeof window!=='undefined'?window:globalThis);

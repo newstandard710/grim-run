@@ -71,7 +71,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(before.bats,12);
   assert.ok(before.alphaReaper>50,'Reaper SVG rasterized blank!');
   assert.ok(before.alphaBat>25,'Bat SVG rasterized blank!');
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.waitForTimeout(800);
   const playing=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],v=s.visuals;
@@ -98,7 +98,7 @@ const server=http.createServer((req,res)=>{
       poses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length};
   });
   assert.deepEqual(illustratedLoaded,{ready:true,illustrated:true,textures:true,poses:13,bats:12});
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const staticReview=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
@@ -171,9 +171,9 @@ const server=http.createServer((req,res)=>{
   await skeletalPage.goto(origin+'/?seed=33',
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>{
-    const v=window.grimRun?.scene?.scenes?.[0]?.visuals;
+    const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return v?.loaded===true&&v.skeletalBatReady===true&&
-      v.boneCrawlerReady===true&&v.emberImpReady===true;
+      v.boneCrawlerReady===true&&v.emberImpReady===true&&s.combatArt.enemyFlashReady;
   },null,{timeout:45000});
   const skeletalLoaded=await skeletalPage.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],V=window.GRIM_VISUALS,m=V.V2_SKELETAL_BAT_ATLAS;
@@ -187,7 +187,7 @@ const server=http.createServer((req,res)=>{
   assert.deepEqual(skeletalLoaded,{ready:true,pool:12,crawler:true,imp:true,
     dimensions:[1254,1254],frames:true,
     reviewFlag:null});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -218,19 +218,25 @@ const server=http.createServer((req,res)=>{
     {elapsed:3/12,mode:'glide',hp:2,dead:false,frame:'flap_mid_up'},
     {elapsed:1,mode:'telegraph',hp:2,dead:false,frame:'telegraph'},
     {elapsed:1.1,mode:'dive',hp:2,dead:false,frame:'dive'},
-    {elapsed:1.2,mode:'glide',hp:1,dead:false,frame:'hit'},
-    {elapsed:1.3,mode:'glide',hp:1,dead:true,frame:'death'}
+    {elapsed:1.2,mode:'glide',hp:1,dead:false,frame:2},
+    {elapsed:1.3,mode:'glide',hp:0,dead:true,frame:'flap_mid_up'}
   ];
   const skeletalCropHashes=[];
   for(let i=0;i<skeletalStates.length;i++){
     const state=skeletalStates[i];
     const rendered=await skeletalPage.evaluate(({elapsed,mode,hp,dead})=>{
-      const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.skeletalBatPool[0];
-      s.elapsed=elapsed;Object.assign(enemy,{mode,hp,dead});s.drawScene();g.step(performance.now(),0);
-      return {frame:sprite.frame.name,visible:sprite.visible};
+      const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0];
+      s.elapsed=elapsed;enemy.mode=mode;s.drawScene();
+      if(hp<enemy.hp)s.hitEnemy(enemy,enemy.hp-hp);
+      s.drawScene();g.step(performance.now(),0);
+      const live=s.visuals.skeletalBatPool.filter(v=>v.visible);
+      const detached=s.combatArt.responses.flat().filter(v=>v.visible);
+      const sprite=dead?detached[0]:live[0];
+      return {frame:sprite.frame.name,visible:sprite.visible,views:live.length+detached.length,
+        flash:sprite.texture.key==='combat-enemy-hit-flash'};
     },state);
-    assert.deepEqual(rendered,{frame:state.frame,visible:true},
-      'Phaser selects and displays the '+state.frame+' frame');
+    assert.deepEqual(rendered,{frame:state.frame,visible:true,views:1,flash:i===6},
+      'Phaser paints one current pose, red hit flash or detached defeat entry');
     const canvas=PNG.sync.read(await skeletalPage.locator('#game canvas').screenshot({
       path:path.join(skeletalArtifactDir,'skeletal-bat-canvas-'+String(i+1).padStart(2,'0')+'.png')}));
     const x=Math.max(0,Math.floor(skeletalRect.screenX)),y=Math.max(0,Math.floor(skeletalRect.screenY));
@@ -251,12 +257,14 @@ const server=http.createServer((req,res)=>{
     skeletalCropHashes.push(crypto.createHash('sha256').update(crop).digest('hex'));
   }
   assert.equal(new Set(skeletalCropHashes).size,8,
-    'All four flight drawings and four action drawings produce distinct phone-scale pixels');
+    'All four flight drawings, warning, dive, red flash and detached defeat produce distinct phone-scale pixels');
   const afterDeath=await skeletalPage.evaluate(()=>{
-    const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0],sprite=s.visuals.skeletalBatPool[0];
-    s.elapsed=1.7;s.drawScene();g.step(performance.now(),0);return sprite.visible;
+    const g=window.grimRun,s=g.scene.scenes[0];
+    const visible=()=>s.visuals.skeletalBatPool.concat(s.combatArt.responses.flat()).some(v=>v.visible);
+    s.combatArt.tick(759);s.drawScene();g.step(performance.now(),0);const before=visible();
+    s.combatArt.tick(1);s.drawScene();g.step(performance.now(),0);return {before,after:visible()};
   });
-  assert.equal(afterDeath,false,'Defeat art clears after its short visual hold');
+  assert.deepEqual(afterDeath,{before:true,after:false},'Detached defeat art clears at the approved 760 ms boundary');
 
   // Exercise all four approved Bone Crawler drawings through real Phaser at
   // 950x430 and compare their actual rendered phone-scale pixels.
@@ -274,7 +282,7 @@ const server=http.createServer((req,res)=>{
       }),flag:new URLSearchParams(location.search).get('enemyReview')};
   });
   assert.deepEqual(crawlerLoaded,{ready:true,pool:12,textures:Array(4).fill([1477,1065]),flag:'bone-crawler'});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -372,7 +380,7 @@ const server=http.createServer((req,res)=>{
       flag:new URLSearchParams(location.search).get('enemyReview')};
   });
   assert.deepEqual(impLoaded,{ready:true,pool:12,dimensions:[768,512],frames:true,flag:'ember-imp'});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -481,7 +489,7 @@ const server=http.createServer((req,res)=>{
       flag:new URLSearchParams(location.search).get('enemyReview')};
   });
   assert.deepEqual(bothLoaded,{crawler:true,imp:true,crawlerPool:12,impPool:12,flag:'both'});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -541,7 +549,7 @@ const server=http.createServer((req,res)=>{
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.loaded===true,
     null,{timeout:45000});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -1050,7 +1058,7 @@ const server=http.createServer((req,res)=>{
   }
   await skeletalPage.close();
 
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const v2Anchors=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_REAPER;
@@ -1227,7 +1235,7 @@ const server=http.createServer((req,res)=>{
   releaseFirstPose();
   await earlyPage.waitForFunction(()=>document.getElementById('start-btn')?.disabled===false,
     null,{timeout:12000});
-  if(await earlyPage.locator('#home-enter-btn').isVisible())await earlyPage.click('#home-enter-btn');await earlyPage.click('#start-btn');
+  if(await earlyPage.locator('#home-enter-btn').isVisible())await earlyPage.click('#home-enter-btn');await earlyPage.waitForTimeout(380);await earlyPage.click('#start-btn');
   await earlyPage.waitForFunction(()=>{
     const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return s?.state==='playing'&&v?.reviewV2===true&&
@@ -1261,7 +1269,7 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(fallback.reaperReady,false);
   assert.equal(fallback.batReady,false);
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.click('#pause-btn');
   await page.locator('#god-mode-checkbox').check();
   await page.waitForFunction(()=>{

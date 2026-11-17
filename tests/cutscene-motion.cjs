@@ -5,7 +5,7 @@ for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-d
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert(html.includes('assets/cutscenes/v0197/animation-data.js?v=0.19.12'));
-assert(html.includes('assets/visuals/power-animations.js?v=rear-carry1"></script>'),'Bow uses the versioned power renderer');
+assert(html.includes('assets/visuals/power-animations.js?v=ae-scythe1"></script>'),'Bow uses the versioned power renderer');
 assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.12-vendor-hood"></script>'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
 assert(loaded.every(([key,url])=>url.endsWith(key==='cutscene-vendor'?'?v=0.19.12-vendor-hood':'?v=0.19.11')));

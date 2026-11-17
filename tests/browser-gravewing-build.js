@@ -13,7 +13,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready&&window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperReady,null,{timeout:60000});
   assert(await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return s.powerArt.ready['revision-plant']&&s.powerArt.ready['gravewing-wings']&&s.combatArt.ready['bat-flight'];}));
-  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};s.setGodMode(true);s.nextVendorNumber=15;s.obstacles=[];s.enemies=[];s.bullets=[];s.fireballs=[];s.player.invulMs=0;});
   for(const [scale,label]of [[.5,'0.5× SPEED'],[.25,'0.25× SPEED'],[0,'TIME PAUSED'],[1,'1× SPEED']]){
    await page.locator('#practice-slow-btn').tap();assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].practiceScale()),scale);assert.equal(await page.locator('#practice-time-label').textContent(),label);

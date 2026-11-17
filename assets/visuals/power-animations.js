@@ -242,14 +242,15 @@
         }
       }else{
         for(const sprite of [...this.wingSprites,...this.nearWings])sprite?.setTexture('power-wings');
-        if(raven){
+        if(raven)attach(phase,p.x-15,rootY-3,tucked?.25:.34,tucked?-.12:0,.95);
+        if(bone){
           const jumpStroke=p.airJumpUsed&&p.jumpAgeMs<280?Math.min(3,Math.floor(p.jumpAgeMs/70)):phase;
-          attach(jumpStroke,p.x-15,rootY-3,tucked?.25:.34,tucked?-.12:0,.95);
+          attach(4+jumpStroke,p.x-15,rootY,tucked?.24:.34,tucked?.1:0,p.hovering?1:.8);
         }
-        if(bone)attach(4+phase,p.x-15,rootY,tucked?.24:.34,tucked?.1:0,p.hovering?1:.8);
       }
-      if(bone){
-        const ratio=clamp(p.hoverBudgetMs/Math.max(1,s.powerManager.skeletalHoverMs()),0,1);
+      const hoverCapacity=s.powerManager.hoverBudgetMs();
+      if(hoverCapacity>0){
+        const ratio=clamp(p.hoverBudgetMs/hoverCapacity,0,1);
         this.fx.fillStyle(0x0d1424,.78);this.fx.fillRoundedRect(p.x-32,rootY-130,64,7,3);
         if(ratio>0){this.fx.fillStyle(0xd5e2e0,.93);this.fx.fillRoundedRect(p.x-30,rootY-128,60*ratio,3,1.5);}
       }
@@ -314,8 +315,9 @@
       // Upgraded abilities add action-local accents; never ten simultaneous auras.
       const t=s.elapsed;
       if(p.attackMs>0&&this.level('soulCleave')>=2)this.motes(p.x+40,s.feetY-(s.lowProfile?30:70),'soulCleave',this.level('soulCleave')+1,25,t,.55);
-      if(!p.grounded&&this.level('ravenWings')>=2&&p.airJumpUsed)this.motes(p.x-30,s.feetY-70,'ravenWings',this.level('ravenWings'),24,t,.35);
-      if(p.hovering&&this.level('skeletalWings')>=2)this.motes(p.x-15,s.feetY-66,'skeletalWings',this.level('skeletalWings'),36,t,.4);
+      const {extraJump,hover}=scope.GRIM_POWERS.WING_EFFECT_IDS;
+      if(!p.grounded&&p.airJumpUsed&&this.level(extraJump)>=2)this.motes(p.x-30,s.feetY-70,extraJump,this.level(extraJump),24,t,.35);
+      if(p.hovering&&this.level(hover)>=2)this.motes(p.x-15,s.feetY-66,hover,this.level(hover),36,t,.4);
       if(p.slowMs>0){
         for(let i=0;i<3;i++){g.lineStyle(1,0x9bdcff,.12-i*.025);g.strokeEllipse(p.x-i*15,s.feetY-27,35+i*6,22);}
         if(this.level('deathsDelay')>=2)this.motes(p.x-30,s.feetY-28,'deathsDelay',this.level('deathsDelay'),30,t,.38);

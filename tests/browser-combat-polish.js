@@ -33,7 +33,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const area=defeat?spec.width*spec.height:512*512;
    assert(counts.every(n=>n>(defeat?1400:250)&&n<area*.65),name+' has visible transparent drawings');
   }
-  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
   const setup=async()=>page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],p=s.player;s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');
    s.combatArt.reset();s.powerArt.reset();s.obstacles=[];s.enemies=[];s.fireballs=[];s.bullets=[];s.particles=[];
@@ -84,10 +84,24 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   });
   assert(blast.count===44&&blast.left&&blast.right&&blast.top&&blast.bottom,'Brittle Bones crosses all four viewport edges');
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.powerArt.reset();s.takeDamage(1,'rock');s.powerArt.tick(180);s.drawScene();});await shot('brittle-bones');
+  await page.waitForFunction(()=>{const s=grimRun.scene.scenes[0];return s.combatArt.enemyFlashReady&&s.visuals.skeletalBatReady&&s.visuals.emberImpReady;});
   for(const kind of ['bat','skeletalBat','crawler','imp']){
-   await setup();await page.evaluate(kind=>{const s=window.grimRun.scene.scenes[0],e={kind,x:s.player.x+180,y:s.feetY-90,hp:4,dead:false,mode:'glide',phase:0};s.enemies=[e];s.hitEnemy(e,1);s.combatArt.tick(80);s.drawScene();},kind);await shot(kind+'-hit');
-   const dead=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0],e=s.enemies[0];s.hitEnemy(e,4);s.enemies=s.enemies.filter(v=>!v.dead);const rng=s.rng.state;s.combatArt.tick(150);s.drawScene();return {enemies:s.enemies.length,corpses:s.combatArt.corpses.length,views:s.combatArt.responses.flat().filter(v=>v.visible).length,rng,sameRng:s.rng.state===rng};});
-   assert(dead.enemies===0&&dead.corpses===1&&dead.views>0&&dead.sameRng);await shot(kind+'-defeat');
+   await setup();
+   const hit=await page.evaluate(kind=>{
+    const s=grimRun.scene.scenes[0],a=s.combatArt,x=s.player.x+180;
+    const twoHp=kind==='skeletalBat'||kind==='imp';
+    const y=kind==='crawler'?(s.terrain.groundAt(x)??s.feetY)-46:kind==='imp'?(s.terrain.groundAt(x)??s.feetY)-30:s.feetY-90;
+    const e={kind,x,y,hp:twoHp?2:1,dead:false,mode:'glide',phase:0};s.enemies=[e];s.drawScene();
+    s.hitEnemy(e,1);s.drawScene();
+    const pool=kind==='skeletalBat'?s.visuals.skeletalBatPool:s.visuals.emberImpPool;
+    return {hp:e.hp,dead:e.dead,flashing:a.enemyFlashing(e),flashCel:pool.some(v=>v.visible&&v.texture.key==='combat-enemy-hit-flash'),
+      defeats:a.responses.flat().filter(v=>v.visible).length};
+   },kind);
+   const twoHp=kind==='skeletalBat'||kind==='imp';
+   assert.deepEqual(hit,{hp:twoHp?1:0,dead:!twoHp,flashing:twoHp,flashCel:twoHp,defeats:twoHp?0:1});
+   if(twoHp)await shot(kind+'-hit');
+   const dead=await page.evaluate(()=>{const s=grimRun.scene.scenes[0],e=s.enemies[0];if(!e.dead)s.hitEnemy(e,1);s.enemies=s.enemies.filter(v=>!v.dead);const rng=s.rng.state;s.combatArt.tick(150);s.drawScene();return {enemies:s.enemies.length,corpses:s.combatArt.corpses.length,views:s.combatArt.responses.flat().filter(v=>v.visible).length,sameRng:s.rng.state===rng};});
+   assert.deepEqual(dead,{enemies:0,corpses:1,views:1,sameRng:true});await shot(kind+'-defeat');
    for(let i=0;i<7;i++){await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.combatArt.tick(90);s.drawScene();});await page.waitForTimeout(45);}
    assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].combatArt.corpses.length),0);
   }

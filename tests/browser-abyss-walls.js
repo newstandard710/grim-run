@@ -19,8 +19,10 @@ const server = http.createServer((req, res) => {
     const file = path.resolve(root, '.' + decodeURIComponent(pathname === '/' ? '/index.html' : pathname));
     if (!file.startsWith(root + path.sep)) return res.writeHead(403).end();
     res.writeHead(200, {'Content-Type': mime[path.extname(file)] || 'application/octet-stream'});
-    res.end(pathname === '/forest-baseline.html' ?
-      execFileSync('git', ['show', baseline + ':index.html'], {cwd: root}) : fs.readFileSync(file));
+    const historical = pathname === '/forest-baseline.html' ? 'index.html' :
+      pathname === '/assets/visuals/power-animations.js' && req.url.endsWith('?v=0.19.8') ?
+        pathname.slice(1) : null;
+    res.end(historical ? execFileSync('git', ['show', baseline + ':' + historical], {cwd: root}) : fs.readFileSync(file));
   } catch {
     if (!res.headersSent) res.writeHead(404);
     res.end();
@@ -312,7 +314,8 @@ async function portalReadiness(browser){
       });
       await page.waitForFunction(()=>{
         const s=window.biomeReview.scene;
-        return s.cavesBackdropLoad&&s.terrainMaterialIds.has('caves')&&s.biomeBackdrops.tundra?.visible;
+        return s.cavesBackdropLoad&&s.terrainMaterialIds.has('caves')&&
+          s.portalSummitArt?.sky.visible&&!s.biomeBackdrops.tundra?.visible;
       });
       releaseCaves();
       await page.waitForFunction(missing=>{

@@ -40,8 +40,20 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    await page.locator('#reliquary-back-btn').click();await page.locator('#start-btn').click();
    const start=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};return {gold:s.coinCount,collected:s.goldCollected,free:s.freeLifeAvailable,rerolls:s.rerollsRemaining};});assert.deepEqual(start,{gold:4,collected:0,free:true,rerolls:1});
    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.coinCount=21;s.player.hp=1;s.triggerVendor(1);});await page.locator('#vendor-intro-skip').click();await shot('angel');
+   const feedback=page.getByRole('status');
+   const firstCard=page.locator('.reward-card').first();
+   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.coinCount=4;s.showVendor();});
+   await firstCard.tap();
+   assert.match(await feedback.innerText(),/Not enough gold.*You have 4/);
+   await firstCard.press('Space');
+   assert.match(await feedback.innerText(),/Not enough gold/);
+   assert.deepEqual(await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return [s.coinCount,s.vendorPurchased,s.ui.selecting];}),[4,false,false]);
+   await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).tap();
+   assert.match(await feedback.innerText(),/Need 8 gold/);
+   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.coinCount=21;s.showVendor();});
    const offers=await page.evaluate(()=>window.grimRun.scene.scenes[0].pendingOffers.map(v=>v.id));
    await page.getByRole('button',{name:'REROLL · 1 LEFT',exact:true}).click();const fresh=await page.evaluate(()=>window.grimRun.scene.scenes[0].pendingOffers.map(v=>v.id));assert(fresh.every(id=>!offers.includes(id)));
+   assert.equal(await feedback.textContent(),'');
    await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();
    const name=await page.evaluate(()=>window.grimRun.scene.scenes[0].pendingOffers.find(v=>v.type==='power').name);await page.locator('.reward-card').filter({has:page.locator('.reward-name',{hasText:name})}).click();
    assert.equal(await page.locator('.reward-spent').count(),3);assert.equal(await page.locator('.reward-acquired').count(),1);await shot('angel-gift-and-heal');await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();
@@ -73,6 +85,10 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.invulMs=0;s.takeDamage(3,'rock');});await completeDefeat();await shot('results');
     // Devil cards retain health pricing and the same persistent healing panel.
     await page.locator('#retry-btn').click();await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=3;s.coinCount=16;s.triggerVendor(8);});await page.locator('#vendor-intro-skip').click();await shot('devil');
+    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=1;s.showVendor();});
+    await page.locator('.reward-card').first().press('Enter');
+    assert.match(await feedback.innerText(),/Not enough health.*you must keep 1 HP/);
+    assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].player.hp),1);
     await page.getByRole('button',{name:'REROLL · 1 LEFT',exact:true}).click();assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].rerollsRemaining),0);
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=2;s.showVendor();});await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();await shot('devil-healing');
    }
