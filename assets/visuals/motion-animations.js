@@ -47,6 +47,42 @@
     return clamp(underfoot-ground,-12,12);
   }
   function ease(t){t=clamp(t);return t*t*(3-2*t);}
+  function rearCarryRotation(s,x,y,preferred){
+    const outline=FORWARD.rear.outline,terrain=s.terrain,p=s.player;
+    const ledge=p.onSoulPlatform===false?null:(s.soulPlatform||[]).find(v=>v.id===p.onSoulPlatform);
+    const clearance=angle=>{
+      const cos=Math.cos(angle),sin=Math.sin(angle);
+      let margin=Infinity;
+      for(const [u,v] of outline){
+        const px=x+u*cos-v*sin,py=y+u*sin+v*cos;
+        const floor=terrain?.groundAt(px);
+        if(Number.isFinite(floor))margin=Math.min(margin,floor-py);
+        if(ledge&&px>=ledge.x&&px<=ledge.x+ledge.width)margin=Math.min(margin,ledge.y-py);
+        if(margin<6)return margin;
+      }
+      return margin;
+    };
+    // Select the smallest lift that clears the rear ground profile. No
+    // accumulated animation state is needed to reproduce the pose on rewind.
+    if(clearance(preferred)>=6)return preferred;
+    let low=preferred,high=-.16;
+    if(clearance(high)<6){
+      // The tip can clear a steep bank at an intermediate side-on angle,
+      // even where the full upright swing crosses the old lip.
+      for(let i=1;i<=12;i++){
+        const test=mix(preferred,high,i/12);
+        if(clearance(test)>=6){high=test;break;}
+        if(i===12)return high;
+        low=test;
+      }
+    }
+    for(let i=0;i<8;i++){
+      const mid=(low+high)*.5;
+      if(clearance(mid)>=6)high=mid;
+      else low=mid;
+    }
+    return high;
+  }
   function jumpFrame(p){
     if(p.grounded){
       const elapsed=LAND_MS-(p.visualLandingMs||0);
@@ -210,6 +246,7 @@
         if(motion.airDetailsValid(art,isWeapon?100:25,isWeapon?850:280))available.add(art.key);
         motion.forwardReady=available.size===stages.length;
       });
+      scope.GRIM_RISING_CUT?.preload(s,motion);
     }
   }
   class MotionAnimations{
@@ -286,24 +323,26 @@
       return this.registeredAir;
     }
     forwardSequence(p,tucked,release,registered){
-      // Optional paint never participates in the game or Cut readiness gates.
-      // Keep the stock pose owner for the whole air sequence once Slide enters.
-      if(this.forwardPlayer!==p){
+      const s=this.scene,newPlayer=this.forwardPlayer!==p;
+      const airSequence=!p.grounded||(p.visualLandingMs||0)>0;
+      if(newPlayer){
         this.forwardPlayer=p;
-        // Pin one visual family for this run. A slow optional image cannot
-        // flip the carried weapon between two existing frames.
-        this.forwardActive=Boolean(this.forwardReady&&this.cutHandoffReady&&this.cutWeaponReady&&
-          this.airReady&&this.airCutReady);
         this.forwardAir=null;
         this.forwardSwing=null;
       }
-      const airSequence=!p.grounded||(p.visualLandingMs||0)>0;
+      // After an early Start, adopt the complete family on settled running.
+      // Keep an in-progress jump, slide recovery, or attack on its own paint.
+      if(newPlayer||(!this.forwardActive&&s.state==='playing'&&!airSequence&&!s.lowProfile&&
+        !p.sliding&&!p.holdSlide&&!p.attackMs&&!p.visualFireMs&&!p.visualHurtMs&&
+        !s.slideArt?.painted&&s.slideArt?.recoveryAt==null)){
+        this.forwardActive=Boolean(this.rising&&this.forwardReady&&this.cutHandoffReady&&this.cutWeaponReady&&
+          this.airReady&&this.airCutReady);
+      }
       if(airSequence){
         if(this.forwardAir===null)this.forwardAir=Boolean(this.forwardActive&&registered);
         if(tucked||release)this.forwardAir=false;
       }else this.forwardAir=null;
       if(p.attackMs>0){
-        const s=this.scene;
         if(this.forwardSwing!==s.swingSequence){
           this.forwardSwing=s.swingSequence;
           this.forwardAttack=Boolean(this.forwardActive&&!s.lowProfile&&!p.sliding&&
@@ -325,6 +364,53 @@
       const frame=options.length===1?options[0]:options[phase];
       return {art:FORWARD.cut,frame,grip:FORWARD.grips[frame]};
     }
+    trailingRotation(x,y){
+      const s=this.scene,p=s.player,floor=s.terrain?.groundAt(p.x);
+      const airborne=!p.grounded&&p.onSoulPlatform===false;
+      const lift=airborne?ease((Number.isFinite(floor)?floor-s.feetY:46)/46):0;
+      // Shift the rest angle before the blade reaches a downhill crest.
+      // The rigid outline still handles the exact floor and gap lips.
+      let downhill=0;
+      if(Number.isFinite(floor)){
+        for(const offset of [62,84,106]){
+          const behind=s.terrain.groundAt(p.x-offset);
+          if(Number.isFinite(behind))downhill+=Math.max(0,floor-behind)/3;
+        }
+        const ahead=s.terrain.groundAt(p.x+26);
+        if(Number.isFinite(ahead))downhill+=Math.max(0,ahead-floor)*.9;
+      }
+      const bank=ease((downhill-5)/58);
+      const phase=(p.x-(s.startX||0))/PIXELS_PER_GAIT*Math.PI*2;
+      const rest=-Math.PI/2+Math.max(lift*.29,bank*1.16)+.035*Math.sin(phase-.4);
+      return rearCarryRotation(s,x,y,rest);
+    }
+    clearRearRecoil(x,y,rotation){
+      return rearCarryRotation(this.scene,x,y,rotation);
+    }
+    showRearCarry(frame,y,alpha,tint,owner){
+      const hand=FORWARD?.rear?.hands[frame];
+      if(!hand)return;
+      const [x,dy]=hand,s=this.scene;
+      const rotation=this.trailingRotation(s.player.x+x,y+dy);
+      this.showForwardWeapon([x,dy,rotation],y-s.feetY,alpha,tint);
+      this.rearOwner=owner;
+    }
+    hideRearCarry(){
+      if(!this.rearOwner)return;
+      this.weapon?.setVisible(false);
+      this.rearOwner=null;
+    }
+    rearWeaponFor(owner){
+      return owner&&this.rearOwner===owner&&this.weapon?.visible?this.weapon:null;
+    }
+    carryCutGrip(grip,rise,progress){
+      if(!FORWARD.rear||progress>=.20&&progress<=.79)return grip;
+      const [x,y,angle]=grip,s=this.scene;
+      const trailing=this.trailingRotation(s.player.x+x,s.feetY+y+rise);
+      const ramp=progress<.20?progress/.20:(1-progress)/.21;
+      const blend=mix(ramp,ease(ramp),.22);
+      return [x,y,mix(trailing,angle,blend)];
+    }
     showForwardWeapon(grip,rise,alpha,tint){
       const s=this.scene,art=FORWARD.weapon;
       const [x,y,angle]=grip;
@@ -340,28 +426,36 @@
         .setOrigin(paint.pivot[0]/384,paint.pivot[1]/384);
       this.forwardWeapon=false;
     }
-    hide(){for(const v of this.body)v.setVisible(false);this.weapon?.setVisible(false);this.trail?.clear();this.state=null;}
+    hide(){for(const v of this.body)v.setVisible(false);this.weapon?.setVisible(false);this.trail?.clear();this.state=null;this.rearOwner=null;}
     handlesCut(){
       const s=this.scene,p=s.player;
       return this.ready&&s.visuals?.reviewV2&&!s.lowProfile&&s.powerManager.level('soulCleave')===0&&p.attackMs>0;
     }
     attackBoxes(previousMs){return this.handlesCut()?sweepBoxes(this.scene,previousMs):null;}
     render(){
+      this.rising?.clear();
+      const upright=this.rising?.upright();
+      this.renderRegistered(upright);
+      if(upright)this.rising.renderUpright();
+      else this.rising?.renderHandoff();
+    }
+    renderRegistered(rising=false){
       this.hide();const s=this.scene,p=s.player;
       if(!this.ready||!p||!s.visuals?.reviewV2||!['playing','paused','rewinding','countdown'].includes(s.state))return;
+      const attackMs=rising?0:p.attackMs;
       const registered=this.airSequence(p);
       const tucked=!p.grounded&&(p.airTuck||p.holdSlide)&&p.onSoulPlatform===false;
       const release=!tucked&&!p.grounded&&p.onSoulPlatform===false&&
         (p.visualTuckMs>0?scope.GRIM_POWER_ART.TUCK_RELEASE_MS:p.visualTuckReleaseMs||0);
       if(FORWARD)this.forwardSequence(p,tucked,release,registered);
       const landAge=LAND_MS-p.visualLandingMs;
-      const tuckLanding=registered&&p.grounded&&s.powerArt?.tuckLanding&&landAge<36&&p.attackMs<=0;
-      const registeredTuck=registered&&tucked&&p.attackMs<=0;
+      const tuckLanding=registered&&p.grounded&&s.powerArt?.tuckLanding&&landAge<36&&attackMs<=0;
+      const registeredTuck=registered&&tucked&&attackMs<=0;
       if(((s.lowProfile||p.airTuck)&&!registeredTuck&&!tuckLanding)||(p.sliding&&!tuckLanding)||
-         (p.visualFireMs>0&&p.attackMs<=0))return;
+         (p.visualFireMs>0&&attackMs<=0&&!rising))return;
       const distance=p.x-(s.startX||0);
       let name,t,scale=.52,loop=false,rig=null,progress,handoff=null;
-      if(p.attackMs>0){
+      if(attackMs>0){
         if(!this.handlesCut())return;
         name='reaper-cut-body';progress=1-p.attackMs/scope.GRIM_CONFIG.attackDurationMs;
         rig=visualCutRig(progress,this.cutWeaponReady);t=rig.frame;scale=DATA.visualCutBody?.scale??.38;
@@ -405,8 +499,10 @@
         this.body[0].setTexture(art.key,frame).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
           .setPosition(p.x,s.feetY+rise).setScale(FORWARD.scale).setAlpha(alpha).setTint(tint).setVisible(true);
         if(grip){
-          this.showForwardWeapon(grip,rise,alpha,tint);
+          this.showForwardWeapon(this.carryCutGrip(grip,rise,progress),rise,alpha,tint);
           drawSwingArc(this.trail,s,progress,alpha);
+        }else if(art===FORWARD.carry){
+          this.showRearCarry(frame,s.feetY+rise,alpha,tint,this.body[0]);
         }
         this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture:art.key};
         return;
@@ -428,7 +524,7 @@
       }
       this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture};
     }
-    destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();}
+    destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();this.rising?.destroy();}
   }
   scope.GRIM_MOTION_ART={MotionAnimations,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,visualCutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
 })(typeof window!=='undefined'?window:globalThis);

@@ -263,14 +263,23 @@
       const coveredLanding=slide?.fromTuck&&slide.sprite?.visible&&
         (s.motionArt?.state?.name==='reaper-tuck-slide'||(!p.sliding&&p.visualLandingMs>0));
       const reaction=s.reactionArt?.body;
-      const base=(reaction?.visible&&reaction.alpha>.1&&reaction)||s.motionArt?.body?.find(v=>v.visible&&v.alpha>.1)||(coveredLanding&&slide.sprite)||
+      const rising=s.motionArt?.rising?.sprite;
+      const base=(reaction?.visible&&reaction.alpha>.1&&reaction)||
+        (rising?.visible&&rising.alpha>.1&&!p.visualFireMs&&rising)||s.motionArt?.body?.find(v=>v.visible&&v.alpha>.1)||(coveredLanding&&slide.sprite)||
         this.reaper.find(v=>v.visible&&v.alpha>.1)||
         Object.values(s.visuals?.reaperPoseSprites||{}).find(v=>v.visible);if(!base)return;
+      const rear=s.motionArt?.rearWeaponFor?.(base)||
+        (base===reaction&&s.reactionArt.weapon?.visible?s.reactionArt.weapon:null);
+      const tint=s.state==='rewinding'?0xc7aaff:0x9bdcff;
       for(let i=0;i<3;i++){
-        const v=this.echoes[i]?.[0];if(!v)continue;
-        v.setTexture(base.texture.key,base.frame.name).setOrigin(base.originX,base.originY).setScale(base.scaleX,base.scaleY)
-          .setPosition(base.x-(i+1)*13,base.y).setRotation(base.rotation).setTint(s.state==='rewinding'?0xc7aaff:0x9bdcff)
-          .setAlpha(.12-i*.032).setVisible(true);
+        const pair=this.echoes[i];if(!pair)continue;
+        const views=rear?[base,rear]:[base];
+        for(const [j,pose] of views.entries()){
+          pair[j].setTexture(pose.texture.key,pose.frame.name)
+            .setOrigin(pose.originX,pose.originY).setScale(pose.scaleX,pose.scaleY)
+            .setPosition(pose.x-(i+1)*13,pose.y).setRotation(pose.rotation).setTint(tint)
+            .setDepth(j===1?11.79:11.8).setAlpha(.12-i*.032).setVisible(true);
+        }
       }
     }
     render(){

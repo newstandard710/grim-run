@@ -83,17 +83,18 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const s=grimRun.scene.scenes[0],p=s.player,a=s.motionArt;
    Object.assign(p,{grounded:false,jumpAgeMs:390,velocityY:0,visualLandingMs:0,attackMs:0});
    s.drawScene();
-   const carry=Number(a.body[0].frame.name);
+   const carry=Number(a.body[0].frame.name),carryAngle=a.weapon.rotation;
    p.attackMs=260;s.swingSequence++;
    s.drawScene();
    const palm=[a.weapon.x-p.x,a.weapon.y-s.feetY];
    const angle=a.weapon.rotation;
    p.attackMs=0;
-   return {carry,palm,angle};
+   return {carry,carryAngle,palm,angle};
   });
   assert.equal(airJoin.carry,115,'The middle air carry owns the apex');
   assert(Math.hypot(airJoin.palm[0]+22,airJoin.palm[1]+56)<.001,'Cut starts on the apex carry palm');
-  assert(Math.abs(airJoin.angle-Math.PI/10)<.000001,'Cut starts on the apex carry shaft angle');
+  assert(Math.abs(airJoin.carryAngle+Math.PI/2)<.06,'The apex carry holds the scythe behind the Reaper');
+  assert(Math.abs(airJoin.angle-airJoin.carryAngle)<.000001,'Cut starts on the apex carry shaft angle');
   const windowScale=await page.evaluate(()=>window.GRIM_MOTION_ART.WEAPON_SCALE);
   let weaponScale;
   for(const progress of [0,.10,.20,.35,.50,.65,.79,.92,.999]){

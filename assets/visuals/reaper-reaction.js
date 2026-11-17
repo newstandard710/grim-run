@@ -63,6 +63,7 @@
       const slide=s.slideArt?.sprite,motion=s.motionArt?.body?.[0],combat=s.combatArt?.reaper?.[0],
         action=s.powerArt?.action,base=s.visuals?.reaper;
       if(visible(slide))return slide;
+      if(visible(s.motionArt?.rising?.sprite)&&!s.player.visualFireMs)return s.motionArt.rising.sprite;
       if(visible(motion))return motion;
       if(visible(combat))return combat;
       if(visible(action))return action;
@@ -95,7 +96,8 @@
       const track=low?'low':!p.grounded?'air':phase%96<48?'near':'far';
       const view=this.liveBody();
       const entry=takePose(view,p.x,p.y);
-      const weapon=view===s.motionArt?.body?.[0]?takePose(s.motionArt.weapon,p.x,p.y):null;
+      const weaponView=s.motionArt?.rearWeaponFor?.(view)||(view===s.motionArt?.body?.[0]?s.motionArt.weapon:null);
+      const weapon=takePose(weaponView,p.x,p.y);
       const gap=s.terrain.segments?.find(v=>v.kind==='gap'&&p.x>=v.start&&p.x<=v.end);
       // Fall clear of a foreground rock that would cover the final head and
       // hand. The visual anchor moves on the same terrain; the player stays put.
@@ -206,6 +208,14 @@
           .setScale(view.scaleX,view.scaleY).setRotation(view.rotation+angle)
           .setFlipX(view.flipX).setAlpha(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1)
           .setTint(view.tintTopLeft).setVisible(true);
+        const attached=s.motionArt?.rearWeaponFor?.(view);
+        const weapon=takePose(attached,anchorX,anchorY);
+        if(weapon){
+          const x=anchorX+weapon.dx*cos-weapon.dy*sin,y=anchorY+weapon.dx*sin+weapon.dy*cos;
+          const rotation=s.motionArt.clearRearRecoil(x,y,weapon.rotation+angle);
+          place(this.weapon,weapon,x,y,rotation,this.body.alpha);
+          s.motionArt.hideRearCarry();
+        }
         view.setVisible(false);
       }
       const accent=(1-ease(age/117))*ease((age+12)/28);
