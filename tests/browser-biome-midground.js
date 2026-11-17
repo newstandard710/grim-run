@@ -657,6 +657,9 @@ async function main() {
 async function waitForResize(page, width, height) {
   await page.waitForFunction(([w, h]) => {
     const {game, scene} = window.biomeReview;
+    // The fixture sleeps the native loop. Service Phaser's pending resize
+    // with a zero-delta frame while the scene simulation stays disabled.
+    if (!game.loop.running) game.step(performance.now(), 0);
     game.scale.refresh();
     return game.canvas.width === w && game.canvas.height === h && scene.width === w && scene.height === h;
   }, [width, height], {polling: 150, timeout: 10000});
