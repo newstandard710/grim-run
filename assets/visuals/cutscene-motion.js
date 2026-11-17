@@ -9,7 +9,7 @@
   function preload(s){
     for(const [key,file,cell,count] of [['cutscene-bow','reaper-bow.png',CELL,BOW_FRAMES],
       ['cutscene-vendor','reaper-vendor.webp',CELL,VENDOR_FRAMES],['cutscene-hands','bow-hands.png',64,BOW_FRAMES]])
-      s.load.spritesheet(key,ROOT+file+(key==='cutscene-vendor'?'?v=0.19.12-greave':'?v=0.19.11'),
+      s.load.spritesheet(key,ROOT+file+(key==='cutscene-vendor'?'?v=0.19.12-vendor-hood':'?v=0.19.11'),
         {frameWidth:cell,frameHeight:cell,endFrame:count-1});
   }
   function relicMotionAt(t){

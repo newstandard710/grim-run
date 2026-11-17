@@ -32,7 +32,7 @@ for(const [first,later]of [[1,2],[8,9]]){
   assert(s.touchingVendorFloor(k));
   if(k===first){
    assert(s.readyForVendor(k));s.update(0,0);assert.equal(s.state,'vendorIntro');
-   for(let i=0;i<31;i++)s.update(0,250);assert.equal(s.state,'vendorIntro');assert.equal(s.vendorIntroMs,250);
+   for(let i=0;i<15;i++)s.update(0,250);assert.equal(s.state,'vendorIntro');assert.equal(s.vendorIntroMs,250);
    s.update(0,250);assert.equal(s.state,'upgrade');s.leaveVendor();
   }else{
    assert(!s.readyForVendor(k));s.update(0,16);assert.equal(s.state,'playing');
@@ -106,4 +106,4 @@ for(const mode of ['glide','dive','recover'])for(const t of [0,.03,.06,.09,.119,
  assert(views.every(v=>v.x===480&&v.y===160));
  for(const v of views)assert.equal(JSON.stringify(v.origin),JSON.stringify(v.key==='legacy-dive'?[1600/2304,650/1280]:[178/256,128/256]));
 }
-console.log('PASS v0.19: four real time scales + complete freeze/resume, eight-second/center-trigger vendors, proximity bite/hit windows/cutting/rewind, both wing orders, '+gaps+' reachable gaps, large slow four-edge bones and asset hashes.');
+console.log('PASS v0.19: four real time scales + complete freeze/resume, four-second vendor introductions, proximity bite/hit windows/cutting/rewind, both wing orders, '+gaps+' reachable gaps, large slow four-edge bones and asset hashes.');

@@ -1,7 +1,7 @@
 # Cutscene art — v0.19.11 vendor and Bow motion
 
 The first Angel and Devil introductions animate for three visible seconds and
-hold the complete composition for five. Either phase can be skipped directly
+hold the complete composition for one. Either phase can be skipped directly
 to its vendor menu. Reduced motion opens on the same settled composition and
 retains the visible-time contract.
 
@@ -16,12 +16,18 @@ The merchant feet stay fixed. The Devil dips, then opens the offering claw.
 The Angel dips and softens the shoulder while the lantern sways below its hook.
 The left stage elements move just outside the final sightline. WebGL uses the
 existing articulated mesh. Canvas samples 24 poses per merchant from the same
-deformation. The Canvas WebP is 599,126 bytes at 2176 × 1344. The approach WebP
-is 2,510,970 bytes at 3584 × 2912. Both stay below their prior transfer budgets.
+deformation. The Canvas WebP is 599,126 bytes at 2176 × 1344. The approach WebP is
+4,544,524 bytes at 3584 × 2912. Both fit the existing transfer limits.
 
-Rebuild vendor artwork with `python scripts/prepare-cutscene-art.py --vendor-only`
-and `python scripts/prepare-vendor-canvas.py`. The first command preserves the Bow
-data and atlases. No source art is modified.
+Rebuild the approach with `python scripts/prepare-cutscene-art.py --vendor-only`.
+It uses the PR96 vendor atlas blob from local Git history, including the released
+greave contours. The restored cloth follows the existing neck transform and is
+composited behind the released pose. RGB is rounded to the nearest multiple of
+three before lossless WebP compression. Unedited visible pixels differ by at
+most one code value per color channel, and alpha changes only at the hood.
+The generator preserves Bow assets and registration. Rebuild the separate
+merchant strip with `python scripts/prepare-vendor-canvas.py`. No source art
+is modified.
 
 The summit acquisition uses one matching painted body/hood/scythe layer and
 separate painted arm components. A continuous body hinge, knee/hip bend and
@@ -67,7 +73,7 @@ registers feet/eyes at a fixed scale, restores opaque paint, builds the vendor's
 articulated gait and settle, and bakes the summit body/arm rig from
 `scripts/bow_rig.py`. No source PNG is modified. The game samples one solid
 atlas frame. Presentation uses real visible frame timestamps, so smoothed
-simulation deltas cannot stretch the 8s/4s scenes; visibility changes reset the
+simulation deltas cannot stretch the four-second scenes. Visibility changes reset the
 timestamp baseline without consuming hidden-page time.
 
 `manifest.json` records exact raw/runtime SHA-256, dimensions and every frame's

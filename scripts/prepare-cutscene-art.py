@@ -7,12 +7,13 @@ from pathlib import Path
 import argparse
 import json
 import hashlib
+import subprocess
 from io import BytesIO
 import cv2
 import numpy as np
 from PIL import Image
 from scipy.ndimage import label, distance_transform_edt
-from cutscene_walk_rig import make_walk, near_greave_amount
+from cutscene_walk_rig import hood_underpaint, make_walk, place_hood, upper_body_pose
 from bow_rig import build as build_bow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -67,48 +68,37 @@ def register(name):
         records[i] = {'pose': i, 'foot': foot, 'sourceBounds': bounds}
     return poses, hands, records
 
-def webp_chunks(payload):
-    assert payload[:4] == b'RIFF' and payload[8:12] == b'WEBP'
-    offset = 12
-    while offset < len(payload):
-        size = int.from_bytes(payload[offset + 4:offset + 8], 'little')
-        end = offset + 8 + size + size % 2
-        yield payload[offset:offset + 4], payload[offset:end]
-        offset = end
-    assert offset == len(payload)
-
-
-def narrow_vendor_contour(path, sheet, frames):
-    """Preserve the released VP8 color and narrow only the approved contours."""
-    released = path.read_bytes()
+def restore_vendor_hood(path, base, frames):
+    """Paint behind the raised shaft using the PR96 vendor atlas as the base."""
+    # The released blob already includes the approved PR93 greave alpha.
+    blob = 'f05e4b7bf10e82094a483401d75f94333ae0060a'
+    released = subprocess.check_output(['git', 'cat-file', 'blob', blob], cwd=ROOT)
     with Image.open(BytesIO(released)) as image:
-        assert image.size == sheet.size
-        alpha = image.getchannel('A')
-    target = sheet.getchannel('A')
+        sheet = np.array(image.convert('RGBA'))
+    assert sheet.shape == (((frames+COLS-1)//COLS)*CELL, COLS*CELL, 4)
+    patch = hood_underpaint(base)
+    bounds = []
     for frame in range(frames):
-        if not near_greave_amount(frame):
-            continue
         x, y = frame % COLS * CELL, frame // COLS * CELL
-        box = (x, y, x + CELL, y + CELL)
-        inset = np.minimum(np.asarray(alpha.crop(box)), np.asarray(target.crop(box)))
-        alpha.paste(Image.fromarray(inset), (x, y))
-    mask = Image.new('RGBA', sheet.size)
-    mask.putalpha(alpha)
-    encoded = BytesIO()
-    mask.save(encoded, format='WEBP', quality=92, alpha_quality=100, method=6)
-    alpha_chunk = dict(webp_chunks(encoded.getvalue()))[b'ALPH']
-    body = b'WEBP' + b''.join(alpha_chunk if key == b'ALPH' else chunk
-                             for key, chunk in webp_chunks(released))
-    payload = b'RIFF' + len(body).to_bytes(4, 'little') + body
-    with Image.open(BytesIO(payload)) as image:
-        assert np.array_equal(np.asarray(image.getchannel('A')), np.asarray(alpha))
-    path.write_bytes(payload)
-    return [alpha.crop((i % COLS * CELL, i // COLS * CELL,
-                       (i % COLS + 1) * CELL, (i // COLS + 1) * CELL)).getbbox()
-            for i in range(frames)]
+        tile = sheet[y:y+CELL, x:x+CELL]
+        t = frame * 3 / (frames-1)
+        _, _, _, chest, offset = upper_body_pose(t)
+        backing = place_hood(patch, t, chest, offset)
+        # Preserve opaque fabric, face and scythe. Only add paint where the
+        # rejected shaft overlap left transparent or antialiased pixels.
+        uncovered = (tile[:,:,3] < 255) & (np.asarray(backing)[:,:,3] >= 8)
+        composite = np.asarray(Image.alpha_composite(backing, Image.fromarray(tile)))
+        tile[uncovered] = composite[uncovered]
+        bounds.append(Image.fromarray(tile[:,:,3]).getbbox())
+    # Quantize RGB by at most one code value, then encode losslessly. Keep
+    # exact alpha and avoid a second lossy YUV resampling of the whole atlas.
+    rgb = sheet[:,:,:3]
+    rgb[:] = ((rgb.astype(np.uint16)+1)//3)*3
+    Image.fromarray(sheet).save(path, lossless=True, quality=90, method=6)
+    return bounds
 
 
-def build(kind, *, preserve_vendor_color=False):
+def build(kind):
     name = 'reaper-' + kind + '-keyposes.png'
     poses, hands, registration = register(name)
     frames, grips = [], []
@@ -116,7 +106,8 @@ def build(kind, *, preserve_vendor_color=False):
     if kind == 'bow':
         frames, grips, rig = build_bow(OUT/'source/reaper-rig-body.png')
     else:
-        frames, grips, rig = make_walk(np.uint8(poses[0]*255+.5))
+        vendor_base = np.uint8(poses[0]*255+.5)
+        frames, grips, rig = make_walk(vendor_base)
     sheet = Image.new('RGBA', (COLS * CELL, ((len(frames)+COLS-1)//COLS) * CELL))
     overlay = Image.new('RGBA', (COLS * 64, ((len(frames)+COLS-1)//COLS) * 64))
     offsets, bounds = [], []
@@ -147,10 +138,8 @@ def build(kind, *, preserve_vendor_color=False):
     file = OUT / ('reaper-bow.png' if kind == 'bow' else 'reaper-vendor.webp')
     if kind == 'bow':
         sheet.save(file, optimize=True)
-    elif preserve_vendor_color:
-        bounds = narrow_vendor_contour(file, sheet, len(frames))
     else:
-        sheet.save(file, quality=92, alpha_quality=100, method=6)
+        bounds = restore_vendor_hood(file, vendor_base, len(frames))
     meta = {**digest(file), 'size': sheet.size, 'frames': len(frames), 'cell': [CELL,CELL], 'anchor': ANCHOR.tolist(), 'bounds': bounds}
     if kind == 'bow':
         file = OUT / 'bow-hands.png'
@@ -183,8 +172,11 @@ def main():
         vendor_data=prior_data['vendor']
         assert digest(OUT/'reaper-vendor.webp')['sha256']==vendor['sha256']
     else:
-        vendor, _, vendor_data = build('vendor', preserve_vendor_color=args.vendor_only)
-    manifest = {'version':'0.19.11', 'sources': {p.name:digest(p) for p in (OUT/'source').glob('*.png')},
+        vendor, _, vendor_data = build('vendor')
+    source_paths = OUT.joinpath('source').glob('*.png')
+    if args.vendor_only or args.bow_only:
+        source_paths = [OUT/'source'/name for name in prior['sources']]
+    manifest = {'version':'0.19.11', 'sources': {p.name:digest(p) for p in source_paths},
                 'runtime': {'reaper-bow.png':bow, 'reaper-vendor.webp':vendor, 'bow-hands.png':overlay}}
     (OUT/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     data = {'version':'0.19.11', 'cell':CELL, 'anchor':ANCHOR.tolist(), 'bow':bow_data, 'vendor':vendor_data}
