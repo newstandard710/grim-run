@@ -23,7 +23,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   }
   // A screen tap skips once, with no purchase or reroll behind it.
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.coinCount=30;s.triggerVendor(1);s.drawScene();});
-  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].vendorIntroMs),8000);await shot('angel-introduction');
+  assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].vendorIntroMs),4000);await shot('angel-introduction');
   await page.touchscreen.tap(100,100);assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'upgrade');assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].coinCount),30);
   const repeat=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.leaveVendor();s.player.x=s.startX+(2*666-25)*12;s.player.y=s.terrain.groundAt(s.player.x);s.player.grounded=true;s.nextVendorNumber=2;const early=s.readyForVendor(2);s.player.x=s.startX+2*666*12-48;s.player.y=s.terrain.groundAt(s.player.x);const atMerchant=s.readyForVendor(2);s.update(0,0);return {early,atMerchant,state:s.state};});assert(!repeat.early&&repeat.atMerchant&&repeat.state==='upgrade');
   // Renderer follows every one of the sixteen bite poses at one fixed root.

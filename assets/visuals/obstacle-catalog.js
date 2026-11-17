@@ -221,7 +221,7 @@
     "gameW": 60,
     "gameH": 288,
     "groundAnchorY": 0.7546,
-    "src": "assets/obstacles/cut/foothills/foothills_cut_dead-mountain-tree.png",
+    "src": "assets/obstacles/cut/foothills/foothills_cut_dead-mountain-tree-roots-v2.png",
     "key": "obstacle-foothills_cut_dead-mountain-tree",
     "visualInsetPx": 16,
     "buryRoots": true
@@ -328,7 +328,7 @@
     "gameW": 60,
     "gameH": 288,
     "groundAnchorY": 0.6667,
-    "src": "assets/obstacles/cut/tundra/tundra_cut_frozen-dead-pine.png",
+    "src": "assets/obstacles/cut/tundra/tundra_cut_frozen-dead-pine-roots-v2.png",
     "key": "obstacle-tundra_cut_frozen-dead-pine",
     "visualInsetPx": 12,
     "buryRoots": true
@@ -681,7 +681,7 @@
     "gameW": 60,
     "gameH": 288,
     "groundAnchorY": 0.6701,
-    "src": "assets/obstacles/cut/ashlands/ashlands_cut_charred-sapling.png",
+    "src": "assets/obstacles/cut/ashlands/ashlands_cut_charred-sapling-roots-v2.png",
     "key": "obstacle-ashlands_cut_charred-sapling",
     "visualInsetPx": 14,
     "buryRoots": true

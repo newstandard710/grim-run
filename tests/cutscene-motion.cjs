@@ -6,9 +6,9 @@ const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert(html.includes('assets/cutscenes/v0197/animation-data.js?v=0.19.12'));
 assert(html.includes('assets/visuals/power-animations.js?v=0.19.13-air'),'Bow uses the versioned power renderer');
-assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.12-greave"></script>'));
+assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.12-vendor-hood"></script>'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
-assert(loaded.every(([key,url])=>url.endsWith(key==='cutscene-vendor'?'?v=0.19.12-greave':'?v=0.19.11')));
+assert(loaded.every(([key,url])=>url.endsWith(key==='cutscene-vendor'?'?v=0.19.12-vendor-hood':'?v=0.19.11')));
 assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.VENDOR_ANIMATION_SECONDS,3);assert.equal(A.VENDOR_SETTLED_FRAME,192);
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){

@@ -26,10 +26,10 @@ for(let k=1;k<=14;k++){
  assert(!Core.intersectsVendorCorridor(begin-110,74,g.startX),'Fixture collision is outside sanctuary');
  assert(g.vendorObstacleBlocked('branch',begin-110,74),'Painted hanging obstacle may not overhang sanctuary');
 }
-g.triggerVendor(1);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,8000);
+g.triggerVendor(1);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,4000);
 const before=JSON.stringify({x:g.player.x,hp:g.player.hp,coins:g.coinCount,elapsed:g.elapsed,offers:g.pendingOffers,cooldown:g.player.attackCooldownMs,rng:g.rng.state});
-w.document.hidden=true;for(let i=0;i<8;i++)g.update(0,250);assert.equal(g.vendorIntroMs,8000);w.document.hidden=false;
-for(let i=0;i<31;i++)g.update(0,250);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,250);
+w.document.hidden=true;for(let i=0;i<8;i++)g.update(0,250);assert.equal(g.vendorIntroMs,4000);w.document.hidden=false;
+for(let i=0;i<15;i++)g.update(0,250);assert.equal(g.state,'vendorIntro');assert.equal(g.vendorIntroMs,250);
 assert.equal(JSON.stringify({x:g.player.x,hp:g.player.hp,coins:g.coinCount,elapsed:g.elapsed,offers:g.pendingOffers,cooldown:g.player.attackCooldownMs,rng:g.rng.state}),before,'Introduction freezes gameplay, choices and randomness');
 g.update(0,250);assert.equal(g.state,'upgrade');assert.equal(g.vendorIntroMs,0);assert.equal(g.coinCount,16);
 g.leaveVendor();g.triggerVendor(2);assert.equal(g.state,'upgrade','Only the first Angel encounter introduces itself');g.leaveVendor();
@@ -51,16 +51,16 @@ const A=visual.GRIM_POWER_ART,frames=new Set();
 // introduction. Hidden intervals and Phaser's simulation delta stay out.
 let now=1000;w.performance={now:()=>now};
 const clock=game();clock.triggerVendor(1);
-now=4250;clock.update(4350,16);assert.equal(clock.vendorIntroMs,4750);
-w.document.hidden=true;now=100000;clock.update(100100,16);assert.equal(clock.vendorIntroMs,4750);
-w.document.hidden=false;now=200000;clock.update(200100,16);assert.equal(clock.vendorIntroMs,4750);
-now=204749;clock.update(204849,16);assert.equal(clock.vendorIntroMs,1);
-now=204750;clock.update(204850,16);assert.equal(clock.state,'upgrade');
+now=4250;clock.update(4350,16);assert.equal(clock.vendorIntroMs,750);
+w.document.hidden=true;now=100000;clock.update(100100,16);assert.equal(clock.vendorIntroMs,750);
+w.document.hidden=false;now=200000;clock.update(200100,16);assert.equal(clock.vendorIntroMs,750);
+now=200749;clock.update(200849,16);assert.equal(clock.vendorIntroMs,1);
+now=200750;clock.update(200850,16);assert.equal(clock.state,'upgrade');
 clock.startRun();clock.startChest();clock.cutsceneLastAt=1000;
 clock.update(4000,16);assert.equal(clock.chestMs,1000);
 clock.update(4999,16);assert.equal(clock.state,'chest');assert.equal(clock.chestMs,1);
 clock.update(5000,16);assert.equal(clock.state,'playing');assert(clock.gunUnlocked);
-for(let ms=0;ms<8000;ms++)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
+for(let ms=0;ms<4000;ms++)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
 assert(frames.size>=170,'Dense walking and planted settling poses are available');
 for(const t of [3,3.25,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168,'Body holds the final overhead pose');
 assert(A.relicMotionAt(3.5).glow>.99);assert.equal(A.relicMotionAt(4).glow,0);
@@ -70,4 +70,4 @@ for(const type of ['sources','runtime'])for(const[file,meta]of Object.entries(ma
  const b=fs.readFileSync(path.join(root,file));assert.equal(b.length,meta.bytes);assert.equal(crypto.createHash('sha256').update(b).digest('hex'),meta.sha256);
  assert.deepEqual([b.readUInt32BE(16),b.readUInt32BE(20)],meta.size);assert.equal(b[25],6,'Production sprites retain transparency');
 }
-console.log('PASS v0.15.2: 560 solid level sanctuaries, protected approaches, first-per-type eight-second introductions, frozen gameplay, safe skip/reset, threat exclusion, hold/glow and art integrity.');
+console.log('PASS v0.15.2: 560 solid level sanctuaries, protected approaches, first-per-type four-second introductions, frozen gameplay, safe skip/reset, threat exclusion, hold/glow and art integrity.');

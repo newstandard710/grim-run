@@ -114,6 +114,50 @@ def foot(t, steps):
     return x, FLOOR-lift, pitch, pivot, state
 
 
+def upper_body_pose(t):
+    step = max(j for j, (hit, *_) in enumerate(FLOOR_KEYS[:5]) if t >= hit)
+    hit, up, load = FLOOR_KEYS[step][0], FLOOR_KEYS[step+1][0], .13 if step < 4 else .16
+    phase = math.pi*(step + min(1, (t-hit)/(up-hit)))
+    settle = ease((t-2.13)/.64)
+    pulse = 3.5*math.sin(math.pi*min(1,(t-hit)/load))
+    # The pelvis yields under each new heel, then rises over the stance leg.
+    single = math.sin(math.pi*min(1,max(0,(t-hit-load)/(up-hit-load)))) if step < 4 else 0
+    pelvis = np.array([1.9 * math.sin(phase)*(1-settle) + settle * 2.0,
+                       pulse - 2.5*single - 1.7*settle])
+    chest = rotate(.045 + .037 * math.sin(phase + .65)*(1-settle) - settle * .11)
+    chest_pivot = np.array([154., 153.])
+    body_offset = chest_pivot + pelvis - chest @ chest_pivot
+    return phase, settle, pelvis, chest, body_offset
+
+
+def place_hood(paint, t, chest, body_offset):
+    look = ease((t-2.40)/.60)
+    neck = np.array([164., 101.])
+    head = chest @ rotate(-.18 * look)
+    return warp(paint, head, chest @ neck + body_offset - head @ neck)
+
+
+def hood_underpaint(base):
+    """Continue the original crown slope through the old shaft cutout."""
+    # Registered keypose 0. The cloth under the original shaft is occluded.
+    # Join the two visible slopes and sample their adjacent folds for color.
+    outline = [(139, 85), (145, 80), (152, 77), (158, 75), (164, 75),
+               (164, 101), (158, 102), (146, 104), (139, 99)]
+    coverage = Image.new('L', (CELL*4, CELL*4))
+    ImageDraw.Draw(coverage).polygon([(x*4, y*4) for x,y in outline], fill=255)
+    alpha = np.asarray(coverage.resize((CELL, CELL), Image.Resampling.LANCZOS),
+                       dtype=np.float32) / 255
+    patch = np.zeros((CELL, CELL, 4), dtype=np.float32)
+    for y, x in np.argwhere(alpha >= 8/255):
+        rear_x = min(143, max(132, 139 + (87-y)//2))
+        rear = base[min(101, max(83, y+2)), rear_x, :3]
+        front = base[min(101, max(80, y)), 160, :3]
+        u = np.clip((x-142) / 19, 0, 1)
+        patch[y,x,:3] = (rear*(1-u) + front*u) * (alpha[y,x] / 255)
+        patch[y,x,3] = alpha[y,x]
+    return patch
+
+
 def make_walk(base):
     base = base.astype(np.float32) / 255
     base[:, :, :3] *= base[:, :, 3:4]
@@ -173,7 +217,6 @@ def make_walk(base):
     free_paint = np.where(free_arm[:, :, None], base, 0)
     hood_paint = np.where((hood & ~scythe)[:, :, None], base, 0)
     hand_at = np.array([151., 132.])
-    neck = np.array([164., 101.])
     free_shoulder = np.array([165., 131.])
     grid_x, grid_y = xx.astype(np.float32), yy.astype(np.float32)
     trailing = np.clip((135 - grid_x) / 73, 0, 1) ** 1.4
@@ -182,19 +225,7 @@ def make_walk(base):
     for i in range(SAMPLES + 1):
         t = i * 3 / SAMPLES
         travel = travel_at(t)
-        step = max(j for j, (hit, *_) in enumerate(FLOOR_KEYS[:5]) if t >= hit)
-        hit, up, load = FLOOR_KEYS[step][0], FLOOR_KEYS[step+1][0], .13 if step < 4 else .16
-        phase = math.pi*(step + min(1, (t-hit)/(up-hit)))
-        settle = ease((t-2.13)/.64)
-        look = ease((t-2.40)/.60)
-        pulse = 3.5*math.sin(math.pi*min(1,(t-hit)/load))
-        # The pelvis yields under each new heel, then rises over the stance leg.
-        single = math.sin(math.pi*min(1,max(0,(t-hit-load)/(up-hit-load)))) if step < 4 else 0
-        pelvis = np.array([1.9 * math.sin(phase)*(1-settle) + settle * 2.0,
-                           pulse - 2.5*single - 1.7*settle])
-        chest = rotate(.045 + .037 * math.sin(phase + .65)*(1-settle) - settle * .11)
-        chest_pivot = np.array([154., 153.])
-        body_offset = chest_pivot + pelvis - chest @ chest_pivot
+        phase, settle, pelvis, chest, body_offset = upper_body_pose(t)
         legs = []
         feet = []
         for j, (pivots, paints) in enumerate(plates):
@@ -242,8 +273,7 @@ def make_walk(base):
         out.alpha_composite(legs[1])
         out.alpha_composite(warp(lining, chest, body_offset))
         out.alpha_composite(warp(cloth, chest, body_offset))
-        head = chest @ rotate(-.18 * look)
-        out.alpha_composite(warp(hood_paint, head, chest @ neck + body_offset - head @ neck))
+        out.alpha_composite(place_hood(hood_paint, t, chest, body_offset))
         free = chest @ rotate(.29 * math.sin(phase - .25) * (1 - settle))
         out.alpha_composite(warp(free_paint, free, chest @ free_shoulder + body_offset - free @ free_shoulder))
         grip = chest @ hand_at + body_offset + np.array([1., -15.0 + 2 * settle])

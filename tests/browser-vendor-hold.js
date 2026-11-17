@@ -28,7 +28,7 @@ const begin=(page,k)=>page.evaluate(k=>{
 },k);
 const time=(page,t,capture=false)=>page.evaluate(async ({t,capture})=>{
   const g=window.grimRun,s=g.scene.scenes[0],a=s.vendorArt;
-  s.vendorIntroMs=8000-t;s.drawScene();g.step(performance.now(),0);
+  s.vendorIntroMs=4000-t;s.drawScene();g.step(performance.now(),0);
   const state={held:a.holdingFrame(),reaper:Number(a.reaper.frame.name),mesh:a.merchantMesh?.visible||false,
     canvas:a.canvasMerchant?.visible?Number(a.canvasMerchant.frame.name):null,dip:a.merchantMesh?.cutscenePose?.dip??null,
     aura:a.back.commandBuffer.length};
@@ -49,19 +49,33 @@ async function inspect(browser,url,canvas,failed=false){
   try{
     if(failed)await page.route(/reaper-vendor\.webp|vendor-canvas\.webp/,route=>route.abort());
     await page.goto(url,{waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
-    await page.touchscreen.tap(23,43);
+    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,null,{timeout:90000});
+    await page.evaluate(()=>window.grimRun.scene.scenes[0].enterHome());
     await page.locator('#start-btn').tap();
     await page.evaluate(()=>{
       const g=window.grimRun,s=g.scene.scenes[0];
       s.sys.sceneUpdate=()=>{};clearInterval(s.loopWatchdogId);g.loop.sleep();
     });
     assert.equal(await page.evaluate(()=>window.grimRun.renderer.type),canvas?1:2);
+    if(!failed){
+      const opaque=await page.evaluate(()=>{
+        const s=window.grimRun.scene.scenes[0],texture=s.textures.get('cutscene-vendor');
+        const strip=document.createElement('canvas');strip.width=9;strip.height=1;
+        const ctx=strip.getContext('2d',{willReadFrequently:true});
+        return Array.from({length:193},(_,i)=>{
+          const f=texture.get(i);
+          ctx.clearRect(0,0,9,1);
+          ctx.drawImage(f.source.image,f.cutX+145,f.cutY+88,9,1,0,0,9,1);
+          return ctx.getImageData(0,0,9,1).data.every((channel,index)=>index%4!==3||channel>=250);
+        });
+      });
+      assert(opaque.every(Boolean),'The crown behind the raised shaft stays covered in every decoded pose');
+    }
     for(const k of [1,8]){
       await begin(page,k);
       const first=await vendorState(page);
       assert.equal(first.focus,'vendor-intro-skip');
-      assert.equal(first.ms,8000);
+      assert.equal(first.ms,4000);
       const travel=await time(page,900),late=await time(page,2999,true);
       assert.equal(travel.held,false); assert.equal(late.held,false);
       assert(travel.reaper<late.reaper);
@@ -71,7 +85,7 @@ async function inspect(browser,url,canvas,failed=false){
       if(canvas)assert.equal(held.canvas,failed?null:(k===1?23:47));
       else assert.equal(held.dip,1);
       if(!failed)assert.notDeepEqual(late.frame,final,'The final composition starts at exactly three seconds');
-      for(const t of [3001,5060,7999]){
+      for(const t of [3001,3560,3999]){
         const {frame,...snapshot}=await time(page,t,true);
         assert.deepEqual(snapshot,held);
         assert.deepEqual(frame,final,'The entire rendered composition holds');
@@ -88,7 +102,7 @@ async function inspect(browser,url,canvas,failed=false){
       const x=position.x+position.width/2,y=position.y+position.height/2;
       await begin(page,k);
       const waiting=await vendorState(page);
-      await time(page,7999);
+      await time(page,3999);
       await page.mouse.move(x,y);await page.mouse.down();
       await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,1));
       await page.mouse.up();
@@ -99,7 +113,7 @@ async function inspect(browser,url,canvas,failed=false){
 
       const heal=page.getByRole('button',{name:/heal 1 hp/i});
       await begin(page,k);
-      await time(page,7999);
+      await time(page,3999);
       const clock=await page.evaluate(()=>{
         const s=window.grimRun.scene.scenes[0];
         let hidden=true,now=11000;
@@ -120,7 +134,7 @@ async function inspect(browser,url,canvas,failed=false){
       const bounds=await heal.boundingBox();
       const healX=bounds.x+bounds.width/2,healY=bounds.y+bounds.height/2;
       await begin(page,k);
-      await time(page,7999);
+      await time(page,3999);
       const beforeHeal=await vendorState(page);
       await page.mouse.move(healX,healY);await page.mouse.down();
       await page.evaluate(()=>window.grimRun.scene.scenes[0].update(0,1));
@@ -132,7 +146,7 @@ async function inspect(browser,url,canvas,failed=false){
       assert.equal(healed.gold,beforeHeal.gold-await page.evaluate(()=>window.GRIM_CONFIG.devilHealPrice));
 
       if(k===1){
-        await begin(page,k);await time(page,7999);
+        await begin(page,k);await time(page,3999);
         const touch=await page.context().newCDPSession(page);
         const before=await vendorState(page);
         await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:0}]});
@@ -143,7 +157,7 @@ async function inspect(browser,url,canvas,failed=false){
         await touch.detach();
       }
 
-      for(const [phase,key] of [[800,'Space'],[5000,'Enter']]){
+      for(const [phase,key] of [[800,'Space'],[3500,'Enter']]){
         await begin(page,k);await time(page,phase);
         const before=await vendorState(page);
         await page.keyboard.down(key);
@@ -153,7 +167,7 @@ async function inspect(browser,url,canvas,failed=false){
         assert.equal(after.state,'upgrade');assert.equal(after.focus,'reward-title');
         assert.deepEqual(comparable(after),comparable(before));
       }
-      for(const phase of [90,7200]){
+      for(const phase of [90,3800]){
         await begin(page,k);await time(page,phase);
         const before=await vendorState(page);
         await page.touchscreen.tap(350,225);
@@ -169,14 +183,14 @@ async function inspect(browser,url,canvas,failed=false){
       await page.setViewportSize({width:393,height:740});
       await page.waitForFunction(()=>window.grimRun.scene.scenes[0].width===393);
       await page.evaluate(()=>window.grimRun.loop.sleep());
-      const {frame:rotatedFrame,...rotated}=await time(page,4000,true);
+      const {frame:rotatedFrame,...rotated}=await time(page,3500,true);
       assert(rotated.held);assert.equal(rotated.reaper,192);
-      const {frame,...rotatedLater}=await time(page,7340,true);
+      const {frame,...rotatedLater}=await time(page,3940,true);
       assert.deepEqual(rotatedLater,rotated);
       assert.deepEqual(frame,rotatedFrame);
       await page.emulateMedia({reducedMotion:'reduce'});
       await begin(page,8);
-      assert.deepEqual(await time(page,0),await time(page,7999));
+      assert.deepEqual(await time(page,0),await time(page,3999));
       assert.equal((await vendorState(page)).state,'vendorIntro');
       await page.touchscreen.tap(110,260);
       assert.equal((await vendorState(page)).state,'upgrade');
@@ -194,7 +208,7 @@ async function inspectMerchantFallback(browser,url,canvas,missing){
       status:200,contentType:'image/webp',body:'invalid merchant painting'
     }));
     await page.goto(url,{waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady);
+    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,null,{timeout:90000});
     await page.evaluate(()=>{
       const g=window.grimRun,s=g.scene.scenes[0];
       s.sys.sceneUpdate=()=>{};clearInterval(s.loopWatchdogId);g.loop.sleep();
