@@ -23,7 +23,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  try{
   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump,null,{timeout:45000});
-  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
   const ready=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=function(){};s._polishSkin=s.obstacleSkinFor.bind(s);s.obstacleSkinFor=o=>o.reviewSkin||s._polishSkin(o);return {ready:s.worldPolish.ready,platforms:window.GRIM_WORLD_POLISH.BIOMES.filter(b=>s.textures.exists('soul-platform-'+b))};});
   assert(Object.values(ready.ready).every(Boolean));assert.equal(ready.platforms.length,8);
   await stage(400);
@@ -124,16 +124,30 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    s.cameraX=s.player.x-s.width*.32;s.cameraY=s.terrain.anchorAt(s.player.x)-s.groundY;s.cameras.main.setScroll(s.cameraX,s.cameraY);s.rescueFromAbyss();s.drawScene();
    return {state:s.state,hp:s.player.hp,x:s.player.x,elapsed:s.elapsed,cooldown:s.gunCooldownMs,invul:s.player.invulMs,rng:s.rng.state};
   });assert.equal(entry.state,'respawning');assert.equal(entry.hp,2);
-  const respawnFrames=new Set();
+  const mistPhases=new Set();
   for(let i=0;i<50;i++){
-   const sample=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.update(0,30);return {scale:s.worldPolish.respawn[0].scaleX,state:s.state,hp:s.player.hp,x:s.player.x,elapsed:s.elapsed,cooldown:s.gunCooldownMs,invul:s.player.invulMs,rng:s.rng.state,frame:Number(s.worldPolish.respawn[0].frame.name),alpha:s.worldPolish.respawn[0].alpha,body:Object.values(s.visuals.reaperPoseSprites).some(v=>v.visible)};});
-   if(i<49)assert(Math.abs(sample.scale*254-(1420-666)*120/1111)<.001,'Forming body matches the accepted Reaper eye-to-foot span');
-   respawnFrames.add(sample.frame);for(const k of ['hp','x','elapsed','cooldown','invul','rng'])assert.equal(sample[k],entry[k],'Respawn freezes '+k);
+   const sample=await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0];s.update(0,30);
+    const mist=s.reaperFormation,body=s.visuals.reaperPoseSprites.idle;
+    return {state:s.state,hp:s.player.hp,x:s.player.x,elapsed:s.elapsed,cooldown:s.gunCooldownMs,
+     invul:s.player.invulMs,rng:s.rng.state,owns:mist.ownsFall(),
+     mist:[mist.rear,mist.front].map(v=>({visible:v.visible,alpha:v.alpha,key:v.texture.key})),
+     legacy:s.worldPolish.respawn.some(v=>v.visible),body:body.visible,bodyAlpha:body.alpha};
+   });
+   if(i<49){
+    assert(sample.owns&&!sample.legacy,'Shared formation owns the surviving fall');
+    assert(sample.mist.every(v=>v.key==='reaper-formation-mist'));
+    if(i<7)assert(sample.mist.every(v=>!v.visible),'Mist waits for the 240 ms formation start');
+    if(i>=10&&i<=40)assert(sample.mist.every(v=>v.visible),'Both pooled mist layers form the body');
+    if(i>=37)assert.equal(sample.bodyAlpha,1,'The 900 ms formation finishes before the lock releases');
+   }
+   mistPhases.add(sample.mist.map(v=>v.alpha.toFixed(3)).join(','));
+   for(const k of ['hp','x','elapsed','cooldown','invul','rng'])assert.equal(sample[k],entry[k],'Respawn freezes '+k);
    if(i<49)assert.equal(sample.state,'respawning');else assert.equal(sample.state,'playing');
    if(i===3)assert.equal(sample.body,false,'Fallen Reaper remains hidden during smoke gather');
    if([0,8,16,24,32,40,47,49].includes(i))await shot('respawn-'+String(i).padStart(2,'0'));await page.waitForTimeout(16);
   }
-  assert.equal(respawnFrames.size,12);assert.deepEqual(errors,[]);
-  console.log('PASS actual Chromium: 12 coin/8 Soul frames, fixed 1.75x bodies; 8 finite biome ledges and both live encounters; all 24 cut roots; all 8 abyss layer comparisons; 4 material destructions; grounded rounded crest; exact 1.5s smoke respawn with 12 poses, frozen world and immediate resume.');
+  assert(mistPhases.size>20,'The shared mist animates through the surviving-fall lock');assert.deepEqual(errors,[]);
+  console.log('PASS actual Chromium: 12 coin/8 Soul frames, fixed 1.75x bodies; 8 finite biome ledges and both live encounters; all 24 cut roots; all 8 abyss layer comparisons; 4 material destructions; grounded rounded crest; exact 1.5s surviving-fall lock with shared two-layer mist, 900ms body formation, frozen world and immediate resume.');
  }finally{const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'world-polish-preview.webm'));await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

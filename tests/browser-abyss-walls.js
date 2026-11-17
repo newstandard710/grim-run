@@ -312,7 +312,8 @@ async function portalReadiness(browser){
       });
       await page.waitForFunction(()=>{
         const s=window.biomeReview.scene;
-        return s.cavesBackdropLoad&&s.terrainMaterialIds.has('caves')&&s.biomeBackdrops.tundra?.visible;
+        return s.cavesBackdropLoad&&s.terrainMaterialIds.has('caves')&&
+          s.portalSummitArt?.sky.visible&&!s.biomeBackdrops.tundra?.visible;
       });
       releaseCaves();
       await page.waitForFunction(missing=>{

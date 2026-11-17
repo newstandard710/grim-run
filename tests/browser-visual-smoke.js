@@ -71,7 +71,7 @@ const server=http.createServer((req,res)=>{
   assert.equal(before.bats,12);
   assert.ok(before.alphaReaper>50,'Reaper SVG rasterized blank!');
   assert.ok(before.alphaBat>25,'Bat SVG rasterized blank!');
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.waitForTimeout(800);
   const playing=await page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],v=s.visuals;
@@ -98,7 +98,7 @@ const server=http.createServer((req,res)=>{
       poses:Object.keys(v.reaperPoseSprites).length,bats:v.batPool.length};
   });
   assert.deepEqual(illustratedLoaded,{ready:true,illustrated:true,textures:true,poses:13,bats:12});
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const staticReview=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals;
@@ -187,7 +187,7 @@ const server=http.createServer((req,res)=>{
   assert.deepEqual(skeletalLoaded,{ready:true,pool:12,crawler:true,imp:true,
     dimensions:[1254,1254],frames:true,
     reviewFlag:null});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -274,7 +274,7 @@ const server=http.createServer((req,res)=>{
       }),flag:new URLSearchParams(location.search).get('enemyReview')};
   });
   assert.deepEqual(crawlerLoaded,{ready:true,pool:12,textures:Array(4).fill([1477,1065]),flag:'bone-crawler'});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -372,7 +372,7 @@ const server=http.createServer((req,res)=>{
       flag:new URLSearchParams(location.search).get('enemyReview')};
   });
   assert.deepEqual(impLoaded,{ready:true,pool:12,dimensions:[768,512],frames:true,flag:'ember-imp'});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -481,7 +481,7 @@ const server=http.createServer((req,res)=>{
       flag:new URLSearchParams(location.search).get('enemyReview')};
   });
   assert.deepEqual(bothLoaded,{crawler:true,imp:true,crawlerPool:12,impPool:12,flag:'both'});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -541,7 +541,7 @@ const server=http.createServer((req,res)=>{
     {waitUntil:'domcontentloaded',timeout:45000});
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.loaded===true,
     null,{timeout:45000});
-  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.click('#start-btn');
+  if(await skeletalPage.locator('#home-enter-btn').isVisible())await skeletalPage.click('#home-enter-btn');await skeletalPage.waitForTimeout(380);await skeletalPage.click('#start-btn');
   await skeletalPage.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing',
     null,{timeout:15000});
   await skeletalPage.evaluate(()=>{
@@ -1050,7 +1050,7 @@ const server=http.createServer((req,res)=>{
   }
   await skeletalPage.close();
 
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
   const v2Anchors=await page.evaluate(()=>{
     const s=window.grimRun.scene.scenes[0],v=s.visuals,m=window.GRIM_VISUALS.V2_REAPER;
@@ -1227,7 +1227,7 @@ const server=http.createServer((req,res)=>{
   releaseFirstPose();
   await earlyPage.waitForFunction(()=>document.getElementById('start-btn')?.disabled===false,
     null,{timeout:12000});
-  if(await earlyPage.locator('#home-enter-btn').isVisible())await earlyPage.click('#home-enter-btn');await earlyPage.click('#start-btn');
+  if(await earlyPage.locator('#home-enter-btn').isVisible())await earlyPage.click('#home-enter-btn');await earlyPage.waitForTimeout(380);await earlyPage.click('#start-btn');
   await earlyPage.waitForFunction(()=>{
     const s=window.grimRun?.scene?.scenes?.[0],v=s?.visuals;
     return s?.state==='playing'&&v?.reviewV2===true&&
@@ -1261,7 +1261,7 @@ const server=http.createServer((req,res)=>{
   });
   assert.equal(fallback.reaperReady,false);
   assert.equal(fallback.batReady,false);
-  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.click('#start-btn');
+  if(await page.locator('#home-enter-btn').isVisible())await page.click('#home-enter-btn');await page.waitForTimeout(380);await page.click('#start-btn');
   await page.click('#pause-btn');
   await page.locator('#god-mode-checkbox').check();
   await page.waitForFunction(()=>{

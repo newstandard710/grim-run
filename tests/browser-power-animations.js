@@ -22,7 +22,7 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperReady,null,{timeout:45000});
     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].visuals.reaperPoseSprites.hover,null,{timeout:45000});
     await page.waitForFunction(()=>window.grimRun.scene.scenes[0].motionArt.airReady,null,{timeout:45000});
-    await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+    await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.state='paused';s.ui.setMode('playing');s.obstacles=[];s.enemies=[];});
     const ready=await page.evaluate(()=>{
       const s=window.grimRun.scene.scenes[0],a=s.powerArt;

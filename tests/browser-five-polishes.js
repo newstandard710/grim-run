@@ -39,6 +39,7 @@ async function start({page,url}){
   await page.goto(url);
   await page.waitForFunction(ready,null,{timeout:60000});
   await page.locator('#home-enter-btn').tap();
+  await page.waitForTimeout(380);
   await page.locator('#start-btn').tap();
   await page.waitForFunction(()=>window.grimRun.scene.scenes[0].state==='playing');
 }
@@ -47,10 +48,23 @@ async function opening(browser,url){
   await tab.page.addInitScript(()=>{
     const draw=CanvasRenderingContext2D.prototype.drawImage;
     CanvasRenderingContext2D.prototype.drawImage=function(source,...args){
-      if(this.canvas.id==='title-art'&&source.src?.includes('/crawler_crawl_01_v1.png')){
-        const m=this.getTransform();
-        window.homeCrawler={native:m.a>0,x:m.e/this.canvas.width,y:m.f/this.canvas.height,
-          width:this.canvas.width,height:this.canvas.height};
+      const crawler=source.src?.includes('/crawler_crawl_01_v1.png');
+      const imp=source.src?.includes('/ember_imp_atlas_v1.png');
+      if(this.canvas.id==='title-art'&&(crawler||imp)&&args.length===8){
+        const m=this.getTransform(),[sx,sy,sw,sh,dx,dy,dw,dh]=args;
+        const figure={native:m.a>0,x:m.e/this.canvas.width,y:m.f/this.canvas.height,
+          width:this.canvas.width,height:this.canvas.height,paintHeight:dw*(crawler?545:175)/sw};
+        if(crawler){
+          const contacts=[[646,841],[1084,840]];
+          if(contacts.every(([,y])=>y>=sy&&y<=sy+sh)){
+            figure.feet=contacts.map(([x,y])=>{
+              const localX=dx+(x-sx)*dw/sw,localY=dy+(y-sy)*dh/sh;
+              return [(m.a*localX+m.c*localY+m.e)/this.canvas.width,
+                (m.b*localX+m.d*localY+m.f)/this.canvas.height];
+            });
+            window.homeCrawler=figure;
+          }
+        }else window.homeImp=figure;
       }
       return draw.call(this,source,...args);
     };
@@ -90,7 +104,22 @@ async function opening(browser,url){
       },portrait);
       const c=await tab.page.evaluate(()=>window.homeCrawler);
       assert(c.native,'The original left-facing painting looks toward the Reaper');
-      assert(Math.abs(c.x-.86)<.003&&Math.abs(c.y-.91)<.003,'The crawler keeps its planted Home placement');
+      const planted=await tab.page.evaluate(()=>{
+        const canvas=document.querySelector('#title-art'),stage=document.querySelector('#frontispiece');
+        const width=canvas.clientWidth,height=canvas.clientHeight;
+        const scale=Math.max(width/1672,height/941);
+        const left=(width-1672*scale)*parseFloat(stage.style.getPropertyValue('--home-forest-x'))/100;
+        const top=(height-941*scale)*parseFloat(stage.style.getPropertyValue('--home-forest-y'))/100;
+        const tread=[[0,672],[170,674],[308,688],[493,699],[638,711],[798,722],
+          [969,735],[1124,744],[1307,749],[1497,755],[1672,765]];
+        return homeCrawler.feet.every(([x,y])=>{
+          const sourceX=(x*width-left)/scale;
+          const i=tread.findIndex(([end])=>end>=sourceX&&end>0);
+          const [a,y0]=tread[i-1],[b,y1]=tread[i];
+          return Math.abs(y*height-top-scale*(y0+(y1-y0)*(sourceX-a)/(b-a)))<1.5;
+        });
+      });
+      assert(planted,'Both crawler support points follow the registered Home tread');
     };
     await facing(false);
     await tab.page.setViewportSize({width:393,height:740});
@@ -101,13 +130,14 @@ async function opening(browser,url){
     assert(await tab.page.locator('#home-screen').isVisible(),'Early Home tap waits for the scene');
     const pixels=()=>tab.page.evaluate(()=>{
       const c=document.getElementById('title-art'),g=c.getContext('2d');
-      return [[.70,.77],[.87,.75]].map(([x,y])=>Array.from(g.getImageData(c.width*x-16,c.height*y,32,30).data));
+      return [homeImp,homeCrawler].map(({x,y,paintHeight})=>
+        Array.from(g.getImageData(c.width*x-16,c.height*(y-paintHeight*.5/c.clientHeight),32,30).data));
     });
     const before=await pixels();
     await tab.page.waitForFunction(prior=>{
       const c=document.getElementById('title-art'),g=c.getContext('2d');
-      return [[.70,.77],[.87,.75]].every(([x,y],i)=>{
-        const a=g.getImageData(c.width*x-16,c.height*y,32,30).data;
+      return [homeImp,homeCrawler].every(({x,y,paintHeight},i)=>{
+        const a=g.getImageData(c.width*x-16,c.height*(y-paintHeight*.5/c.clientHeight),32,30).data;
         return a.reduce((sum,v,j)=>sum+(Math.abs(v-prior[i][j])>8),0)>45;
       });
     },before,{timeout:5000});

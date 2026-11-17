@@ -33,7 +33,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const area=defeat?spec.width*spec.height:512*512;
    assert(counts.every(n=>n>(defeat?1400:250)&&n<area*.65),name+' has visible transparent drawings');
   }
-  await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+  await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
   const setup=async()=>page.evaluate(()=>{
    const s=window.grimRun.scene.scenes[0],p=s.player;s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');
    s.combatArt.reset();s.powerArt.reset();s.obstacles=[];s.enemies=[];s.fireballs=[];s.bullets=[];s.particles=[];
