@@ -23,7 +23,9 @@ const server = http.createServer((req, res) => {
     // The historical HTML must load its own frontispiece and its matching one-canvas layout.
     const frozenHome = ['/assets/ui/v0160/frontispiece.js', '/assets/ui/v0160/interface.css'].includes(pathname) &&
       req.url.endsWith('?v=0.19.3');
-    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest || frozenHome ? pathname.slice(1) : null;
+    // The historical power API must use its own renderer.
+    const frozenPower = pathname === '/assets/visuals/power-animations.js' && req.url.endsWith('?v=0.19.8');
+    const original = pathname === '/forest-baseline.html' ? 'index.html' : frozenForest || frozenHome || frozenPower ? pathname.slice(1) : null;
     res.end(original ? execFileSync('git', ['show', baseline + ':' + original], {cwd: root}) : fs.readFileSync(file));
   } catch {
     if (!res.headersSent) res.writeHead(404);
