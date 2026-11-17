@@ -28,7 +28,8 @@
   }
 
   function createProjection(scene, referenceX) {
-    const {terrain, startX, hasTeleported, groundY, cameraY, height} = scene;
+    const {terrain, startX, hasTeleported, groundY, height} = scene;
+    const cameraY = scene.renderCameraY ?? scene.cameraY;
     const sections = terrain.segments;
     const first = Math.max(sections[0].start, hasTeleported ? terrain.portalExitX : -Infinity);
     const last = Math.min(sections.at(-1).end, hasTeleported ? Infinity : terrain.portalX);

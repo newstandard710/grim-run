@@ -99,7 +99,8 @@
     clipRims(sections) {
       const {scene} = this;
       if (!scene.make?.graphics) return;
-      const {width, height, cameraX, cameraY} = scene;
+      const {width, height, cameraX} = scene;
+      const cameraY = scene.renderCameraY ?? scene.cameraY;
       const gaps = sections.filter(s => s.kind === 'gap' && s.start < cameraX + width && s.end > cameraX);
       if (!gaps.length && !this.rimClipped) return;
       if (gaps.length) {

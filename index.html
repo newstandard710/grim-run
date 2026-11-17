@@ -1661,9 +1661,10 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/world-art.js?v=snow-tread1"></script>
   <script src="assets/visuals/lavafall-detail.js?v=1"></script>
   <script src="assets/visuals/snow-tread.js?v=planted1"></script>
-  <script src="assets/visuals/midground-terrain.js?v=1"></script>
-  <script src="assets/visuals/forest-midground.js?v=3"></script>
-  <script src="assets/visuals/biome-midground.js?v=3"></script>
+  <script src="assets/visuals/downhill-camera.js?v=1"></script>
+  <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
+  <script src="assets/visuals/forest-midground.js?v=downhill1"></script>
+  <script src="assets/visuals/biome-midground.js?v=downhill1"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=2"></script>
@@ -1690,7 +1691,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
   <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.12"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
-  <script src="assets/visuals/world-polish.js?v=0.19.3-root-mask"></script>
+  <script src="assets/visuals/world-polish.js?v=downhill1"></script>
   <script>
 (function defineScene(scope,Phaser) {
   'use strict';
@@ -1812,6 +1813,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.groundY = Math.round(this.height * C.groundRatio);
       this.cameraX = 0;
       this.cameraY = 0;
+      this.downhillCamera = scope.GRIM_DOWNHILL_CAMERA ? new scope.GRIM_DOWNHILL_CAMERA.DownhillCamera() : null;
+      this.appliedDownhillOffset = 0;
       this.fallFeedbackMs=0;this.respawnMs=0;this.respawnCamera=null;
       this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;
       this.hasTeleported=false;this.portalMs=0;this.chestMs=0;this.shrineClaimed=false;
@@ -2127,6 +2130,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(y===null){this.state='paused';this.ui.setMode('paused');return false;}
       const p=this.player;
       this.snowTread?.clear();
+      this.downhillCamera?.reset();
       this.teleportUsed=true;
       if(d>C.finishMeters)this.godModePastFinish=true;
       this.resetRewindHistory();
@@ -2195,6 +2199,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.player.y+=dy;
       this.reactionArt?.resize(dy);
       this.cameraY+=dy;
+      if(this.appliedDownhillOffset)this.syncWorldScroll();
       if(this.respawnCamera){
         this.respawnCamera.fromY+=dy;this.respawnCamera.toY=this.player.y-this.groundY;
         this.respawnCamera.toX=this.player.x-this.width*C.reaperXRatio;
@@ -2208,6 +2213,12 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.soulPlatform)for(const plat of this.soulPlatform)plat.y+=dy;
       for(const tip of this.tips){tip.baseY+=dy;tip.label.y+=dy;}
       this.drawScene();
+    }
+    get downhillOffset(){return this.downhillCamera?.visibleOffset(this)??0;}
+    get renderCameraY(){return this.cameraY+this.downhillOffset;}
+    syncWorldScroll(){
+      this.appliedDownhillOffset=this.downhillOffset;
+      this.cameras.main.setScroll(this.cameraX,this.cameraY+this.appliedDownhillOffset);
     }
     get feetY(){return this.player.y;}
     get onGround(){return this.player.grounded;}
@@ -2282,6 +2293,7 @@ window.GRIM_CONFIG = Object.freeze({
         combatViews:this.combatArt?.snapshot()||[],
         rubble,rngState:this.rng.state
       });
+      this.downhillCamera?.capture(this.rewindFrames.at(-1));
       // 8 seconds max rewind plus one sample, at about 10 samples / second.
       const cutoff=this.rewindClockMs-8400;
       while(this.rewindFrames.length>2&&this.rewindFrames[1].at<cutoff)
@@ -2341,7 +2353,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.rng.setState(saved.rngState);
       this.particles=[];this.chainArcs=[];
-      this.cameras.main.setScroll(this.cameraX,this.cameraY);
+      this.syncWorldScroll();
       this.ui.showTimeSlow(this.player.slowMs>0);
       this.ui.showGunCooldown(this.gunCooldownMs);
       this.ui.showFallNotice(false);
@@ -2353,7 +2365,9 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='rewinding'||!clip)return;
       clip.elapsedMs+=frameMs;
       const fraction=Math.min(1,clip.elapsedMs/clip.durationMs);
-      const index=Math.min(clip.frames.length-1,Math.floor(fraction*(clip.frames.length-1)));
+      const position=fraction*(clip.frames.length-1);
+      this.downhillCamera?.rewind(clip.frames,position,frameMs);
+      const index=Math.min(clip.frames.length-1,Math.floor(position));
       if(index!==clip.lastIndex){
         clip.lastIndex=index;
         this.applyRewindSnapshot(clip.frames[index]);
@@ -2445,6 +2459,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     startRun() {
       if(this.reactionLoadFailed)return false;
+      this.downhillCamera?.reset();
       this.reactionArt?.reset();this.deathPoseMs=0;
       this.snowTread?.clear();
       this.wakeGameLoop();
@@ -2473,7 +2488,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.startX = this.player.x;
       this.cameraX=this.player.x-this.width*C.reaperXRatio;
       this.cameraY=0;
-      this.cameras.main.setScroll(this.cameraX,this.cameraY);
+      this.syncWorldScroll();
       this.nextEnemySpawnX=this.startX+5070*C.pxPerMeter;
       this.nextGroundSpawnX=this.startX+5140*C.pxPerMeter;
       this.nextSnapSpawnX=this.startX+3260*C.pxPerMeter;
@@ -2698,6 +2713,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     triggerVendor(number){
       if(this.state!=='playing'||number>14||number<=this.lastVendorNumber)return;
+      this.downhillCamera?.reset();
       this.resetRewindHistory();
       this.lastVendorNumber=number;
       this.vendorType=number*C.vendorEveryMeters<5000?'angel':'devil';
@@ -3152,7 +3168,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         if(this.respawnMs===0)this.finishAbyssRespawn();
         // Do not tick physics, enemies, projectiles, timers, FX or the run clock.
-        this.cameras.main.setScroll(this.cameraX,this.cameraY);this.drawScene();return;
+        this.syncWorldScroll();this.drawScene();return;
       }
       else if(this.state==='countdown'){
         // World, obstacles, player and ability timers remain completely frozen.
@@ -3313,6 +3329,7 @@ window.GRIM_CONFIG = Object.freeze({
         for (const part of this.particles) {part.x+=part.vx*dt;part.y+=part.vy*dt;part.vy+=170*dt;part.life-=dt;}
         this.particles=this.particles.filter(part=>part.life>0);
         this.powerArt?.tick(frameMs);this.worldPolish?.tick(frameMs);this.combatArt?.tick(frameMs);
+        this.downhillCamera?.step(this,frameMs);
         this.tickRewind(frameMs);
       }
       if(this.state==='playing'&&this.player.visualFireMs>0)
@@ -3333,7 +3350,7 @@ window.GRIM_CONFIG = Object.freeze({
         const referenceEase=this.state==='portal'?.28:.115;
         this.cameraY+=delta*(1-Math.pow(1-referenceEase,clamp(deltaMs*(this.state==='playing'?this.practiceScale():1),0,100)/(1000/60)));
       }
-      this.cameras.main.setScroll(this.cameraX,this.cameraY);
+      this.syncWorldScroll();
       this.drawScene();
     }
 
@@ -3688,7 +3705,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Lethal falls keep the existing death / paid-revive flow.
       if(this.state!=='playing'){
         this.cameraX=p.x-this.width*C.reaperXRatio;this.cameraY=p.y-this.groundY;
-        this.cameras.main.setScroll(this.cameraX,this.cameraY);
+        this.syncWorldScroll();
         return false;
       }
       p.slideConsumed=false;p.jumpAgeMs=0;p.visualLandingMs=0;p.visualFireMs=0;p.visualHurtMs=0;
@@ -3703,6 +3720,7 @@ window.GRIM_CONFIG = Object.freeze({
     finishAbyssRespawn(){
       this.snowTread?.clear();
       if(this.state!=='respawning')return false;
+      this.downhillCamera?.reset();
       this.state='playing';this.respawnMs=0;this.respawnCamera=null;
       this.damageFlashMs=0;this.bonesBlastMs=0;this.blastFlashMs=0;
       this.ui.setMode('playing');this.refreshHud();
@@ -3721,7 +3739,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.hoverBudgetMs=this.powerManager.skeletalHoverMs();p.hoverHoldMs=0;p.hoverPressKind='none';
       p.visualTuckMs=0;p.visualTuckReleaseMs=0;p.visualWasAirborne=false;p.visualFireMs=0;
       this.distance=4900;this.cameraX=p.x-this.width*C.reaperXRatio;
-      this.cameraY=p.y-this.groundY;this.cameras.main.setScroll(this.cameraX,this.cameraY);
+      this.cameraY=p.y-this.groundY;this.syncWorldScroll();
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.ui.showPortal(false);
       this.state='chest';this.chestMs=window.GRIM_CUTSCENES?.SHRINE_MS||4000;this.cutsceneLastAt=scope.performance?.now?.()??null;this.resetRewindHistory();
@@ -3746,6 +3764,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showGunCooldown(0);this.resetRewindHistory();this.captureRewind();
     }
     enterUnderworld(){
+      this.downhillCamera?.reset();
       this.snowTread?.clear();
       const p=this.player;
       this.hasTeleported=true;
@@ -3822,6 +3841,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastResurrection='paid';this.resurrect();return true;
     }
     resurrect(){
+      this.downhillCamera?.reset();
       this.reactionArt?.finishDefeat();
       this.resetRewindHistory();
       this.totalSouls=this.meta.souls;
@@ -4022,7 +4042,7 @@ window.GRIM_CONFIG = Object.freeze({
     resizeBackdropGroundVeil(){
       if(!this.backdropGroundVeil)return;
       const worldGround=this.player&&this.terrain?.groundAt?.(this.player.x);
-      const screenGround=Number.isFinite(worldGround)?worldGround-(this.cameraY||0):this.groundY;
+      const screenGround=Number.isFinite(worldGround)?worldGround-(this.renderCameraY||0):this.groundY;
       const top=clamp(screenGround-Math.max(72,this.height*.12),this.height*.34,this.height*.86);
       this.backdropGroundVeil.setPosition(0,top)
         .setDisplaySize(this.width,Math.max(1,this.height-top));
@@ -4065,6 +4085,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.cameras.main.visible=false;return;
       }
       this.cameras.main.visible=true;
+      if(this.downhillOffset!==(this.appliedDownhillOffset??0))this.syncWorldScroll();
       const g=this.bg;
       g.clear();
       this.ensureBiomeBackdropGroup(this.hasTeleported?'underworld':'surface');
@@ -4991,7 +5012,7 @@ window.GRIM_CONFIG = Object.freeze({
       const g=this.abyssWallArt;
       if(!g||!wall)return;
       const [body,edge,sheen,detail]=palette;
-      const cameraTop=this.cameraY??0,limit=cameraTop+this.height+72;
+      const cameraTop=this.renderCameraY??0,limit=cameraTop+this.height+72;
       const {points,direction,start,y,bankWidth,spread}=wall;
       for(let i=1;i<points.length-1;i++){
         const a=points[i-1],b=points[i],c=points[i+1];

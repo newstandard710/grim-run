@@ -460,7 +460,7 @@
         return;
       }
       const camera = {width: scene.width, height: scene.height, cameraX: scene.cameraX,
-        cameraY: scene.cameraY, project, travel: scene.cameraX - scene.startX};
+        cameraY: scene.renderCameraY ?? scene.cameraY, project, travel: scene.cameraX - scene.startX};
       const ready = active.filter(([id]) => this.stream.loaded.has(id) && scene.biomeBackdrops?.[id]);
       if (!ready.length) {
         this.hide();
