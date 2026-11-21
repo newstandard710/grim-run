@@ -63,10 +63,10 @@
   // Milliseconds, palm x/y, hip shift x/y, torso lean, weapon bank/yaw/pitch.
   // The hips start forward while the upper body is still gathering behind.
   const SWING=[
-    [0,  -18,-55,   0,  0,   0,  -90,  0, 0],
-    [22, -21,-57,  -2,  1,  -6,  -93, -2, 7],
-    [48, -22,-61,  -4,  3, -11, -110, -5,19],
-    [71, -18,-62,  -2,  4, -12, -136, -7,35],
+    [0,  -31,-59,   0,  0, -14, -104,  0, 0],
+    [22, -29,-58,  -2,  1, -15, -109, -2, 7],
+    [48, -24,-59,  -4,  3, -14, -123, -5,19],
+    [71, -18,-62,  -2,  4, -12, -143, -7,35],
     [94,  -9,-63,   1,  3,  -4, -163, -5,42],
     [116,  5,-61,   4,  2,   6, -193,  0,45],
     [141, 18,-60,   6,  1,  13, -227,  2,40],
@@ -75,9 +75,9 @@
     [221, 19,-66,   3, -2,  11, -328,  1, 9],
     [249,  7,-72,   1, -2,   5, -359,  3,15],
     [279, -6,-68,  -1, -1,   0, -393,  6,21],
-    [310,-15,-61,  -1,  0,  -3, -425,  5,17],
-    [335,-18,-56,   0,  0,  -1, -445,  2, 7],
-    [355,-18,-55,   0,  0,   0, -450,  0, 0],
+    [310,-15,-61,  -1,  0,  -7, -425,  5,17],
+    [335,-26,-57,   0,  0, -12, -456,  2, 7],
+    [355,-31,-59,   0,  0, -14, -464,  0, 0],
   ];
   const END=SWING.at(-1)[0],DEG=Math.PI/180;
   function preload(scene,motion){
@@ -181,18 +181,20 @@
     const [x,y,hipX,hipY,lean,turn,yaw,pitch]=G.pose(SWING,time);
     const w=Math.min(smooth(time/36),smooth((END-time)/50));
     const carryHand=forward.rear.hands[key.frame], [cx,cy]=carryHand;
-    const rest=w<1?m.trailingRotation(p.x+cx,s.feetY+cy+key.rise):0;
+    const drag=key.frame<96&&p.grounded;
+    const join=Math.min(smooth(time/95),smooth((END-time)/85));
+    const rest=join<1?m.trailingRotation(p.x+cx,s.feetY+cy+key.rise,drag):0;
     // On a slope, aim the low arc along the surface so the blade clears
     // the ground without pulling the hand away from the shoulder.
     const behind=s.terrain.groundAt(p.x-32),ahead=s.terrain.groundAt(p.x+32);
     const grade=p.grounded&&p.onSoulPlatform===false&&Number.isFinite(behind)&&Number.isFinite(ahead)
       ?G.clamp(Math.atan2(ahead-behind,64),-.55,.55):0;
-    const bank=turn*DEG+(1-w)*(rest+Math.PI/2)+grade*w;
+    const bank=turn*DEG+(1-join)*(rest+104*DEG)+grade*w;
     const hand=lerp(carryHand,[x,y],w);
     const matrix=G.project(bank,yaw*DEG,pitch*DEG);
     // Mirror around the palm in weapon space, before the swing projection.
     matrix[0]*=-1;matrix[2]*=-1;
-    const hip=[hipX*w,hipY*w],tilt=lean*w*DEG;
+    const hip=[hipX*w,hipY*w],tilt=G.mix(drag?forward.rear.dragLean:0,lean*DEG,w);
     const [wx,wy]=carried.waist,dx=carried.shoulder[0]-wx,dy=carried.shoulder[1]-wy;
     const shoulder=[wx+hip[0]+dx*Math.cos(tilt)-dy*Math.sin(tilt),
       wy+hip[1]+dx*Math.sin(tilt)+dy*Math.cos(tilt)];
@@ -201,23 +203,25 @@
     const platform=p.onSoulPlatform===false?null:(s.soulPlatform||[]).find(q=>q.id===p.onSoulPlatform);
     let gap=Infinity,depthScale=1;
     const rootX=p.x+hand[0],rootY=s.feetY+key.rise+hand[1];
-    const [a,b,c,d]=matrix;
-    for(const [u,v] of forward.rear.outline){
-      const x=rootX+a*u+b*v,drop=c*u+d*v,ground=s.terrain.groundAt(x);
+    const [a,b,c,d]=matrix,slope=Math.tan(grade);
+    for(const [u,v] of GRIM_MOTION_ART.shaft){
+      const run=a*u+b*v,x=rootX+run,drop=c*u+d*v,ground=s.terrain.groundAt(x);
       let floor=Number.isFinite(ground)?ground:Infinity;
       if(platform&&x>=platform.x&&x<=platform.x+platform.width)floor=Math.min(floor,platform.y);
-      const available=floor-rootY-6;
+      const available=floor-rootY-2;
       gap=Math.min(gap,available-drop);
       // Tip the swing plane toward the viewer when lifting farther would
       // straighten the elbow past its reach. Paint and contact use this pose.
-      if(drop>0&&drop>available+maxLift)depthScale=Math.min(depthScale,(available+maxLift)/drop);
+      const normalDrop=drop-slope*run;
+      if(normalDrop>0&&drop>available+maxLift)
+        depthScale=Math.min(depthScale,(available+maxLift-slope*run)/normalDrop);
     }
     // Let the terrain-aware carry own clearance at the two joins.
     // Keep the blade, hand, and collision edge under one transform.
-    const lift=G.clamp(-gap,0,maxLift)*w;
+    const lift=G.clamp(-gap,0,maxLift);
     hand[1]-=lift;
-    const depth=G.mix(1,G.clamp(depthScale,.35,1),w);
-    matrix[2]*=depth;matrix[3]*=depth;
+    const depth=G.clamp(depthScale,.05,1);
+    matrix[2]=G.mix(slope*a,c,depth);matrix[3]=G.mix(slope*b,d,depth);
     return {...key,carried,hand,shoulder,matrix,w,hip,tilt};
   }
   function acceptCut(){
@@ -347,9 +351,33 @@
       ctx.restore();
     }
   }
-  function weapon(pose,alpha=1){
+  function aboveGround(hand,rise){
+    // Build one short clip path in actor coordinates. Duplicate x at gap lips
+    // and platform ends so the path cannot bridge empty space diagonally.
+    const p=s.player,ledge=p.onSoulPlatform===false?null:s.soulPlatform?.find(q=>q.id===p.onSoulPlatform);
+    const path=new Path2D(),left=hand[0]-98,right=hand[0]+98;
+    path.moveTo(left,-Y);path.lineTo(right,-Y);
+    let x=right;
+    while(x>left){
+      const world=p.x+x,section=s.terrain.sectionAt?.(world-.001);
+      let next=Math.max(left,x-6);
+      if(section&&section.start<world-.001)next=Math.max(next,section.start-p.x);
+      if(ledge)for(const edge of [ledge.x,ledge.x+ledge.width]){
+        if(edge<world-.001)next=Math.max(next,edge-p.x);
+      }
+      for(const [at,side] of [[x,-.0001],[next,.0001]]){
+        const ground=GRIM_MOTION_ART.floorAt(s,p.x+at+side,ledge);
+        path.lineTo(at,Math.min(70,ground-s.feetY-rise));
+      }
+      x=next;
+    }
+    path.closePath();
+    return path;
+  }
+  function weapon(pose,ground,alpha=1){
     const art=forward.weapon, image=s.textures.get(art.key).getSourceImage(),[a,b,c,d]=pose.matrix;
     ctx.save();
+    ctx.clip(ground);
     ctx.globalAlpha=alpha;
     ctx.transform(a,c,b,d,...pose.hand);
     ctx.scale(art.scale,art.scale);
@@ -362,27 +390,32 @@
     ctx.clearRect(0,0,box.width,box.height);
     ctx.setTransform(2,0,0,2,2*X,2*Y);
     const front=smooth((time-34)/42)*smooth((277-time)/36);
-    if(front<1)weapon(f);
+    const ground=aboveGround(f.hand,f.rise);
+    if(front<1)weapon(f,ground);
     bodyPose(f);
     arm(f,'arm');
-    if(front>0)weapon(f,front);
+    if(front>0)weapon(f,ground,front);
     arm(f,'hand');
     const p=s.player;
+    const [start,end]=spec.active;
+    if(time>=start&&time<=end){
+      const edge=G.transform(spec.edge,f),bounds=spec.bounds;
+      ctx.save();
+      ctx.clip(ground);
+      ctx.beginPath();
+      for(let i=1;i<edge.length;i++){
+        const section=clipSegment(edge[i-1],edge[i],[bounds[0],bounds[1]-f.rise,bounds[2],bounds[3]-f.rise]);
+        if(section){ctx.moveTo(...section[0]);ctx.lineTo(...section[1]);}
+      }
+      ctx.strokeStyle='#b9f4ea';
+      for(const [width,alpha] of [[6,.20],[2,.85]]){
+        ctx.lineWidth=width;ctx.globalAlpha=alpha;ctx.stroke();
+      }
+      ctx.restore();
+    }
     light.refresh();
     sprite.setPosition(p.x-X,s.feetY+f.rise-Y).setAlpha(p.invulMs>0&&Math.floor(s.elapsed/.083333)%2===0?.58:1)
       .setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
-    const [start,end]=spec.active;
-    if(time>=start&&time<=end){
-      const edge=G.transform(spec.edge,f).map(([x,y])=>[p.x+x,s.feetY+y+f.rise]);
-      const [x,y,X,Y]=spec.bounds,bounds=[p.x+x,s.feetY+y,p.x+X,s.feetY+Y];
-      for(const [width,alpha] of [[6,.20],[2,.85]]){
-        ink.lineStyle(width,0xb9f4ea,alpha);
-        for(let i=1;i<edge.length;i++){
-          const portion=clipSegment(edge[i-1],edge[i],bounds);
-          if(portion)ink.lineBetween(...portion[0],...portion[1]);
-        }
-      }
-    }
   }
   const angle=(x,y)=>Math.atan2(y,x);
   const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -493,7 +526,7 @@
     const compactDepth=Math.sin(Math.PI*e)*.35;
     const matrix=G.project(angleNow,yaw*(1-e),Math.acos(G.clamp(Math.hypot(b,d),0,1))*(1-e)+compactDepth);
     matrix[0]*=-1;matrix[2]*=-1;
-    preparing();weapon({hand,matrix});
+    preparing();weapon({hand,matrix},aboveGround(hand,0));
     showJoin(bow.depth-.06,bow);
   }
   const playingPose=()=>['playing','rewinding','paused'].includes(s.state);
