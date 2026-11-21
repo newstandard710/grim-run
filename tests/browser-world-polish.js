@@ -8,7 +8,47 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
  const context=await browser.newContext({viewport:{width:950,height:430},recordVideo:{dir,size:{width:950,height:430}}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
- const shot=async name=>{await page.evaluate(()=>window.grimRun.step(performance.now(),0));return page.screenshot({path:path.join(dir,'polish-'+name+'.png')});};
+ const captureSession=await context.newCDPSession(page);
+ async function bounded(stage,operation){
+  let timer;
+  try{
+   return await Promise.race([operation,new Promise((_,reject)=>{
+    timer=setTimeout(()=>reject(Error(stage+' exceeded 30s')),30000);
+   })]);
+  }finally{clearTimeout(timer);}
+ }
+ const shot=async name=>{
+  const floating=name.startsWith('floating-encounter-');
+  console.log(name+' Phaser step started');
+  await bounded(name+' Phaser step',page.evaluate(()=>window.grimRun.step(performance.now(),0)));
+  console.log(name+' Phaser step finished');
+  const file=path.join(dir,'polish-'+name+'.png');
+  let pixels;
+  if(floating){
+   // The page records video throughout. Check GPU completion separately from
+   // Chromium's viewport capture, and retain the full composited page and HUD.
+   await bounded(name+' GPU completion',page.evaluate(()=>{
+    const gl=window.grimRun.renderer.gl;
+    gl.finish();
+    if(gl.isContextLost())throw Error('WebGL context lost before platform capture');
+   }));
+   console.log(name+' GPU finished, viewport capture started');
+   const capture=await bounded(name+' viewport capture',
+    captureSession.send('Page.captureScreenshot',{format:'png',fromSurface:false}));
+   pixels=Buffer.from(capture.data,'base64');
+   const frame=PNG.sync.read(pixels);
+   assert.equal(frame.width,950);assert.equal(frame.height,430);
+   const colors=new Set();
+   for(let y=80;y<350;y+=8)for(let x=40;x<910;x+=8){
+    const offset=4*(y*frame.width+x);
+    colors.add(frame.data.readUInt32BE(offset));
+   }
+   assert(colors.size>64,name+' viewport contains rendered scenery');
+   fs.writeFileSync(file,pixels);
+  }else pixels=await page.screenshot({path:file,timeout:30000});
+  console.log(name+' screenshot finished');
+  return pixels;
+ };
  const stage=async meters=>{const x=await page.evaluate(m=>{
   const s=window.grimRun.scene.scenes[0];s.terrain.advance(s.startX+m*12+2400);
   const wanted=s.startX+m*12,ground=s.terrain.visibleSections(wanted,wanted+1400).find(v=>v.kind==='ground'&&v.end-v.start>100);
@@ -24,7 +64,10 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump,null,{timeout:45000});
   await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
-  const ready=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=function(){};s._polishSkin=s.obstacleSkinFor.bind(s);s.obstacleSkinFor=o=>o.reviewSkin||s._polishSkin(o);return {ready:s.worldPolish.ready,platforms:window.GRIM_WORLD_POLISH.BIOMES.filter(b=>s.textures.exists('soul-platform-'+b))};});
+  const ready=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=function(){};
+   // All subsequent simulation ticks and render submissions belong to this fixture.
+   window.grimRun.loop.sleep();clearInterval(s.loopWatchdogId);
+   s._polishSkin=s.obstacleSkinFor.bind(s);s.obstacleSkinFor=o=>o.reviewSkin||s._polishSkin(o);return {ready:s.worldPolish.ready,platforms:window.GRIM_WORLD_POLISH.BIOMES.filter(b=>s.textures.exists('soul-platform-'+b))};});
   assert(Object.values(ready.ready).every(Boolean));assert.equal(ready.platforms.length,8);
   await stage(400);
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.coins=[{x:s.player.x+145,baseY:s.player.y,offset:-45,taken:false}];s.souls=[{x:s.player.x+280,baseY:s.player.y,offset:-74,taken:false}];});

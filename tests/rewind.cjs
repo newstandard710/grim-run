@@ -16,7 +16,7 @@ w.window=w;vm.createContext(w);
 for(const [,attrs,body] of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
  if(!/\bsrc\s*=/.test(attrs))vm.runInContext(body,w,{filename:'index.html'});
 const C=w.GRIM_CONFIG,P=w.GRIM_POWERS,Core=w.GRIM_CORE;
-assert.equal(C.version,'0.19.16');
+assert.equal(C.version,'0.19.17');
 assert.ok(P.POWER_ORDER.includes('deathsReversal'),'Rewind must be Angel vendor power');
 const m=P.makePowerManager();
 for(const [lvl,seconds,cooldown] of [[1,5,60000],[2,6,55000],[3,7,50000],[4,8,45000]]){
@@ -156,3 +156,22 @@ assert.equal(barriers.state,'playing');
 assert.equal(barriers.state,'playing');assert.equal(barriers.rewind(),false);
 
 console.log('PASS v0.13.6: Angel tiers, God Mode level-4 override, snapshot rewind, non-rewindable cooldown, referenced projectiles, Brittle Bones terrain rollback, Soul/vendor/portal boundaries.');
+
+// Seed 78 has a slope that overtakes a short jump before its apex.
+{
+  const s=game(78),p=s.player,x=47568.84974368973;
+  Object.assign(s,{state:'playing',distance:(x-s.startX)/C.pxPerMeter,nextVendorNumber:15,
+    lastVendorNumber:14,shrineClaimed:true,nextEncounterX:x+2000,nextSnapSpawnX:x+2000});
+  Object.assign(p,{x,y:s.terrain.groundAt(x),grounded:true,onSoulPlatform:false});
+  s.speed=Core.runSpeed(s.distance);
+  s.jump();
+  assert.equal(p.grounded,false);
+  const intervals=[11,33,8,53,17];
+  for(let frame=0;frame<80&&!p.grounded;frame++){
+    if(frame===4)s.jumpEnd();
+    s.update(0,intervals[frame%intervals.length]);
+    const ground=s.terrain.groundAt(p.x);
+    assert(ground===null||p.y<=ground+1.5,'Jump crossed into uphill terrain');
+  }
+  assert(p.grounded,'Short jump lands on the rising slope');
+}

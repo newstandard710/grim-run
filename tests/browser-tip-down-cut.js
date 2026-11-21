@@ -39,7 +39,7 @@ async function measure(browser,renderer,revision){
       reset();
       const view=s.motionArt.weapon,tip=GRIM_RISING_CUT_DATA.spec.edge[0];
       const tipOffsetY=tip[0]*Math.sign(view.scaleX)*Math.sin(view.rotation)+tip[1]*Math.cos(view.rotation);
-      const quantiles=values=>{values.sort((a,b)=>a-b);return {median:values[50],p95:values[95]};};
+      const quantiles=values=>{values.sort((a,b)=>a-b);return {median:(values[49]+values[50])/2,p95:values[94],p99:values[98],max:values.at(-1),over50ms:values.filter(v=>v>50).length};};
       async function timing(cut){
         let last,owned=0;
         const interval=[],cpu=[];
@@ -57,6 +57,15 @@ async function measure(browser,renderer,revision){
       reset();
       const cutting=await timing(true);
       reset();
+      // Cross 900 m during the measured window, after the 50 warm-up frames.
+      const entry=855,x=s.startX+entry*GRIM_CONFIG.pxPerMeter;
+      s.distance=entry;s.speed=GRIM_CORE.runSpeed(entry);
+      s.player.x=x;s.player.y=s.terrain.groundAt(x)??s.terrain.anchorAt(x);
+      s.cameraX=x-s.width*GRIM_CONFIG.reaperXRatio;s.cameraY=s.player.y-s.groundY;
+      s.nextVendorNumber=2;s.lastVendorNumber=1;
+      const crossing=await timing(false);
+      crossing.endMeters=s.distance;
+      reset();
       const p=s.player,spawned=s.trySpawnCombat(p.x+134,'crawler'),enemy=s.enemies[0];
       const tree=GRIM_CORE.obstacle('bramble',p.x+115,s.terrain.groundAt(p.x+115),0,GRIM_CONFIG.slideClearancePx,s.height);
       s.obstacles.push(tree);s.attack();
@@ -67,7 +76,7 @@ async function measure(browser,renderer,revision){
         if(tree.destroyed&&treeMs===null)treeMs=i*8;
         if(enemy?.dead&&crawlerMs===null)crawlerMs=i*8;
       }
-      return {renderer:g.renderer.type,mode,tipOffsetY,spawned,treeMs,crawlerMs,running,...cutting};
+      return {renderer:g.renderer.type,mode,tipOffsetY,spawned,treeMs,crawlerMs,running,crossing,...cutting};
     });
     console.log(renderer,revision,JSON.stringify(report));
     if(process.env.GITHUB_ACTIONS){
@@ -75,6 +84,7 @@ async function measure(browser,renderer,revision){
       console.log('::notice title=Phone Cut '+renderer+' '+revision+'::'+times);
     }
     assert.equal(report.renderer,renderer==='canvas'?1:2);
+    assert(report.crossing.endMeters>900,'Timed route crosses into the Foothills');
     assert(report.owned>60,'Repeated attacks used the drawn Cut');
     if(revision==='after'){
       assert(report.tipOffsetY>0,'The resting tip points below the palm');
