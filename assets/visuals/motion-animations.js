@@ -12,6 +12,8 @@
     key:'motion-reaper-jump-deliberate',url:ROOT+'reaper-air-registration.webp?v=2',
     width:224,height:184,columns:8,frames:48,anchor:[125,168],scale:13/15
   };
+  const AIR_CLOTH={key:'motion-reaper-air-cloth',url:'assets/motion/v0200/reaper-air-cloth.webp?v=1',
+    width:200,height:184,columns:8,frames:17};
   const AIR_CUT_ART={
     key:'motion-reaper-air-cut-joins',url:ROOT+'reaper-air-cut-joins.webp?v=2',
     width:192,height:160,columns:6,frames:18,anchor:[125,148],scale:13/15
@@ -286,6 +288,7 @@
     loader.load(s,AIR_ART,()=>{motion.airReady=motion.airDetailsValid(AIR_ART);});
     loader.load(s,AIR_CUT_ART,()=>{motion.airCutReady=motion.airDetailsValid(AIR_CUT_ART);});
     if(FORWARD){
+      loader.load(s,AIR_CLOTH,()=>{motion.airClothReady=true;});
       const stages=[FORWARD.carry,FORWARD.cut,FORWARD.weapon],available=new Set();
       for(const art of stages)loader.load(s,art,()=>{
         const isWeapon=art===FORWARD.weapon;
@@ -549,7 +552,15 @@
       const forward=FORWARD?this.forwardPose(p,name,progress,runAtlasFrame(distance),registeredFrame,solidRun):null;
       if(forward){
         const {art,frame,grip}=forward;
-        this.body[0].setTexture(art.key,frame).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
+        let key=art.key,cell=frame;
+        if(this.airClothReady&&art===FORWARD.carry&&frame===115&&!p.grounded){
+          const age=p.jumpAgeMs||0;
+          const weight=ease((age-105)/90)*(p.hovering?1:1-ease(((p.velocityY||0)-15)/80));
+          const wave=Math.sin((age-105)*.0105)*weight;
+          key=AIR_CLOTH.key;
+          cell=8+Math.round(8*wave);
+        }
+        this.body[0].setTexture(key,cell).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
           .setPosition(p.x,s.feetY+rise).setScale(FORWARD.scale).setAlpha(alpha).setTint(tint).setVisible(true);
         if(grip){
           this.showForwardWeapon(this.carryCutGrip(grip,rise,progress),rise,alpha,tint);
@@ -557,7 +568,7 @@
         }else if(art===FORWARD.carry){
           this.showRearCarry(frame,s.feetY+rise,alpha,tint,this.body[0]);
         }
-        this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture:art.key};
+        this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture:key};
         return;
       }
       const renderScale=handoff?CUT_HANDOFF.scale:solidRun?RUN.scale:registeredFrame!==null?AIR_ART.scale:scale;
@@ -579,5 +590,5 @@
     }
     destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();this.rising?.destroy();}
   }
-  scope.GRIM_MOTION_ART={MotionAnimations,shaft,floorAt,levelDragAngle,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,visualCutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
+  scope.GRIM_MOTION_ART={MotionAnimations,shaft,floorAt,levelDragAngle,preload,queueAirDetails,runFrame,runAtlasFrame,runSupportRise,jumpFrame,cutFrame,cutRig,visualCutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
 })(typeof window!=='undefined'?window:globalThis);

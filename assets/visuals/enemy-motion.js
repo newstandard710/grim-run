@@ -24,6 +24,28 @@
     const value=x/stride*4+(phase||0);
     return (value%4+4)%4;
   }
+  const wingNames=['flap_raised','flap_mid_down','flap_lowered','flap_mid_up'];
+  const part=(t,count)=>Math.round(Math.min(1,Math.max(0,t))*(count-1));
+  function skeletalTurn(e,now){
+    const t=e.timer||0;
+    const wing=time=>Math.floor(Math.max(0,time)*12+(e.phase||0))%4;
+    if(e.mode==='telegraph'&&t<.16)return wing(now-t)*6+part(t/.16,6);
+    if(e.mode==='dive'&&t<.14)return 24+part(t/.14,8);
+    if(e.mode==='recover'&&t<.18)return 32+wing(now-t+.18)*7+part(t/.18,7);
+    return null;
+  }
+  function turnSkull(frame,marks){
+    let a,b,u;
+    if(frame<24){a=wingNames[Math.floor(frame/6)];b='telegraph';u=frame%6/5;}
+    else if(frame<32){a='telegraph';b='dive';u=(frame-24)/7;}
+    else {a='dive';b=wingNames[Math.floor((frame-32)/7)];u=(frame-32)%7/6;}
+    return marks[a].map((x,i)=>x+(marks[b][i]-x)*u);
+  }
+  function impTurn(warning,releaseAge){
+    if(warning>0&&warning>250)return 60+part((470-warning)/220,14);
+    if(releaseAge>=145&&releaseAge<=260)return 74+part((releaseAge-145)/115,9);
+    return null;
+  }
   function floor(terrain,x){
     const segments=terrain?.segments;
     if(!segments?.length)return null;
@@ -95,5 +117,5 @@
     return pose;
   }
   scope.GRIM_ENEMY_MOTION={KEY,CELL,CRAWLER_STRIDE,IMP_STRIDE,CRAWL_CLAWS,CRAWL_MIDS,
-    RESPONSE_CLAWS,queueGroundDetails,cycle,floor,crawlerPose,hasTweens,crawlView,clawX,responsePose};
+    RESPONSE_CLAWS,skeletalTurn,turnSkull,impTurn,queueGroundDetails,cycle,floor,crawlerPose,hasTweens,crawlView,clawX,responsePose};
 })(typeof window!=='undefined'?window:globalThis);

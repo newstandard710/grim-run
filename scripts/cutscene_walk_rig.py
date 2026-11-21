@@ -131,7 +131,7 @@ def upper_body_pose(t):
 
 
 def place_hood(paint, t, chest, body_offset):
-    look = ease((t-2.40)/.60)
+    look = .82*ease((t-1.72)/.68) + .18*ease((t-2.40)/.52)
     neck = np.array([164., 101.])
     head = chest @ rotate(-.18 * look)
     return warp(paint, head, chest @ neck + body_offset - head @ neck)
@@ -141,7 +141,7 @@ def hood_underpaint(base):
     """Continue the original crown slope through the old shaft cutout."""
     # Registered keypose 0. The cloth under the original shaft is occluded.
     # Join the two visible slopes and sample their adjacent folds for color.
-    outline = [(139, 85), (145, 80), (152, 77), (158, 75), (164, 75),
+    outline = [(137, 84), (144, 79), (152, 76), (158, 75), (164, 75),
                (164, 101), (158, 102), (146, 104), (139, 99)]
     coverage = Image.new('L', (CELL*4, CELL*4))
     ImageDraw.Draw(coverage).polygon([(x*4, y*4) for x,y in outline], fill=255)
@@ -216,6 +216,8 @@ def make_walk(base):
     hand_paint = np.where(hand[:, :, None], base, 0)
     free_paint = np.where(free_arm[:, :, None], base, 0)
     hood_paint = np.where((hood & ~scythe)[:, :, None], base, 0)
+    backing = hood_underpaint(base)
+    hood_paint += backing * (1-hood_paint[:,:,3:4])
     hand_at = np.array([151., 132.])
     free_shoulder = np.array([165., 131.])
     grid_x, grid_y = xx.astype(np.float32), yy.astype(np.float32)
@@ -267,6 +269,9 @@ def make_walk(base):
                          'ankle': ankle.round(3).tolist()})
         cloth_wave = trailing * (2.4 * math.sin(phase - .9) * (1 - settle))
         cloth_drop = trailing * (1.4 * math.cos(phase - 1.15) * (1 - settle) + 2.2 * settle)
+        brake = ease((t-2.03)/.27) * (1-ease((t-2.30)/.62))
+        cloth_wave += 3.8 * trailing * brake
+        cloth_drop -= 2.7 * trailing * brake
         cloth = cv2.remap(torso, grid_x - cloth_wave, grid_y - cloth_drop, cv2.INTER_LINEAR)
         out = Image.new('RGBA', (CELL,CELL))
         out.alpha_composite(legs[0])
@@ -277,7 +282,7 @@ def make_walk(base):
         free = chest @ rotate(.29 * math.sin(phase - .25) * (1 - settle))
         out.alpha_composite(warp(free_paint, free, chest @ free_shoulder + body_offset - free @ free_shoulder))
         grip = chest @ hand_at + body_offset + np.array([1., -15.0 + 2 * settle])
-        carry = rotate(.245 + .026 * math.sin(phase - .18)*(1-settle) - .035 * settle)
+        carry = rotate(.245 + .026 * math.sin(phase - .18)*(1-settle) - .035 * settle - .065 * brake)
         out.alpha_composite(warp(weapon, carry, grip - carry @ hand_at))
         out.alpha_composite(warp(hand_paint, chest, grip - chest @ hand_at))
         out.paste((0, 0, 0, 0), (0, FLOOR + 1, CELL, CELL))

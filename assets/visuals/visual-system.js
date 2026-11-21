@@ -685,7 +685,9 @@
             .setPosition(e.x,e.y).setVisible(true)
             .setAlpha(1)
             .setRotation(e.mode==='dive'?.10:0);
-          if(s.combatArt?.enemyFlashing(e))s.combatArt.paintEnemyFlash(sprite,V2_SKELETAL_BAT_FRAMES.findIndex(v=>v.name===frame));
+          const turn=e.dead?null:scope.GRIM_ENEMY_MOTION?.skeletalTurn(e,now)??null;
+          if(!s.combatArt?.paintTurn?.(sprite,turn,e)&&s.combatArt?.enemyFlashing(e))
+            s.combatArt.paintEnemyFlash(sprite,V2_SKELETAL_BAT_FRAMES.findIndex(v=>v.name===frame));
         }
       }
       for(let i=used;i<this.skeletalBatPool.length;i++)this.skeletalBatPool[i].setVisible(false);
@@ -725,7 +727,9 @@
         const left=s.cameraX-100,right=s.cameraX+s.width+100,now=Math.max(0,s.elapsed||0);
         for(const e of s.enemies||[]){
           if(e.kind!=='imp'||e.dead||e.x<left||e.x>right||used>=this.emberImpPool.length)continue;
-          const launched=(s.fireballs||[]).some(ball=>ball.owner===e&&!ball.dead&&ball.ageMs<=260);
+          const ball=(s.fireballs||[]).find(ball=>ball.owner===e&&!ball.dead&&ball.ageMs<=260);
+          const releaseAge=Number.isFinite(e.visualCastAt)?(now-e.visualCastAt)*1000:ball?.ageMs??-1;
+          const launched=releaseAge>=0&&releaseAge<=260;
           const motion=scope.GRIM_ENEMY_MOTION;
           const time=motion?motion.cycle(e.x,e.phase,motion.IMP_STRIDE):
             (now*V2_EMBER_IMP_FPS+(e.phase||0))%V2_EMBER_IMP_RUN.length;
@@ -740,7 +744,8 @@
           else sprite.setFrame(frame);
           sprite.setOrigin(meta.origin[0],tween?(245+32)/320:meta.origin[1]).setScale(tween?meta.scale/.6:meta.scale)
             .setPosition(e.x,e.y+22).setVisible(true).setAlpha(1).setRotation(0);
-          if(s.combatArt?.enemyFlashing(e)){
+          const turn=motion?.impTurn(e.warningMs,releaseAge)??null;
+          if(!s.combatArt?.paintTurn?.(sprite,turn,e)&&s.combatArt?.enemyFlashing(e)){
             const slot=tween?12+from:6+V2_EMBER_IMP_FRAMES.findIndex(v=>v.name===frame);
             s.combatArt.paintEnemyFlash(sprite,slot);
           }

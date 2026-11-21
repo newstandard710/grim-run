@@ -173,6 +173,10 @@ async function opening(browser,url){
 }
 async function gameplay(tab, older){
   await start(tab);
+  if(!older)await tab.page.waitForFunction(()=>{
+    const ready=window.grimRun.scene.scenes[0].combatArt.ready;
+    return ready['enemy-attack-turns']&&ready['enemy-attack-turns-hit'];
+  });
   const values=await tab.page.evaluate(older=>{
     const game=window.grimRun,s=game.scene.scenes[0],C=window.GRIM_CONFIG;
     s.sys.sceneUpdate=()=>{}; game.loop.sleep(); clearInterval(s.loopWatchdogId);
@@ -243,7 +247,7 @@ async function gameplay(tab, older){
     };
     const {crawler,imp}=enemies(.5);
     const cv=s.visuals.boneCrawlerPool[0],iv=s.visuals.emberImpPool[0];
-    const warnings=[iv.frame.name];
+    const warningKey=iv.texture.key,warnings=[iv.frame.name];
     imp.warningMs=0;
     for(const ageMs of [0,260,261]){
       s.fireballs=[{owner:imp,ageMs,x:imp.x-12,y:imp.y-11}];draw();
@@ -251,16 +255,17 @@ async function gameplay(tab, older){
     }
     window.grimPolishCapture={game,s,draw,bridge,jump,place,enemies,x};
     return {fill,rewind,air,crawler:{angle:cv.rotation,texture:cv.texture.key,box:window.GRIM_COMBAT.rectFor(crawler)},
-      imp:{warnings,texture:iv.texture.key},snapshot:snapshot()};
+      imp:{warningKey,warnings,texture:iv.texture.key},snapshot:snapshot()};
   },older);
   assert.equal(values.fill.kind,'rubble');
   assert(Number.isFinite(values.fill.ground));
   assert.deepEqual(values.rewind,{kind:'gap',ground:null,visible:0});
   assert(values.air.poses.some(([name,v])=>name==='reaper-jump'&&v>=18));
   assert(values.air.poses.every(([, ,alpha])=>alpha===1));
-  assert.equal(values.imp.warnings[0],'warning');
+  if(!older)assert.equal(values.imp.warningKey,'enemy-attack-turns');
+  assert.equal(values.imp.warnings[0],older?'warning':60);
   assert.equal(values.imp.warnings[1],'release');
-  assert.equal(values.imp.warnings[2],'release');
+  assert.equal(values.imp.warnings[2],older?'release':82);
   assert.notEqual(values.imp.warnings[3],'release');
   if(!older){
     assert(values.fill.visible>0);
@@ -268,7 +273,7 @@ async function gameplay(tab, older){
     assert.equal(values.crawler.texture,'enemy-ground-inbetweens');
     assert.equal(values.imp.texture,'enemy-ground-inbetweens');
     assert(values.air.poses.some(([, , ,name])=>name==='motion-reaper-jump-deliberate' ||
-      name==='motion-reaper-forward-carry'),'The registered air family owns the ordinary jump');
+      name==='motion-reaper-forward-carry'||name==='motion-reaper-air-cloth'),'The registered air family owns the ordinary jump');
     const rise=values.air.poses.slice(0,7);
     assert(rise.every((v,i)=>i===0||v[1]-rise[i-1][1]<1.5),'Short-hop pose remains continuous');
     assert(values.air.poses.slice(6,14).every(([,frame])=>frame===4),

@@ -226,7 +226,7 @@ const server=http.createServer((req,res)=>{
     const state=skeletalStates[i];
     const rendered=await skeletalPage.evaluate(({elapsed,mode,hp,dead})=>{
       const g=window.grimRun,s=g.scene.scenes[0],enemy=s.enemies[0];
-      s.elapsed=elapsed;enemy.mode=mode;s.drawScene();
+      s.elapsed=elapsed;enemy.mode=mode;enemy.timer=.22;s.drawScene();
       if(hp<enemy.hp)s.hitEnemy(enemy,enemy.hp-hp);
       s.drawScene();g.step(performance.now(),0);
       const live=s.visuals.skeletalBatPool.filter(v=>v.visible);
@@ -413,7 +413,7 @@ const server=http.createServer((req,res)=>{
     {elapsed:1/8,warningMs:0,ageMs:null,frame:'run_02'},
     {elapsed:2/8,warningMs:0,ageMs:null,frame:'run_03'},
     {elapsed:3/8,warningMs:0,ageMs:null,frame:'run_04'},
-    {elapsed:.5,warningMs:470,ageMs:null,frame:'warning'},
+    {elapsed:.5,warningMs:190,ageMs:null,frame:'warning'},
     {elapsed:.6,warningMs:0,ageMs:0,frame:'release'}
   ];
   const impHashes=[];

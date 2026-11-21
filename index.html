@@ -1983,28 +1983,28 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0200/animation-data.js?v=ground-drag1"></script>
   <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
   <script src="assets/visuals/rising-cut.js?v=ground-drag1"></script>
-  <script src="assets/visuals/motion-animations.js?v=ground-drag1"></script>
+  <script src="assets/visuals/motion-animations.js?v=character-motion1"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=0.19.12"></script>
   <script src="assets/visuals/slide-animations.js?v=rear-carry1"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
-  <script src="assets/visuals/enemy-motion.js?v=0.19.11"></script>
-  <script src="assets/visuals/combat-animations.js?v=ground-drag1"></script>
+  <script src="assets/visuals/enemy-motion.js?v=character-motion1"></script>
+  <script src="assets/visuals/combat-animations.js?v=character-motion1"></script>
   <script src="assets/combat/v0201/animation-data.js?v=1"></script>
   <script src="assets/visuals/reaper-reaction.js?v=rear-carry1"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=home1"></script>
-  <script src="assets/visuals/visual-system.js?v=ae-scythe1"></script>
+  <script src="assets/visuals/visual-system.js?v=character-motion1"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=0.15.3-tree-roots"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=1"></script>
   <script src="assets/visuals/obstacle-mounts.js?v=3"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
-  <script src="assets/cutscenes/v0197/animation-data.js?v=0.19.12"></script>
-  <script src="assets/visuals/cutscene-motion.js?v=0.19.12-vendor-hood"></script>
+  <script src="assets/cutscenes/v0197/animation-data.js?v=character-motion1"></script>
+  <script src="assets/visuals/cutscene-motion.js?v=character-motion1"></script>
   <script src="assets/visuals/power-animations.js?v=ae-scythe1"></script>
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=0.19.12"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=character-motion1"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/reaper-formation.js?v=portal-summit1"></script>
   <script src="assets/visuals/portal-summit.js?v=portal-summit1"></script>
@@ -3789,6 +3789,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.fireSoulcaster(target);
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
       p.visualFireMs=p.attackMs>0?0:(scope.GRIM_COMBAT_ART?.FIRE_MS||180);
+      p.visualShotMotion=this.combatArt?.shotReady===true;
       this.motionArt?.rising?.acceptBow();
       if(this.powerManager.level('rapidFire'))this.powerArt?.trigger('rapidFire',this.player.x+52,this.player.y-(this.lowProfile?36:65));
       if(this.powerManager.level('powerShot'))this.powerArt?.trigger('powerShot',this.player.x+52,this.player.y-(this.lowProfile?36:65));
@@ -3905,6 +3906,7 @@ window.GRIM_CONFIG = Object.freeze({
                 const dx=p.x-e.x,dy=p.y-45-(e.y-11),distance=Math.max(1,Math.hypot(dx,dy));
                 this.fireballs.push({x:e.x-12,y:e.y-11,vx:dx/distance*300,vy:dy/distance*300,
                   owner:e,reflected:false,dead:false,ageMs:0});
+                e.visualCastAt=this.elapsed;
                 e.fireMs=3000;
               }
             }else{

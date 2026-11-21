@@ -7,6 +7,11 @@
     width:192,height:128,columns:6,frames:36,anchor:[126,65]};
   const ENEMY_FLASH={key:'combat-enemy-hit-flash',url:'assets/enemies/illustrated-v2/enemy-hit-flash-v1.webp?v=1',
     width:128,height:128,columns:8,frames:16,anchor:[64,90]};
+  const SHOT={key:'combat-crossbow-motion',url:'assets/combat/v0201/reaper-crossbow-motion.webp?v=1',
+    width:192,height:144,columns:16,frames:189};
+  const TURN={key:'enemy-attack-turns',url:'assets/enemies/illustrated-v2/attack-turns.webp?v=1',
+    width:128,height:128,columns:12,frames:83};
+  const TURN_HIT={...TURN,key:'enemy-attack-turns-hit',url:'assets/enemies/illustrated-v2/attack-turns-hit.webp?v=1'};
   const DATA={...(scope.GRIM_COMBAT_DATA?.sheets||{})};
   delete DATA['reaper-hurt-death'];
   if(BAT)DATA['bat-flight']=BAT.SPEC;
@@ -65,6 +70,9 @@
       this.batHandoffReady=transitionReady(s,BAT_HANDOFF);
       scope.GRIM_ACTOR_TEXTURES?.load(s,BAT_HANDOFF,()=>{this.batHandoffReady=transitionReady(s,BAT_HANDOFF);});
       scope.GRIM_ACTOR_TEXTURES?.load(s,ENEMY_FLASH,()=>{this.enemyFlashReady=transitionReady(s,ENEMY_FLASH);});
+      for(const art of [SHOT,TURN,TURN_HIT]){
+        scope.GRIM_ACTOR_TEXTURES?.load(s,art,()=>{this.ready[art.key]=transitionReady(s,art);});
+      }
       const pair=(depth)=>[0,1].map(()=>s.add.image(0,0,'combat-reaper-slide-cut',0).setDepth(depth).setVisible(false));
       if(this.ready['reaper-slide-cut']){
         this.reaper=pair(12.05);
@@ -93,6 +101,12 @@
       view.setTexture(ENEMY_FLASH.key,frame).setOrigin(ENEMY_FLASH.anchor[0]/ENEMY_FLASH.width,
         ENEMY_FLASH.anchor[1]/ENEMY_FLASH.height).setScale(1);
     }
+    paintTurn(view,frame,enemy){
+      if(frame===null||!this.ready[TURN.key]||!this.ready[TURN_HIT.key])return false;
+      const hit=this.enemyFlashing(enemy);
+      view.setTexture(hit?TURN_HIT.key:TURN.key,frame).setOrigin(.5,90/128).setScale(1);
+      return true;
+    }
     defeatEntry(e){
       const visuals=this.scene.visuals;
       const pool=e.kind==='bat'?visuals?.batPool:e.kind==='skeletalBat'?visuals?.skeletalBatPool:visuals?.emberImpPool;
@@ -101,7 +115,7 @@
       if(!view)return null;
       const flash=view.texture.key===ENEMY_FLASH.key;
       return {
-        key:flash?view.__grimBaseKey:view.texture.key,frame:flash?view.__grimBaseFrame:view.frame.name,
+        key:flash?view.__grimBaseKey:view.texture.key===TURN_HIT.key?TURN.key:view.texture.key,frame:flash?view.__grimBaseFrame:view.frame.name,
         originX:flash?view.__grimBaseOriginX:view.originX,originY:flash?view.__grimBaseOriginY:view.originY,
         scale:flash?view.__grimBaseScale:view.scaleX,rotation:view.rotation,flip:view.flipX,
         dx:view.__grimBatOffsetX??0,dy:view.__grimBatOffsetY??0
@@ -131,7 +145,8 @@
         corpse.entry=this.defeatEntry(e);
         corpse.drop=flying?(ground==null?84:Math.max(0,Math.min(84,ground-e.y-12))):0;
         const entry=corpse.entry;
-        const skull=e.kind==='skeletalBat'&&SKELETAL_SKULL[entry?.frame];
+        const skull=e.kind==='skeletalBat'&&entry&&(entry.key===TURN.key?
+          scope.GRIM_ENEMY_MOTION.turnSkull(Number(entry.frame),SKELETAL_SKULL):SKELETAL_SKULL[entry.frame]);
         if(skull){
           const [x,y]=skull,cos=Math.cos(entry.rotation),sin=Math.sin(entry.rotation);
           corpse.joinX=x*cos-y*sin-18;corpse.joinY=x*sin+y*cos-7;
@@ -176,6 +191,19 @@
         .clearTint().setAlpha(alpha).setVisible(alpha>0);
       this.reaper[1].setVisible(false);
     }
+    get shotReady(){return Boolean(this.ready[SHOT.key]);}
+    renderShot(progress){
+      const s=this.scene,p=s.player;
+      const gait=scope.GRIM_MOTION_ART?.runAtlasFrame(p.x-(s.startX||0))??0;
+      const band=s.lowProfile?(p.grounded?19:20):p.grounded?Math.round(gait/6)%16:
+        16+(p.velocityY < -100?0:p.velocityY>100?2:1);
+      const frame=band*9+Math.round(progress*8);
+      const rise=p.grounded&&!s.lowProfile?scope.GRIM_MOTION_ART?.runSupportRise(s,p,gait)||0:0;
+      this.reaper[0].setTexture(SHOT.key,frame).setOrigin(112/192,132/144).setScale(1)
+        .setPosition(p.x,s.feetY+rise).setAlpha(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1)
+        .setRotation(0).setFlipX(false).clearTint().setVisible(true);
+      this.reaper[1].setVisible(false);
+    }
     renderReaper(){
       const s=this.scene,p=s.player;if(!p||!s.visuals?.reaperReady||!this.reaper.length)return;
       if(!['playing','paused','rewinding','countdown'].includes(s.state))return;
@@ -193,7 +221,8 @@
       }
       if(name&&this.ready[name]){
         this.hideReaper();const alpha=p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1;
-        this.renderSolidAction(name,t,p.x,s.feetY,scale,alpha,frames);
+        if(this.ready[SHOT.key]&&p.visualShotMotion!==false&&name.includes('crossbow'))this.renderShot(clamp(1-p.visualFireMs/FIRE_MS));
+        else this.renderSolidAction(name,t,p.x,s.feetY,scale,alpha,frames);
         this.reaperState={name,frame:t};
       }
     }

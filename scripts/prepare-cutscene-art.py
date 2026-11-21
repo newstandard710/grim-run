@@ -7,13 +7,11 @@ from pathlib import Path
 import argparse
 import json
 import hashlib
-import subprocess
-from io import BytesIO
 import cv2
 import numpy as np
 from PIL import Image
 from scipy.ndimage import label, distance_transform_edt
-from cutscene_walk_rig import hood_underpaint, make_walk, place_hood, upper_body_pose
+from cutscene_walk_rig import make_walk
 from bow_rig import build as build_bow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,36 +66,6 @@ def register(name):
         records[i] = {'pose': i, 'foot': foot, 'sourceBounds': bounds}
     return poses, hands, records
 
-def restore_vendor_hood(path, base, frames):
-    """Paint behind the raised shaft using the PR96 vendor atlas as the base."""
-    # The released blob already includes the approved PR93 greave alpha.
-    blob = 'f05e4b7bf10e82094a483401d75f94333ae0060a'
-    released = subprocess.check_output(['git', 'cat-file', 'blob', blob], cwd=ROOT)
-    with Image.open(BytesIO(released)) as image:
-        sheet = np.array(image.convert('RGBA'))
-    assert sheet.shape == (((frames+COLS-1)//COLS)*CELL, COLS*CELL, 4)
-    patch = hood_underpaint(base)
-    bounds = []
-    for frame in range(frames):
-        x, y = frame % COLS * CELL, frame // COLS * CELL
-        tile = sheet[y:y+CELL, x:x+CELL]
-        t = frame * 3 / (frames-1)
-        _, _, _, chest, offset = upper_body_pose(t)
-        backing = place_hood(patch, t, chest, offset)
-        # Preserve opaque fabric, face and scythe. Only add paint where the
-        # rejected shaft overlap left transparent or antialiased pixels.
-        uncovered = (tile[:,:,3] < 255) & (np.asarray(backing)[:,:,3] >= 8)
-        composite = np.asarray(Image.alpha_composite(backing, Image.fromarray(tile)))
-        tile[uncovered] = composite[uncovered]
-        bounds.append(Image.fromarray(tile[:,:,3]).getbbox())
-    # Quantize RGB by at most one code value, then encode losslessly. Keep
-    # exact alpha and avoid a second lossy YUV resampling of the whole atlas.
-    rgb = sheet[:,:,:3]
-    rgb[:] = ((rgb.astype(np.uint16)+1)//3)*3
-    Image.fromarray(sheet).save(path, lossless=True, quality=90, method=6)
-    return bounds
-
-
 def build(kind):
     name = 'reaper-' + kind + '-keyposes.png'
     poses, hands, registration = register(name)
@@ -139,7 +107,7 @@ def build(kind):
     if kind == 'bow':
         sheet.save(file, optimize=True)
     else:
-        bounds = restore_vendor_hood(file, vendor_base, len(frames))
+        sheet.save(file, quality=91, alpha_quality=100, method=6)
     meta = {**digest(file), 'size': sheet.size, 'frames': len(frames), 'cell': [CELL,CELL], 'anchor': ANCHOR.tolist(), 'bounds': bounds}
     if kind == 'bow':
         file = OUT / 'bow-hands.png'

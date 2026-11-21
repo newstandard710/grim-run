@@ -142,7 +142,7 @@ def ik(shoulder,hand,lengths,side):
 
 
 T=np.array([0,.25,.43,.58,.70,.80,.89,1])
-PATH=np.array([[160,181],[166,164],[173,144],[173,117],[168,96],[154,78],[137,72],[125,70]],dtype=float)
+PATH=np.array([[160,181],[163,164],[169.5,144],[172,117],[168,96],[154,78],[137,72],[125,70]],dtype=float)
 WRIST=PchipInterpolator(T,PATH,axis=0)
 TURN=PchipInterpolator(T,[0,.07,.20,.41,.52,.38,.17,.05])
 
@@ -152,7 +152,7 @@ def head_transform(frame,bend):
     reach=min(frame/72,1)
     lift=max((frame-72)/96,0)
     retract=np.sin(lift*np.pi/2)**2
-    angle=HINGE*bend+.13*smooth(reach)*(1-lift)-.08*retract
+    angle=HINGE*bend+.15*smooth(reach/.59)*(1-lift)-.08*retract
     c,s=np.cos(angle),np.sin(angle)
     R=np.array([[c,-s],[s,c]])
     neck=body_point(NECK,bend)+np.array([-7.,7.])*retract
@@ -162,14 +162,14 @@ def head_transform(frame,bend):
 def pose(frame):
     if frame<=72:
         q=np.clip(frame/72,0,1)
-        bend=q
+        bend=q-.052*np.sin(2*np.pi*q)
         near=np.array([125.,174.])*(1-q)+PATH[0]*q
         support=smooth((q-.14)/.86)
         far=np.array([160.,171.])*(1-support)+(PATH[0]+STOCK_SPAN)*support
         angle=0.0
     else:
         q=(frame-72)/96
-        bend=1-smooth(q/.69)
+        bend=1-smooth(q/.72)+.035*np.sin(np.pi*min(1,q/.20))**2
         near=WRIST(q)
         angle=float(TURN(q))
         c,s=np.cos(angle),np.sin(angle)

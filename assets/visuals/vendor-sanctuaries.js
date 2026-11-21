@@ -5,7 +5,7 @@
   const smooth=v=>{v=clamp(v,0,1);return v*v*(3-2*v);};
   const HALF_METERS=25,VENDOR_SCALE=1.75;
   const CANVAS_CELLS=24,CANVAS_WIDTH=272,CANVAS_HEIGHT=224;
-  const CANVAS_URL='assets/cutscenes/v0197/vendor-canvas.webp?v=0.19.11';
+  const CANVAS_URL='assets/cutscenes/v0197/vendor-canvas.webp?v=character-motion1';
   const textureFor=kind=>kind==='devil'?'vendor-demon':'vendor-angel';
   const cinematicElapsed=s=>Math.max(0,(scope.GRIM_CONFIG.vendorIntroDurationMs-s.vendorIntroMs)/1000);
   function preload(s){
@@ -133,7 +133,7 @@
         .setPosition(vx+(i?w*.20:-w*.20-leftClearance),ground+9).setDisplaySize(w*.21,h*.82).setVisible(true));
       const width=h*(devil?.88:.85);
       if(p.canvas){
-        const cell=Math.floor(t/A.VENDOR_ANIMATION_SECONDS*(CANVAS_CELLS-1));
+        const cell=A.merchantCellAt(t);
         p.canvas.setFrame(cell+(devil?CANVAS_CELLS:0)).setOrigin(.5,216/CANVAS_HEIGHT)
           .setPosition(vx,ground+5).setDisplaySize(width*CANVAS_WIDTH/256,h*.72*CANVAS_HEIGHT/208).setVisible(true);
       }else if(!A.placeMerchant(p.mesh,s,p.key,vx,ground+5,width,h*.72,t,devil)){

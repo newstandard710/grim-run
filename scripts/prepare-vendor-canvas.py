@@ -21,7 +21,7 @@ require('./assets/visuals/cutscene-motion.js');
 const A = global.GRIM_CUTSCENES;
 const [frames, nx, ny] = process.argv.slice(1).map(Number);
 const poses = [false,true].flatMap(devil => Array.from({length:frames},(_,i)=>{
-  const t = i/(frames-1)*A.VENDOR_ANIMATION_SECONDS;
+  const t = A.merchantSampleTime(i);
   return Array.from({length:(nx+1)*(ny+1)},(_,j)=>{
     const p = A.merchantPoint((j%(nx+1))/nx,Math.floor(j/(nx+1))/ny,t,devil);
     return [p.x,p.y];
@@ -76,6 +76,6 @@ for kind,actor in enumerate(ACTORS):
     for i in range(FRAMES):
         k = kind*FRAMES+i
         atlas.paste(paint(source,poses[k]),(k%COLUMNS*cell[0],k//COLUMNS*cell[1]))
-atlas.save(DESTINATION,quality=79,method=6,exact=False)
+atlas.save(DESTINATION,quality=77,method=6,exact=False)
 raw = DESTINATION.read_bytes()
 print(f'{DESTINATION.name}: {atlas.size}, {len(raw):,} bytes, SHA-256 {hashlib.sha256(raw).hexdigest()}')
