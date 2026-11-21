@@ -288,6 +288,12 @@ async function parity(browser) {
   };
   const forest = async page => page.evaluate(() => {
     const b = window.biomeReview;
+    // This historical pixel comparison isolates midground scenery. Use the
+    // original cap on both sides; the ridge has its own two-renderer pixel test.
+    const surfaceView=b.scene.terrainSurfaceView;
+    b.scene.terrainSurfaceView=function(section,edge,sheen,detail,activeKeys,biome){
+      return surfaceView.call(this,section,edge,sheen,detail,activeKeys,biome);
+    };
     // Compare the Forest scenery independently of revised supports and Reaper art.
     // The obstacle and motion suites exercise those layers at their own entry points.
     for (const sprite of b.scene.obstacleSupportObjects.values()) sprite.destroy();
