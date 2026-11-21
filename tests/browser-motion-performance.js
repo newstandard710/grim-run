@@ -27,7 +27,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   assert(pixels['reaper-jump'].slice(18).every(v=>Math.abs(v.bottom-279)<=1),'All grounded landing drawings register to the same foot line');
   await page.waitForFunction(()=>{
     const art=window.grimRun.scene.scenes[0].motionArt;
-    return art.forwardReady&&art.airReady&&art.airCutReady;
+    return art.forwardReady&&art.airReady&&art.airCutReady&&art.airClothReady;
   },null,{timeout:45000});
   await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.sys.sceneUpdate=()=>{};s.state='paused';s.ui.setMode('playing');s.player.invulMs=0;s.player.visualHurtMs=0;s.obstacles=[];s.enemies=[];s.powerManager.levels.soulCleave=0;});
@@ -83,15 +83,23 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    const s=grimRun.scene.scenes[0],p=s.player,a=s.motionArt;
    Object.assign(p,{grounded:false,jumpAgeMs:390,velocityY:0,visualLandingMs:0,attackMs:0});
    s.drawScene();
-   const carry=Number(a.body[0].frame.name),carryAngle=a.weapon.rotation;
+   const cloth={key:a.body[0].texture.key,frame:Number(a.body[0].frame.name)};
+   const carryAngle=a.weapon.rotation,grip=[a.weapon.x,a.weapon.y];
+   a.airClothReady=false;
+   s.drawScene();
+   const carry=Number(a.body[0].frame.name),baseGrip=[a.weapon.x,a.weapon.y];
+   a.airClothReady=true;
+   s.drawScene();
    p.attackMs=260;s.swingSequence++;
    s.drawScene();
    const palm=[a.weapon.x-p.x,a.weapon.y-s.feetY];
    const angle=a.weapon.rotation;
    p.attackMs=0;
-   return {carry,carryAngle,palm,angle};
+   return {carry,cloth,grip,baseGrip,carryAngle,palm,angle};
   });
-  assert.equal(airJoin.carry,115,'The middle air carry owns the apex');
+  assert.deepEqual(airJoin.cloth,{key:'motion-reaper-air-cloth',frame:9},'The held apex paints the cloak at its current phase');
+  assert.equal(airJoin.carry,115,'The middle air carry supplies the underlying apex pose');
+  assert.deepEqual(airJoin.grip,airJoin.baseGrip,'The moving cloak keeps the hand registered to the scythe');
   assert(Math.hypot(airJoin.palm[0]+22,airJoin.palm[1]+56)<.001,'Cut starts on the apex carry palm');
   assert(Math.abs(airJoin.carryAngle+Math.PI/2)<.06,'The apex carry holds the scythe behind the Reaper');
   assert(Math.abs(airJoin.angle-airJoin.carryAngle)<.000001,'Cut starts on the apex carry shaft angle');

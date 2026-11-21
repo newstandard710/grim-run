@@ -9,12 +9,16 @@
   function preload(s){
     for(const [key,file,cell,count] of [['cutscene-bow','reaper-bow.png',CELL,BOW_FRAMES],
       ['cutscene-vendor','reaper-vendor.webp',CELL,VENDOR_FRAMES],['cutscene-hands','bow-hands.png',64,BOW_FRAMES]])
-      s.load.spritesheet(key,ROOT+file+(key==='cutscene-vendor'?'?v=0.19.12-vendor-hood':'?v=0.19.11'),
+      s.load.spritesheet(key,ROOT+file+'?v=character-motion1',
         {frameWidth:cell,frameHeight:cell,endFrame:count-1});
   }
   function relicMotionAt(t){
     t=Math.max(0,t);
-    const pose=t<.22?0:t<1.65?72*smooth((t-.22)/1.43):t<1.78?72:t<3?72+96*smooth((t-1.78)/1.22):168;
+    // Carry some velocity through contact. The hands start taking the load
+    // as the body finishes bending, then the legs and arms lift it together.
+    const reach=clamp(t/1.65), lift=clamp((t-1.65)/1.35);
+    const pose=t<1.65?72*reach*reach*(3-2*reach)+49.5*reach*reach*(reach-1):
+      72+96*lift*lift*(3-2*lift)+40.5*lift*(1-lift)*(1-lift);
     const hold=t>=HOLD_START&&t<HOLD_START+HOLD_SECONDS;
     // Quantization must not select the final painting early: the raised
     // drawing, glow clock and one-second exit all begin on the same boundary.
@@ -45,16 +49,19 @@
     return 2.5+.5*(u+u*u-u*u*u);
   }
   function merchantPose(t,devil=false){
-    const dip=devil?smooth((t-1.56)/1.03):smooth((t-1.50)/.96);
-    const greet=smooth((t-1.92)/.75),offer=smooth((t-2.25)/.53);
-    const ambient=vendorAmbientTime(t),rest=1-smooth((t-2.55)/.45);
-    const swing=Math.sin((t-1.88)*9)*smooth((t-1.88)/.33)*rest;
-    const headAngle=-(devil?.29:.25)*dip;
-    const armAngle=-.51*(1-offer);
+    const dip=smooth((t-(devil?1.53:1.50))/(devil?.77:.62));
+    const answer=smooth((t-2.12)/.72);
+    const offer=smooth((t-2.02)/.79), wrist=smooth((t-2.22)/.61);
+    const rest=t>=3?0:1-smooth((t-2.56)/.44);
+    const swing=Math.sin((t-1.69)*8.4)*smooth((t-1.69)/.35)*rest;
+    const headAngle=devil?-.31*dip+.045*answer:-.36*dip+.10*answer;
+    const armAngle=-.55*(1-offer);
+    const ambient=vendorAmbientTime(t);
     return {dip,headAngle,headCos:Math.cos(headAngle),headSin:Math.sin(headAngle),
-      lean:devil?-.019*offer-.009*dip:-.026*greet,
-      breath:Math.sin(ambient*1.45)*.0025,cloth:Math.sin(ambient*1.15-.5)*.002,
-      armCos:Math.cos(armAngle),armSin:Math.sin(armAngle),offer,lantern:.012*swing};
+      lean:devil?-.027*offer-.014*dip:-.038*dip+.012*answer,
+      breath:Math.sin(ambient*1.45)*.003,cloth:Math.sin(ambient*1.15-.5)*.002,
+      armCos:Math.cos(armAngle),armSin:Math.sin(armAngle),offer,wrist,
+      lantern:.029*swing};
   }
   function deformMerchant(u,v,p,devil){
     const upper=1-smooth((v-.32)/.55);
@@ -71,12 +78,22 @@
       const ax=u-.42,ay=v-.37;
       x+=(ax*p.armCos-ay*p.armSin-ax+.023*(1-p.offer))*zone;
       y+=(ax*p.armSin+ay*p.armCos-ay)*zone;
+      // Let the fingertips trail the elbow as the open palm turns upward.
+      y+=.055*(p.offer-p.wrist)*zone*(1-smooth((u-.25)/.09));
     }else{
       // Weight the lantern below its hook and exclude the hand on the staff.
       const suspended=smooth((v-.17)/.17)*(1-smooth((u-.318)/.051))*(1-smooth((v-.46)/.11));
       x+=p.lantern*suspended;
     }
     return {x,y};
+  }
+  // Spend most Canvas samples in the greeting; the first seconds have
+  // only a little breathing. Both renderers use the same authored clock.
+  function merchantSampleTime(i){
+    return i<=4?i*1.5/4:1.5+(i-4)*1.5/19;
+  }
+  function merchantCellAt(t){
+    return Math.min(t<3?22:23,Math.round(t<=1.5?t*4/1.5:4+(t-1.5)*19/1.5));
   }
   function merchantPoint(u,v,t,devil=false){
     return deformMerchant(u,v,merchantPose(t,devil),devil);
@@ -110,5 +127,5 @@
   }
   scope.GRIM_CUTSCENES={CELL,ANCHOR,BOW_FRAMES,VENDOR_FRAMES,SHRINE_MS,HOLD_START,HOLD_SECONDS,VENDOR_ANIMATION_SECONDS,VENDOR_SETTLED_FRAME,
     vendorVisualTime,vendorAmbientTime,
-    vendorTravel,WALK_DISTANCE,preload,relicMotionAt,approachAt,merchantPose,merchantPoint,createMerchantMesh,placeMerchant};
+    vendorTravel,WALK_DISTANCE,merchantSampleTime,merchantCellAt,preload,relicMotionAt,approachAt,merchantPose,merchantPoint,createMerchantMesh,placeMerchant};
 })(typeof window!=='undefined'?window:globalThis);

@@ -4,11 +4,11 @@ const root=path.resolve(__dirname,'..'),w={};w.window=w;vm.createContext(w);
 for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-data.js','assets/cutscenes/v0197/animation-data.js'])vm.runInContext(fs.readFileSync(path.join(root,p),'utf8'),w);
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-assert(html.includes('assets/cutscenes/v0197/animation-data.js?v=0.19.12'));
+assert(html.includes('assets/cutscenes/v0197/animation-data.js?v=character-motion1'));
 assert(html.includes('assets/visuals/power-animations.js?v=ae-scythe1"></script>'),'Bow uses the versioned power renderer');
-assert(html.includes('assets/visuals/cutscene-motion.js?v=0.19.12-vendor-hood"></script>'));
+assert(html.includes('assets/visuals/cutscene-motion.js?v=character-motion1"></script>'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
-assert(loaded.every(([key,url])=>url.endsWith(key==='cutscene-vendor'?'?v=0.19.12-vendor-hood':'?v=0.19.11')));
+assert(loaded.every(([key,url])=>url.endsWith('?v=character-motion1')));
 assert.equal(A.SHRINE_MS,4000);assert.equal(A.HOLD_SECONDS,1);assert.equal(A.HOLD_START,3);assert.equal(A.VENDOR_ANIMATION_SECONDS,3);assert.equal(A.VENDOR_SETTLED_FRAME,192);
 let last=-1;const frames=new Set();
 for(let ms=0;ms<4000;ms++){
@@ -16,6 +16,8 @@ for(let ms=0;ms<4000;ms++){
  assert.equal(p.hold,ms>=3000);if(ms<3000){assert.equal(p.glow,0);assert(p.frame<168,'The final raised drawing cannot be selected before the hold starts');}
 }
 assert.equal(frames.size,169);
+const contactFrames=new Set(Array.from({length:431},(_,i)=>A.relicMotionAt(1.454+i/1000).frame));
+assert(contactFrames.size>=14,'Weight continues moving through the clasp');
 for(const t of [3,3.1,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168);
 assert.equal(A.relicMotionAt(4).hold,false);assert.equal(A.relicMotionAt(1.649).grabbed,false);assert(A.relicMotionAt(1.65).grabbed);
 const low=D.bow.hands[72][0],high=D.bow.hands[168][0];
@@ -100,7 +102,8 @@ for(const height of [360,430]){
   assert(drift<.65,'The interpolated root stays registered to the sampled paint');
  }
 }
-assert.equal(A.merchantPose(2.2,true).offer,0);
+assert.equal(A.merchantPose(2.02,true).offer,0);
+assert(A.merchantPose(2.30,true).offer>A.merchantPose(2.30,true).wrist);
 assert(A.merchantPose(2.55,true).offer>.45);
 assert.equal(A.merchantPose(3,true).offer,1);
 assert(A.merchantPose(3,false).lantern===0);
