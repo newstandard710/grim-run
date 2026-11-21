@@ -1987,6 +1987,8 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
   <script src="assets/visuals/rising-cut.js?v=ground-drag1"></script>
   <script src="assets/visuals/motion-animations.js?v=tuck-scale1"></script>
+  <script src="assets/motion/landing/poses.js?v=1"></script>
+  <script src="assets/visuals/landing-motion.js?v=1"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=0.19.12"></script>
   <script src="assets/visuals/slide-animations.js?v=rear-carry1"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
@@ -2323,6 +2325,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.worldPolish=scope.GRIM_WORLD_POLISH?new scope.GRIM_WORLD_POLISH.WorldPolish(this):null;
       this.motionArt=scope.GRIM_MOTION_ART?new scope.GRIM_MOTION_ART.MotionAnimations(this):null;
       this.slideArt=scope.GRIM_SLIDE_ART?new scope.GRIM_SLIDE_ART.GroundSlideAnimations(this):null;
+      this.landingArt=scope.GRIM_LANDING_MOTION?new scope.GRIM_LANDING_MOTION(this):null;
       this.reactionArt=scope.GRIM_REAPER_REACTION?new scope.GRIM_REAPER_REACTION.ReaperReaction(this):null;
       this.reactionLoadFailed=Boolean(this.load?.spritesheet)&&!this.reactionArt?.ready;
       if(this.reactionLoadFailed){
@@ -3686,12 +3689,14 @@ window.GRIM_CONFIG = Object.freeze({
           const groundHit=(!landed&&!p.hovering&&(p.velocityY>=0||uphillCrossing))
             ? Core.sweptTerrainLanding(this.terrain.groundAt.bind(this.terrain),
               previousX,p.x,priorY,p.y,p.velocityY) : null;
+          const arrivalVy=p.velocityY;
           if(landed){
             p.y=landed.y;p.velocityY=0;p.grounded=true;p.onSoulPlatform=landed.id;p.coyoteMs=0;
           }else if(groundHit!==null&&groundHit!==undefined){
             p.y=groundHit;p.velocityY=0;p.grounded=true;p.onSoulPlatform=false;p.coyoteMs=0;
           }
           if(p.grounded){
+            this.landingArt?.contact(arrivalVy);
             snowLanding=groundHit!==null&&groundHit!==undefined;
             if(this.motionArt?.ready)p.visualLandingMs=scope.GRIM_MOTION_ART.LAND_MS;
             p.jumpHeld=false;p.jumpAgeMs=0;p.jumpsUsed=0;p.airJumpUsed=false;p.airTuck=false;
@@ -4566,6 +4571,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.combatArt?.render();
       this.motionArt?.render();
       this.drawGroundSlide();
+      this.landingArt?.render();
       this.reactionArt?.render();
       this.combatArt?.renderTimeEchoes();
       this.vendorArt?.renderCinema();
