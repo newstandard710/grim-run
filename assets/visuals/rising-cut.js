@@ -2,11 +2,18 @@
   'use strict';
   const clamp = (v, a, b) => Math.max(a,Math.min(b,v));
   const mix = (a,b,t) => a+(b-a)*t;
-  function pose(spec, name, time){
-    const a=clamp(time,0,spec.duration), i=Math.floor(a);
-    const frames=spec.poses[name].frames;
-    const frame=frames[i].map((v,j)=>mix(v,frames[Math.min(i+1,spec.duration)][j],a-i));
-    return {hand:frame.slice(0,2), matrix:frame.slice(2,6), shoulder:frame.slice(6,8), angles:frame.slice(8)};
+  function pose(keys, time){
+    const next=keys.findIndex(key=>key[0]>=time);
+    if(next<=0)return keys[next===0?0:keys.length-1].slice(1);
+    const left=keys[next-1],right=keys[next],span=right[0]-left[0];
+    const before=keys[next-2],after=keys[next+1];
+    const t=(time-left[0])/span,t2=t*t,t3=t2*t;
+    return left.slice(1).map((a,i)=>{
+      const j=i+1,b=right[j];
+      const u=before?(b-before[j])*span/(right[0]-before[0]):0;
+      const v=after?(after[j]-a)*span/(after[0]-left[0]):0;
+      return a+(b-a)*(3*t2-2*t3)+u*(t3-2*t2+t)+v*(t3-t2);
+    });
   }
   function project(bank,yaw,pitch){
     const c=Math.cos(bank),s=Math.sin(bank),yc=Math.cos(yaw),ys=Math.sin(yaw),pc=Math.cos(pitch),ps=Math.sin(pitch);
@@ -50,6 +57,30 @@
 (function(scope){
   'use strict';
   const DATA=scope.GRIM_RISING_CUT_DATA;
+  // Age, grip, shoulder, and unwrapped bank/yaw/pitch in degrees. The blade
+  // drops behind, sweeps low, climbs ahead of the body, then settles over
+  // the shoulder. One rotation returns to the original bank.
+  const SWING=[
+    [0,  -18,-55, -1,-55,  -90,  0, 0],
+    [12, -18,-56, -1,-55,  -93, -2, 6],
+    [26, -20,-67, -2,-56, -110,-12,30],
+    [47, -19,-69, -3,-56, -142,-16,45],
+    [66, -15,-66, -5,-54, -172, -1,49],
+    [82,  -9,-65, -4,-54, -197,  9,58],
+    [97,  -2,-65, -2,-54, -221,  9,58],
+    [112,  7,-65,  0,-55, -242,  3,54],
+    [130, 17,-65,  4,-57, -264, -1,37],
+    [151, 24,-63,  7,-59, -287, -1,17],
+    [175, 26,-63,  8,-61, -308,  1, 8],
+    [200, 23,-68,  7,-65, -329,  2, 8],
+    [225, 15,-73,  4,-65, -350,  5,14],
+    [249,  5,-72,  0,-62, -375,  8,20],
+    [278, -7,-67, -2,-59, -401,  9,23],
+    [308,-15,-62, -2,-57, -422,  7,18],
+    [333,-18,-59, -2,-56, -441,  3,10],
+    [355,-18,-55, -1,-55, -450,  0, 0],
+  ];
+  const END=SWING.at(-1)[0],DEG=Math.PI/180;
   function preload(scene,motion){
     if(!DATA||!scope.Image||!scene.textures?.addCanvas)return;
     const pending=[],sources={},arts=Object.entries(DATA.arts);
@@ -91,7 +122,7 @@
   }
   function create(s,m,{body,arm:limbs,compact:compactAtlas}){
   const {paint,spec,compactPaint}=DATA;
-  const variant='extension',C=scope.GRIM_CONFIG,G=scope.RisingGeometry;
+  const C=scope.GRIM_CONFIG,G=scope.RisingGeometry;
   const forward=scope.GRIM_FORWARD_SCYTHE,Core=scope.GRIM_CORE,keys=[0,4,12,16,18,20,23];
   const compactSpec={bounds:[12,-140,138,-4],pad:0};
   // The torso warp already lives in CPU pixels. Compose it on a CPU canvas
@@ -110,13 +141,6 @@
   let recentCompact=null,glints=[];
   const lerp=(a,b,w)=>a.map((v,j)=>G.mix(v,b[j],w));
   const smooth=x=>{x=G.clamp(x,0,1);return x*x*(3-2*x);};
-  function preloadProgress(t){
-    // Integrate a short acceleration/deceleration at each end of the turn.
-    // This lets the point travel smoothly into the fixed active-start pose.
-    if(t<9)return t*t/18/43;
-    if(t>43)return 1-(52-t)*(52-t)/18/43;
-    return (t-4.5)/43;
-  }
   const auth=()=>s.player.risingCut;
   const riseAge=()=>C.attackCooldownMs-(s.player.attackCooldownMs||0);
   const compact=p=>s.lowProfile||p.sliding||p.airTuck||(!p.grounded&&((p.visualTuckReleaseMs||0)>0||(p.visualTuckMs||0)>0));
@@ -160,52 +184,27 @@
     const cell=part===0?18+left:part===4?18+right:left*3+part-1;
     return {frame:96+cell,rise};
   }
-  function at(time,recover=false){
-    // Accelerate the post-contact return into the back plane. By the first
-    // eligible post-cut shot the scythe hand is already near the cape.
-    if(recover&&time>205.4)time+=(355-time)*.36*smooth((time-205.4)/55);
-    const key=carryFrame(), carried=paint.poses[key.frame], p=s.player;
-    const still=G.pose(spec,variant,time);
-    const w=Math.min(smooth(time/42),smooth((355-time)/70));
-    const [cx,cy]=carried.hand;
-    const bank=m.trailingRotation(p.x+cx,s.feetY+cy+key.rise);
-    const hand=lerp(carried.hand,still.hand,w);
-    const shoulder=lerp(carried.shoulder,still.shoulder,w);
-    const [restYaw,restPitch]=still.angles.slice(1).map(a=>w*a*Math.PI/180);
-    const activeStart=spec.poses[variant].frames[52][8]*Math.PI/180;
-    const baseBank=time<52?G.mix(bank,activeStart,preloadProgress(time)):
-      G.mix(bank,still.angles[0]*Math.PI/180,w);
-    // Finite support can require extra vertical clearance as the grip rolls over
-    // a crest. Apply the same one rigid body/weapon translation to cue and hit.
+  function at(time){
+    const key=carryFrame(),carried=paint.poses[key.frame],p=s.player;
+    const [x,y,sx,sy,turn,yaw,pitch]=G.pose(SWING,time);
+    const w=Math.min(smooth(time/36),smooth((END-time)/50));
+    const carryHand=forward.rear.hands[key.frame], [cx,cy]=carryHand;
+    const rest=w<1?m.trailingRotation(p.x+cx,s.feetY+cy+key.rise):0;
+    const bank=turn*DEG+(1-w)*(rest+Math.PI/2);
+    const hand=lerp(carryHand,[x,y],w),shoulder=lerp(carried.shoulder,[sx,sy],w);
+    const matrix=G.project(bank,yaw*DEG,pitch*DEG);
     const platform=p.onSoulPlatform===false?null:(s.soulPlatform||[]).find(q=>q.id===p.onSoulPlatform);
-    const ground=s.terrain.groundAt(p.x),back=s.terrain.groundAt(p.x-86);
-    const bankAssist=Number.isFinite(ground)&&Number.isFinite(back)?
-      .95*smooth((ground-back-10)/56)*smooth((time-260)/54)*smooth((355-time)/34):0;
-    let turn=baseBank+bankAssist,matrix=G.project(turn,restYaw,restPitch);
-    function floorClearance(orientation){
-      let gap=Infinity;
-      for(const [dx,dy] of G.transform(forward.rear.outline,{hand,matrix:orientation})){
-        const wx=p.x+dx,wy=s.feetY+dy+key.rise;
-        const y=s.terrain.groundAt(wx);
-        if(Number.isFinite(y))gap=Math.min(gap,y-wy);
-        if(platform&&wx>=platform.x&&wx<=platform.x+platform.width)gap=Math.min(gap,platform.y-wy);
-      }
-      return gap;
+    let gap=Infinity;
+    for(const [dx,dy] of G.transform(forward.rear.outline,{hand,matrix})){
+      const wx=p.x+dx,wy=s.feetY+dy+key.rise,y=s.terrain.groundAt(wx);
+      if(Number.isFinite(y))gap=Math.min(gap,y-wy);
+      if(platform&&wx>=platform.x&&wx<=platform.x+platform.width)gap=Math.min(gap,platform.y-wy);
     }
-    let gap=floorClearance(matrix);
-    // Pivot the returning weapon through the shoulder plane before lifting the
-    // character's arm. The authoritative stroke remains on the sampled pose.
-    if(gap<6&&time>260){
-      const cap=Math.min(.15,turn+.95);
-      for(let i=1;i<=12;i++){
-        const next=G.project(G.mix(turn,cap,i/12),restYaw,restPitch),margin=floorClearance(next);
-        if(margin>gap){matrix=next;gap=margin;}
-        if(gap>=6)break;
-      }
-    }
-    const lift=Math.max(0,6-gap);
+    // Fade any clearance adjustment into the untouched carry at the joins.
+    // Keep the blade, hand, and collision edge under one transform.
+    const lift=Math.max(0,6-gap)*w;
     hand[1]-=lift;shoulder[1]-=lift;
-    return {...key,carried,hand,shoulder,matrix,gap:gap+lift,lift,w,span:Math.hypot(hand[0]-shoulder[0],hand[1]-shoulder[1])};
+    return {...key,carried,hand,shoulder,matrix,w};
   }
   function acceptCut(){
     const p=s.player;
@@ -220,18 +219,27 @@
   }
   function acceptBow(){
     const p=s.player,owner=auth();
-    if(owner?.mode==='rise'&&p.visualFireMs>0&&riseAge()<=355) switchOwner(p,owner,'yield','bow');
+    if(owner?.mode==='rise'&&p.visualFireMs>0&&riseAge()<=END) switchOwner(p,owner,'yield','bow');
   }
-  function contactTest(){
+  function wantsContactTest(){
+    const p=s.player,[start,end]=spec.active;
+    return p.previousAttackMs>p.attackMs&&C.attackDurationMs-p.previousAttackMs<=end&&
+      C.attackDurationMs-p.attackMs>=start&&resolve()?.mode==='rise';
+  }
+  function contactTest(previousRoot){
     const stage=resolve(),frame=compactFrame(stage);
     glints=[];
     if(stage?.mode!=='rise'&&frame===null){recentCompact=null;return null;}
-    const p=s.player,previous=260-p.previousAttackMs,now=260-p.attackMs;
+    const p=s.player,previous=C.attackDurationMs-p.previousAttackMs,now=C.attackDurationMs-p.attackMs;
     const edgeSpec=frame===null?spec:compactSpec;
     // Keep current-cel checks and the verified same-cel projectile correction.
     // Clamp each pose to its original legal edge. No hidden bridge across cels.
     const edges=frame===null?G.samples(spec,previous,now,t=>{
       const pose=at(t);return G.transform(spec.edge,pose).map(([x,y])=>[x,y+pose.rise]);
+    }).map(sample=>{
+      if(!previousRoot||now===previous)return sample;
+      const remaining=(now-sample.ms)/(now-previous);
+      return {...sample,origin:[(p.x-previousRoot[0])*remaining,(s.feetY-previousRoot[1])*remaining]};
     }):compactSamples(stage,frame,previous,now);
     return (target,ball)=>{
       if(!edges.length)return false;
@@ -339,11 +347,11 @@
       ctx.drawImage(limbs,0,k*2,k,k,0,0,k,k);
       ctx.restore();
     }
-    return elbow;
   }
-  function weapon(pose){
+  function weapon(pose,alpha=1){
     const art=forward.weapon, image=s.textures.get(art.key).getSourceImage(),[a,b,c,d]=pose.matrix;
     ctx.save();
+    ctx.globalAlpha=alpha;
     ctx.transform(a,c,b,d,...pose.hand);
     ctx.scale(art.scale,art.scale);
     ctx.translate(...art.anchor.map(x=>-x));
@@ -354,36 +362,29 @@
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,box.width,box.height);
     ctx.setTransform(2,0,0,2,2*X,2*Y);
-    const front=time>=57&&time<=237;
-    if(!front)weapon(f);
+    const front=smooth((time-34)/42)*smooth((277-time)/36);
+    if(front<1)weapon(f);
     drawCell(f.frame);
     torso(f);
-    const elbow=arm(f,'arm');
-    if(front)weapon(f);
+    arm(f,'arm');
+    if(front>0)weapon(f,front);
     arm(f,'hand');
     const p=s.player;
     light.refresh();
     sprite.setPosition(p.x-X,s.feetY+f.rise-Y).setAlpha(p.invulMs>0&&Math.floor(s.elapsed/.083333)%2===0?.58:1)
       .setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
-    if(time>=52&&time<=205.4){
+    const [start,end]=spec.active;
+    if(time>=start&&time<=end){
       const edge=G.transform(spec.edge,f).map(([x,y])=>[p.x+x,s.feetY+y+f.rise]);
-      // Draw the legal part of the exact edge. A clipped segment outside the
-      // front bounds stays physical paint only. Avoid a detached glow.
-      const bounds=[p.x+15,s.feetY-140,p.x+141,s.feetY-10];
+      const [x,y,X,Y]=spec.bounds,bounds=[p.x+x,s.feetY+y,p.x+X,s.feetY+Y];
       for(const [width,alpha] of [[6,.20],[2,.85]]){
         ink.lineStyle(width,0xb9f4ea,alpha);
         for(let i=1;i<edge.length;i++){
-          const a=edge[i-1],b=edge[i],points=[];
-          const steps=Math.ceil(Math.hypot(a[0]-b[0],a[1]-b[1]));
-          for(let j=0;j<=steps;j++){
-            const at=lerp(a,b,j/Math.max(1,steps));
-            if(at[0]>=bounds[0]&&at[0]<=bounds[2]&&at[1]>=bounds[1]&&at[1]<=bounds[3])points.push(at);
-          }
-          if(points.length>1)ink.lineBetween(...points[0],...points.at(-1));
+          const portion=clipSegment(edge[i-1],edge[i],bounds);
+          if(portion)ink.lineBetween(...portion[0],...portion[1]);
         }
       }
     }
-    return elbow;
   }
   const angle=(x,y)=>Math.atan2(y,x);
   const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -497,7 +498,7 @@
   function bowJoin(owner,age){
     const p=s.player,bow=s.combatArt?.reaper?.[0];
     if(!p.visualFireMs||p.attackMs||!bow?.visible||!bow.texture?.key.includes('crossbow'))return;
-    const from=at(owner.age,true),held=at(355),e=smooth(age/90);
+    const from=at(owner.age),held=at(END),e=smooth(age/90);
     const hand=lerp([from.hand[0],from.hand[1]+from.rise],[held.hand[0],held.hand[1]+held.rise],e);
     const [a,b,c,d]=from.matrix;
     const fromAngle=Math.atan2(-b,d),holdAngle=Math.atan2(-held.matrix[1],held.matrix[3]);
@@ -516,11 +517,12 @@
   }
   function upright(){
     const time=riseAge();
-    return playingPose()&&resolve()?.mode==='rise'&&time>=0&&time<=355;
+    return playingPose()&&resolve()?.mode==='rise'&&time>=0&&time<=END;
   }
   function renderUpright(){
-    const time=riseAge(),f=at(time,true);
-    if(time<=.001||time>=354.999)return;
+    const time=riseAge();
+    if(time<=0||time>=END)return;
+    const f=at(time);
     sprite.setDepth(12.09);
     draw(time,f);
     for(const view of m.body)view.setVisible(false);
@@ -540,7 +542,7 @@
     sprite.destroy();ink.destroy();s.textures.remove('motion-rising-reaper');
     body.close?.();
   }
-  return {acceptCut,acceptSlide,acceptBow,contactTest,compactFrame,clear,upright,renderUpright,renderHandoff,destroy,sprite};
+  return {acceptCut,acceptSlide,acceptBow,wantsContactTest,contactTest,compactFrame,clear,upright,renderUpright,renderHandoff,destroy,sprite};
   }
   scope.GRIM_RISING_CUT={preload};
 })(typeof window!=='undefined'?window:globalThis);

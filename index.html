@@ -1981,8 +1981,8 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=rear-carry1"></script>
-  <script src="assets/motion/v0200/rising-cut-data.js?v=1"></script>
-  <script src="assets/visuals/rising-cut.js?v=2"></script>
+  <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
+  <script src="assets/visuals/rising-cut.js?v=continuous1"></script>
   <script src="assets/visuals/motion-animations.js?v=rear-carry2"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=0.19.12"></script>
   <script src="assets/visuals/slide-animations.js?v=rear-carry1"></script>
@@ -3242,10 +3242,10 @@ window.GRIM_CONFIG = Object.freeze({
       if(Combat.cuttable(ob))this.worldPolish?.destroyObstacle(ob,cutBox);
       return true;
     }
-    cutNearby() {
+    cutNearby(previousRoot) {
       const bonus=126*this.powerManager.attackBonus();
       const box=Core.attackBox(this.player.x,this.feetY,bonus,this.lowProfile);
-      const rising=this.motionArt?.rising?.contactTest();
+      const rising=this.motionArt?.rising?.contactTest(previousRoot);
       const sweep=rising?null:this.motionArt?.attackBoxes(this.player.previousAttackMs);
       const hits=rising||(target=>sweep?sweep.some(edge=>Core.overlaps(edge,target)):Core.overlaps(box,target));
       for (const ob of this.obstacles) {
@@ -3607,6 +3607,7 @@ window.GRIM_CONFIG = Object.freeze({
         // required for correct landings on steep uphill sections.
         const previousGround=this.terrain.groundAt(p.x);
         const previousX=p.x;
+        const previousFeet=this.feetY;
         const snowRun=this.snowTread&&scope.GRIM_SNOW_TREAD.isRunning(p);
         let snowLanding=false;
         p.x += this.speed*dt*worldFactor;
@@ -3720,8 +3721,10 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.spawnAhead();
         this.updatePlants(frameMs*worldFactor);
-        if (Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)||
-          (p.previousAttackMs>C.attackDurationMs*(1-C.attackActiveEnd)&&p.attackMs<C.attackDurationMs*(1-C.attackActiveStart))) this.cutNearby();
+        if (this.motionArt?.rising?.wantsContactTest()||
+          Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)||
+          (p.previousAttackMs>C.attackDurationMs*(1-C.attackActiveEnd)&&p.attackMs<C.attackDurationMs*(1-C.attackActiveStart)))
+          this.cutNearby([previousX,previousFeet]);
         this.updateCombat(frameMs,dt);
         if(this.state!=='playing'){this.drawScene();return;}
         this.checkCollectibles();
