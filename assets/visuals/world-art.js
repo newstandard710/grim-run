@@ -141,14 +141,15 @@
     return foothills.map((color,i)=>mix(color,frost[i],t));
   }
 
-  function drawOpeningGround(scene,g,from,to){
+  function drawOpeningGround(scene,g,from,to,patches){
     const first=Math.ceil(from/58)*58;
     for(let x=first;x<to-8;x+=58){
       const y=scene.terrain.groundAt(x);
       if(y===null||!Number.isFinite(y))continue;
       const n=Math.floor(x/58);
       const variation=(Math.sin(n*12.8)+1)*.5;
-      g.lineStyle(1.7,0xa1a884,.57);
+      const besideTuft=patches?.some(patch=>Math.abs(patch.x-x-10)<22);
+      g.lineStyle(1.7,0xa1a884,besideTuft?.16:.57);
       g.lineBetween(x+7,y-2,x+9,y-7-variation*4);
       g.lineBetween(x+10,y-2,x+14,y-5-variation*5);
       if(n%2===0)g.lineBetween(x+13,y-2,x+18,y-6-variation*3);
