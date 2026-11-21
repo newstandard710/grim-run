@@ -65,11 +65,48 @@ async function measure(browser,renderer,revision){
         frameIntervalMs:quantiles(interval),updateAndRenderCpuMs:quantiles(cpu)};
     });
     console.log(renderer,revision,JSON.stringify(report));
+    if(process.env.GITHUB_ACTIONS){
+      const times=JSON.stringify({frameIntervalMs:report.frameIntervalMs,updateAndRenderCpuMs:report.updateAndRenderCpuMs});
+      console.log('::notice title=Phone Cut '+renderer+' '+revision+'::'+times);
+    }
     assert.equal(report.renderer,renderer==='canvas'?1:2);
     assert(report.owned>60,'Repeated attacks used the drawn Cut');
     if(revision==='after'){
       assert(report.tipOffsetY>0,'The resting tip points below the palm');
       assert.equal(report.mode,'rise');
+      const slopes=await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0],p=s.player,geometry=window.RisingGeometry;
+        const project=geometry.transform,ground=s.terrain.groundAt;
+        let longest=0,wrongFacing=0,count=0;
+        // Observe the registered edge consumed by both contact and the visible glint.
+        geometry.transform=(points,pose)=>{
+          if(points===GRIM_RISING_CUT_DATA.spec.edge&&pose.shoulder){
+            const [a,b,c,d]=pose.matrix;
+            if(a*d-b*c>=0)wrongFacing++;
+            longest=Math.max(longest,Math.hypot(pose.hand[0]-pose.shoulder[0],pose.hand[1]-pose.shoulder[1]));
+            count++;
+          }
+          return project(points,pose);
+        };
+        try{
+          for(const grade of [-.25,0,.25]){
+            s.terrain.groundAt=x=>s.groundY+grade*(x-s.startX);
+            for(const offset of [0,42,98,154]){
+              p.x=s.startX+offset;p.y=s.terrain.groundAt(p.x);
+              p.grounded=true;p.onSoulPlatform=false;p.visualHurtMs=0;p.attackCooldownMs=0;
+              s.attack();
+              for(let age=102;age<=218;age+=4){
+                p.attackMs=GRIM_CONFIG.attackDurationMs-age;
+                p.attackCooldownMs=GRIM_CONFIG.attackCooldownMs-age;
+                s.drawScene();
+              }
+            }
+          }
+        }finally{geometry.transform=project;s.terrain.groundAt=ground;}
+        return {longest,wrongFacing,count};
+      });
+      assert(slopes.count>=360&&slopes.wrongFacing===0,'Every active pose keeps the turned grip');
+      assert(slopes.longest<=28.4,'The elbow stays within the painted arm length on slopes');
       assert(report.spawned&&report.treeMs&&report.crawlerMs,'Ordinary Cut hits the tree and Bone Crawler');
     }
     assert.deepEqual(errors,[]);

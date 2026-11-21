@@ -179,28 +179,42 @@
     const w=Math.min(smooth(time/36),smooth((END-time)/50));
     const carryHand=forward.rear.hands[key.frame], [cx,cy]=carryHand;
     const rest=w<1?m.trailingRotation(p.x+cx,s.feetY+cy+key.rise):0;
-    const bank=turn*DEG+(1-w)*(rest+Math.PI/2);
+    // On a slope, aim the low arc along the surface so the blade clears
+    // the ground without pulling the hand away from the shoulder.
+    const behind=s.terrain.groundAt(p.x-32),ahead=s.terrain.groundAt(p.x+32);
+    const grade=p.grounded&&p.onSoulPlatform===false&&Number.isFinite(behind)&&Number.isFinite(ahead)
+      ?G.clamp(Math.atan2(ahead-behind,64),-.55,.55):0;
+    const bank=turn*DEG+(1-w)*(rest+Math.PI/2)+grade*w;
     const hand=lerp(carryHand,[x,y],w);
     const matrix=G.project(bank,yaw*DEG,pitch*DEG);
     // Mirror around the palm in weapon space, before the swing projection.
     matrix[0]*=-1;matrix[2]*=-1;
-    const platform=p.onSoulPlatform===false?null:(s.soulPlatform||[]).find(q=>q.id===p.onSoulPlatform);
-    let gap=Infinity;
-    const rootX=p.x+hand[0],rootY=s.feetY+key.rise+hand[1];
-    const [a,b,c,d]=matrix;
-    for(const [u,v] of forward.rear.outline){
-      const wx=rootX+a*u+b*v,wy=rootY+c*u+d*v,y=s.terrain.groundAt(wx);
-      if(Number.isFinite(y))gap=Math.min(gap,y-wy);
-      if(platform&&wx>=platform.x&&wx<=platform.x+platform.width)gap=Math.min(gap,platform.y-wy);
-    }
-    // Let the terrain-aware carry own clearance at the two joins.
-    // Keep the blade, hand, and collision edge under one transform.
-    const lift=Math.max(0,6-gap)*w;
-    hand[1]-=lift;
     const hip=[hipX*w,hipY*w],tilt=lean*w*DEG;
     const [wx,wy]=carried.waist,dx=carried.shoulder[0]-wx,dy=carried.shoulder[1]-wy;
     const shoulder=[wx+hip[0]+dx*Math.cos(tilt)-dy*Math.sin(tilt),
       wy+hip[1]+dx*Math.sin(tilt)+dy*Math.cos(tilt)];
+    const reachX=hand[0]-shoulder[0];
+    const maxLift=Math.max(0,hand[1]-shoulder[1]+Math.sqrt(Math.max(0,28**2-reachX**2)));
+    const platform=p.onSoulPlatform===false?null:(s.soulPlatform||[]).find(q=>q.id===p.onSoulPlatform);
+    let gap=Infinity,depthScale=1;
+    const rootX=p.x+hand[0],rootY=s.feetY+key.rise+hand[1];
+    const [a,b,c,d]=matrix;
+    for(const [u,v] of forward.rear.outline){
+      const x=rootX+a*u+b*v,drop=c*u+d*v,ground=s.terrain.groundAt(x);
+      let floor=Number.isFinite(ground)?ground:Infinity;
+      if(platform&&x>=platform.x&&x<=platform.x+platform.width)floor=Math.min(floor,platform.y);
+      const available=floor-rootY-6;
+      gap=Math.min(gap,available-drop);
+      // Tip the swing plane toward the viewer when lifting farther would
+      // straighten the elbow past its reach. Paint and contact use this pose.
+      if(drop>0&&drop>available+maxLift)depthScale=Math.min(depthScale,(available+maxLift)/drop);
+    }
+    // Let the terrain-aware carry own clearance at the two joins.
+    // Keep the blade, hand, and collision edge under one transform.
+    const lift=G.clamp(-gap,0,maxLift)*w;
+    hand[1]-=lift;
+    const depth=G.mix(1,G.clamp(depthScale,.35,1),w);
+    matrix[2]*=depth;matrix[3]*=depth;
     return {...key,carried,hand,shoulder,matrix,w,hip,tilt};
   }
   function acceptCut(){
