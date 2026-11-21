@@ -8,7 +8,18 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
  const context=await browser.newContext({viewport:{width:950,height:430},recordVideo:{dir,size:{width:950,height:430}}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
- const shot=async name=>{await page.evaluate(()=>window.grimRun.step(performance.now(),0));return page.screenshot({path:path.join(dir,'polish-'+name+'.png')});};
+ // Report the renderer and capture separately even when Chromium stops answering.
+ const shot=async name=>{
+  console.log(name+' Phaser step started');
+  let timer;
+  try{
+   await Promise.race([page.evaluate(()=>window.grimRun.step(performance.now(),0)),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(name+' Phaser step exceeded 30s')),30000);})]);
+  }finally{clearTimeout(timer);}
+  console.log(name+' Phaser step finished, screenshot started');
+  await page.screenshot({path:path.join(dir,'polish-'+name+'.png'),timeout:30000});
+  console.log(name+' screenshot finished');
+ };
  const stage=async meters=>{const x=await page.evaluate(m=>{
   const s=window.grimRun.scene.scenes[0];s.terrain.advance(s.startX+m*12+2400);
   const wanted=s.startX+m*12,ground=s.terrain.visibleSections(wanted,wanted+1400).find(v=>v.kind==='ground'&&v.end-v.start>100);

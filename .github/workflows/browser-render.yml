@@ -31,7 +31,7 @@ jobs:
         run: |
           if [ -n "$BASE_REVISION" ]; then
             git fetch --depth 1 origin "$BASE_REVISION"
-            if ! git diff --quiet "$BASE_REVISION" HEAD -- assets/visuals/rising-cut.js assets/visuals/motion-animations.js; then
+            if ! git diff --quiet "$BASE_REVISION" HEAD -- index.html assets/visuals/rising-cut.js assets/visuals/motion-animations.js; then
               baseline="$RUNNER_TEMP/grim-cut-before"
               git worktree add --detach "$baseline" "$BASE_REVISION"
               node tests/browser-tip-down-cut.js "$baseline"

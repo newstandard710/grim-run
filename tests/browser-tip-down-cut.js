@@ -39,7 +39,7 @@ async function measure(browser,renderer,revision){
       reset();
       const view=s.motionArt.weapon,tip=GRIM_RISING_CUT_DATA.spec.edge[0];
       const tipOffsetY=tip[0]*Math.sign(view.scaleX)*Math.sin(view.rotation)+tip[1]*Math.cos(view.rotation);
-      const quantiles=values=>{values.sort((a,b)=>a-b);return {median:values[50],p95:values[95]};};
+      const quantiles=values=>{values.sort((a,b)=>a-b);return {median:(values[49]+values[50])/2,p95:values[94],p99:values[98],max:values.at(-1),over50ms:values.filter(v=>v>50).length};};
       async function timing(cut){
         let last,owned=0;
         const interval=[],cpu=[];
