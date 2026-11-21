@@ -160,6 +160,18 @@
     return {frame:left*(AIR_STEPS-1)+step-1,tween:true};
   }
   function airBand(t){return t<8?0:t<14?1:2;}
+  // The source tuck painting has a smaller head and hands than the slide.
+  // Each bridge inherits the tuck share used to paint that particular cel.
+  function registeredScale(frame){
+    let tuckShare=0;
+    if(frame>=TUCK_START){
+      if(frame<TUCK_EXIT_START)tuckShare=1;
+      else if(frame<TUCK_ENTRY_START)tuckShare=[.75,.5,.25][(frame-TUCK_EXIT_START)%3];
+      else if(frame<TUCK_TOUCHDOWN)tuckShare=[.58,.79][(frame-TUCK_ENTRY_START)%2];
+      else tuckShare=[.61,.26,.39][frame-TUCK_TOUCHDOWN];
+    }
+    return AIR_ART.scale*(1+.24*tuckShare);
+  }
   function tuckPose(s,t,tucked,release){
     const p=s.player;
     if(tucked){
@@ -571,7 +583,7 @@
         this.state={name,frame:t,atlasFrame,phase:loop?t/COUNT:null,texture:key};
         return;
       }
-      const renderScale=handoff?CUT_HANDOFF.scale:solidRun?RUN.scale:registeredFrame!==null?AIR_ART.scale:scale;
+      const renderScale=handoff?CUT_HANDOFF.scale:solidRun?RUN.scale:registeredFrame!==null?registeredScale(registeredFrame):scale;
       // One opaque registered painting at a time, including the derived
       // transitions. Keep the same apparent size and feet anchor.
       this.body[0].setTexture(texture,atlasFrame)

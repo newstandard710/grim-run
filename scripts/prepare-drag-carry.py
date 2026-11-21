@@ -63,7 +63,7 @@ for i in range(96):
     waist = np.array(pose['waist'])
     shoulder = waist + rotate(lean) @ (pose['shoulder'] - waist)
     phase = math.tau*i/96
-    palm = shoulder + [-26.35+.45*math.sin(phase), -1.9+.6*math.cos(phase)]
+    palm = shoulder + [-27.94+.13*math.sin(phase), -1.9+.6*math.cos(phase)]
     data['rear']['hands'][i] = palm.round(5).tolist()
     rest = cell(i)
     pivot = anchor + waist/scale
