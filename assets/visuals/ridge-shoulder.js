@@ -5,12 +5,13 @@
   const plates=new WeakMap();
   const width=544,height=96;
 
-  function projectedPlate(source){
-    let plate=plates.get(source);
-    if(plate)return plate;
-    plate=document.createElement('canvas');
+  function projectedPlate(texture){
+    const cached=plates.get(texture);
+    if(cached)return cached;
+    const source=texture.getSourceImage();
+    const plate=document.createElement('canvas');
     plate.width=width;plate.height=height;
-    const ctx=plate.getContext('2d');
+    const ctx=plate.getContext('2d',{willReadFrequently:true});
     // Far rows cover more ground per pixel. A small oblique offset lets roots
     // and rock strata lead the eye down the shoulder toward the viewer.
     for(let row=0;row<height;row++){
@@ -34,31 +35,40 @@
     fade.addColorStop(1,'transparent');
     ctx.globalCompositeOperation='destination-in';
     ctx.fillStyle=fade;ctx.fillRect(0,0,width,height);
-    plates.set(source,plate);
-    return plate;
+    const pixels=ctx.getImageData(0,0,width,height).data;
+    plates.set(texture,pixels);
+    return pixels;
   }
 
-  function paint(ctx,source,from,to,surfaceY,extent,walls,blend){
-    const pattern=ctx.createPattern(projectedPlate(source),'repeat-x');
-    ctx.save();
-    ctx.fillStyle=pattern;
-    // Integer strip boundaries meet without antialiased triangle seams.
-    // Sampling absolute world coordinates keeps the roll continuous at joins.
-    const span=Math.ceil(to-from);
-    for(let x=0;x<span;x+=3){
-      const end=Math.min(span,x+3),worldX=from+(x+end)*.5;
+  function paint(ctx,sources,from,to,surfaceY,extent,walls,blendAt){
+    const first=projectedPlate(sources[0]);
+    const second=sources.length>1?projectedPlate(sources[1]):null;
+    const firstWords=new Uint32Array(first.buffer,first.byteOffset,first.length/4);
+    const output=ctx.createImageData(ctx.canvas.width,ctx.canvas.height);
+    const words=new Uint32Array(output.data.buffer);
+    // Bake once into the existing section texture. World-space samples keep
+    // the roll continuous at joins and a gap rim constrains its maximum depth.
+    for(let x=0;x<output.width;x++){
+      const worldX=from+x+.5;
       const shoulder=extent*(.64+.18*Math.sin(worldX*.0051)+.115*Math.sin(worldX*.0127+1.1)
         +.055*Math.sin(worldX*.027-.8)+.025*Math.sin(worldX*.073));
       const bankDistance=Math.min(walls?.start?worldX-from:Infinity,walls?.end?to-worldX:Infinity);
       const depth=Math.min(shoulder,bankDistance*.75);
       if(depth<1)continue;
-      if(blend)ctx.globalAlpha=blend(worldX);
-      const y=surfaceY(x),slope=(surfaceY(end)-y)/(end-x);
-      const phase=((from+x)%width+width)%width;
-      ctx.setTransform(1,slope,0,depth/height,x-phase,y-slope*phase);
-      ctx.fillRect(phase,0,end-x,height);
+      const top=surfaceY(x+.5),column=((Math.floor(worldX)%width)+width)%width;
+      const end=Math.min(output.height,Math.ceil(top+depth-.5));
+      const weight=second?blendAt(worldX):0;
+      for(let y=Math.max(0,Math.ceil(top-.5));y<end;y++){
+        const row=Math.min(height-1,Math.floor((y+.5-top)*height/depth));
+        const sample=row*width+column,destination=y*output.width+x;
+        words[destination]=firstWords[sample];
+        if(weight>0){
+          const src=sample*4,dst=destination*4;
+          for(let c=0;c<3;c++)output.data[dst+c]=first[src+c]+weight*(second[src+c]-first[src+c]);
+        }
+      }
     }
-    ctx.restore();
+    ctx.putImageData(output,0,0);
   }
   scope.GRIM_RIDGE_SHOULDER={paint};
 })(window);

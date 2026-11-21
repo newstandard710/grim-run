@@ -5052,15 +5052,11 @@ window.GRIM_CONFIG = Object.freeze({
       };
       const surfaceY=x=>this.terrainSurfaceY(section,Math.min(to,from+x))-top;
       if(ready){
-        let total=0;
-        for(const [id,weight] of materials){
-          const source=this.textures.get('terrain-material-'+id).getSourceImage();
-          total+=weight;
-          // Use the biome crossfade at each world position on a mixed shoulder.
-          const blend=total===weight?null:worldX=>
-            this.terrainBiomeWeights((worldX-(this.startX??200))/C.pxPerMeter)[id]||0;
-          scope.GRIM_RIDGE_SHOULDER.paint(context,source,from,to,surfaceY,extent,walls,blend);
-        }
+        const sources=materials.map(([id])=>this.textures.get('terrain-material-'+id));
+        // Each biome transition mixes two adjacent terrain paintings.
+        const secondId=materials[1]?.[0];
+        const blendAt=worldX=>this.terrainBiomeWeights((worldX-(this.startX??200))/C.pxPerMeter)[secondId]||0;
+        scope.GRIM_RIDGE_SHOULDER.paint(context,sources,from,to,surfaceY,extent,walls,blendAt);
       }
       const contour=(offset,roughness=0,salt=0)=>{
         const points=[];
