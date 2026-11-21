@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.12</title>
+  <title>GRIM RUN — v0.19.13</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -284,7 +284,7 @@ button {cursor:pointer;}
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.12</div>
+    <div class="home-edition">GRIM RUN · v0.19.13</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="critical-health-halo" class="hidden" aria-hidden="true"></div>
@@ -325,7 +325,7 @@ button {cursor:pointer;}
       <p id="portal-art-load-error" role="alert" class="hidden">Portal and mist artwork failed to load. Refresh to retry.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.12</div>
+      <div class="mini">v0.19.13</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -470,7 +470,7 @@ button {cursor:pointer;}
   </div>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.12',
+  version: '0.19.13',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -1975,6 +1975,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/lavafall-detail.js?v=1"></script>
   <script src="assets/visuals/snow-tread.js?v=planted1"></script>
   <script src="assets/visuals/downhill-camera.js?v=1"></script>
+  <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
   <script src="assets/visuals/forest-midground.js?v=downhill1"></script>
   <script src="assets/visuals/biome-midground.js?v=downhill1"></script>
@@ -5009,7 +5010,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrainTextureViews.set(key,view);
       return view;
     }
-    terrainSurfaceView(section,edge,sheen,detail,activeKeys,biome='caves'){
+    terrainSurfaceView(section,edge,sheen,detail,activeKeys,biome='caves',weights={},walls=null){
       if(!this.terrainSurfaceViews||!this.textures?.createCanvas||!this.add?.image)return null;
       const from=section.start,to=section.end;
       const y0=Number.isFinite(section.y0)?section.y0:section.y;
@@ -5017,8 +5018,13 @@ window.GRIM_CONFIG = Object.freeze({
       if(!Number.isFinite(y0)||!Number.isFinite(y1)||to<=from)return null;
       const key=[section.kind,from,to].join(':');
       const capDepth=section.kind==='soul-platform'?11:14;
+      const materials=section.kind==='ground'
+        ?Object.entries(weights).filter(([,weight])=>weight>.003):[];
+      const ready=materials.length>0&&materials.every(([id])=>this.terrainMaterialIds.has(id));
+      const extent=ready?clamp((this.height-this.groundY)*.84,48,154):0;
       const slopes=this.terrain.surfaceSlopes?.(section)||[];
-      const geometrySignature=[y0.toFixed(2),y1.toFixed(2),...slopes,edge,sheen,detail,biome,capDepth].join(':');
+      const geometrySignature=[y0.toFixed(2),y1.toFixed(2),...slopes,edge,sheen,detail,biome,capDepth,extent,Boolean(walls?.start),Boolean(walls?.end),
+        ...materials].join(':');
       let view=this.terrainSurfaceViews.get(key);
       if(view?.geometrySignature===geometrySignature){
         activeKeys.add(key);
@@ -5032,7 +5038,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       const width=Math.max(1,Math.ceil(to-from));
       const top=Math.min(y0,y1),leftY=y0-top,rightY=y1-top;
-      const height=Math.max(1,Math.ceil(Math.max(leftY,rightY)+capDepth+2));
+      const height=Math.max(1,Math.ceil(Math.max(leftY,rightY)+Math.max(capDepth,extent)+2));
       const textureKey='terrain-surface-'+section.kind+'-'+Math.round(from)+'-'+Math.round(to);
       if(this.textures.exists?.(textureKey))this.textures.remove(textureKey);
       const texture=this.textures.createCanvas(textureKey,width,height);
@@ -5045,6 +5051,13 @@ window.GRIM_CONFIG = Object.freeze({
         return value-Math.floor(value);
       };
       const surfaceY=x=>this.terrainSurfaceY(section,Math.min(to,from+x))-top;
+      if(ready){
+        const sources=materials.map(([id])=>this.textures.get('terrain-material-'+id));
+        // Each biome transition mixes two adjacent terrain paintings.
+        const secondId=materials[1]?.[0];
+        const blendAt=worldX=>this.terrainBiomeWeights((worldX-(this.startX??200))/C.pxPerMeter)[secondId]||0;
+        scope.GRIM_RIDGE_SHOULDER.paint(context,sources,from,to,surfaceY,extent,walls,blendAt);
+      }
       const contour=(offset,roughness=0,salt=0)=>{
         const points=[];
         const step=Math.min(4,width/16);
@@ -5874,7 +5887,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         const weights=this.terrainBiomeWeights(m);
         const surfaceBiome=Object.entries(weights).sort((a,b)=>b[1]-a[1])[0]?.[0]||'caves';
-        if(!this.terrainSurfaceView(section,edge,sheen,detail,activeSurfaceViews,surfaceBiome))
+        if(!this.terrainSurfaceView(section,edge,sheen,detail,activeSurfaceViews,surfaceBiome,weights,bankWalls))
           this.drawTerrainSurfaceFallback(section,edge,sheen,detail,surfaceBiome);
         if(tundraWorldArt)scope.GRIM_WORLD_ART.drawTundraGround(this,g,from,to);
         else if(foothillsWorldArt)scope.GRIM_WORLD_ART.drawFoothillsGround(this,g,from,to);

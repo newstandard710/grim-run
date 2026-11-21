@@ -397,6 +397,34 @@ async function main(){
     else if(process.env.GRIM_ABYSS_PIXELS==='1'){
       const session=await setup(browser,{width:740,height:360});
       try{
+        await session.page.evaluate(()=>window.biomeReview.place(15));
+        await session.page.waitForFunction(()=>window.biomeReview.scene.terrainMaterialIds.has('forest'));
+        const ridge=await session.page.evaluate(()=>{
+          const {scene:s}=window.biomeReview;
+          s.drawGround();
+          const section=s.terrain.sectionAt(s.player.x);
+          const key=[section.kind,section.start,section.end].join(':');
+          const view=s.terrainSurfaceViews.get(key);
+          const image=s.textures.get(view.textureKey).getSourceImage();
+          const ctx=image.getContext('2d');
+          let opaque=0,probes=0;
+          for(let wx=s.player.x-60;wx<s.player.x+240;wx+=8){
+            if(wx<section.start||wx>=section.end)continue;
+            const y=s.terrain.groundAt(wx)-view.sprite.y+22;
+            if(ctx.getImageData(Math.floor(wx-section.start),Math.floor(y),1,1).data[3]>128)opaque++;
+            probes++;
+          }
+          const timings=[];
+          for(let i=0;i<48;i++){
+            const t=performance.now();s.drawGround();timings.push(performance.now()-t);
+          }
+          timings.sort((a,b)=>a-b);
+          return {opaque,probes,stable:s.terrainSurfaceViews.get(key)===view,
+            depth:view.sprite.depth,actorDepth:s.actor.depth,p95Ms:timings[45]};
+        });
+        assert(ridge.probes>0&&ridge.opaque>ridge.probes*.5,'Broad Forest shoulder has painted pixels below the old cap');
+        assert(ridge.stable&&ridge.depth<ridge.actorDepth,'Shoulder stays cached below the Reaper');
+        console.log('Forest shoulder renderer check',ridge);
         const result=await isolatedFog(session.page);
         assert.equal(result.webgl,!canvas);
         assert.deepEqual(session.errors,[]);
