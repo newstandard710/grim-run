@@ -340,7 +340,12 @@
     }else{
       const shaft=Math.atan2(-f.matrix[1],f.matrix[3]),[gx,gy]=paint.grip,
         wrist=Math.atan2(f.hand[1]-elbow[1],f.hand[0]-elbow[0]);
-      const strike=shaft+.227+.23*wrap(wrist+.28-shaft-.227),angle=shaft+.227+wrap(strike-shaft-.227)*f.w;
+      const strike=shaft+.227+.23*wrap(wrist+.28-shaft-.227);
+      // The baked running glove keeps its relaxed wrist on a slope. Start and
+      // finish in that same orientation as the fingers tighten into the swing.
+      const rest=f.frame<96&&f.w<1
+        ?GRIM_MOTION_ART.levelDragAngle(-forward.rear.hands[f.frame][1])+.227:shaft+.227;
+      const angle=rest+wrap(strike-rest)*f.w;
       ctx.save();
       ctx.translate(...f.hand);
       ctx.rotate(angle);

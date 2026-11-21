@@ -335,7 +335,7 @@
           pair[j].setTexture(pose.texture.key,pose.frame.name)
             .setOrigin(pose.originX,pose.originY).setScale(pose.scaleX,pose.scaleY)
             .setPosition(pose.x-(i+1)*13,pose.y).setRotation(pose.rotation).setTint(tint)
-            .setDepth(j===1?11.79:11.8).setAlpha(.12-i*.032).setVisible(true);
+            .setDepth(j===1?Math.min(11.79,pose.depth):11.8).setAlpha(.12-i*.032).setVisible(true);
         }
       }
     }
