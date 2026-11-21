@@ -24,6 +24,21 @@ jobs:
         run: |
           npm install --no-save playwright@1.56.1 pngjs@7.0.0
           npx playwright install chromium
+      - name: Verify the running grip, Cut contact and phone-size frame timings
+        if: matrix.group == 'movement'
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_REVISION" ]; then
+            git fetch --depth 1 origin "$BASE_REVISION"
+            if ! git diff --quiet "$BASE_REVISION" HEAD -- assets/visuals/rising-cut.js assets/visuals/motion-animations.js; then
+              baseline="$RUNNER_TEMP/grim-cut-before"
+              git worktree add --detach "$baseline" "$BASE_REVISION"
+              node tests/browser-tip-down-cut.js "$baseline"
+              exit
+            fi
+          fi
+          node tests/browser-tip-down-cut.js
       - name: Fetch the previous live Forest renderer
         if: matrix.group == 'forest'
         run: |

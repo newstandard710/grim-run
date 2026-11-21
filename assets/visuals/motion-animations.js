@@ -54,7 +54,7 @@
       const cos=Math.cos(angle),sin=Math.sin(angle);
       let margin=Infinity;
       for(const [u,v] of outline){
-        const px=x+u*cos-v*sin,py=y+u*sin+v*cos;
+        const px=x-u*cos-v*sin,py=y-u*sin+v*cos;
         const floor=terrain?.groundAt(px);
         if(Number.isFinite(floor))margin=Math.min(margin,floor-py);
         if(ledge&&px>=ledge.x&&px<=ledge.x+ledge.width)margin=Math.min(margin,ledge.y-py);
@@ -393,6 +393,7 @@
       const [x,dy]=hand,s=this.scene;
       const rotation=this.trailingRotation(s.player.x+x,y+dy);
       this.showForwardWeapon([x,dy,rotation],y-s.feetY,alpha,tint);
+      this.weapon.setScale(-FORWARD.weapon.scale,FORWARD.weapon.scale);
       this.rearOwner=owner;
     }
     hideRearCarry(){
