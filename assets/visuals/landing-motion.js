@@ -55,6 +55,9 @@
       if(!Number.isFinite(floor)||p.hovering)return null;
       const closing=p.velocityY-speed*slope;
       const h=Math.max(0,floor-p.y),g=scope.GRIM_CONFIG.gravity;
+      // A stationary airborne sample at floor height has no approach.
+      // Await the scene's next physical contact before taking the paint.
+      if(h===0&&closing<=0)return null;
       const time=(Math.sqrt(closing*closing+2*g*h)-closing)/g;
       if(time>lookAhead||closing<0&&p.jumpAgeMs<50)return null;
       const x=p.x+speed*time;
@@ -159,7 +162,10 @@
         view.setTexture(carry.carry.key,cell).setOrigin(carry.carry.anchor[0]/carry.carry.width,
           carry.carry.anchor[1]/carry.carry.height).setPosition(p.x,p.y+rise).setScale(carry.scale).setVisible(true);
         m.showRearCarry(cell,p.y+rise,view.alpha,view.tintTopLeft,view);
-        m.state={name:'reaper-run',atlasFrame:cell,phase:cell/cycle,texture:carry.carry.key};
+        const distance=corrected*step;
+        const frame=scope.GRIM_MOTION_ART.runFrame(distance);
+        m.state={name:'reaper-run',frame,atlasFrame:scope.GRIM_MOTION_ART.runAtlasFrame(distance),
+          phase:frame/scope.GRIM_MOTION_DATA.frames,texture:carry.carry.key};
         return;
       }
       const progress=clamp(d/joinDistance);
