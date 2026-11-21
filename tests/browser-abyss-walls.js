@@ -385,6 +385,45 @@ async function measureDraw(browser){
   console.log('Chromium CPU drawScene comparison',results);
 }
 
+async function stageThree(browser, renderer) {
+  for (const [width,height] of [[740,360],[390,844],[1280,720]]) {
+    const {page}=await setup(browser,{width,height});
+    const save=async tag=>page.screenshot({path:path.join(root,'test-results',`stage3-${renderer}-${width}-${tag}.png`)});
+    try {
+      await page.evaluate(()=>{const b=window.biomeReview;b.place(0);b.scene.goFlashMs=0;});
+      for(const frame of [1,30,60,90]){
+        const metrics=await page.evaluate(frame=>{
+          const {scene:s,game:g}=window.biomeReview;
+          for(let i=window.lastAuditFrame||0;i<frame;i++)s.update(0,1000/60);
+          window.lastAuditFrame=frame;
+          s.drawScene();g.step(performance.now(),0);
+          return [s.distance,g.renderer.type,s.children.list.filter(v=>v.visible).length,s.children.list.filter(v=>v.visible&&v.mask).length,Object.keys(s.textures.list).length];
+        },frame);
+        await save('forest-'+frame+'-original');
+        await page.evaluate(()=>{const {scene:s,game:g}=window.biomeReview;
+          for(const v of s.forestMidground.pools[1])if(v.visible && /oak|trunk/.test(v.frame.name))v.setAlpha(v.alpha*.84);
+          g.step(performance.now(),0);
+        });
+        await save('forest-'+frame+'-treatment');console.log('Audit Forest',renderer,width,frame,metrics);
+      }
+      if(width===390)for(const m of [1100,2050,6200,6800,10300,13500]){
+        await page.evaluate(m=>window.biomeReview.place(m),m);
+        await page.waitForFunction(()=>{const s=window.biomeReview.scene;s.drawScene();return !s.load.isLoading()&&!s.terrainMaterialLoading.size});
+        await page.evaluate(()=>window.biomeReview.frame());await save('portrait-'+m);
+      }
+      if(width===740)for(const m of [550,8500])for(const variant of ['narrow','wide','slope']){
+        await page.evaluate(([m,v])=>window.biomeReview.stageGap(m,v),[m,variant]);
+        await page.waitForFunction(()=>{const s=window.biomeReview.scene;s.drawScene();return !s.load.isLoading()&&s.abyssBackdropViews.size>0});
+        await page.evaluate(()=>window.biomeReview.frame());await save('gap-'+m+'-'+variant+'-center');
+        await page.evaluate(()=>{const b=window.biomeReview;
+          for(const v of b.scene.abyssBackdropViews.values())v.sprite.x+=Math.sign(Math.sin(Math.floor(v.artTopLeft.x))||1)*Math.min(18,v.sprite.displayWidth*.035);
+          b.game.step(performance.now(),0);
+        });await save('gap-'+m+'-'+variant+'-offset');
+      }
+    }finally{await page.close();}
+  }
+}
+
 async function main(){
   fs.mkdirSync(outputs,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -392,6 +431,7 @@ async function main(){
   const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage',
     canvas?'--disable-webgl':'--use-angle=swiftshader']});
   try{
+    if(process.env.GRIM_ABYSS_PIXELS==='1')await stageThree(browser,canvas?'canvas':'webgl');
     if(process.env.GRIM_ABYSS_PORTAL==='1')await portalReadiness(browser);
     else if(process.env.GRIM_ABYSS_PERF==='1')await measureDraw(browser);
     else if(process.env.GRIM_ABYSS_PIXELS==='1'){
