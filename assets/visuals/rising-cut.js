@@ -33,9 +33,12 @@
     }
     return true;
   }
+  function inBounds([left,top,right,bottom],box){
+    return box.x<right&&box.x+box.width>left&&box.y<bottom&&box.y+box.height>top;
+  }
   function contact(spec, edges, box){
     const [bx,by,bX,bY]=spec.bounds, {x,y,width,height}=box, X=x+width,Y=y+height,pad=spec.pad;
-    if(!(x<bX&&X>bx&&y<bY&&Y>by))return null;
+    if(!inBounds(spec.bounds,box))return null;
     const rect=[Math.max(bx,x-pad),Math.max(by,y-pad),Math.min(bX,X+pad),Math.min(bY,Y+pad)];
     for(const {ms,edge,origin} of edges){
       const target=origin?[rect[0]+origin[0],rect[1]+origin[1],rect[2]+origin[0],rect[3]+origin[1]]:rect;
@@ -51,7 +54,7 @@
       const ms=mix(lo,hi,i/n);return {ms,edge:toEdge(ms)};
     });
   }
-  root.RisingGeometry={clamp,mix,pose,project,transform,intersects,contact,samples};
+  root.RisingGeometry={clamp,mix,pose,project,transform,intersects,inBounds,contact,samples};
 })(globalThis);
 /* Rear-carry Cut paint and registered edge. Optional as a complete pose family. */
 (function(scope){
@@ -242,20 +245,27 @@
     glints=[];
     if(stage?.mode!=='rise'&&frame===null){recentCompact=null;return null;}
     const p=s.player,previous=C.attackDurationMs-p.previousAttackMs,now=C.attackDurationMs-p.attackMs;
-    const edgeSpec=frame===null?spec:compactSpec;
-    // Keep current-cel checks and the verified same-cel projectile correction.
-    // Clamp each pose to its original legal edge. No hidden bridge across cels.
-    const edges=frame===null?G.samples(spec,previous,now,t=>{
-      const pose=at(t);return G.transform(spec.edge,pose).map(([x,y])=>[x,y+pose.rise]);
-    }).map(sample=>{
-      if(!previousRoot||now===previous)return sample;
-      const remaining=(now-sample.ms)/(now-previous);
-      return {...sample,origin:[(p.x-previousRoot[0])*remaining,(s.feetY-previousRoot[1])*remaining]};
-    }):compactSamples(stage,frame,previous,now);
+    if(frame===null){
+      let edges;
+      return target=>{
+        const local={x:target.x-p.x,y:target.y-s.feetY,width:target.width,height:target.height};
+        if(!G.inBounds(spec.bounds,local))return false;
+        // The scene tests every obstacle, enemy and projectile. Sample the
+        // blade once, on the first target inside its reachable area this tick.
+        edges??=G.samples(spec,previous,now,t=>{
+          const pose=at(t);return G.transform(spec.edge,pose).map(([x,y])=>[x,y+pose.rise]);
+        }).map(sample=>{
+          if(!previousRoot||now===previous)return sample;
+          const remaining=(now-sample.ms)/(now-previous);
+          return {...sample,origin:[(p.x-previousRoot[0])*remaining,(s.feetY-previousRoot[1])*remaining]};
+        });
+        return G.contact(spec,edges,local)!==null;
+      };
+    }
+    // Compact poses retain their per-tick history for moving projectiles.
+    const edges=compactSamples(stage,frame,previous,now);
     return (target,ball)=>{
-      if(!edges.length)return false;
       const local={x:target.x-p.x,y:target.y-s.feetY,width:target.width,height:target.height};
-      if(frame===null)return G.contact(edgeSpec,edges,local)!==null;
       for(const sample of edges){
         const [x,y]=sample.origin;
         const anchored={...local,x:local.x-x,y:local.y-y};
@@ -265,7 +275,7 @@
           anchored.x+=G.mix(before[0]-ball.x,0,sample.phase);
           anchored.y+=G.mix(before[1]-ball.y,0,sample.phase);
         }
-        if(G.contact(edgeSpec,[{ms:sample.ms,edge:sample.edge}],anchored)===null)continue;
+        if(G.contact(compactSpec,[{ms:sample.ms,edge:sample.edge}],anchored)===null)continue;
         if(sample.ms!==now)markCrossing(sample,anchored,stage);
         return true;
       }
