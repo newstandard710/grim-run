@@ -312,8 +312,12 @@ async function parity(browser) {
     });
   });
   // Both builds use the original far plate so this remains a pixel check of the Forest renderer.
-  const first = await use({routes: page => page.route('**/biomes/forest-ravine-v1.webp',
-    route => route.fulfill({path: path.join(root, 'assets/visuals/biomes/forest.webp'), contentType: 'image/webp'}))}, forest);
+  const first = await use({routes: async page => {
+    // The accepted reference predates the surface pass. Compare the midground alone.
+    await page.route('**/surface-dressing.js*', route => route.fulfill({body: '', contentType: 'text/javascript'}));
+    await page.route('**/biomes/forest-ravine-v1.webp',
+      route => route.fulfill({path: path.join(root, 'assets/visuals/biomes/forest.webp'), contentType: 'image/webp'}));
+  }}, forest);
   const old = await use({baseline: true}, forest);
   for (const [i, frame] of first.entries()) {
     writeFrame(path.join(outputs, 'forest-current-' + i + '.png'), frame);

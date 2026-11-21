@@ -6,7 +6,7 @@ const path=require('node:path');
 const {chromium}=require('playwright');
 const root=path.resolve(__dirname,'..'),output=path.join(root,'test-results/surface');
 const mime={'.html':'text/html','.js':'text/javascript','.webp':'image/webp','.png':'image/png',
-  '.ttf':'font/ttf','.json':'application/json','.svg':'image/svg+xml'};
+  '.css':'text/css','.ttf':'font/ttf','.json':'application/json','.svg':'image/svg+xml'};
 const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://localhost');
   const file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':url.pathname));
@@ -26,8 +26,11 @@ async function exercise(browser,renderer,width,height,enabled){
     // Same release, same inputs. The control removes only this optional visual module.
     if(!enabled)await page.route('**/surface-dressing.js*',route=>route.fulfill({body:'',contentType:'text/javascript'}));
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33');
-    await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready&&
-      window.grimRun?.scene.scenes[0]?.motionArt?.runReady,null,{timeout:90000});
+    await page.waitForFunction(()=>{
+      const s=window.grimRun?.scene.scenes[0];
+      return window.GRIM_FRONTEND?.ready&&s?.visuals?.reaperReady&&s.visuals.loaded&&
+        s.motionArt?.runReady&&s.motionArt.forwardReady&&s.motionArt.airCutReady;
+    },null,{timeout:90000});
     const version=await page.evaluate(()=>{
       const g=grimRun,s=g.scene.scenes[0];s.startRun();g.loop.sleep();
       clearInterval(s.loopWatchdogId);s.sys.sceneUpdate=()=>{};
@@ -36,15 +39,29 @@ async function exercise(browser,renderer,width,height,enabled){
     assert.equal(version,renderer==='webgl'?2:1);
     const report={states:[],regions:[],timing:null};
     const tag=renderer+'-'+width;
-    for(const distance of [0,1500,3000,5500,6500,7500,8500,11000]){
+    for(const distance of [0,1500,2500,5500,6500,7500,8500,11000]){
       if(distance)await page.evaluate(m=>{
         const s=grimRun.scene.scenes[0];s.godMode=true;s.state='teleportConfirm';
         if(!s.teleportForTesting(m))throw Error('Could not reach '+m);
+        // Some practice markers land on a one-way island. Review the nearest actual trail.
+        const begin=s.player.x;let x=begin;
+        const runway=x=>[0,80,160,240,320,400,480,560,640,720].every(dx=>
+          s.terrain.sectionAt(x+dx)?.kind==='ground');
+        while(x<begin+4200&&!runway(x))x+=40;
+        if(!runway(x))throw Error('No solid review stretch at '+m);
+        s.player.x=x;s.player.y=s.terrain.groundAt(x);
+        s.distance=(x-s.startX)/GRIM_CONFIG.pxPerMeter;
+        s.cameraX=x-s.width*GRIM_CONFIG.reaperXRatio;s.cameraY=s.player.y-s.groundY;
+        s.syncWorldScroll();s.drawScene();
       },distance);
       await page.waitForFunction(()=>{
         const s=grimRun.scene.scenes[0];return s.terrainMaterialIds.has((s.distance<900?'forest':s.distance<2300?'foothills':s.distance<5000?'tundra':s.distance<6000?'caves':
            s.distance<7000?'crystals':s.distance<8000?'ashlands':s.distance<9999?'lava':'boss'));
       },null,{timeout:30000});
+      if(enabled){
+        await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.drawScene();grimRun.step(performance.now(),0);});
+        await page.screenshot({path:path.join(output,tag+'-'+distance+'.png')});
+      }
       const frames=await page.evaluate(()=>{
         const s=grimRun.scene.scenes[0],d=s.surfaceDressing;
         const states=[],ids=new Set();let maxVisible=0,grass=0,snow=0,loose=0;
@@ -68,9 +85,10 @@ async function exercise(browser,renderer,width,height,enabled){
         return {states,region:{ids:[...ids],maxVisible,grass,loose,snow,slots:d?.slots.length||0}};
       });
       report.states.push(...frames.states);report.regions.push(frames.region);
-      if(enabled)await page.screenshot({path:path.join(output,tag+'-'+distance+'.png')});
+
     }
     if(enabled){
+      console.log(tag+' materials',JSON.stringify(report.regions));
       assert.equal(new Set(report.regions.flatMap(r=>r.ids)).size,8);
       assert(report.regions[0].grass>0,'Forest contact bends grass');
       assert(report.regions[2].snow>0,'Tundra kicks existing snow');
@@ -99,6 +117,19 @@ async function exercise(browser,renderer,width,height,enabled){
           await page.screenshot({path:path.join(output,'forest-'+String(i).padStart(2,'0')+'.png')});
         }
       }
+      const lifecycle=await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0],d=s.surfaceDressing;
+        s.startRun();grimRun.loop.sleep();s.setGodMode(true);
+        for(let i=0;i<255;i++)s.update(0,34);
+        const rewound=s.rewind();for(let i=0;i<100&&s.state==='rewinding';i++)s.update(0,34);
+        const restored=s.state==='playing';
+        const group=s.terrain.sequences[0];s.player.x=group.startX+40;
+        s.player.y=s.terrain.anchorAt(s.player.x)+500;s.rescueFromAbyss();s.drawScene();
+        const gapClear=d.slots.every(slot=>!slot.patch||s.terrain.sectionAt(slot.patch.frontX)?.kind==='ground');
+        const didFall=s.state==='respawning';s.finishAbyssRespawn();
+        return {rewound,restored,gapClear,didFall,recovered:s.state==='playing'};
+      });
+      assert(Object.values(lifecycle).every(Boolean),JSON.stringify(lifecycle));
       await page.emulateMedia({reducedMotion:'reduce'});
       const quiet=await page.evaluate(()=>{
         const s=grimRun.scene.scenes[0];s.startRun();grimRun.loop.sleep();

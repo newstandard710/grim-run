@@ -52,6 +52,7 @@
         const row=BIOMES.indexOf(id);
         if(row<0||sample(cell,193)>=DENSITY[row])continue;
         let variant=Math.floor(sample(cell,361)*4);
+        if(id==='foothills'&&sample(cell,61)<Math.min(.83,Math.max(0,(m-1050)/1450)))variant=3;
         // Frozen stalks only occur at the lower snow line.
         if(id==='tundra'&&m>2570&&variant===0)variant=2;
         const size=.80+.33*sample(cell,563);
@@ -99,7 +100,7 @@
       for(const slot of this.slots){
         const patch=slot.patch;
         if(!patch)continue;
-        const grass=patch.id==='forest'||patch.id==='foothills';
+        const grass=patch.id==='forest'||(patch.id==='foothills'&&patch.variant!==3);
         if(grass&&previousX+8<patch.x&&p.x+8>=patch.x)patch.rearHit=s.elapsed;
         if(!patch.frontVisible)continue;
         if(patch.id==='forest'&&patch.variant%2===0){

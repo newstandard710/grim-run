@@ -63,6 +63,37 @@ def paint(biome, variant, layer):
                 stroke([(base,y-.5),knee,(tip,top)],light,.43)
             if dry and i%4==0:
                 stroke([knee,(tip-2.4,top+2.6)],accent,1.15)
+    def snowlip(x, y, w, h):
+        # One swept cornice with a broken shaded underside and tapering tail.
+        edge=[(x-w*.53,y-.1),(x-w*.34,y-h*.52),(x-w*.11,y-h*.87),
+              (x+w*.04,y-h),(x+w*.25,y-h*.79),(x+w*.49,y-h*.29)]
+        poly(edge+[(x+w*.38,y+.2),(x+w*.05,y-.5),(x-w*.17,y+.6)],mid)
+        poly(edge+[(x+w*.16,y-h*.57),(x-w*.08,y-h*.53),(x-w*.38,y-.2)],'#9caeb9')
+        stroke(edge[1:4],light,.5)
+
+    def fragment(x, y, w, h):
+        # Split crystal with two blunt, unequal cut faces.
+        a=(x-w*.44,y-.3); b=(x-w*.22,y-h*.82); c=(x-w*.02,y-h)
+        d=(x+w*.13,y-h*.79); e=(x+w*.03,y); f=(x+w*.39,y-h*.48)
+        poly([a,b,c,d,e],mid);poly([c,d,e,(x-w*.09,y-.1)],accent)
+        poly([e,(x+w*.22,y-h*.53),f,(x+w*.42,y-.4)],dark)
+        stroke([b,c,d],light,.52)
+        stroke([(x+w*.22,y-h*.53),f],mid,.55)
+
+    def slab(x, y, w, h, masonry=False):
+        # Joint-broken flagstone has a squared arris. Basalt breaks in long thin plates.
+        left=x-w*.5
+        if masonry:
+            face=[(left,y-h*.66),(left+w*.14,y-h),(left+w*.79,y-h*.81),
+                  (left+w*.92,y-h*.45),(left+w*.84,y-h*.36),(left+w*.98,y-h*.13)]
+        else:
+            face=[(left,y),(left+w*.22,y-h*.74),(left+w*.64,y-h),
+                  (left+w*.94,y-h*.27),(left+w*.72,y-h*.37)]
+        poly(face+[(left+w*.84,y+.3),(left+w*.23,y+.7)],dark)
+        poly(face+[(left+w*.31,y-h*.18)],mid)
+        stroke(face[1:3],light,.5)
+        if masonry: stroke([(left+w*.68,y-h*.83),(left+w*.6,y-h*.37)],dark,.62)
+        else: stroke([(left+w*.19,y-.15),(left+w*.55,y-h*.33)],accent,.55)
     if layer == 0:  # Material lying on the inclined shoulder.
         for _ in range(9 if biome != 7 else 4):
             x,y = rng.uniform(6,58),rng.uniform(11,19)
@@ -74,21 +105,24 @@ def paint(biome, variant, layer):
             elif biome in (2,5):
                 stroke([(x-w,y+1),(x-w*.15,y),(x+w*.28,y+.2),(x+w,y-1.1)],mid,1.15)
                 stroke([(x-w*.24,y+.2),(x+w*.38,y-.3)],light,.47)
+            elif biome==4: fragment(x,y,w,rng.uniform(1.2,2.5))
+            elif biome in (6,7): slab(x,y,w*1.2,rng.uniform(1,2.2),biome==7)
             else: chip(x,y,w,rng.uniform(1,2.2),accent if rng.random()<.35 else mid)
         if biome in (0,5,7):
             x=rng.uniform(13,24)
             stroke([(x,16),(x+7,14),(x+15,14.3),(x+21,12.4)],dark,1.5)
             stroke([(x+7,13.8),(x+14,14)],accent,.65)
     elif biome in (0,1):
-        if layer==1 or (biome==0 and variant%2==0):
+        if biome==1 and layer==1 and variant==3:
+            slab(31,24,22,4.3)
+        elif layer==1 or (biome==0 and variant%2==0):
             grass(32,24, (14+variant*.9) if layer==1 else 7, 6 if layer==1 else 3,
                   14 if layer==1 else 6,dry=biome==1)
         elif biome==0: leaf(32,24,9,4.8)
         else: chip(32,24,10,3.4)
     elif biome==2:
         if layer==1 and variant==0: grass(30,24,7,4,5,True)
-        chip(32,24,22 if layer==1 else 12,4.5 if layer==1 else 2.5)
-        stroke([(24 if layer==1 else 28,22.8),(31,21),(35,21.5)],'#b2bdc5',1)
+        snowlip(32,24,25 if layer==1 else 13,4.2 if layer==1 else 2.7)
     elif biome==5:
         if layer==1:
             chip(28,24,13,3.1,accent)
@@ -97,11 +131,14 @@ def paint(biome, variant, layer):
         else:
             for x in (29,31,34):
                 chip(x,24+rng.uniform(-.4,.4),rng.uniform(4,7),rng.uniform(1.4,2.4))
+    elif biome==4:
+        fragment(32,24,15 if layer==1 else 9,7 if layer==1 else 3.4)
+    elif biome in (6,7):
+        slab(32,24,21 if layer==1 else 12,4.1 if layer==1 else 2.8,biome==7)
+        if biome==6 and layer==1: slab(26,22.7,13,2.3)
     else:
-        height={3:5.5,4:7,6:4.6,7:3.8}[biome]
-        chip(32,24,16 if layer==1 else 9.5,height if layer==1 else height*.56,
-             accent if biome==4 and variant%2 else mid)
-        if layer==1: chip(24,24.5,8,height*.48)
+        chip(32,24,17 if layer==1 else 9.5,5 if layer==1 else 2.8)
+        if layer==1: chip(24,24.5,8,2.7)
     return im.resize((W*2,H*2),Image.Resampling.LANCZOS)
 
 
