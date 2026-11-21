@@ -10,6 +10,13 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
  // Report the renderer and capture separately even when Chromium stops answering.
  const shot=async name=>{
+  // The fixture already drives sceneUpdate manually. For a capture, give
+  // exactly one frame to the compositor instead of racing an automatic render.
+  const wasRunning=await page.evaluate(()=>{
+   const loop=window.grimRun.loop,running=loop.running;
+   if(running)loop.sleep();
+   return running;
+  });
   console.log(name+' Phaser step started');
   let timer;
   try{
@@ -17,8 +24,10 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(name+' Phaser step exceeded 30s')),30000);})]);
   }finally{clearTimeout(timer);}
   console.log(name+' Phaser step finished, screenshot started');
-  await page.screenshot({path:path.join(dir,'polish-'+name+'.png'),timeout:30000});
+  const pixels=await page.screenshot({path:path.join(dir,'polish-'+name+'.png'),timeout:30000});
   console.log(name+' screenshot finished');
+  if(wasRunning)await page.evaluate(()=>window.grimRun.loop.wake());
+  return pixels;
  };
  const stage=async meters=>{const x=await page.evaluate(m=>{
   const s=window.grimRun.scene.scenes[0];s.terrain.advance(s.startX+m*12+2400);
