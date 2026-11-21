@@ -338,7 +338,8 @@ async function screenshotAt(page, distance) {
           if (seed === originalSeed && [720, 900, 1080].includes(m)) scenes.push({m, weight, count: list.length});
           for (const v of list) {
             const near = v.depth === -22, alpha = v.alpha / weight;
-            check(alpha >= (near ? .82 : .60) - 1e-9 && alpha <= (near ? .95 : .72) + 1e-9,
+            const treeFactor = near && /oak|trunk/.test(v.frame) ? .84 : 1;
+            check(alpha >= (near ? .82 * treeFactor : .60) - 1e-9 && alpha <= (near ? .95 * treeFactor : .72) + 1e-9,
               'Full Forest opacity stays in the correct band');
             check(v.origin[0] > .19 && v.origin[0] < .66 && v.origin[1] > .82 && v.origin[1] < .96,
               'Illustrated contact is anchored inside the frame');

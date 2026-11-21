@@ -385,6 +385,35 @@ async function measureDraw(browser){
   console.log('Chromium CPU drawScene comparison',results);
 }
 
+async function checkPortraitLandmarks(browser) {
+  const {page,errors}=await setup(browser,{width:390,height:844});
+  try {
+    // The pale moon and lit gate occupy these coordinates in the source paintings.
+    for(const [biome,meters,x,y] of [
+      ['foothills',1100,630,102],['foothills',2080,630,102],
+      ['crystals',6200,842,181],['crystals',6800,842,181],
+      ['boss',10300,1095,181],['boss',19800,1095,181]
+    ]){
+      await page.evaluate(m=>window.biomeReview.place(m),meters);
+      await page.waitForFunction(id=>{
+        const {scene}=window.biomeReview;
+        scene.drawScene();
+        return scene.biomeBackdrops[id]?.visible&&!scene.load.isLoading();
+      },biome);
+      const position=await page.evaluate(([id,x,y])=>{
+        const {scene,game}=window.biomeReview;
+        const plate=scene.biomeBackdrops[id],scale=plate.displayWidth/1536;
+        game.step(performance.now(),0);
+        return [plate.x+(x-768)*scale,plate.y+(y-432)*scale];
+      },[biome,x,y]);
+      assert(position[0]>20 && position[0]<370 && position[1]>44 && position[1]<640,
+        biome+' portrait landmark visible at '+meters+'m: '+position);
+      await page.screenshot({path:path.join(outputs,'portrait-'+biome+'-'+meters+'.png')});
+    }
+    assert.deepEqual(errors,[]);
+  }finally{await page.close();}
+}
+
 async function main(){
   fs.mkdirSync(outputs,{recursive:true});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -395,6 +424,7 @@ async function main(){
     if(process.env.GRIM_ABYSS_PORTAL==='1')await portalReadiness(browser);
     else if(process.env.GRIM_ABYSS_PERF==='1')await measureDraw(browser);
     else if(process.env.GRIM_ABYSS_PIXELS==='1'){
+      await checkPortraitLandmarks(browser);
       const session=await setup(browser,{width:740,height:360});
       try{
         await session.page.evaluate(()=>window.biomeReview.place(15));

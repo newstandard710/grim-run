@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.15</title>
+  <title>GRIM RUN — v0.19.16</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -34,6 +34,7 @@ html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#090
 .coin-icon {color:#ffd36c;font-size:1.13em;text-shadow:0 0 10px #ffc45b;}
 .collect-divider {opacity:.48;margin:0 5px;}
 .top-pause {position:absolute;right:max(env(safe-area-inset-right),16px);top:max(env(safe-area-inset-top),9px);border:1px solid #b8cbde77;border-radius:9px;background:#122033bb;color:#fff;font-weight:900;font-size:18px;width:42px;height:39px;pointer-events:auto;touch-action:manipulation;}
+.pause-bars {display:block;box-sizing:content-box;width:4px;height:14px;margin:auto;border-inline:3px solid currentColor;}
 #controls {position:absolute;inset:0;z-index:6;pointer-events:none;}
 /* Compact near-square thumb controls, with Jump directly above Slide. */
 :root { --action-size: clamp(70px,21vh,91px); --right-bottom: max(env(safe-area-inset-bottom),17px); }
@@ -284,7 +285,7 @@ button {cursor:pointer;}
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.15</div>
+    <div class="home-edition">GRIM RUN · v0.19.16</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="critical-health-halo" class="hidden" aria-hidden="true"></div>
@@ -292,7 +293,7 @@ button {cursor:pointer;}
     <div id="hearts" class="top-left" aria-label="Health">♥ ♥ ♥</div>
     <div class="top-center"><span id="distance">0</span><small> METERS</small><span class="score-inline"> / <span id="score">0</span> PTS</span><div id="power-strip" class="power-strip" aria-live="off"></div><div id="time-status" class="time-status hidden">◷ TIME SLOWED</div><div id="god-mode-status" class="god-mode-status hidden">♜ GOD MODE</div><div id="gun-status" class="gun-status hidden">⌁ BONE CROSSBOW</div></div>
     <div class="top-right"><span class="coin-icon">●</span> <span id="coins">0</span><span class="collect-divider"> · </span><span class="soul-icon">✦</span> <span id="souls">0</span></div>
-    <button id="pause-btn" class="top-pause" aria-label="Pause game">Ⅱ</button>
+    <button id="pause-btn" class="top-pause" aria-label="Pause game"><span aria-hidden="true" class="pause-bars"></span></button>
   </div>
   <div id="portal-overlay" class="portal-overlay hidden"><div class="portal-title">DESCENT INTO THE UNDERWORLD</div></div>
   <div id="chest-screen" class="chest-scene hidden" aria-label="Bone Crossbow acquired">
@@ -325,7 +326,7 @@ button {cursor:pointer;}
       <p id="portal-art-load-error" role="alert" class="hidden">Portal and mist artwork failed to load. Refresh to retry.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.15</div>
+      <div class="mini">v0.19.16</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -470,7 +471,7 @@ button {cursor:pointer;}
   </div>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.15',
+  version: '0.19.16',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -1978,7 +1979,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/surface-dressing.js?v=1"></script>
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
-  <script src="assets/visuals/forest-midground.js?v=downhill1"></script>
+  <script src="assets/visuals/forest-midground.js?v=0.19.16"></script>
   <script src="assets/visuals/biome-midground.js?v=downhill1"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
@@ -4503,7 +4504,13 @@ window.GRIM_CONFIG = Object.freeze({
         const progress=clamp((this.distance-biome.start)/Math.max(1,biome.end-biome.start),0,1);
         const drift=this.width*(.10*progress+Math.sin(this.elapsed*.12+i*1.7)*.004);
         const float=Math.sin(this.elapsed*.20+i*1.9)*this.height*.003;
-        image.setPosition(this.width*.5-drift,this.height*.5+float);
+        // On tall screens, keep the Foothills moon and the Boss gate within
+        // the narrow painted crop. Fade the framing out toward square.
+        const portrait=clamp((1-this.width/this.height)*2,0,1);
+        const focusX=biome.id==='foothills'?-153:biome.id==='boss'?262:0;
+        const frameScale=focusX?portrait*image.displayWidth/1536:0;
+        image.setPosition(this.width*.5-drift-focusX*frameScale,
+          this.height*.5+float+46*frameScale);
         image.setAlpha(alpha).setVisible(true);
       }
       this.portalSummitArt?.drawSky(this.biomeBackdrops.tundra);
