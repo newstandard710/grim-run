@@ -179,7 +179,7 @@ def boot_samples(im,center):
 
 def bake():
     OUT.mkdir(exist_ok=True)
-    poses=[];low=[];ranges={};hands=[];soles=[];unroll_targets={}
+    poses=[];low=[];low_soles=[];ranges={};hands=[];soles=[];unroll_targets={}
     def add_pose(im,palm,sole):
         poses.append(image(im).crop((65,40,216,154)))
         hands.append(list(np.round(palm,2)));soles.append(sole)
@@ -252,6 +252,7 @@ def bake():
         if i==0:final=tuck
         if i==16:final=low_slide
         low.append(image(final))
+        low_soles.append(boot_samples(body,mid[6,0]))
         if i==7:
             opening=over(body,glove)
             opening_marks=mid.copy()
@@ -283,7 +284,7 @@ def bake():
                     columns=cols,frames=len(images))
     data=dict(body=save('reaper-landing',poses,12),low=save('reaper-tuck-landing',low,5),
               steel=save('reaper-landing-steel',steels,3),compactAngle=round(opening_angle,6),
-              ranges=ranges,hands=hands,soles=soles)
+              ranges=ranges,hands=hands,soles=soles,lowSoles=low_soles)
     (OUT/'poses.js').write_text('window.GRIM_LANDING_POSES='+json.dumps(data,separators=(',',':'))+';\n')
 
 

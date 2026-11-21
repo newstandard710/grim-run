@@ -16,7 +16,7 @@
   function supportAt(s,platform,x,points){
     let y=Infinity;
     for(const [offset,sole] of points){
-      const floor=ground(s,x+offset,platform);
+      const floor=platform?platform.y:ground(s,x+offset,null);
       if(Number.isFinite(floor))y=Math.min(y,floor-sole);
     }
     return Number.isFinite(y)?y:s.feetY;
@@ -82,11 +82,13 @@
       if(!this.ready||!m?.forwardActive||activeAction(s))return;
       const last=this.owner===p?this.approach:null;
       const grade=s.terrain.groundAt(p.x+3)-s.terrain.groundAt(p.x);
-      const entry=last||this.entry(p.x,vy,Number.isFinite(grade)?grade/3:0);
+      const entry=last&&(!p.holdSlide||last.source==='compact')?last:
+        this.entry(p.x,vy,Number.isFinite(grade)?grade/3:0);
       const lead=entry.lead;
       // Store an immutable sample. Rewind's existing player snapshot can
       // reuse it without retaining the renderer or mutating an older frame.
       p.visualTouchdown={...entry,x:p.x,at:s.elapsed,lead,
+        contactAngle:m.weapon?.visible?m.weapon.rotation:null,
         held:p.holdSlide,platform:p.onSoulPlatform};
       this.approach=null;
     }
@@ -117,7 +119,9 @@
       const s=this.scene,p=s.player;
       if(entry.source==='compact'){
         const frame=Math.round(7*t);
-        this.body(frame,true,p.x,s.feetY);
+        const floor=ground(s,p.x,platform);
+        const rise=Number.isFinite(floor)?supportAt(s,platform,p.x,art.lowSoles[7])-floor:0;
+        this.body(frame,true,p.x,s.feetY+rise*ease(t));
         return;
       }
       const key=entry.load+entry.side;
@@ -138,7 +142,7 @@
       if(entry.source==='compact'&&entry.held){
         if(p.sliding&&age<120){
           const t=clamp(age/120),frame=7+Math.round(9*t);
-          const rise=supportAt(s,platform,p.x,[[2,0],[-7,0]])-p.y;
+          const rise=supportAt(s,platform,p.x,art.lowSoles[frame])-p.y;
           this.body(frame,true,p.x,p.y+rise*(1-ease(t)));
         }
         return;
@@ -171,8 +175,8 @@
       const view=this.body(frame,false,x,y);
       const hand=art.hands[frame],gx=x+hand[0],gy=y+hand[1];
       const air=m.trailingRotation(gx,gy,false);
-      const start=entry.source==='compact'?art.compactAngle:
-        entry.source==='legacy'?mix(.04,air,ease(.76)):air;
+      const start=entry.source==='compact'?art.compactAngle:entry.contactAngle??
+        (entry.source==='legacy'?mix(.04,air,ease(.76)):air);
       const drag=m.trailingRotation(gx,gy,true);
       this.weapon(view,hand,mix(start,drag,ease(progress)),progress>=.64);
       if(unroll){
@@ -192,9 +196,14 @@
         p.visualTouchdown=null;
         const next=this.forecast();
         if(!next){this.approach=null;return;}
-        if(!this.approach||p.holdSlide&&this.approach.source!=='compact')
+        if(!this.approach||p.holdSlide&&this.approach.source!=='compact'){
+          // Let a release already in progress finish its painted aerial turn.
+          if(!p.holdSlide&&!p.airTuck&&p.visualTuckReleaseMs>0)return;
           this.approach=this.entry(next.x,p.velocityY,next.slope);
-        this.arrival(this.approach,clamp(1-next.time/lookAhead),next.platform);
+          this.approach.window=this.approach.source==='legacy'?next.time:lookAhead;
+        }
+        const t=1-next.time/Math.max(.001,this.approach.window);
+        this.arrival(this.approach,clamp(t),next.platform);
       }else if(p.visualTouchdown){
         const entry=p.visualTouchdown;
         if(entry.platform!==p.onSoulPlatform||p.x<entry.x||p.x-entry.x>=settledDistance||

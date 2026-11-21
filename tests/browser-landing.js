@@ -10,6 +10,9 @@ const routes=[
  {id:'seed78',x:47568.84974368973,short:4},{id:'held',m:20,short:1,press:3,releaseAfter:170},
  {id:'latched',m:20,short:1,latch:true},{id:'release',m:20,short:1,press:3,releaseFraction:.61},
  {id:'lateRelease',m:20,short:1,press:3,releaseFraction:.94},{id:'platform',platform:true},
+ {id:'heldUp',m:2515,short:1,press:2},{id:'heldDown',m:2586,short:1,press:3},
+ {id:'releasedUp',m:2515,short:1,latch:true},{id:'releasedDown',m:2586,short:1,press:3,releaseFraction:.94},
+ {id:'platformHeld',platform:true,press:2},{id:'platformReleased',platform:true,press:2,releaseFraction:.94},
  ...['jump','slide','cut','shoot'].map(action=>({id:action,m:12,short:1,interrupt:action}))];
 const rates={hz30:[1000/30],hz60:[1000/60],hz120:[1000/120],uneven:[11,33,8,53,17]};
 function setup({route,rate,landingAt}){
@@ -68,12 +71,37 @@ async function scenarios(page,ver,selection){
  const at=rows.findIndex(r=>r.grounded);
  if(ver==='after'){
    if(!rows.some(r=>r.key?.includes('landing')))throw Error('Candidate art absent '+route.id+'/'+rk);
+   if(route.id==='platform'&&rows[at-1].w&&rows[at].w)
+     assert(Math.abs(rows[at].w[2]-rows[at-1].w[2])<.025,'Platform contact must retain the airborne blade angle');
    if(route.id==='jump')assert(!rows[at+1].grounded,'re-jump');
    if(route.id==='cut')assert(rows[at+1].attack>0,'Cut');
    if(route.id==='slide')assert(rows[at+1].low,'Slide');
    if(route.id==='shoot')assert(rows[at+1].shots>0,'Shoot');}
  timing[rk][route.id]=rows;
  }}return timing;
+}
+async function checkTouchAtContact(page){
+ const client=await page.context().newCDPSession(page);
+ const result={};
+ try{
+  for(const [action,selector] of Object.entries({jump:'#jump-btn',slide:'#slide-btn',cut:'#attack-btn',shoot:'#crossbow-btn'})){
+   await page.evaluate(setup,{route:routes[0],rate:rates.hz60,landingAt:0});
+   await page.evaluate(()=>{
+    const s=grimRun.scene.scenes[0];
+    s.gunUnlocked=true;s.gunCooldownMs=0;s.ui.showGun(true);
+    for(let i=0;i<120;i++)if(qaStep().grounded)return;
+    throw Error('Touch route missed ground');
+   });
+   const box=await page.locator(selector).boundingBox();
+   assert(box,action+' touch control');
+   await client.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]});
+   const state=await page.evaluate(()=>qaStep());
+   assert(({jump:!state.grounded,slide:state.low,cut:state.attack>0,shoot:state.shots>0})[action],action+' first-tick touch');
+   result[action]=signature([state])[0];
+   await client.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }
+ }finally{await client.detach();}
+ return result;
 }
 async function film(page,route,ver){
  const rate=rates.hz60;
@@ -131,6 +159,8 @@ if(require.main===module)(async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_EXECUTABLE,headless:true,args:['--no-sandbox','--disable-dev-shm-usage',...(renderer==='canvas'?['--disable-webgl']:['--use-angle=swiftshader','--enable-unsafe-swiftshader'])]});
  try{let original;for(const ver of ['before','after']){
   const page=await open(browser,ver,{width,height});const rendererType=await page.evaluate(()=>grimRun.renderer.type);assert.equal(rendererType,renderer==='canvas'?1:2);console.log('READY',ver,renderer,width,height);
+  const touch=await checkTouchAtContact(page);
+  fs.writeFileSync(path.join(dir,ver+'-touch.json'),JSON.stringify(touch));
   const result=await scenarios(page,ver,process.argv.includes('quick')?{hz60:rates.hz60}:rates);
   fs.writeFileSync(path.join(dir,ver+'-'+renderer+'-'+width+'.json'),JSON.stringify(result));
   if(ver==='before')original=result;
