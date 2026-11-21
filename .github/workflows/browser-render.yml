@@ -39,6 +39,16 @@ jobs:
             fi
           fi
           node tests/browser-tip-down-cut.js
+      - name: Check surface placement, contacts, seeded parity and rendering cost
+        if: matrix.group == 'cut'
+        run: node tests/browser-surface-dressing.js
+      - name: Save surface dressing review
+        if: always() && matrix.group == 'cut'
+        uses: actions/upload-artifact@v4
+        with:
+          name: surface-dressing-review
+          path: test-results/surface/
+          if-no-files-found: ignore
       - name: Fetch the previous live Forest renderer
         if: matrix.group == 'forest'
         run: |
