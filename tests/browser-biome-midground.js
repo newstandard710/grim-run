@@ -290,6 +290,13 @@ async function parity(browser) {
     const b = window.biomeReview;
     // This historical pixel comparison isolates midground scenery. Use the
     // original cap on both sides; the ridge has its own two-renderer pixel test.
+    // Use the original tree opacity for this historical geometry comparison.
+    // The Forest suite checks the production tree and ground-cover opacities.
+    const forest=b.scene.forestMidground;
+    const drawBand=forest.drawBand;
+    forest.drawBand=function(band,...args){
+      return drawBand.call(this,{...band,treeOpacity:band.opacity},...args);
+    };
     const surfaceView=b.scene.terrainSurfaceView;
     b.scene.terrainSurfaceView=function(section,edge,sheen,detail,activeKeys,biome){
       return surfaceView.call(this,section,edge,sheen,detail,activeKeys,biome);

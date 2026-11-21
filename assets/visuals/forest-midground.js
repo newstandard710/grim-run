@@ -17,7 +17,7 @@
     },
     {
       depth: -22, rate: .42, stride: 690, base: .87, color: 0x212a2d, coverCutoff: [.19, .19], salt: 0x776,
-      opacity: [.82, .95], treeHeight: [.75, .95],
+      opacity: [.82, .95], treeOpacity: [.82 * .84, .95 * .84], treeHeight: [.75, .95],
       trees: [
         ['near-curved-oak', .34, .89], ['near-split-trunk', .34, .92],
         ['near-twin-trunks', .28, .92], ['near-bent-oak', .27, .90]
@@ -158,6 +158,7 @@
         const size = variation(seed, cell, salt + 4);
         const relativeHeight = isCover ? coverHeight * mix(.85, 1.12, size)
           : mix(...(tall ? band.giants : band.treeHeight), size);
+        const opacity = (!isCover && band.treeOpacity) || band.opacity;
         const frame = this.atlas.get(key);
         const scale = scaleHeight * relativeHeight / frame.height;
         const flip = variation(seed, cell, salt + 5) < .5;
@@ -166,7 +167,7 @@
         const image = pool[used++];
         if (image.frame.name !== key) image.setFrame(key);
         image.setOrigin(rootX, rootY).setPosition(x, y).setScale(flip ? -scale : scale, scale)
-          .setAlpha(weight * mix(...band.opacity, variation(seed, cell, salt + 6))).setVisible(true);
+          .setAlpha(weight * mix(...opacity, variation(seed, cell, salt + 6))).setVisible(true);
         this.drawBank(bank, band, ground, worldX, x, scaleHeight, Math.min(frame.width * scale * .54, band.stride * .32));
       }
       for (; used < pool.length; used++) pool[used].setVisible(false);

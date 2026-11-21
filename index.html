@@ -1979,7 +1979,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/surface-dressing.js?v=1"></script>
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
-  <script src="assets/visuals/forest-midground.js?v=downhill1"></script>
+  <script src="assets/visuals/forest-midground.js?v=0.19.16"></script>
   <script src="assets/visuals/biome-midground.js?v=downhill1"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
@@ -4504,7 +4504,13 @@ window.GRIM_CONFIG = Object.freeze({
         const progress=clamp((this.distance-biome.start)/Math.max(1,biome.end-biome.start),0,1);
         const drift=this.width*(.10*progress+Math.sin(this.elapsed*.12+i*1.7)*.004);
         const float=Math.sin(this.elapsed*.20+i*1.9)*this.height*.003;
-        image.setPosition(this.width*.5-drift,this.height*.5+float);
+        // On tall screens, keep the Foothills moon and the Boss gate within
+        // the narrow painted crop. Fade the framing out toward square.
+        const portrait=clamp((1-this.width/this.height)*2,0,1);
+        const focusX=biome.id==='foothills'?-153:biome.id==='boss'?262:0;
+        const frameScale=focusX?portrait*image.displayWidth/1536:0;
+        image.setPosition(this.width*.5-drift-focusX*frameScale,
+          this.height*.5+float+46*frameScale);
         image.setAlpha(alpha).setVisible(true);
       }
       this.portalSummitArt?.drawSky(this.biomeBackdrops.tundra);
