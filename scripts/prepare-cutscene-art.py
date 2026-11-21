@@ -66,16 +66,49 @@ def register(name):
         records[i] = {'pose': i, 'foot': foot, 'sourceBounds': bounds}
     return poses, hands, records
 
-def build(kind):
-    name = 'reaper-' + kind + '-keyposes.png'
-    poses, hands, registration = register(name)
-    frames, grips = [], []
-    rig = None
-    if kind == 'bow':
-        frames, grips, rig = build_bow(OUT/'source/reaper-rig-body.png')
-    else:
-        vendor_base = np.uint8(poses[0]*255+.5)
-        frames, grips, rig = make_walk(vendor_base)
+def build_vendor():
+    poses, _, _ = register('reaper-vendor-keyposes.png')
+    base = np.uint8(poses[0]*255+.5)
+    tiles, by_hash, tracks = [], {}, {}
+    for kind in ('angel', 'devil'):
+        frames, rig = make_walk(base, kind == 'devil')
+        for frame, pose in zip(frames, rig):
+            pixels = np.array(frame)
+            pixels[pixels[:,:,3]<8] = 0
+            key = hashlib.sha256(pixels.tobytes()).digest()
+            if key not in by_hash:
+                by_hash[key] = len(tiles)
+                tiles.append(Image.fromarray(pixels))
+            pose['frame'] = by_hash[key]
+        tracks[kind] = rig
+    # The two performances share opening drawings. Crop the common camera
+    # rectangle once so both keep the original floor and registration.
+    bounds = np.array([tile.getbbox() for tile in tiles])
+    left, top = bounds[:,:2].min(axis=0).tolist()
+    right, bottom = bounds[:,2:].max(axis=0).tolist()
+    assert min(left, top, CELL-right, CELL-bottom) >= 2
+    box = (left-2, top-2, right+2, bottom+2)
+    w, h = box[2]-box[0], box[3]-box[1]
+    columns = min(3584//w, len(tiles))
+    sheet = Image.new('RGBA', (columns*w, ((len(tiles)+columns-1)//columns)*h))
+    assert max(sheet.size) <= 3584
+    for i, tile in enumerate(tiles):
+        sheet.paste(tile.crop(box), (i%columns*w, i//columns*h))
+    file = OUT/'reaper-vendor.webp'
+    sheet.save(file, quality=83, alpha_quality=100, method=6)
+    anchor = (ANCHOR-[box[0],box[1]]).astype(int).tolist()
+    for track in tracks.values():
+        for pose in track:
+            for point in ('eye','crown'):
+                if pose[point] is not None:
+                    pose[point] = (np.array(pose[point])-box[:2]).round(3).tolist()
+    layout = {'frames':len(tiles), 'cell':[w,h], 'anchor':anchor}
+    return {**digest(file), 'size':sheet.size, **layout}, {**layout, **tracks}
+
+
+def build_bow_atlas():
+    _, _, registration = register('reaper-bow-keyposes.png')
+    frames, grips, rig = build_bow(OUT/'source/reaper-rig-body.png')
     sheet = Image.new('RGBA', (COLS * CELL, ((len(frames)+COLS-1)//COLS) * CELL))
     overlay = Image.new('RGBA', (COLS * 64, ((len(frames)+COLS-1)//COLS) * 64))
     offsets, bounds = [], []
@@ -85,7 +118,7 @@ def build(kind):
         pixels[pixels[:,:,3] == 0] = 0
         tile = Image.fromarray(pixels)
         box = tile.getbbox()
-        assert box and box[0] >= 2 and box[1] >= 2 and box[2] < CELL-1 and box[3] < CELL-1, (kind, i, box)
+        assert box and box[0] >= 2 and box[1] >= 2 and box[2] < CELL-1 and box[3] < CELL-1, ('bow', i, box)
         bounds.append(box)
         sheet.paste(tile, (i % COLS * CELL, i // COLS * CELL))
         center = np.mean(grips[i], axis=0)
@@ -103,18 +136,12 @@ def build(kind):
         palm[:,:,3] = np.uint8(palm[:,:,3]*palm_mask)
         palm[palm[:,:,3] == 0] = 0
         overlay.paste(Image.fromarray(palm), (i % COLS * 64, i // COLS * 64))
-    file = OUT / ('reaper-bow.png' if kind == 'bow' else 'reaper-vendor.webp')
-    if kind == 'bow':
-        sheet.save(file, optimize=True)
-    else:
-        sheet.save(file, quality=91, alpha_quality=100, method=6)
+    file = OUT / 'reaper-bow.png'
+    sheet.save(file, optimize=True)
     meta = {**digest(file), 'size': sheet.size, 'frames': len(frames), 'cell': [CELL,CELL], 'anchor': ANCHOR.tolist(), 'bounds': bounds}
-    if kind == 'bow':
-        file = OUT / 'bow-hands.png'
-        overlay.save(file, optimize=True)
-        hand_meta = {**digest(file), 'size': overlay.size, 'frames': len(frames), 'cell': [64,64]}
-    else:
-        hand_meta = None
+    file = OUT / 'bow-hands.png'
+    overlay.save(file, optimize=True)
+    hand_meta = {**digest(file), 'size': overlay.size, 'frames': len(frames), 'cell': [64,64]}
     return meta, hand_meta, {'hands': grips, 'handOffsets': offsets, 'registration': registration, 'rig':rig}
 
 def main():
@@ -134,13 +161,13 @@ def main():
         assert digest(OUT/'reaper-bow.png')['sha256']==bow['sha256']
         assert digest(OUT/'bow-hands.png')['sha256']==overlay['sha256']
     else:
-        bow, overlay, bow_data = build('bow')
+        bow, overlay, bow_data = build_bow_atlas()
     if args.bow_only:
         vendor=prior['runtime']['reaper-vendor.webp']
         vendor_data=prior_data['vendor']
         assert digest(OUT/'reaper-vendor.webp')['sha256']==vendor['sha256']
     else:
-        vendor, _, vendor_data = build('vendor')
+        vendor, vendor_data = build_vendor()
     source_paths = OUT.joinpath('source').glob('*.png')
     if args.vendor_only or args.bow_only:
         source_paths = [OUT/'source'/name for name in prior['sources']]
@@ -149,6 +176,6 @@ def main():
     (OUT/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     data = {'version':'0.19.11', 'cell':CELL, 'anchor':ANCHOR.tolist(), 'bow':bow_data, 'vendor':vendor_data}
     (OUT/'animation-data.js').write_text('/* Generated by scripts/prepare-cutscene-art.py */\nwindow.GRIM_CUTSCENE_DATA='+json.dumps(data, separators=(',',':'))+';\n')
-    print('Bow:', bow['frames'], 'poses; vendor:', vendor['frames'], 'poses.')
+    print('Bow:', bow['frames'], 'poses; vendor:', vendor['frames'], 'packed poses', vendor['size'])
 
 if __name__=='__main__':main()

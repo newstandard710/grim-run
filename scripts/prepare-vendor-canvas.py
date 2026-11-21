@@ -11,7 +11,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 DESTINATION = ROOT / 'assets/cutscenes/v0197/vendor-canvas.webp'
 ACTORS = ('angel', 'demon')
-FRAMES, COLUMNS = 24, 8
+FRAMES, COLUMNS = 32, 8
 W, H, MARGIN = 256, 208, 8
 NX, NY = 24, 28
 
@@ -55,6 +55,8 @@ def paint(source, points):
         back = cv2.getAffineTransform(screen,source_points[indices])
         x0,y0 = np.maximum(0,np.floor(screen.min(axis=0)).astype(int))
         x1,y1 = np.minimum([mx.shape[1],mx.shape[0]],np.ceil(screen.max(axis=0)).astype(int)+1)
+        if x1 <= x0 or y1 <= y0:
+            continue
         mask = np.zeros((y1-y0,x1-x0),dtype=np.uint8)
         cv2.fillConvexPoly(mask,np.round((screen-[x0,y0])*256).astype(np.int32),1,shift=8)
         y,x = np.where(mask)
@@ -75,7 +77,8 @@ for kind,actor in enumerate(ACTORS):
     source[:,:,:3] *= source[:,:,3:4]
     for i in range(FRAMES):
         k = kind*FRAMES+i
-        atlas.paste(paint(source,poses[k]),(k%COLUMNS*cell[0],k//COLUMNS*cell[1]))
-atlas.save(DESTINATION,quality=77,method=6,exact=False)
+        tile = paint(source,poses[k])
+        atlas.paste(tile,(k%COLUMNS*cell[0],k//COLUMNS*cell[1]))
+atlas.save(DESTINATION,quality=48,method=6,exact=False)
 raw = DESTINATION.read_bytes()
 print(f'{DESTINATION.name}: {atlas.size}, {len(raw):,} bytes, SHA-256 {hashlib.sha256(raw).hexdigest()}')

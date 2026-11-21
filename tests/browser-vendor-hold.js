@@ -58,18 +58,34 @@ async function inspect(browser,url,canvas,failed=false){
     });
     assert.equal(await page.evaluate(()=>window.grimRun.renderer.type),canvas?1:2);
     if(!failed){
-      const opaque=await page.evaluate(()=>{
-        const s=window.grimRun.scene.scenes[0],texture=s.textures.get('cutscene-vendor');
-        const strip=document.createElement('canvas');strip.width=9;strip.height=1;
+      const checked=await page.evaluate(()=>{
+        const texture=window.grimRun.scene.scenes[0].textures.get('cutscene-vendor');
+        const vendor=window.GRIM_CUTSCENE_DATA.vendor;
+        const strip=document.createElement('canvas');strip.width=7;strip.height=7;
         const ctx=strip.getContext('2d',{willReadFrequently:true});
-        return Array.from({length:193},(_,i)=>{
-          const f=texture.get(i);
-          ctx.clearRect(0,0,9,1);
-          ctx.drawImage(f.source.image,f.cutX+145,f.cutY+88,9,1,0,0,9,1);
-          return ctx.getImageData(0,0,9,1).data.every((channel,index)=>index%4!==3||channel>=250);
+        return [vendor.angel,vendor.devil].map(track=>{
+          let exposed=0;
+          for(const pose of track){
+            const f=texture.get(pose.frame);
+            const [x,y]=pose.eye.map(Math.round);
+            ctx.clearRect(0,0,7,7);
+            ctx.drawImage(f.source.image,f.cutX+x-3,f.cutY+y-3,7,7,0,0,7,7);
+            const rgba=ctx.getImageData(0,0,7,7).data;
+            let cyan=false;
+            for(let i=0;i<rgba.length;i+=4)if(rgba[i+1]>115&&rgba[i+1]-rgba[i]>35&&rgba[i+2]>80&&rgba[i+3]>200)cyan=true;
+            if(!cyan)return -1;
+            if(pose.crown){
+              const [cx,cy]=pose.crown;
+              ctx.clearRect(0,0,1,1);ctx.drawImage(f.source.image,f.cutX+cx,f.cutY+cy,1,1,0,0,1,1);
+              const [r,g,b,alpha]=ctx.getImageData(0,0,1,1).data;
+              if(alpha<245||r+g+b<32)return -2;
+              exposed++;
+            }
+          }
+          return exposed;
         });
       });
-      assert(opaque.every(Boolean),'The crown behind the raised shaft stays covered in every decoded pose');
+      assert(checked.every(n=>n>60),'Every eye is visible and exposed reconstructed cloth has color and coverage');
     }
     for(const k of [1,8]){
       await begin(page,k);
@@ -81,8 +97,8 @@ async function inspect(browser,url,canvas,failed=false){
       assert(travel.reaper<late.reaper);
       const {frame:final,...held}=await time(page,3000,true);
       assert(held.held);
-      assert.equal(held.reaper,failed?11:192);
-      if(canvas)assert.equal(held.canvas,failed?null:(k===1?23:47));
+      assert.equal(held.reaper,failed?11:await page.evaluate(k=>GRIM_CUTSCENE_DATA.vendor[k===1?'angel':'devil'].at(-1).frame,k));
+      if(canvas)assert.equal(held.canvas,failed?null:(k===1?31:63));
       else assert.equal(held.dip,1);
       if(!failed)assert.notDeepEqual(late.frame,final,'The final composition starts at exactly three seconds');
       for(const t of [3001,3560,3999]){
@@ -184,7 +200,7 @@ async function inspect(browser,url,canvas,failed=false){
       await page.waitForFunction(()=>window.grimRun.scene.scenes[0].width===393);
       await page.evaluate(()=>window.grimRun.loop.sleep());
       const {frame:rotatedFrame,...rotated}=await time(page,3500,true);
-      assert(rotated.held);assert.equal(rotated.reaper,192);
+      assert(rotated.held);assert.equal(rotated.reaper,await page.evaluate(()=>GRIM_CUTSCENE_DATA.vendor.angel.at(-1).frame));
       const {frame,...rotatedLater}=await time(page,3940,true);
       assert.deepEqual(rotatedLater,rotated);
       assert.deepEqual(frame,rotatedFrame);

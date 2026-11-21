@@ -61,7 +61,7 @@ clock.update(4000,16);assert.equal(clock.chestMs,1000);
 clock.update(4999,16);assert.equal(clock.state,'chest');assert.equal(clock.chestMs,1);
 clock.update(5000,16);assert.equal(clock.state,'playing');assert(clock.gunUnlocked);
 for(let ms=0;ms<4000;ms++)frames.add(visual.GRIM_VENDOR_ART.approachAt(ms/1000).frame);
-assert(frames.size>=170,'Dense walking and planted settling poses are available');
+assert(frames.size>=125,'Dense walking and planted settling poses are available');
 for(const t of [3,3.25,3.5,3.999])assert.equal(A.relicMotionAt(t).frame,168,'Body holds the final overhead pose');
 assert(A.relicMotionAt(3.5).glow>.99);assert.equal(A.relicMotionAt(4).glow,0);
 assert.equal(visual.GRIM_VENDOR_DATA.relicGrips.length,24);

@@ -10,13 +10,16 @@ from scipy.ndimage import distance_transform_edt
 CELL = 224
 FLOOR = 214
 TRAVEL = 400 / 3
-SAMPLES = 192
-FLOOR_KEYS = ((0, 0, 46), (.45, 27, 65), (.95, 59, 63),
-              (1.50, 92, 60), (2.10, 125, 42), (2.26, TRAVEL, 0))
-# Time, fixed flat-sole x, and final loaded instant. Alternate feet are
-# independently posed so the two braking steps do not replay the opening.
-FAR = ((-.52, 135, .12), (.45, 202, 1.07), (1.50, 267, 2.20), (2.50, 275, 4))
-NEAR = ((0, 169, .56), (.95, 234, 1.63), (2.10, 300, 4))
+FPS = 48
+# (time, stage travel, speed) for the hips; boot marks are independent.
+ANGEL_TRAVEL = ((0,0,52),(.49,30,67),(1.04,67,68),(1.62,103,52),
+                (2.18,127,29),(2.57,TRAVEL,0))
+DEVIL_TRAVEL = ((0,0,52),(.49,30,67),(.97,58,48),(1.43,77,34),
+                (2.00,101,32),(2.31,107,0))
+ANGEL_FEET = (((-.52,131,.14),(.49,198,1.16),(1.62,267,2.28),(2.58,282,4)),
+              ((0,164,.59),(1.04,234,1.76),(2.18,299,4)))
+DEVIL_FEET = (((-.52,131,.14),(.49,198,1.07),(1.43,244,4)),
+              ((0,164,.59),(.97,227,1.57),(2.00,286,4)))
 
 
 def ease(t):
@@ -81,13 +84,13 @@ def leather_joins(hip, knee, ankle):
     return leg.resize((CELL, CELL), Image.Resampling.LANCZOS)
 
 
-def travel_at(t):
-    for (a, x, dx), (b, z, dz) in zip(FLOOR_KEYS, FLOOR_KEYS[1:]):
+def travel_at(t, keys):
+    for (a, x, dx), (b, z, dz) in zip(keys, keys[1:]):
         if t <= b:
             u = (t-a)/(b-a)
             return ((2*u**3-3*u*u+1)*x + (u**3-2*u*u+u)*dx*(b-a)
                     + (-2*u**3+3*u*u)*z + (u**3-u*u)*dz*(b-a))
-    return TRAVEL
+    return keys[-1][1]
 
 
 def foot(t, steps):
@@ -96,45 +99,62 @@ def foot(t, steps):
     hit, x, release = steps[k]
     final = k == len(steps)-1
     lift = 0
+    # Compress the whole foot roll as the remaining distance shortens.
+    # The rear boot's low gather is a short transfer of support.
+    incoming = steps[k][1] - steps[k-1][1] if k else 60
+    outgoing = steps[k+1][1] - x if not final else 0
+    heel_pitch = -.22 * min(1, incoming / 45)
+    toe_pitch = .49 * min(1, outgoing / 50)
     if t <= release:
         if t < hit+.105:
-            pitch, pivot, state = -.23 * (1-ease((t-hit)/.105)), -12, 'heel'
-        elif not final and t > release-.145:
-            pitch, pivot, state = .54 * ease((t-release+.145)/.145), 9, 'toe'
+            pitch, pivot, state = heel_pitch * (1-ease((t-hit)/.105)), -12, 'heel'
+        elif not final and t > release-.14:
+            pitch, pivot, state = toe_pitch * ease((t-release+.14)/.14), 9, 'toe'
         else:
             pitch, pivot, state = 0, 0, 'flat'
     else:
         next_hit, target, _ = steps[k+1]
         u = (t-release)/(next_hit-release)
         x += (target-x)*ease(u)
-        pitch = .54*(1-ease(u/.52)) - .23*ease((u-.39)/.61)
+        pitch = toe_pitch*(1-ease(u/.51)) - .22*min(1,outgoing/45)*ease((u-.37)/.63)
         pivot = 9 - 21*ease(u)
-        lift = (12 if k+1 == len(steps)-1 and steps == FAR else 16)*math.sin(math.pi*u)**1.55
+        lift = min(13, outgoing*.19)*math.sin(math.pi*u)**1.65
         state = 'swing'
     return x, FLOOR-lift, pitch, pivot, state
 
 
-def upper_body_pose(t):
-    step = max(j for j, (hit, *_) in enumerate(FLOOR_KEYS[:5]) if t >= hit)
-    hit, up, load = FLOOR_KEYS[step][0], FLOOR_KEYS[step+1][0], .13 if step < 4 else .16
-    phase = math.pi*(step + min(1, (t-hit)/(up-hit)))
-    settle = ease((t-2.13)/.64)
-    pulse = 3.5*math.sin(math.pi*min(1,(t-hit)/load))
-    # The pelvis yields under each new heel, then rises over the stance leg.
-    single = math.sin(math.pi*min(1,max(0,(t-hit-load)/(up-hit-load)))) if step < 4 else 0
-    pelvis = np.array([1.9 * math.sin(phase)*(1-settle) + settle * 2.0,
-                       pulse - 2.5*single - 1.7*settle])
-    chest = rotate(.045 + .037 * math.sin(phase + .65)*(1-settle) - settle * .11)
-    chest_pivot = np.array([154., 153.])
-    body_offset = chest_pivot + pelvis - chest @ chest_pivot
-    return phase, settle, pelvis, chest, body_offset
-
-
-def place_hood(paint, t, chest, body_offset):
-    look = .82*ease((t-1.72)/.68) + .18*ease((t-2.40)/.52)
-    neck = np.array([164., 101.])
-    head = chest @ rotate(-.18 * look)
-    return warp(paint, head, chest @ neck + body_offset - head @ neck)
+def body_pose(t, keys, devil):
+    step = max(i for i, key in enumerate(keys[:-1]) if t >= key[0])
+    start, end = keys[step][0], keys[step+1][0]
+    u = min(1, (t-start)/(end-start))
+    phase = math.pi * (step + u)
+    brake_start = 1.87 if devil else 2.03
+    settle = ease((t-brake_start)/(.80 if devil else .75))
+    catch = ease((t-brake_start)/.32)*(1-ease((t-brake_start-.32)/.47))
+    load = math.sin(math.pi*min(1,u/.34))**2
+    rise = math.sin(math.pi*max(0,(u-.24)/.76))**2
+    stride = 1-settle
+    pelvis = np.array([(3.4*math.sin(phase-.24)+1.3*load)*stride,
+                       (3.1*load-3.4*rise)*stride])
+    pelvis += [(-8.8 if devil else 4.4)*settle + 2.8*catch,
+               (5.5 if devil else -4.2)*settle + 4.0*catch]
+    # Shoulder counterturn arrives after heel contact. The skull stabilizes
+    # independently while the ribcage absorbs the weight of the scythe.
+    chest_angle = (.025+.084*math.sin(phase+.72))*stride + .080*catch
+    chest_angle += (.125 if devil else -.145)*settle
+    chest = rotate(chest_angle)
+    pivot = np.array([154.,153.])
+    offset = pivot + pelvis - chest @ pivot
+    if devil:
+        claw = ease((t-.52)/.61)
+        face = ease((t-1.73)/.79)
+        gaze = .14*claw - .37*face
+    else:
+        gaze = -.12*ease((t-.50)/.63) - .16*ease((t-1.63)/1.02)
+    head = rotate(gaze + .35*chest_angle)
+    neck = np.array([164.,101.])
+    head_offset = chest @ neck + offset - head @ neck
+    return phase, settle, catch, pelvis, chest, offset, head, head_offset
 
 
 def hood_underpaint(base):
@@ -153,12 +173,12 @@ def hood_underpaint(base):
         rear = base[min(101, max(83, y+2)), rear_x, :3]
         front = base[min(101, max(80, y)), 160, :3]
         u = np.clip((x-142) / 19, 0, 1)
-        patch[y,x,:3] = (rear*(1-u) + front*u) * (alpha[y,x] / 255)
+        patch[y,x,:3] = (rear*(1-u) + front*u) * alpha[y,x]
         patch[y,x,3] = alpha[y,x]
     return patch
 
 
-def make_walk(base):
+def make_walk(base, devil):
     base = base.astype(np.float32) / 255
     base[:, :, :3] *= base[:, :, 3:4]
 
@@ -180,10 +200,10 @@ def make_walk(base):
     # Keep the exposed fingers in the hand layer where the shaft passes behind it.
     hand = polygon([(124,118),(137,119),(146,123),(160,124),(163,132),(160,140),
                     (149,141),(140,139),(130,138),(121,137),(119,128)])
-    free_arm = polygon([(166,129),(174,132),(178,140),(185,143),(192,151),(187,162),
-                        (179,162),(174,153),(171,148),(164,141)])
-    hood = polygon([(123,90),(145,73),(177,70),(188,85),(190,97),(179,106),
-                    (162,111),(151,105),(139,101),(123,103)])
+    free_arm = polygon([(165,127),(180,130),(196,143),(195,165),(179,164),
+                        (176,153),(169,148),(163,142)])
+    hood = polygon([(114,92),(144,70),(178,68),(190,82),(192,102),(179,110),
+                    (166,112),(152,106),(139,102),(116,102)])
 
     plates = []
     legs_removed = np.zeros((CELL, CELL), bool)
@@ -216,23 +236,28 @@ def make_walk(base):
     hand_paint = np.where(hand[:, :, None], base, 0)
     free_paint = np.where(free_arm[:, :, None], base, 0)
     hood_paint = np.where((hood & ~scythe)[:, :, None], base, 0)
+    eye_y, eye_x = np.where((hood_paint[:,:,1]-hood_paint[:,:,0]>.18) & (hood_paint[:,:,1]>.5))
+    eye_at = np.array([eye_x.mean(), eye_y.mean()])
     backing = hood_underpaint(base)
+    bare_cloth = np.uint8((hood_paint[:,:,3] < .05) & (backing[:,:,3] > .99))
     hood_paint += backing * (1-hood_paint[:,:,3:4])
     hand_at = np.array([151., 132.])
     free_shoulder = np.array([165., 131.])
     grid_x, grid_y = xx.astype(np.float32), yy.astype(np.float32)
     trailing = np.clip((135 - grid_x) / 73, 0, 1) ** 1.4
-    frames, contacts, grips = [], [], []
+    frames, contacts = [], []
 
-    for i in range(SAMPLES + 1):
-        t = i * 3 / SAMPLES
-        travel = travel_at(t)
-        phase, settle, pelvis, chest, body_offset = upper_body_pose(t)
+    marks = DEVIL_FEET if devil else ANGEL_FEET
+    keys = DEVIL_TRAVEL if devil else ANGEL_TRAVEL
+    for i in range(3*FPS + 1):
+        t = i / FPS
+        travel = travel_at(t, keys)
+        phase, settle, brake, pelvis, chest, body_offset, head, head_offset = body_pose(t, keys, devil)
         legs = []
         feet = []
         for j, (pivots, paints) in enumerate(plates):
             old_hip, old_knee, old_ankle = pivots
-            x, y, pitch, pivot, state = foot(t, (FAR, NEAR)[j])
+            x, y, pitch, pivot, state = foot(t, marks[j])
             # Shorten the original long toe in profile, keeping the actual
             # armor paint. Keep the nearer sole forward of the far sole in depth.
             shoe = rotate(pitch) @ np.diag([.70 if j else .65, .91])
@@ -256,7 +281,7 @@ def make_walk(base):
             knee = hip + unit * along + np.array([unit[1], -unit[0]]) * bend
             leg = leather_joins(hip, knee, ankle)
             leg.alpha_composite(segment(paints[0], old_hip, old_knee, hip, knee))
-            shin_paint = near_greave(paints[1], old_knee, old_ankle, i) if j else paints[1]
+            shin_paint = near_greave(paints[1], old_knee, old_ankle, i*64/FPS) if j else paints[1]
             leg.alpha_composite(segment(shin_paint, old_knee, old_ankle, knee, ankle))
             leg.alpha_composite(warp(paints[2], shoe, shift))
             if j == 0:
@@ -268,22 +293,27 @@ def make_walk(base):
                          'hip': hip.round(3).tolist(), 'knee': knee.round(3).tolist(),
                          'ankle': ankle.round(3).tolist()})
         cloth_wave = trailing * (2.4 * math.sin(phase - .9) * (1 - settle))
-        cloth_drop = trailing * (1.4 * math.cos(phase - 1.15) * (1 - settle) + 2.2 * settle)
-        brake = ease((t-2.03)/.27) * (1-ease((t-2.30)/.62))
-        cloth_wave += 3.8 * trailing * brake
-        cloth_drop -= 2.7 * trailing * brake
+        cloth_drop = trailing * (1.4 * math.cos(phase - 1.15) * (1 - settle) + (0.9 if devil else 3.9) * settle)
+        cloth_wave += 5.2 * trailing * brake
+        cloth_drop -= 3.7 * trailing * brake
+        cloth_drop += trailing*(2.8 if devil else 4.4)*ease((t-2.48)/.52)
         cloth = cv2.remap(torso, grid_x - cloth_wave, grid_y - cloth_drop, cv2.INTER_LINEAR)
         out = Image.new('RGBA', (CELL,CELL))
         out.alpha_composite(legs[0])
         out.alpha_composite(legs[1])
         out.alpha_composite(warp(lining, chest, body_offset))
         out.alpha_composite(warp(cloth, chest, body_offset))
-        out.alpha_composite(place_hood(hood_paint, t, chest, body_offset))
-        free = chest @ rotate(.29 * math.sin(phase - .25) * (1 - settle))
+        out.alpha_composite(warp(hood_paint, head, head_offset))
+        free = chest @ rotate(.41*math.sin(phase-.42)*(1-settle) + (-.46 if devil else .49)*settle)
         out.alpha_composite(warp(free_paint, free, chest @ free_shoulder + body_offset - free @ free_shoulder))
-        grip = chest @ hand_at + body_offset + np.array([1., -15.0 + 2 * settle])
-        carry = rotate(.245 + .026 * math.sin(phase - .18)*(1-settle) - .035 * settle - .065 * brake)
-        out.alpha_composite(warp(weapon, carry, grip - carry @ hand_at))
+        guard = ease((t-.55)/.72) if devil else 0
+        grip = chest @ hand_at + body_offset + np.array([
+            -2.2*math.sin(phase-.58)*(1-settle) - 2*guard,
+            -6.5 + (-4*guard if devil else 4.1*settle)])
+        carry = rotate(.035 + .052*math.sin(phase-.58)*(1-settle)
+                       + (.067*guard if devil else -.16*settle) - .05*brake)
+        carried = warp(weapon, carry, grip - carry @ hand_at)
+        out.alpha_composite(carried)
         out.alpha_composite(warp(hand_paint, chest, grip - chest @ hand_at))
         out.paste((0, 0, 0, 0), (0, FLOOR + 1, CELL, CELL))
         pixels = np.array(out)
@@ -292,6 +322,13 @@ def make_walk(base):
         pixels[np.isin(labels,tiny)] = 0
         out = Image.fromarray(pixels)
         frames.append(out)
-        contacts.append({'feet': feet, 'pelvis': pelvis.round(3).tolist(), 'travel': round(travel, 5)})
-        grips.append([grip.round(3).tolist(), (chest @ free_shoulder + body_offset).round(3).tolist()])
-    return frames, grips, contacts
+        eye = head @ eye_at + head_offset
+        # Register an exposed cloth pixel independently of its paint color.
+        visible = cv2.warpAffine(bare_cloth, np.column_stack([head,head_offset]),
+                                 (CELL,CELL), flags=cv2.INTER_NEAREST).astype(bool)
+        visible &= np.array(carried)[:,:,3] < 8
+        depth = distance_transform_edt(visible)
+        cy,cx = np.unravel_index(depth.argmax(), depth.shape)
+        crown = [int(cx),int(cy)] if depth[cy,cx] >= 1.5 else None
+        contacts.append({'eye': eye.round(3).tolist(), 'crown': crown, 'feet': feet, 'pelvis': pelvis.round(3).tolist(), 'travel': round(travel, 5)})
+    return frames, contacts

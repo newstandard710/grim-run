@@ -4,8 +4,8 @@
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const smooth=v=>{v=clamp(v,0,1);return v*v*(3-2*v);};
   const HALF_METERS=25,VENDOR_SCALE=1.75;
-  const CANVAS_CELLS=24,CANVAS_WIDTH=272,CANVAS_HEIGHT=224;
-  const CANVAS_URL='assets/cutscenes/v0197/vendor-canvas.webp?v=character-motion1';
+  const CANVAS_CELLS=scope.GRIM_CUTSCENES.MERCHANT_CELLS,CANVAS_WIDTH=272,CANVAS_HEIGHT=224;
+  const CANVAS_URL='assets/cutscenes/v0197/vendor-canvas.webp?v=vendor-greetings1';
   const textureFor=kind=>kind==='devil'?'vendor-demon':'vendor-angel';
   const cinematicElapsed=s=>Math.max(0,(scope.GRIM_CONFIG.vendorIntroDurationMs-s.vendorIntroMs)/1000);
   function preload(s){
@@ -21,7 +21,7 @@
     s.load.spritesheet('relic-grip-overlay','assets/vendors/v0152/relic-grip-overlay.png?v=0.15.2',
       {frameWidth:128,frameHeight:96,endFrame:23});
   }
-  function approachAt(t){return scope.GRIM_CUTSCENES.approachAt(t);}
+  function approachAt(t,devil=false){return scope.GRIM_CUTSCENES.approachAt(t,devil);}
   function drawAura(g,x,y,devil,t,scale=1){
     if(!g)return;
     const pulse=1+Math.sin(t*2.1)*.075,s=scale;
@@ -66,7 +66,7 @@
       this.motionPreference=scope.matchMedia?.('(prefers-reduced-motion: reduce)');
       this.introPresentation=null;
       this.approachReady=scene.textures.exists('cutscene-vendor')&&
-        Number.isFinite(scope.GRIM_CUTSCENE_DATA?.vendor?.rig?.[0]?.travel);
+        ['angel','devil'].every(kind=>Number.isFinite(scope.GRIM_CUTSCENE_DATA?.vendor?.[kind]?.[0]?.travel));
       this.reaper=this.image(this.approachReady?'cutscene-vendor':'vendor-reaper-approach',29,0);
       this.light=scene.add.graphics().setScrollFactor(0).setDepth(29.2);
       scene.events.once('shutdown',()=>this.destroy());
@@ -119,36 +119,38 @@
       const devil=s.vendorType==='devil',kind=devil?'devil':'angel';
       this.introPresentation??=this.beginPresentation(kind);
       const p=this.introPresentation;
-      const t=A.vendorVisualTime(cinematicElapsed(s),p.reduced),motion=approachAt(t);
+      const t=A.vendorVisualTime(cinematicElapsed(s),p.reduced),motion=approachAt(t,devil);
       if(t===A.VENDOR_ANIMATION_SECONDS){p.holdWidth=s.width;p.holdHeight=s.height;}
       const w=s.width,h=s.height;
-      const ground=h*.84,vx=w*.66,rx=w*.36-scope.GRIM_CUTSCENES.vendorTravel(h)*(1-motion.travel);
-      const leftClearance=Math.min(w*.14,h*(devil?.24:.28));
+      const stage=Math.min(h,w*.70),ground=stage===h?h*.84:h*.52+stage*.32;
+      const vx=w*.66,rx=w*.36-scope.GRIM_CUTSCENES.vendorTravel(stage)*(1-motion.travel);
+      const leftClearance=Math.min(w*.14,stage*(devil?.24:.28));
       this.shade.fillStyle(devil?0x120811:0x071321,.88);this.shade.fillRect(0,0,w,h);
       this.shade.fillStyle(0x020710,.7);this.shade.fillRect(0,0,w,h*.11);this.shade.fillRect(0,h*.91,w,h*.09);
-      drawAura(this.back,vx,ground,devil,A.vendorAmbientTime(t),h*.72/142*(1+motion.presence*.05));
+      drawAura(this.back,vx,ground,devil,A.vendorAmbientTime(t),stage*.72/142*(1+motion.presence*.05));
       p.floor?.setTexture('sanctuary-'+kind+'-floor').setOrigin(.5,0).setPosition(w*.5,ground-3)
-        .setDisplaySize(w*.94,h*.19).setVisible(true);
+        .setDisplaySize(w*.94,stage*.19).setVisible(true);
       p.columns.forEach((v,i)=>v.setTexture('sanctuary-'+kind+'-architecture',i).setOrigin(.5,740/768)
-        .setPosition(vx+(i?w*.20:-w*.20-leftClearance),ground+9).setDisplaySize(w*.21,h*.82).setVisible(true));
-      const width=h*(devil?.88:.85);
+        .setPosition(vx+(i?w*.20:-w*.20-leftClearance),ground+9).setDisplaySize(w*.21,stage*.82).setVisible(true));
+      const width=stage*(devil?.88:.85);
       if(p.canvas){
         const cell=A.merchantCellAt(t);
         p.canvas.setFrame(cell+(devil?CANVAS_CELLS:0)).setOrigin(.5,216/CANVAS_HEIGHT)
-          .setPosition(vx,ground+5).setDisplaySize(width*CANVAS_WIDTH/256,h*.72*CANVAS_HEIGHT/208).setVisible(true);
-      }else if(!A.placeMerchant(p.mesh,s,p.key,vx,ground+5,width,h*.72,t,devil)){
+          .setPosition(vx,ground+5).setDisplaySize(width*CANVAS_WIDTH/256,stage*.72*CANVAS_HEIGHT/208).setVisible(true);
+      }else if(!A.placeMerchant(p.mesh,s,p.key,vx,ground+5,width,stage*.72,t,devil)){
         p.still?.setTexture(p.key).setOrigin(.5,1).setPosition(vx,ground+5)
-          .setDisplaySize(width,h*.72).setVisible(true);
+          .setDisplaySize(width,stage*.72).setVisible(true);
       }
+      const layout=scope.GRIM_CUTSCENE_DATA?.vendor;
       this.reaper?.setFrame(p.approach?motion.frame:Math.min(11,Math.floor(t*4)))
-        .setOrigin(p.approach?136/224:300/512,p.approach?214/224:480/512).setPosition(rx,ground)
-        .setScale(h/(p.approach?420:800)).setVisible(true);
+        .setOrigin(p.approach?layout.anchor[0]/layout.cell[0]:300/512,p.approach?layout.anchor[1]/layout.cell[1]:480/512).setPosition(rx,ground)
+        .setScale(stage/(p.approach?420:800)).setVisible(true);
       // The single painted frame includes the supported settle and hood turn.
       this.reaper?.setRotation(0);
       const beat=Math.sin(clamp((t-2)/.9,0,1)*Math.PI)*motion.presence;
       for(let i=0;i<4;i++){
         this.light.fillStyle(devil?0xc54631:0xffe2a1,beat*.035*(4-i));
-        this.light.fillEllipse(vx-h*.12,ground-h*.45,h*(.09+i*.045),h*(.11+i*.05));
+        this.light.fillEllipse(vx-stage*.12,ground-stage*.45,stage*(.09+i*.045),stage*(.11+i*.05));
       }
       // Hide world actors underneath the staged encounter, including equipped wings.
       s.actor?.clear();s.powerArt?.hideBase();
