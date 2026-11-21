@@ -184,7 +184,7 @@
       this.action?.setVisible(false);
       if(frame!==null&&this.action&&s.visuals?.reaperReady){
         this.hideBase();
-        this.action.setFrame(frame).setPosition(p.x,s.feetY).setVisible(true)
+        this.action.setFrame(frame).setScale(frame<4?.375*1.24:.375).setPosition(p.x,s.feetY).setVisible(true)
           .setAlpha(p.invulMs>0&&Math.floor(s.frame/5)%2===0?.58:1)
           .setTint(p.slowMs>0?0xb9ecff:0xffffff);
         // Keep the attack trail even when the normal procedural actor is suppressed.
