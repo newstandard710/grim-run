@@ -33,9 +33,12 @@
     }
     return true;
   }
+  function inBounds([left,top,right,bottom],box){
+    return box.x<right&&box.x+box.width>left&&box.y<bottom&&box.y+box.height>top;
+  }
   function contact(spec, edges, box){
     const [bx,by,bX,bY]=spec.bounds, {x,y,width,height}=box, X=x+width,Y=y+height,pad=spec.pad;
-    if(!(x<bX&&X>bx&&y<bY&&Y>by))return null;
+    if(!inBounds(spec.bounds,box))return null;
     const rect=[Math.max(bx,x-pad),Math.max(by,y-pad),Math.min(bX,X+pad),Math.min(bY,Y+pad)];
     for(const {ms,edge,origin} of edges){
       const target=origin?[rect[0]+origin[0],rect[1]+origin[1],rect[2]+origin[0],rect[3]+origin[1]]:rect;
@@ -51,34 +54,30 @@
       const ms=mix(lo,hi,i/n);return {ms,edge:toEdge(ms)};
     });
   }
-  root.RisingGeometry={clamp,mix,pose,project,transform,intersects,contact,samples};
+  root.RisingGeometry={clamp,mix,pose,project,transform,intersects,inBounds,contact,samples};
 })(globalThis);
 /* Rear-carry Cut paint and registered edge. Optional as a complete pose family. */
 (function(scope){
   'use strict';
   const DATA=scope.GRIM_RISING_CUT_DATA;
-  // Age, grip, shoulder, and unwrapped bank/yaw/pitch in degrees. The blade
-  // drops behind, sweeps low, climbs ahead of the body, then settles over
-  // the shoulder. One rotation returns to the original bank.
+  // Milliseconds, palm x/y, hip shift x/y, torso lean, weapon bank/yaw/pitch.
+  // The hips start forward while the upper body is still gathering behind.
   const SWING=[
-    [0,  -18,-55, -1,-55,  -90,  0, 0],
-    [12, -18,-56, -1,-55,  -93, -2, 6],
-    [26, -20,-67, -2,-56, -110,-12,30],
-    [47, -19,-69, -3,-56, -142,-16,45],
-    [66, -15,-66, -5,-54, -172, -1,49],
-    [82,  -9,-65, -4,-54, -197,  9,58],
-    [97,  -2,-65, -2,-54, -221,  9,58],
-    [112,  7,-65,  0,-55, -242,  3,54],
-    [130, 17,-65,  4,-57, -264, -1,37],
-    [151, 24,-63,  7,-59, -287, -1,17],
-    [175, 26,-63,  8,-61, -308,  1, 8],
-    [200, 23,-68,  7,-65, -329,  2, 8],
-    [225, 15,-73,  4,-65, -350,  5,14],
-    [249,  5,-72,  0,-62, -375,  8,20],
-    [278, -7,-67, -2,-59, -401,  9,23],
-    [308,-15,-62, -2,-57, -422,  7,18],
-    [333,-18,-59, -2,-56, -441,  3,10],
-    [355,-18,-55, -1,-55, -450,  0, 0],
+    [0,  -31,-59,   0,  0, -14, -104,  0, 0],
+    [22, -29,-58,  -2,  1, -15, -109, -2, 7],
+    [48, -24,-59,  -4,  3, -14, -123, -5,19],
+    [71, -18,-62,  -2,  4, -12, -143, -7,35],
+    [94,  -9,-63,   1,  3,  -4, -163, -5,42],
+    [116,  5,-61,   4,  2,   6, -193,  0,45],
+    [141, 18,-60,   6,  1,  13, -227,  2,40],
+    [167, 25,-60,   6,  0,  16, -262,  3,18],
+    [194, 24,-62,   5, -1,  15, -296,  2, 8],
+    [221, 19,-66,   3, -2,  11, -328,  1, 9],
+    [249,  7,-72,   1, -2,   5, -359,  3,15],
+    [279, -6,-68,  -1, -1,   0, -393,  6,21],
+    [310,-15,-61,  -1,  0,  -7, -425,  5,17],
+    [335,-26,-57,   0,  0, -12, -456,  2, 7],
+    [355,-31,-59,   0,  0, -14, -464,  0, 0],
   ];
   const END=SWING.at(-1)[0],DEG=Math.PI/180;
   function preload(scene,motion){
@@ -105,8 +104,7 @@
       }
     }
     for(const [name,art] of arts){
-      // Keep the decoded body atlas available for the first synchronous torso
-      // readback. Blob decoding does not need to run on the game thread.
+      // Decode the body atlas off the game thread where available.
       if(name==='body'&&scope.location?.protocol!=='file:'&&
          typeof scope.fetch==='function'&&typeof scope.createImageBitmap==='function'){
         scope.fetch(art.url).then(response=>response.ok?response.blob():null)
@@ -125,19 +123,13 @@
   const C=scope.GRIM_CONFIG,G=scope.RisingGeometry;
   const forward=scope.GRIM_FORWARD_SCYTHE,Core=scope.GRIM_CORE,keys=[0,4,12,16,18,20,23];
   const compactSpec={bounds:[12,-140,138,-4],pad:0};
-  // The torso warp already lives in CPU pixels. Compose it on a CPU canvas
-  // and let Phaser upload the complete cut texture once in WebGL.
+  // Compose all existing paint layers into the single reusable Cut texture.
   const box=document.createElement('canvas');box.width=576;box.height=448;
-  const ctx=box.getContext('2d',{willReadFrequently:true});
+  const ctx=box.getContext('2d');
   const light=s.textures.addCanvas('motion-rising-reaper',box);
   const sprite=s.add.image(0,0,'motion-rising-reaper').setOrigin(0).setScale(.5).setDepth(12.09).setVisible(false);
   const ink=s.add.graphics().setDepth(12.18);
   const X=144,Y=176;
-  const source=document.createElement('canvas');
-  [source.width,source.height]=paint.size;
-  const sourceContext=source.getContext('2d',{willReadFrequently:true}),torsoPixels=new Map();
-  const warp=document.createElement('canvas');[warp.width,warp.height]=paint.size;
-  const warpContext=warp.getContext('2d',{willReadFrequently:true}),painted=warpContext.createImageData(warp.width,warp.height);
   let recentCompact=null,glints=[];
   const lerp=(a,b,w)=>a.map((v,j)=>G.mix(v,b[j],w));
   const smooth=x=>{x=G.clamp(x,0,1);return x*x*(3-2*x);};
@@ -186,25 +178,51 @@
   }
   function at(time){
     const key=carryFrame(),carried=paint.poses[key.frame],p=s.player;
-    const [x,y,sx,sy,turn,yaw,pitch]=G.pose(SWING,time);
+    const [x,y,hipX,hipY,lean,turn,yaw,pitch]=G.pose(SWING,time);
     const w=Math.min(smooth(time/36),smooth((END-time)/50));
     const carryHand=forward.rear.hands[key.frame], [cx,cy]=carryHand;
-    const rest=w<1?m.trailingRotation(p.x+cx,s.feetY+cy+key.rise):0;
-    const bank=turn*DEG+(1-w)*(rest+Math.PI/2);
-    const hand=lerp(carryHand,[x,y],w),shoulder=lerp(carried.shoulder,[sx,sy],w);
+    const drag=key.frame<96&&p.grounded;
+    const join=Math.min(smooth(time/95),smooth((END-time)/85));
+    const rest=join<1?m.trailingRotation(p.x+cx,s.feetY+cy+key.rise,drag):0;
+    // On a slope, aim the low arc along the surface so the blade clears
+    // the ground without pulling the hand away from the shoulder.
+    const behind=s.terrain.groundAt(p.x-32),ahead=s.terrain.groundAt(p.x+32);
+    const grade=p.grounded&&p.onSoulPlatform===false&&Number.isFinite(behind)&&Number.isFinite(ahead)
+      ?G.clamp(Math.atan2(ahead-behind,64),-.55,.55):0;
+    const bank=turn*DEG+(1-join)*(rest+104*DEG)+grade*w;
+    const hand=lerp(carryHand,[x,y],w);
     const matrix=G.project(bank,yaw*DEG,pitch*DEG);
+    // Mirror around the palm in weapon space, before the swing projection.
+    matrix[0]*=-1;matrix[2]*=-1;
+    const hip=[hipX*w,hipY*w],tilt=G.mix(drag?forward.rear.dragLean:0,lean*DEG,w);
+    const [wx,wy]=carried.waist,dx=carried.shoulder[0]-wx,dy=carried.shoulder[1]-wy;
+    const shoulder=[wx+hip[0]+dx*Math.cos(tilt)-dy*Math.sin(tilt),
+      wy+hip[1]+dx*Math.sin(tilt)+dy*Math.cos(tilt)];
+    const reachX=hand[0]-shoulder[0];
+    const maxLift=Math.max(0,hand[1]-shoulder[1]+Math.sqrt(Math.max(0,28**2-reachX**2)));
     const platform=p.onSoulPlatform===false?null:(s.soulPlatform||[]).find(q=>q.id===p.onSoulPlatform);
-    let gap=Infinity;
-    for(const [dx,dy] of G.transform(forward.rear.outline,{hand,matrix})){
-      const wx=p.x+dx,wy=s.feetY+dy+key.rise,y=s.terrain.groundAt(wx);
-      if(Number.isFinite(y))gap=Math.min(gap,y-wy);
-      if(platform&&wx>=platform.x&&wx<=platform.x+platform.width)gap=Math.min(gap,platform.y-wy);
+    let gap=Infinity,depthScale=1;
+    const rootX=p.x+hand[0],rootY=s.feetY+key.rise+hand[1];
+    const [a,b,c,d]=matrix,slope=Math.tan(grade);
+    for(const [u,v] of GRIM_MOTION_ART.shaft){
+      const run=a*u+b*v,x=rootX+run,drop=c*u+d*v,ground=s.terrain.groundAt(x);
+      let floor=Number.isFinite(ground)?ground:Infinity;
+      if(platform&&x>=platform.x&&x<=platform.x+platform.width)floor=Math.min(floor,platform.y);
+      const available=floor-rootY-2;
+      gap=Math.min(gap,available-drop);
+      // Tip the swing plane toward the viewer when lifting farther would
+      // straighten the elbow past its reach. Paint and contact use this pose.
+      const normalDrop=drop-slope*run;
+      if(normalDrop>0&&drop>available+maxLift)
+        depthScale=Math.min(depthScale,(available+maxLift-slope*run)/normalDrop);
     }
-    // Fade any clearance adjustment into the untouched carry at the joins.
+    // Let the terrain-aware carry own clearance at the two joins.
     // Keep the blade, hand, and collision edge under one transform.
-    const lift=Math.max(0,6-gap)*w;
-    hand[1]-=lift;shoulder[1]-=lift;
-    return {...key,carried,hand,shoulder,matrix,w};
+    const lift=G.clamp(-gap,0,maxLift);
+    hand[1]-=lift;
+    const depth=G.clamp(depthScale,.05,1);
+    matrix[2]=G.mix(slope*a,c,depth);matrix[3]=G.mix(slope*b,d,depth);
+    return {...key,carried,hand,shoulder,matrix,w,hip,tilt};
   }
   function acceptCut(){
     const p=s.player;
@@ -231,20 +249,27 @@
     glints=[];
     if(stage?.mode!=='rise'&&frame===null){recentCompact=null;return null;}
     const p=s.player,previous=C.attackDurationMs-p.previousAttackMs,now=C.attackDurationMs-p.attackMs;
-    const edgeSpec=frame===null?spec:compactSpec;
-    // Keep current-cel checks and the verified same-cel projectile correction.
-    // Clamp each pose to its original legal edge. No hidden bridge across cels.
-    const edges=frame===null?G.samples(spec,previous,now,t=>{
-      const pose=at(t);return G.transform(spec.edge,pose).map(([x,y])=>[x,y+pose.rise]);
-    }).map(sample=>{
-      if(!previousRoot||now===previous)return sample;
-      const remaining=(now-sample.ms)/(now-previous);
-      return {...sample,origin:[(p.x-previousRoot[0])*remaining,(s.feetY-previousRoot[1])*remaining]};
-    }):compactSamples(stage,frame,previous,now);
+    if(frame===null){
+      let edges;
+      return target=>{
+        const local={x:target.x-p.x,y:target.y-s.feetY,width:target.width,height:target.height};
+        if(!G.inBounds(spec.bounds,local))return false;
+        // The scene tests every obstacle, enemy and projectile. Sample the
+        // blade once, on the first target inside its reachable area this tick.
+        edges??=G.samples(spec,previous,now,t=>{
+          const pose=at(t);return G.transform(spec.edge,pose).map(([x,y])=>[x,y+pose.rise]);
+        }).map(sample=>{
+          if(!previousRoot||now===previous)return sample;
+          const remaining=(now-sample.ms)/(now-previous);
+          return {...sample,origin:[(p.x-previousRoot[0])*remaining,(s.feetY-previousRoot[1])*remaining]};
+        });
+        return G.contact(spec,edges,local)!==null;
+      };
+    }
+    // Compact poses retain their per-tick history for moving projectiles.
+    const edges=compactSamples(stage,frame,previous,now);
     return (target,ball)=>{
-      if(!edges.length)return false;
       const local={x:target.x-p.x,y:target.y-s.feetY,width:target.width,height:target.height};
-      if(frame===null)return G.contact(edgeSpec,edges,local)!==null;
       for(const sample of edges){
         const [x,y]=sample.origin;
         const anchored={...local,x:local.x-x,y:local.y-y};
@@ -254,7 +279,7 @@
           anchored.x+=G.mix(before[0]-ball.x,0,sample.phase);
           anchored.y+=G.mix(before[1]-ball.y,0,sample.phase);
         }
-        if(G.contact(edgeSpec,[{ms:sample.ms,edge:sample.edge}],anchored)===null)continue;
+        if(G.contact(compactSpec,[{ms:sample.ms,edge:sample.edge}],anchored)===null)continue;
         if(sample.ms!==now)markCrossing(sample,anchored,stage);
         return true;
       }
@@ -277,42 +302,20 @@
     ctx.drawImage(body,(slot%columns)*w,Math.floor(slot/columns)*h,w,h,
                        -ox*scale,-oy*scale,w*scale,h*scale);
   }
-  function torso(f){
-    const scale=paint.scale,[ax,ay]=paint.anchor,[w,h]=paint.size;
-    const [dx,dy]=f.shoulder.map((v,i)=>v-f.carried.shoulder[i]);
-    const [u,v]=f.carried.shoulder, [,hipY]=f.carried.waist;
-    const a=.67*Math.atan2(dx,Math.max(20,hipY-v+14));
-    const c=Math.cos(a),s=Math.sin(a),slot=f.frame+122;
-    const sourceX=slot%paint.columns*w,sourceY=Math.floor(slot/paint.columns)*h;
-    let pixels=torsoPixels.get(slot);
-    if(!pixels){
-      sourceContext.clearRect(0,0,w,h);
-      sourceContext.drawImage(body,sourceX,sourceY,w,h,0,0,w,h);
-      pixels=sourceContext.getImageData(0,0,w,h).data;
-      torsoPixels.set(slot,pixels);
-    }
-    const result=painted.data;
-    result.fill(0);
-    for(let j=0;j<h;j++){
-      const y=(j-ay)*scale;
-      const blend=1-smooth((j-114)/35);
-      for(let i=0;i<w;i++){
-        const x=(i-ax)*scale,rx=x-u-dx,ry=y-v-dy;
-        const px=i+(u+c*rx+s*ry-x)*blend/scale;
-        const py=j+(v-s*rx+c*ry-y)*blend/scale;
-        const ix=Math.floor(px),iy=Math.floor(py);
-        if(ix<0||iy<0||ix>=w-1||iy>=h-1)continue;
-        const tx=px-ix,ty=py-iy,n=(iy*w+ix)*4;
-        const n2=n+w*4,to=(j*w+i)*4;
-        const alpha=G.mix(G.mix(pixels[n+3],pixels[n+7],tx),G.mix(pixels[n2+3],pixels[n2+7],tx),ty);
-        if(alpha<1)continue;
-        result[to+3]=alpha;
-        for(let k=0;k<3;k++)result[to+k]=G.mix(G.mix(pixels[n+k]*pixels[n+3],pixels[n+4+k]*pixels[n+7],tx),
-          G.mix(pixels[n2+k]*pixels[n2+3],pixels[n2+4+k]*pixels[n2+7],tx),ty)/alpha;
-      }
-    }
-    warpContext.putImageData(painted,0,0);
-    ctx.drawImage(warp,-ax*scale,-ay*scale,w*scale,h*scale);
+  function bodyPose(f){
+    const [wx,wy]=f.carried.waist,[dx,dy]=f.hip;
+    // Shear and compress the lower paint about the soles. Its top meets the
+    // translated pelvis exactly, while the stride keeps its ground contact.
+    ctx.save();
+    ctx.transform(1,0,dx/wy,1+dy/wy,0,0);
+    drawCell(f.frame);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(wx+dx,wy+dy);
+    ctx.rotate(f.tilt);
+    ctx.translate(-wx,-wy);
+    drawCell(f.frame,1);
+    ctx.restore();
   }
   function segment(i,p1,p2,a,b){
     const [u,v]=a,[x,y]=b,[x0,y0]=p1,[x1,y1]=p2;
@@ -337,7 +340,12 @@
     }else{
       const shaft=Math.atan2(-f.matrix[1],f.matrix[3]),[gx,gy]=paint.grip,
         wrist=Math.atan2(f.hand[1]-elbow[1],f.hand[0]-elbow[0]);
-      const strike=.77*shaft+.23*(wrist+.28),angle=G.mix(shaft-.227,strike,f.w);
+      const strike=shaft+.227+.23*wrap(wrist+.28-shaft-.227);
+      // The baked running glove keeps its relaxed wrist on a slope. Start and
+      // finish in that same orientation as the fingers tighten into the swing.
+      const rest=f.frame<96&&f.w<1
+        ?GRIM_MOTION_ART.levelDragAngle(-forward.rear.hands[f.frame][1])+.227:shaft+.227;
+      const angle=rest+wrap(strike-rest)*f.w;
       ctx.save();
       ctx.translate(...f.hand);
       ctx.rotate(angle);
@@ -348,9 +356,33 @@
       ctx.restore();
     }
   }
-  function weapon(pose,alpha=1){
+  function aboveGround(hand,rise){
+    // Build one short clip path in actor coordinates. Duplicate x at gap lips
+    // and platform ends so the path cannot bridge empty space diagonally.
+    const p=s.player,ledge=p.onSoulPlatform===false?null:s.soulPlatform?.find(q=>q.id===p.onSoulPlatform);
+    const path=new Path2D(),left=hand[0]-98,right=hand[0]+98;
+    path.moveTo(left,-Y);path.lineTo(right,-Y);
+    let x=right;
+    while(x>left){
+      const world=p.x+x,section=s.terrain.sectionAt?.(world-.001);
+      let next=Math.max(left,x-6);
+      if(section&&section.start<world-.001)next=Math.max(next,section.start-p.x);
+      if(ledge)for(const edge of [ledge.x,ledge.x+ledge.width]){
+        if(edge<world-.001)next=Math.max(next,edge-p.x);
+      }
+      for(const [at,side] of [[x,-.0001],[next,.0001]]){
+        const ground=GRIM_MOTION_ART.floorAt(s,p.x+at+side,ledge);
+        path.lineTo(at,Math.min(70,ground-s.feetY-rise));
+      }
+      x=next;
+    }
+    path.closePath();
+    return path;
+  }
+  function weapon(pose,ground,alpha=1){
     const art=forward.weapon, image=s.textures.get(art.key).getSourceImage(),[a,b,c,d]=pose.matrix;
     ctx.save();
+    ctx.clip(ground);
     ctx.globalAlpha=alpha;
     ctx.transform(a,c,b,d,...pose.hand);
     ctx.scale(art.scale,art.scale);
@@ -363,28 +395,32 @@
     ctx.clearRect(0,0,box.width,box.height);
     ctx.setTransform(2,0,0,2,2*X,2*Y);
     const front=smooth((time-34)/42)*smooth((277-time)/36);
-    if(front<1)weapon(f);
-    drawCell(f.frame);
-    torso(f);
+    const ground=aboveGround(f.hand,f.rise);
+    if(front<1)weapon(f,ground);
+    bodyPose(f);
     arm(f,'arm');
-    if(front>0)weapon(f,front);
+    if(front>0)weapon(f,ground,front);
     arm(f,'hand');
     const p=s.player;
+    const [start,end]=spec.active;
+    if(time>=start&&time<=end){
+      const edge=G.transform(spec.edge,f),bounds=spec.bounds;
+      ctx.save();
+      ctx.clip(ground);
+      ctx.beginPath();
+      for(let i=1;i<edge.length;i++){
+        const section=clipSegment(edge[i-1],edge[i],[bounds[0],bounds[1]-f.rise,bounds[2],bounds[3]-f.rise]);
+        if(section){ctx.moveTo(...section[0]);ctx.lineTo(...section[1]);}
+      }
+      ctx.strokeStyle='#b9f4ea';
+      for(const [width,alpha] of [[6,.20],[2,.85]]){
+        ctx.lineWidth=width;ctx.globalAlpha=alpha;ctx.stroke();
+      }
+      ctx.restore();
+    }
     light.refresh();
     sprite.setPosition(p.x-X,s.feetY+f.rise-Y).setAlpha(p.invulMs>0&&Math.floor(s.elapsed/.083333)%2===0?.58:1)
       .setTint(p.slowMs>0?0xb9ecff:0xffffff).setVisible(true);
-    const [start,end]=spec.active;
-    if(time>=start&&time<=end){
-      const edge=G.transform(spec.edge,f).map(([x,y])=>[p.x+x,s.feetY+y+f.rise]);
-      const [x,y,X,Y]=spec.bounds,bounds=[p.x+x,s.feetY+y,p.x+X,s.feetY+Y];
-      for(const [width,alpha] of [[6,.20],[2,.85]]){
-        ink.lineStyle(width,0xb9f4ea,alpha);
-        for(let i=1;i<edge.length;i++){
-          const portion=clipSegment(edge[i-1],edge[i],bounds);
-          if(portion)ink.lineBetween(...portion[0],...portion[1]);
-        }
-      }
-    }
   }
   const angle=(x,y)=>Math.atan2(y,x);
   const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -417,20 +453,14 @@
     const follow=smooth((age-2)/18)*(1-smooth((age-43)/44));
     const [b,d]=[from.matrix[1],from.matrix[3]],
       rotation=wrap(angle(-b,-d)-angle(marks.socket[0]-marks.hand[0],marks.socket[1]-marks.hand[1]))*(1-e)+follow;
-    const axis=angle(marks.socket[0]-marks.hand[0],marks.socket[1]-marks.hand[1]);
-    const socket=marks.socket.map((v,i)=>(v-[288,400][i])*scale);
-    const roll=Math.cos(Math.PI*(1-e));
-    const rotate=([x,y],rad)=>[x*Math.cos(rad)-y*Math.sin(rad),x*Math.sin(rad)+y*Math.cos(rad)];
+    // The tip-down blade and compact cel now face the same way. Both the
+    // paint and its edge rotate with the hands about the same pivot.
+    const c=Math.cos(rotation),sin=Math.sin(rotation);
     const edge=marks.edge.map(([u,v])=>{
-      const p=[(u-288)*scale-socket[0],(v-400)*scale-socket[1]];
-      const inShaft=rotate(p,-axis);inShaft[1]*=roll;
-      const head=rotate(inShaft,axis);
-      return rotate(head.map((v,i)=>v+socket[i]-pivot[i]),rotation)
-        .map((v,i)=>v+pivot[i]+skin[i]*(1-e));
+      const x=(u-288)*scale-pivot[0],y=(v-400)*scale-pivot[1];
+      return [c*x-sin*y+pivot[0]+skin[0]*(1-e),sin*x+c*y+pivot[1]+skin[1]*(1-e)];
     });
-    // The Canvas transform degenerates at the edge-on pose. Do not let its
-    // collapsed line cut invisibly while less than a pixel of steel projects.
-    return {age,e,scale,pivot,skin,rotation,axis,socket,roll,edge,edgeVisible:Math.abs(roll)>=.02};
+    return {e,scale,pivot,skin,rotation,edge};
   }
   function compactSamples(owner,frame,previous,now){
     const mark={owner,frame,time:now,origin:[s.player.x,s.feetY],elapsed:s.elapsed,
@@ -439,7 +469,7 @@
     recentCompact=mark;
     const active=Core.attackActive(s.player.attackMs,260,.20,.79);
     const presented=compactPose(owner,frame);
-    const samples=active&&presented.edgeVisible?[{ms:now,edge:presented.edge,origin:[0,0]}]:[];
+    const samples=active?[{ms:now,edge:presented.edge,origin:[0,0]}]:[];
     // Sweep only exact intermediate registrations of one continuous cel.
     // A skipped or changed cel has no defined interpolation in the paint.
     if(!active||!past||past.owner!==owner||
@@ -451,7 +481,6 @@
       const ms=G.mix(from,to,i/count),f=(ms-previous)/(now-previous);
       const slot=8+Math.floor(ms/65);
       const pose=compactPose(owner,slot,G.mix(past.elapsed,mark.elapsed,f));
-      if(!pose.edgeVisible)continue;
       samples.push({ms,edge:pose.edge,phase:f,oldBalls:past.balls,
         origin:lerp(past.origin,mark.origin,f).map((v,k)=>v-mark.origin[k])});
     }
@@ -460,9 +489,9 @@
   function compactJoin(owner,frame){
     const p=s.player,action=s.powerArt.action;
     if(!action.visible||Number(action.frame.name)!==frame)return;
-    const {age,e,scale,pivot,skin,rotation,axis,socket,roll,edge,edgeVisible}=compactPose(owner,frame);
+    const {e,scale,pivot,skin,rotation,edge}=compactPose(owner,frame);
     const segments=[];
-    if(edgeVisible&&Core.attackActive(p.attackMs,260,.20,.79)){
+    if(Core.attackActive(p.attackMs,260,.20,.79)){
       for(let i=1;i<edge.length;i++){
         const segment=clipSegment(edge[i-1],edge[i],compactSpec.bounds);
         if(segment)segments.push(segment);
@@ -484,11 +513,6 @@
     ctx.rotate(rotation);
     ctx.translate(-pivot[0],-pivot[1]);
     draw(512);
-    // Roll the blade around its shaft as the hands turn. The original glove
-    // and handle stay together. This closes the opposite blade facings without
-    // flipping the character or rendering a second weapon.
-    ctx.translate(...socket);ctx.rotate(axis);ctx.scale(1,roll);
-    ctx.rotate(-axis);ctx.translate(-socket[0],-socket[1]);
     draw(1024);
     showJoin(action.depth,action);
     // Keep the native compact action registered for drawGroundSlide's
@@ -502,11 +526,12 @@
     const hand=lerp([from.hand[0],from.hand[1]+from.rise],[held.hand[0],held.hand[1]+held.rise],e);
     const [a,b,c,d]=from.matrix;
     const fromAngle=Math.atan2(-b,d),holdAngle=Math.atan2(-held.matrix[1],held.matrix[3]);
-    const yaw=Math.sign(Math.cos(fromAngle)*c-Math.sin(fromAngle)*a)*Math.acos(G.clamp(Math.hypot(a,c),0,1));
+    const yaw=Math.sign(-Math.cos(fromAngle)*c+Math.sin(fromAngle)*a)*Math.acos(G.clamp(Math.hypot(a,c),0,1));
     const angleNow=fromAngle+wrap(holdAngle-fromAngle)*e;
     const compactDepth=Math.sin(Math.PI*e)*.35;
     const matrix=G.project(angleNow,yaw*(1-e),Math.acos(G.clamp(Math.hypot(b,d),0,1))*(1-e)+compactDepth);
-    preparing();weapon({hand,matrix});
+    matrix[0]*=-1;matrix[2]*=-1;
+    preparing();weapon({hand,matrix},aboveGround(hand,0));
     showJoin(bow.depth-.06,bow);
   }
   const playingPose=()=>['playing','rewinding','paused'].includes(s.state);

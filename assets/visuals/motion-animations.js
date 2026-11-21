@@ -47,38 +47,84 @@
     return clamp(underfoot-ground,-12,12);
   }
   function ease(t){t=clamp(t);return t*t*(3-2*t);}
-  function rearCarryRotation(s,x,y,preferred){
-    const outline=FORWARD.rear.outline,terrain=s.terrain,p=s.player;
+  // The rigid handle and cast socket use their own hull. The hooked plate is
+  // free to travel through the ground. Subdivide the hull at asset load only.
+  const shaft=[];
+  const hull=FORWARD?.rear?.shaft||[];
+  for(let i=0;i<hull.length;i++){
+    const [x,y]=hull[i],[u,v]=hull[(i+1)%hull.length];
+    const n=Math.ceil(Math.hypot(u-x,v-y)/2);
+    for(let j=0;j<n;j++)shaft.push([mix(x,u,j/n),mix(y,v,j/n)]);
+  }
+  function floorAt(s,x,ledge){
+    const ground=s.terrain?.groundAt(x);
+    const y=Number.isFinite(ground)?ground:Infinity;
+    return ledge&&x>=ledge.x&&x<=ledge.x+ledge.width?Math.min(y,ledge.y):y;
+  }
+  function levelDragAngle(height){
+    const [u,v]=FORWARD.rear.dragMark;
+    return -Math.PI-Math.atan2(v,-u)-Math.asin(clamp(height/Math.hypot(u,v),-1,1));
+  }
+  function dragAngle(s,x,y,ledge){
+    const [u,v]=FORWARD.rear.dragMark;
+    // Solve at the actual world x of the turned blade, including on a bank.
+    // Over empty space the grip hangs freely at its level-ground angle.
+    const free=levelDragAngle(s.feetY-y);
+    const error=angle=>{
+      const c=Math.cos(angle),sn=Math.sin(angle);
+      const at=x-u*c-v*sn;
+      let level=floorAt(s,at,ledge);
+      if(ledge)level=Math.min(level,ledge.y);
+      if(!Number.isFinite(level)){
+        // Across a gap let gravity hold the drag angle between the two lips.
+        // Only solid ground occludes the steel or constrains the shaft.
+        const gap=s.terrain.sectionAt?.(at);
+        const left=gap&&s.terrain.groundAt(gap.start-.01),right=gap&&s.terrain.groundAt(gap.end+.01);
+        level=Number.isFinite(left)&&Number.isFinite(right)
+          ?mix(left,right,(at-gap.start)/(gap.end-gap.start)):s.feetY;
+      }
+      return y-u*sn+v*c-level;
+    };
+    const flat=error(free);
+    if(Math.abs(flat)<.015)return free;
+    let low=flat>0?free:-3.07,high=flat>0?-.04:free;
+    for(let i=0;i<13;i++){
+      const angle=(low+high)*.5;
+      if(error(angle)>0)low=angle;
+      else high=angle;
+    }
+    return (low+high)*.5;
+  }
+  function rearCarryRotation(s,x,y,preferred,outline=FORWARD.rear.outline,clearancePx=6){
+    const p=s.player;
     const ledge=p.onSoulPlatform===false?null:(s.soulPlatform||[]).find(v=>v.id===p.onSoulPlatform);
     const clearance=angle=>{
       const cos=Math.cos(angle),sin=Math.sin(angle);
       let margin=Infinity;
       for(const [u,v] of outline){
-        const px=x+u*cos-v*sin,py=y+u*sin+v*cos;
-        const floor=terrain?.groundAt(px);
-        if(Number.isFinite(floor))margin=Math.min(margin,floor-py);
-        if(ledge&&px>=ledge.x&&px<=ledge.x+ledge.width)margin=Math.min(margin,ledge.y-py);
-        if(margin<6)return margin;
+        const px=x-u*cos-v*sin,py=y-u*sin+v*cos;
+        margin=Math.min(margin,floorAt(s,px,ledge)-py);
+        if(margin<clearancePx)return margin;
       }
       return margin;
     };
     // Select the smallest lift that clears the rear ground profile. No
     // accumulated animation state is needed to reproduce the pose on rewind.
-    if(clearance(preferred)>=6)return preferred;
+    if(clearance(preferred)>=clearancePx)return preferred;
     let low=preferred,high=-.16;
-    if(clearance(high)<6){
+    if(clearance(high)<clearancePx){
       // The tip can clear a steep bank at an intermediate side-on angle,
       // even where the full upright swing crosses the old lip.
       for(let i=1;i<=12;i++){
         const test=mix(preferred,high,i/12);
-        if(clearance(test)>=6){high=test;break;}
+        if(clearance(test)>=clearancePx){high=test;break;}
         if(i===12)return high;
         low=test;
       }
     }
     for(let i=0;i<8;i++){
       const mid=(low+high)*.5;
-      if(clearance(mid)>=6)high=mid;
+      if(clearance(mid)>=clearancePx)high=mid;
       else low=mid;
     }
     return high;
@@ -364,8 +410,12 @@
       const frame=options.length===1?options[0]:options[phase];
       return {art:FORWARD.cut,frame,grip:FORWARD.grips[frame]};
     }
-    trailingRotation(x,y){
+    trailingRotation(x,y,drag=this.scene.player.grounded&&!this.scene.player.visualLandingMs){
       const s=this.scene,p=s.player,floor=s.terrain?.groundAt(p.x);
+      if(drag){
+        const ledge=p.onSoulPlatform===false?null:s.soulPlatform?.find(v=>v.id===p.onSoulPlatform);
+        return rearCarryRotation(s,x,y,dragAngle(s,x,y,ledge),shaft,2);
+      }
       const airborne=!p.grounded&&p.onSoulPlatform===false;
       const lift=airborne?ease((Number.isFinite(floor)?floor-s.feetY:46)/46):0;
       // Shift the rest angle before the blade reaches a downhill crest.
@@ -391,8 +441,11 @@
       const hand=FORWARD?.rear?.hands[frame];
       if(!hand)return;
       const [x,dy]=hand,s=this.scene;
-      const rotation=this.trailingRotation(s.player.x+x,y+dy);
+      const rotation=this.trailingRotation(s.player.x+x,y+dy,frame<96&&s.player.grounded);
       this.showForwardWeapon([x,dy,rotation],y-s.feetY,alpha,tint);
+      this.weapon.setScale(-FORWARD.weapon.scale,FORWARD.weapon.scale);
+      // Solid terrain and one-way platforms already paint their exact silhouette.
+      if(frame<96&&s.player.grounded)this.weapon.setDepth(.61);
       this.rearOwner=owner;
     }
     hideRearCarry(){
@@ -414,7 +467,7 @@
     showForwardWeapon(grip,rise,alpha,tint){
       const s=this.scene,art=FORWARD.weapon;
       const [x,y,angle]=grip;
-      this.weapon.setTexture(art.key,0).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
+      this.weapon.setDepth(12.08).setTexture(art.key,0).setOrigin(art.anchor[0]/art.width,art.anchor[1]/art.height)
         .setPosition(s.player.x+x,s.feetY+y+rise).setRotation(angle).setScale(art.scale)
         .setAlpha(alpha).setTint(tint).setVisible(true);
       this.forwardWeapon=true;
@@ -422,7 +475,7 @@
     restoreWeaponPaint(){
       if(!this.forwardWeapon)return;
       const paint=this.cutWeaponReady?DATA.visualCutWeapon:DATA.weapon;
-      this.weapon.setTexture(this.cutWeaponReady?'motion-cut-scythe':'motion-scythe')
+      this.weapon.setDepth(12.08).setTexture(this.cutWeaponReady?'motion-cut-scythe':'motion-scythe')
         .setOrigin(paint.pivot[0]/384,paint.pivot[1]/384);
       this.forwardWeapon=false;
     }
@@ -526,5 +579,5 @@
     }
     destroy(){for(const v of this.body)v.destroy();this.body=[];this.weapon?.destroy();this.trail?.destroy();this.rising?.destroy();}
   }
-  scope.GRIM_MOTION_ART={MotionAnimations,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,visualCutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
+  scope.GRIM_MOTION_ART={MotionAnimations,shaft,floorAt,levelDragAngle,preload,queueAirDetails,runFrame,runAtlasFrame,jumpFrame,cutFrame,cutRig,visualCutRig,weaponPoint,sweepPoint,drawSwingArc,sweepBoxes,sample,STRIDE_PX,PIXELS_PER_GAIT,GAITS_PER_SHEET,WEAPON_SCALE,LAND_MS};
 })(typeof window!=='undefined'?window:globalThis);
