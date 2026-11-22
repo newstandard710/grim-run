@@ -1,13 +1,58 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),http=require('node:http');
 const {chromium}=require('playwright'),{PNG}=require('pngjs');
+const execFile=require('node:util').promisify(require('node:child_process').execFile);
 const root=path.resolve(__dirname,'..'),dir=path.join(root,'test-results');fs.mkdirSync(dir,{recursive:true});
 const server=http.createServer((req,res)=>{try{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname.replace(/^\/+/,''))||'index.html');if(!file.startsWith(root+path.sep))return res.writeHead(403).end();res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.css':'text/css','.ttf':'font/ttf','.png':'image/png','.webp':'image/webp'})[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));}catch(e){res.writeHead(404).end();}});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
+ const browser=await chromium.launch({headless:false,args:['--no-sandbox','--use-angle=swiftshader']});
  const context=await browser.newContext({viewport:{width:950,height:430},recordVideo:{dir,size:{width:950,height:430}}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
+ // Read the X11 compositor independently of Chromium's continuous video recorder.
+ async function screenFrame(){
+  const {stdout}=await execFile('ffmpeg',['-hide_banner','-loglevel','error','-f','x11grab',
+   '-draw_mouse','0','-video_size','1280x800','-i',process.env.DISPLAY,'-frames:v','1',
+   '-threads','1','-c:v','png','-f','image2pipe','pipe:1'],{encoding:'buffer',maxBuffer:8*1024*1024,timeout:8000});
+  return PNG.sync.read(stdout);
+ }
+ async function viewportOrigin(){
+  await page.evaluate(()=>{
+   const marker=document.createElement('div');marker.id='viewport-corner';
+   marker.style.cssText='position:fixed;top:0;left:0;width:24px;height:12px;z-index:2147483647;background:linear-gradient(to right,#ff00e1 50%,#00ff9d 50%)';
+   document.body.append(marker);
+  });
+  try{
+   for(let attempt=0;attempt<4;attempt++){
+    const frame=await screenFrame();
+    for(let y=0;y<=frame.height-430;y++)for(let x=0;x<=frame.width-950;x++){
+     const i=(y*frame.width+x)*4;
+     if(frame.data.readUInt32BE(i)===0xff00e1ff&&frame.data.readUInt32BE(i+44)===0xff00e1ff&&
+        frame.data.readUInt32BE(i+48)===0x00ff9dff&&frame.data.readUInt32BE(i+92)===0x00ff9dff)return {x,y};
+    }
+   }
+   throw Error('Cannot locate the 950×430 browser viewport on the display');
+  }finally{await page.locator('#viewport-corner').evaluate(el=>el.remove());}
+ }
+ async function viewportFrame(origin){
+  const desktop=await screenFrame(),view=new PNG({width:950,height:430});
+  PNG.bitblt(desktop,view,origin.x,origin.y,950,430,0,0);
+  return view;
+ }
+ async function platformVisibility(visible){
+  return bounded('platform render',page.evaluate(visible=>{
+   const game=window.grimRun,s=game.scene.scenes[0],camera=s.cameras.main;
+   if(!document.querySelector('#hud').getClientRects().length)throw Error('Platform HUD missing');
+   const boxes=[];
+   for(const image of s.worldPolish.platforms.values()){
+    const bounds=image.getBounds();image.setVisible(visible);
+    boxes.push([bounds.x-camera.scrollX,bounds.y-camera.scrollY,bounds.width,bounds.height]);
+   }
+   game.step(performance.now(),0);
+   if(game.renderer.gl.isContextLost())throw Error('Lost platform WebGL context');
+   return boxes;
+  },visible));
+ }
  async function bounded(stage,operation){
   let timer;
   try{
@@ -19,62 +64,40 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  const shot=async name=>{
   const floating=name.startsWith('floating-encounter-');
   console.log(name+' Phaser step started');
+  await bounded(name+' Phaser step',page.evaluate(()=>window.grimRun.step(performance.now(),0)));
+  console.log(name+' Phaser step finished');
   const file=path.join(dir,'polish-'+name+'.png');
   let pixels;
   if(floating){
-   // Freeze this exact WebGL frame in the same browser task as the draw. The
-   // recorder can keep the real viewport and HUD while the still is captured.
-   const samples=await bounded(name+' render and readback',page.evaluate(()=>{
-    const game=window.grimRun,canvas=game.canvas,gl=game.renderer.gl;
-    game.step(performance.now(),0);
-    gl.finish();
-    if(gl.isContextLost())throw Error('WebGL context lost before platform capture');
-    const rect=canvas.getBoundingClientRect();
-    if(rect.x!==0||rect.y!==0||rect.width!==950||rect.height!==430||
-       canvas.width!==950||canvas.height!==430||!document.querySelector('#hud').getClientRects().length)
-     throw Error('Expected a 950×430 game frame with the HUD visible');
-    const still=document.createElement('canvas');
-    still.id='platform-capture-frame';
-    still.width=canvas.width;still.height=canvas.height;
-    const ctx=still.getContext('2d',{willReadFrequently:true});
-    ctx.drawImage(canvas,0,0);
-    const data=ctx.getImageData(0,0,still.width,still.height).data,samples=[];
-    for(let y=120;y<=260;y+=20)for(let x=180;x<=740;x+=40){
-     const i=(y*still.width+x)*4;
-     samples.push([x,y,data[i],data[i+1],data[i+2]]);
+   const origin=await viewportOrigin();
+   let demonstrated=false;
+   // Compare the actual game viewport with only the rendered ledges hidden.
+   // A stale gallery frame or a changed background cannot satisfy both tests.
+   for(let attempt=0;attempt<3&&!demonstrated;attempt++){
+    await platformVisibility(false);
+    await page.waitForTimeout(180);
+    const hidden=await viewportFrame(origin);
+    const boxes=await platformVisibility(true);
+    for(let sample=0;sample<4&&!demonstrated;sample++){
+     const shown=await viewportFrame(origin),colors=new Set();
+     let ledgePixels=0,otherPixels=0;
+     for(let y=60;y<345;y+=2)for(let x=10;x<940;x+=2){
+      const i=4*(y*shown.width+x);
+      colors.add(shown.data.readUInt32BE(i));
+      const delta=[0,1,2].reduce((n,c)=>n+Math.abs(shown.data[i+c]-hidden.data[i+c]),0);
+      if(delta<=30)continue;
+      if(boxes.some(([bx,by,w,h])=>x>=bx-2&&x<=bx+w+2&&y>=by-2&&y<=by+h+2))ledgePixels++;
+      else otherPixels++;
+     }
+     if(colors.size>64&&ledgePixels>100&&otherPixels<50){
+      pixels=PNG.sync.write(shown);demonstrated=true;
+      console.log(name+' verified '+ledgePixels+' changed platform samples, '+otherPixels+' outside');
+     }
     }
-    // Keep the original canvas attached and preserve its layout and all UI layers.
-    Object.assign(still.style,{position:'fixed',left:'0',top:'0',width:'950px',height:'430px'});
-    canvas.after(still);
-    canvas.style.visibility='hidden';
-    return samples;
-   }));
-   try{
-    pixels=await page.screenshot({timeout:30000});
-   }finally{
-    await page.evaluate(()=>{
-     window.grimRun.canvas.style.removeProperty('visibility');
-     document.getElementById('platform-capture-frame')?.remove();
-    });
    }
-   const frame=PNG.sync.read(pixels);
-   const matched=samples.filter(([x,y,r,g,b])=>{
-    const i=4*(y*frame.width+x);
-    return Math.max(Math.abs(r-frame.data[i]),Math.abs(g-frame.data[i+1]),Math.abs(b-frame.data[i+2]))<=2;
-   });
-   assert(matched.length>=samples.length*.95,name+' viewport contains this exact rendered game frame');
-   assert.equal(frame.width,950);assert.equal(frame.height,430);
-   const colors=new Set();
-   for(let y=80;y<350;y+=8)for(let x=40;x<910;x+=8){
-    const offset=4*(y*frame.width+x);
-    colors.add(frame.data.readUInt32BE(offset));
-   }
-   assert(colors.size>64,name+' viewport contains rendered scenery');
+   assert(demonstrated,name+' must show visible, registered floating ledges in the real viewport');
    fs.writeFileSync(file,pixels);
-  }else{
-   await bounded(name+' Phaser step',page.evaluate(()=>window.grimRun.step(performance.now(),0)));
-   pixels=await page.screenshot({path:file,timeout:30000});
-  }
+  }else pixels=await page.screenshot({path:file,timeout:30000});
   console.log(name+' screenshot finished');
   return pixels;
  };
@@ -89,7 +112,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   s.powerArt.reset();s.worldPolish.reset();s.damageFlashMs=0;s.fallFeedbackMs=0;s.bonesBlastMs=0;
   s.ui.setMode('playing');s.cameras.main.setScroll(s.cameraX,s.cameraY);s.refreshHud();s.drawScene();return x;
  },meters);await page.waitForFunction(group=>{const s=window.grimRun.scene.scenes[0];return s.biomeBackdropReady&&s.biomeBackdropGroup===group;},meters>=5000?'underworld':'surface',{timeout:45000});await page.evaluate(()=>window.grimRun.scene.scenes[0].drawScene());return x;};
- try{
+ async function startFixture(){
   await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=33',{waitUntil:'domcontentloaded',timeout:45000});
   await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump,null,{timeout:45000});
   await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
@@ -98,6 +121,9 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    window.grimRun.loop.sleep();clearInterval(s.loopWatchdogId);
    s._polishSkin=s.obstacleSkinFor.bind(s);s.obstacleSkinFor=o=>o.reviewSkin||s._polishSkin(o);return {ready:s.worldPolish.ready,platforms:window.GRIM_WORLD_POLISH.BIOMES.filter(b=>s.textures.exists('soul-platform-'+b))};});
   assert(Object.values(ready.ready).every(Boolean));assert.equal(ready.platforms.length,8);
+ }
+ try{
+  await startFixture();
   await stage(400);
   await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.coins=[{x:s.player.x+145,baseY:s.player.y,offset:-45,taken:false}];s.souls=[{x:s.player.x+280,baseY:s.player.y,offset:-74,taken:false}];});
   let min=100,max=0;const faces=new Set(),soulFrames=new Set();let fixed;
@@ -123,7 +149,18 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const p of gallery){assert(Math.abs(p.top-12)<=2,p.b+' registered top');assert(p.bottom<192&&p.displayBottom<50,p.b+' complete floating underside');}
   await shot('all-eight-platforms');await page.evaluate(()=>window._polishGallery.forEach(v=>v.destroy()));
   for(const m of [4840,9470]){
+   // Use a new game context for each distant scene, retaining this tab's video.
+   await startFixture();
    await stage(m);
+   await page.evaluate(()=>{
+    const s=window.grimRun.scene.scenes[0];
+    s.syncWorldScroll();s.biomeMidground.prioritizeTeleport(s.distance);s.drawScene();
+   });
+   await page.waitForFunction(()=>{
+    const s=window.grimRun.scene.scenes[0],weights=window.GRIM_WORLD_ART.biomeWeights(s.distance);
+    s.drawScene();window.grimRun.step(performance.now(),0);
+    return Object.keys(weights).every(id=>id==='forest'||s.biomeMidground.stream.loaded.has(id));
+   },null,{polling:180,timeout:45000});
    const platforms=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.soulPlatform=s.makeSoulPlatform();s.souls=s.soulPlatform.filter(p=>p.id===1||p.id===8).map(p=>({x:p.x+p.width/2,baseY:p.y,offset:-100,taken:false}));s.drawScene();return [...s.worldPolish.platforms.values()].map(v=>({h:v.displayHeight,y:v.y,key:v.texture.key}));});
    assert(platforms.length>=3);assert(platforms.every(p=>p.h<60));await page.waitForTimeout(300);await page.evaluate(()=>window.grimRun.scene.scenes[0].drawScene());await shot('floating-encounter-'+m);
   }
