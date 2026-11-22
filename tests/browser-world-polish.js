@@ -3,7 +3,16 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const {chromium}=require('playwright'),{PNG}=require('pngjs');
 const execFile=require('node:util').promisify(require('node:child_process').execFile);
 const root=path.resolve(__dirname,'..'),dir=path.join(root,'test-results');fs.mkdirSync(dir,{recursive:true});
-const server=http.createServer((req,res)=>{try{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname.replace(/^\/+/,''))||'index.html');if(!file.startsWith(root+path.sep))return res.writeHead(403).end();res.writeHead(200,{'Content-Type':({'.html':'text/html','.js':'application/javascript','.css':'text/css','.ttf':'font/ttf','.png':'image/png','.webp':'image/webp'})[path.extname(file)]||'application/octet-stream'});res.end(fs.readFileSync(file));}catch(e){res.writeHead(404).end();}});
+const mime={'.html':'text/html','.js':'application/javascript','.css':'text/css','.ttf':'font/ttf','.png':'image/png','.webp':'image/webp'};
+const server=http.createServer((req,res)=>{
+ try{
+  const route=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+  const file=path.resolve(root,route.replace(/^\/+/, '')||'index.html');
+  if(!file.startsWith(root+path.sep))return res.writeHead(403).end();
+  const data=fs.readFileSync(file);
+  res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'application/octet-stream'}).end(data);
+ }catch{res.writeHead(404).end();}
+});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const browser=await chromium.launch({headless:false,args:['--no-sandbox','--use-angle=swiftshader']});
