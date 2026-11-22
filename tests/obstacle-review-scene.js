@@ -18,7 +18,7 @@
     const start = s.startX + centers[skin.biome] * C.pxPerMeter;
     for (let x = start; x < start + 2400; x += 1) {
       if (s.terrain.canPlace(x,74) && s.terrain.groundAt(x-110) !== null &&
-          s.obstacleSkinFor({type,x})?.id === skin.id) return x;
+          (type === 'branch' || s.obstacleSkinFor({type,x})?.id === skin.id)) return x;
     }
     throw Error('No legal gallery position for ' + skin.id);
   }
@@ -40,7 +40,7 @@
     const ground = s.terrain.groundAt(x);
     obstacle = type === 'tuckGate' ? s.obstacles.find(o => o.type === type && Math.abs(o.x-x) < .01) :
       window.GRIM_CORE.obstacle(type,x,ground,spec.variant ?? 0,C.slideClearancePx,s.height);
-    if (spec.slideSkin && obstacle) obstacle.slideSkin=spec.slideSkin;
+    if (obstacle && type==='branch' && (spec.slideSkin || spec.gallery)) obstacle.slideSkin=spec.slideSkin ?? skin.id;
     if (!obstacle || s.obstacleSkinFor(obstacle)?.id !== skin.id) throw Error('Seed/skin mismatch: '+skin.id+' at '+x);
     gap = type === 'tuckGate' ? s.terrain.sectionAt(x) : null;
     if (gap && gap.kind !== 'gap') throw Error('Gate requires a generated gap');
@@ -91,11 +91,13 @@
       try{return drawObstacle.call(this,o);}
       finally{mountMs=performance.now()-t;}
     };
+    const firstDraw=performance.now();
     try{s.drawScene();}
     finally{s.drawObstacle=drawObstacle;}
     render();
+    const frameMs=performance.now()-firstDraw;
     inputSent = false; tick = 0; firstCut = null; firstHit = null; airTucked = false;
-    return {x, type, skin:skin.id, entry, seed:s.seed, mountMs,
+    return {x, type, skin:skin.id, entry, seed:s.seed, mountMs, frameMs,
       weights:window.GRIM_WORLD_ART.biomeWeights((x-s.startX)/C.pxPerMeter)};
   }
   function ready() {
@@ -144,6 +146,8 @@
       rearPixels=difference(read());
       support.setVisible(true);render();
       if(rearPixels<120)throw Error('Weight-bearing mass absent from real pixels: '+skin.id+' '+rearPixels);
+      if(skin.landform.openTop && support.y>cam.scrollY)
+        throw Error('Open-ended structure stops inside the viewport: '+skin.id);
       const paint=front.texture.getSourceImage(),w=paint.width,h=paint.height;
       const rgba=paint.getContext('2d').getImageData(0,0,w,h).data;
       const errors=[];

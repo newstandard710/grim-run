@@ -139,7 +139,7 @@ async function main() {
     const counts=new Map();
     for(const s of skins)counts.set(s.biome,(counts.get(s.biome)||0)+1);
     assert.equal(counts.size,8);
-    assert.ok([...counts.values()].every(n=>n>=2));
+    assert.ok([...counts.values()].every(n=>n===5));
     receipt.counts=Object.fromEntries(counts);receipt.ok=true;
   } finally {await browser.close();}
 }

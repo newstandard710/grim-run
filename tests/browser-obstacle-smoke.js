@@ -68,11 +68,11 @@ const server=http.createServer((req,res)=>{
         images:Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-')).length,
         baselineErrors};
     });
-    assert.equal(loaded.count,96,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.19.19','visible version badge matches the current art release');
-    assert.deepEqual(loaded.missing,[],'all 96 obstacle textures load in actual Phaser');
+    assert.equal(loaded.count,112,'catalog is loaded in the game');
+    assert.equal(loaded.badge,'v0.19.20','visible version badge matches the current art release');
+    assert.deepEqual(loaded.missing,[],'all 112 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
-    assert.equal(loaded.images,104,'24 landforms use one load each and 8 airborne supports load');
+    assert.equal(loaded.images,120,'40 landforms use one load each and 8 airborne supports load');
     assert.equal(loaded.supports.length,8,'all airborne variants retain their paired supports');
     assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
@@ -94,6 +94,7 @@ const server=http.createServer((req,res)=>{
         let found=null;
         for(let dx=0;dx<1000;dx++){
           const candidate={type,x:base+dx};
+          if(type==='branch')s.chooseSlideSkin(candidate);
           if(s.obstacleSkinFor(candidate)?.id===skin.id){found=candidate;break;}
         }
         if(!found){selectorMisses++;continue;}
@@ -191,7 +192,7 @@ const server=http.createServer((req,res)=>{
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
       return {checked:checked.length,selectorMisses,renderMisses,renderFailures};
     });
-    assert.deepEqual(exercise,{checked:96,selectorMisses:0,renderMisses:0,renderFailures:[]},
+    assert.deepEqual(exercise,{checked:112,selectorMisses:0,renderMisses:0,renderFailures:[]},
       'every biome skin is selectable, scaled, and anchored at its intended baseline');
 
     const resultDir=path.join(root,'test-results');fs.mkdirSync(resultDir,{recursive:true});
@@ -214,7 +215,7 @@ const server=http.createServer((req,res)=>{
       await page.evaluate(()=>obstacleReview.cleanup());
     }
     assert.deepEqual(errors,[],'obstacle loading and rendering produce no browser exceptions');
-    console.log('PASS actual Chromium: all 96 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');
+    console.log('PASS actual Chromium: all 112 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');
   }finally{
     await browser.close();
     await new Promise(resolve=>server.close(resolve));

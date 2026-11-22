@@ -12,10 +12,11 @@
   }
   // Both depths come from one painting. The common canvas keeps the shelves,
   // seams and footing continuous, even on a curved piece of terrain.
-  const slidePaint=new WeakMap();
   let nextMount=0;
-  function readSlidePaint(source,art){
-    if(slidePaint.has(source))return slidePaint.get(source);
+  function readSlidePaint(scene,source,art){
+    // Keep one biome's working set. An active mount owns its finished textures.
+    const cache=scene.slidePaintCache??=new Map();
+    if(cache.has(source))return cache.get(source);
     const canvas=document.createElement('canvas');
     canvas.width=Math.round(source.width*art.scale);
     canvas.height=Math.round(source.height*art.scale);
@@ -31,7 +32,8 @@
       edge[x]=y+1;
     }
     const paint={width:canvas.width,height:canvas.height,pixels:new Uint32Array(alpha.buffer),lipX,lipY,footY,edge};
-    slidePaint.set(source,paint);
+    if(cache.size>=5)cache.delete(cache.keys().next().value);
+    cache.set(source,paint);
     return paint;
   }
   function fitBank(scene,center,offsets,halfSpan,leftExtent,rightExtent){
@@ -59,14 +61,17 @@
     if(ob.x+550<scene.cameraX||ob.x-550>scene.cameraX+scene.width)return true;
     const terrain=scene.terrain,groundAt=terrain.groundAt;
     const prior=scene.obstacleSupportObjects.get(ob),texture=scene.textures.get(skin.key);
+    // A cropped trunk or vault continues above a tall viewport. Only its top
+    // band extends; the lip, footing and terrain registration stay fixed.
+    const extension=art.openTop?Math.max(0,Math.ceil(scene.height+96-art.lip[1]*art.scale)):0;
     const left=groundAt(ob.x),right=groundAt(ob.x+ob.width);
-    if(prior && prior.mountTexture===texture && prior.mountTerrain===terrain &&
+    if(prior && prior.mountExtension===extension && prior.mountTexture===texture && prior.mountTerrain===terrain &&
       prior.mountFloor===groundAt && prior.mountLip===underside && prior.mountLeft===left &&
       prior.mountRight===right && prior.mountFeet.every(p=>{const floor=groundAt(p.x);return floor!==null && floor+13===p.y;})){
       return true;
     }
     const source=texture.getSourceImage();
-    const {width,height,pixels,lipX,lipY,footY,edge}=readSlidePaint(source,art);
+    const {width,height,pixels,lipX,lipY,footY,edge}=readSlidePaint(scene,source,art);
     const offsets=art.feet.map(x=>x*art.scale-lipX);
     const halfSpan=ob.width/2+2;
     const bank=fitBank(scene,center,offsets,halfSpan,-lipX,width-lipX);
@@ -98,7 +103,7 @@
       const foot=Math.max(lip+1,Math.round(floor));
       const bottom=Math.ceil(foot+(height-footY)*(foot-lip)/(footY-srcLip));
       columns.push({sx,top,join,srcLip,lip,bottom,constrained});
-      minY=Math.min(minY,top);
+      minY=Math.min(minY,top-extension);
       maxY=Math.max(maxY,lip,bottom);
     }
     const id=++nextMount,keys=['obstacle-mounted-'+id,'obstacle-registered-'+id];
@@ -126,7 +131,21 @@
       const end=constrained?lip:bottom;
       // One nearest-row copy of already filtered, world-resolution paint.
       // This avoids re-reading a live GPU canvas for every pixel column.
-      for(let y=top;y<end;y++){
+      // Above the fitted rim, the rear wall keeps its source rows. A straight
+      // copy avoids testing depth and recalculating a scale for each tower pixel.
+      const straightEnd=Math.min(end,upper,inFront?frontTop:upper);
+      let copyTop=top;
+      if(extension){
+        const band=Math.min(96,straightEnd-top);
+        const step=band/(extension+band);
+        let row=0;
+        for(let y=top-extension;y<top+band;y++,row+=step)
+          backPixels[(y-minY)*displayWidth+x]=pixels[Math.floor(row)*width+sx];
+        copyTop+=band;
+      }
+      let src=(copyTop-top)*width+sx,dst=(copyTop-minY)*displayWidth+x;
+      for(let y=copyTop;y<straightEnd;y++,src+=width,dst+=displayWidth)backPixels[dst]=pixels[src];
+      for(let y=Math.max(top,straightEnd);y<end;y++){
         const v=y<upper?y-top:y<lip?join+(y-upper+.5)*rimScale:srcLip+(y-lip+.5)*footScale;
         const pixel=pixels[(v|0)*width+sx];
         if(inFront && y>=frontTop && y<lip)frontPixels[(y-frontTop)*frontWidth+x-frontLeft]=pixel;
@@ -144,7 +163,7 @@
     }
     const mount=replace(scene.obstacleSupportObjects,rear,originX,minY,.53);
     Object.assign(mount,{mountTexture:texture,mountSource:skin.key,mountFeet:feet,mountTerrain:terrain,mountFloor:groundAt,
-      mountLip:underside,mountLeft:left,mountRight:right});
+      mountLip:underside,mountLeft:left,mountRight:right,mountExtension:extension});
     replace(scene.obstacleSpriteObjects,front,originX+frontLeft,frontTop,16);
     return true;
   }

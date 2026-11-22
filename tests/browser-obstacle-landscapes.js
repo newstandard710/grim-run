@@ -101,14 +101,24 @@ async function playTransitions(page,revision,results,onlySeed){
 
 async function captureGallery(page){
   const ids=await page.evaluate(()=>GRIM_OBSTACLE_SPRITES.filter(s=>s.category==='slide').map(s=>s.id));
-  assert.equal(ids.length,24);
+  assert.equal(ids.length,40);
   const dir=path.join(out,'gallery');
   await fs.mkdir(dir,{recursive:true});
   const captures={};
   for(const id of ids){
     const setup=await page.evaluate(id=>obstacleReview.prepare({id,gallery:true}),id);
     await waitForArt(page);
-    captures[id]={mountMs:setup.mountMs,...await page.evaluate(()=>obstacleReview.inspect())};
+    const memory=await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0],cache=s.slidePaintCache;
+      const bytes=Array.from(cache.values()).reduce((n,paint)=>n+paint.pixels.byteLength+paint.edge.byteLength,0);
+      const sourceBytes=GRIM_OBSTACLE_SPRITES.filter(skin=>skin.landform).reduce((n,skin)=>{
+        const image=s.textures.get(skin.key).getSourceImage();
+        return n+image.width*image.height*4;
+      },0);
+      return {entries:cache.size,workingBytes:bytes,sourceBytes};
+    });
+    assert.ok(memory.entries<=5 && memory.workingBytes<6*1024*1024,'bounded world-resolution slide paint');
+    captures[id]={mountMs:setup.mountMs,frameMs:setup.frameMs,memory,...await page.evaluate(()=>obstacleReview.inspect())};
     await page.screenshot({path:path.join(dir,id+'-phone-scene.png')});
     await page.evaluate(()=>obstacleReview.cleanup());
   }

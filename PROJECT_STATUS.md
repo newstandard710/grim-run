@@ -1,6 +1,10 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build** is v0.19.19.
+**Current build** is v0.19.20.
+
+## v0.19.20 — Taller ground-slide varieties
+
+Two new paintings in each of the eight biomes bring the total to forty. Each biome’s seeded rotation deals all five before refilling and excludes the last pick at the refill seam.
 
 ## v0.19.19 — Ground-slide landforms
 
