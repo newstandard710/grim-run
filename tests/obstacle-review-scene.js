@@ -43,6 +43,15 @@
     let entry = bank;
     const target = Math.min(bank - 8, x - approach);
     while (entry - 1 >= target && s.terrain.groundAt(entry - 1) !== null) entry--;
+    // On the sharp Boss approach the lip initially sits above a short
+    // landscape screen. Begin as it enters the playable camera view.
+    const contactY = obstacle.y+obstacle.height;
+    const lastEntry = gap ? Math.min(x-100,gap.start-28) : x-100;
+    while (entry+1<lastEntry && s.terrain.groundAt(entry+1)!==null) {
+      const screenY=contactY-s.terrain.groundAt(entry)+s.groundY;
+      if (screenY>=60 && screenY<=s.height-20)break;
+      entry++;
+    }
     s.player.x = entry; s.player.y = s.terrain.groundAt(entry);
     s.distance = (entry-s.startX)/C.pxPerMeter;
     s.speed = window.GRIM_CORE.runSpeed(s.distance);
@@ -213,11 +222,42 @@
         s.player.x!==s.terrain.portalExitX) throw Error('Portal destination missed');
     return states;
   }
+  function exerciseMountLifecycle() {
+    const w=s.width,h=s.height;
+    const x=obstacle.x;
+    const contacts=[];
+    const style=game.scale.parent.style,previous=[style.width,style.height];
+    for(const [width,height] of [[h,w],[w,h]]) {
+      style.width=width+'px';style.height=height+'px';
+      game.scale.getParentBounds();game.scale.resize(width,height);
+      s.drawScene();render();
+      const support=s.obstacleSupportObjects.get(obstacle);
+      if(s.width!==width || !support?.mountFeet?.length)throw Error('Rotation lost the ground mount');
+      const feet=support.mountFeet.map(p=>p.y-s.terrain.groundAt(p.x));
+      if(feet.some(d=>Math.abs(d-13)>.001))throw Error('Rotated support left the tread');
+      contacts.push(feet);
+    }
+    [style.width,style.height]=previous;
+    game.scale.getParentBounds();game.scale.refresh();
+    s.godMode=true;
+    s.practicePowerLevels={...s.practicePowerLevels,deathsReversal:1};
+    s.resetRewindHistory();s.captureRewind();
+    for(let i=0;i<303;i++)s.update(0,1000/60);
+    if(!s.rewind())throw Error('Gameplay rewind failed to start');
+    for(let i=0;i<160 && s.state==='rewinding';i++)s.update(0,1000/60);
+    obstacle=s.obstacles.find(o=>o.x===x && o.type==='branch');
+    s.drawScene();render();
+    if(s.state!=='playing'||!obstacle||!s.obstacleSpriteObjects.get(obstacle)?.visible ||
+       !s.obstacleSupportObjects.get(obstacle)?.visible)throw Error('Visible mount missing after rewind');
+    const geometry=[s.player.x,s.player.y,obstacle.x,obstacle.y,obstacle.width,obstacle.height];
+    cleanup();
+    return {contacts,geometry};
+  }
   function cleanup() {
     s.obstacles=[];s.drawScene();
     const leaked=Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-mounted-')||k.startsWith('obstacle-registered-'));
     if (leaked.length) throw Error('Leaked obsolete art: '+leaked.join(', '));
   }
-  window.obstacleReview={prepare,ready,diagnostics,inspect,step,signature,image,cleanup,render,startPortal,beginRoute,seekRoute,routeFrame,
+  window.obstacleReview={prepare,ready,diagnostics,inspect,step,signature,image,cleanup,render,startPortal,exerciseMountLifecycle,beginRoute,seekRoute,routeFrame,
     get result(){return {firstCut,firstHit,airTucked,inputSent,passed:s.player.x>obstacle.x+obstacle.width};}};
 })();

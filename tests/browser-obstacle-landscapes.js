@@ -156,6 +156,12 @@ async function measure(page,revision,cases,extras=true){
     }
   }
   if(!extras){assert.deepEqual(errors,[]);return results;}
+  const lifecycle=await page.evaluate(()=>{
+    const q=obstacleReview;
+    q.prepare({id:'forest_slide_dead-bough-curtain',seed:33,x:1050,variant:2});
+    return q.exerciseMountLifecycle();
+  });
+  results.lifecycle={trace:hash(lifecycle),...lifecycle};
   const arrival=await page.evaluate(()=>{
     const q=obstacleReview;
     const states=q.startPortal();
