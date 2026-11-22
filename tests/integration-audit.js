@@ -33,6 +33,12 @@ async function play(page) {
   await page.locator('#start-btn').click();
   await page.waitForFunction(()=>{const s=window.grimRun?.scene.scenes[0];return s?.state==='playing' && s.motionArt?.rising && s.landingArt?.ready;},null,{timeout:90000});
   await page.evaluate(()=>grimRun.scene.scenes[0].visuals.reviewLoad);
+  result.hud = await page.evaluate(()=>{
+    const rect=el=>{const r=el.getBoundingClientRect();return [r.left,r.right,r.top,r.bottom];};
+    const parts={};for(const key of ['#hearts','.top-center','.top-right','#pause-btn','#jump-btn','#attack-btn'])parts[key]=rect(document.querySelector(key));
+    return parts;
+  });
+  assert(result.hud['#jump-btn'][0]<result.hud['#attack-btn'][0], 'Production control stylesheet must apply');
   result.renderer = await page.evaluate(()=>grimRun.renderer.type);
   assert.equal(result.renderer, mode==='canvas'?1:2);
   await page.locator('#pause-btn').click();
@@ -118,20 +124,64 @@ async function pace(page,entry=0) {
       s.distance=entry;s.nextVendorNumber=2;s.lastVendorNumber=1;s.nextEncounterX=x+400;s.speed=GRIM_CORE.runSpeed(entry);
       s.godMode=true;s.drawScene();
     }
-    const cpu=[],gap=[];let prev;
+    const cpu=[],gap=[],slow=[];let prev;
     for(let i=0;i<245;i++){
       const now=await new Promise(requestAnimationFrame);
       const start=performance.now();
       if(i===80||i===205)s.jump();if(i===90||i===215)s.jumpEnd();
       if(i===100||i===220)s.attack();if(i===156)s.startSlide();if(i===201)s.endSlide();
       s.update(0,1000/60);g.step(now,0);
-      if(i>=45){gap.push(now-prev);cpu.push(performance.now()-start);}prev=now;
+      if(i>=45){
+        gap.push(now-prev);cpu.push(performance.now()-start);
+        if(now-prev>50.5)slow.push({i,m:s.distance,raf:now-prev,cpu:cpu.at(-1),ob:s.obstacles.filter(o=>Math.abs(o.x-s.player.x)<180).map(o=>o.type)});
+      }prev=now;
     }
     function stats(a){a.sort((x,y)=>x-y);return {n:a.length,median:a[99],p95:a[189],p99:a[197],over50:a.filter(x=>x>50).length,max:a.at(-1)};}
-    return {cpu:stats(cpu),raf:stats(gap),end:s.distance,state:s.state};
+    return {cpu:stats(cpu),raf:stats(gap),end:s.distance,state:s.state,slow};
   },entry);
 }
 
+async function ledgeAndObstacles(browser){
+  for(const revision of ['after','before']){
+    const page=await browser.newPage({viewport,hasTouch:true,deviceScaleFactor:1});
+    try{
+      await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=78');
+      await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+      await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.landingArt?.ready,null,{timeout:90000});
+      await page.evaluate(()=>grimRun.scene.scenes[0].visuals.reviewLoad);
+      const touch=await page.evaluate(()=>{
+        const g=grimRun,s=g.scene.scenes[0];s.startRun();g.loop.sleep();clearInterval(s.loopWatchdogId);s.sys.sceneUpdate=()=>{};
+        const l=s.soulPlatform[0],p=s.player;p.x=l.x-220;p.y=s.terrain.groundAt(p.x);s.distance=(p.x-s.startX)/GRIM_CONFIG.pxPerMeter;
+        const marks=[],orig=s.landingArt.contact;
+        s.landingArt.contact=function(v){if(p.onSoulPlatform===l.id)marks.push([p.x-l.x,p.y,p.slideMs]);return orig.call(this,v);};
+        s.nextVendorNumber=8;s.jump();s.startSlide();
+        for(let i=0;i<100&&p.x<l.x+l.width+30;i++)s.update(0,1000/60);
+        s.landingArt.contact=orig;
+        return {marks,off:p.onSoulPlatform===false&& !p.grounded};
+      });
+      result[revision+'Ledge']=touch;save();assert.equal(touch.marks.length,revision==='before'?1:3);assert(touch.off);
+      if(revision==='after'){
+        await page.addScriptTag({path:path.join(root,'tests/obstacle-review-scene.js')});
+        const cases=[['forest_cut_thorny-young-pine',33,4530.551778453482,2],['forest_cut_dead-oak-sapling',34,10047.762656558414,0],
+         ['foothills_cut_dead-mountain-tree',38,12602.127225780047,0],['tundra_cut_frozen-dead-pine',34,57640.14732234026,3],
+         ['ashlands_cut_charred-sapling',34,93504.95999999999,1],['ashlands_air-tuck_basalt-tuck-gate',33,89696.6902453087,0],
+         ['lava_air-tuck_molten-chain-tuck-gate',33,97658.58771006875,0]];
+        result.obstacles=[];
+        for(const [id,seed,x,variant] of cases){
+          const spec={id,seed,x,variant};
+          await page.evaluate(spec=>obstacleReview.prepare(spec),spec);
+          await page.waitForFunction(()=>obstacleReview.ready(),null,{timeout:60000});
+          const paint=await page.evaluate(()=>obstacleReview.inspect());
+          const protectedRun=await page.evaluate(()=>{for(let j=0;j<120;j++)obstacleReview.step();return obstacleReview.result;});
+          const missed=await page.evaluate(spec=>{obstacleReview.cleanup();obstacleReview.prepare(spec);for(let j=0;j<120;j++)obstacleReview.step(false);return obstacleReview.result;},spec);
+          result.obstacles.push({id,seed,x,paint,protectedRun,missed});save();
+          assert(protectedRun.passed&&protectedRun.firstHit===null&&missed.firstHit!==null,id);
+          await page.evaluate(()=>obstacleReview.cleanup());
+        }
+      }
+    }finally{await page.close();}
+  }
+}
 async function comparePacing(browser){
   result.pairs=[];
   for(const revision of ['before','after','after','before']){
@@ -152,6 +202,7 @@ async function comparePacing(browser){
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const b=await chromium.launch({args:mode==='canvas'?['--disable-webgl']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try{
+    if(process.argv[5]==='ledge')return await ledgeAndObstacles(b);
     if(process.argv[5]==='compare')return await comparePacing(b);
     const page=await b.newPage({viewport,hasTouch:mobile,deviceScaleFactor:1});
     page.on('pageerror',e=>result.errors.push(e.message));

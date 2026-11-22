@@ -2,7 +2,7 @@ const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:
 const dir=path.resolve(process.env.LANDING_RESULTS||'test-results/landing');
 fs.mkdirSync(dir,{recursive:true});
 const roots={before:path.resolve(process.env.LANDING_BASELINE),after:path.resolve(__dirname,'..')};
-const types={'.js':'text/javascript','.html':'text/html','.webp':'image/webp','.png':'image/png','.ttf':'font/ttf','.svg':'image/svg+xml'};
+const types={'.css':'text/css','.js':'text/javascript','.html':'text/html','.webp':'image/webp','.png':'image/png','.ttf':'font/ttf','.svg':'image/svg+xml'};
 const server=http.createServer((req,res)=>{const [,version,...rest]=new URL(req.url,'http://x').pathname.split('/');if(!roots[version])return res.writeHead(404).end();
  const file=path.join(roots[version],rest.join('/')||'index.html');if(!fs.existsSync(file))return res.writeHead(404).end();res.setHeader('Content-Type',types[path.extname(file)]||'application/octet-stream');fs.createReadStream(file).pipe(res);});
 const routes=[
