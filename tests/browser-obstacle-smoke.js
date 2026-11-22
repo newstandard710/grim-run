@@ -39,7 +39,7 @@ const server=http.createServer((req,res)=>{
       const wrongSize=skins.filter(skin=>{
         if(!s.textures.exists(skin.key))return false;
         const source=s.textures.get(skin.key).getSourceImage();
-        if(skin.slideSize)return source.width!==512||source.height<120;
+        if(skin.landform)return source.width<skin.landform.feet[1]||source.height<skin.landform.footY;
         if(skin.gateSize)return source.width<skin.gateSize[0]||source.height<skin.gateSize[1];
         return skin.category==='slide'?
           source.width!==512||source.height<350:
@@ -69,11 +69,11 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,96,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.19.18','visible version badge matches the current art release');
+    assert.equal(loaded.badge,'v0.19.19','visible version badge matches the current art release');
     assert.deepEqual(loaded.missing,[],'all 96 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
-    assert.equal(loaded.images,152,'all 24 upper paintings and 32 unique supports load');
-    assert.equal(loaded.supports.length,32,'every slide and airborne variant has a paired support');
+    assert.equal(loaded.images,104,'24 landforms use one load each and 8 airborne supports load');
+    assert.equal(loaded.supports.length,8,'all airborne variants retain their paired supports');
     assert.deepEqual(loaded.baselineErrors,[],'ground anchors align to the lowest clearly visible art pixel');
 
     const exercise=await page.evaluate(()=>{
@@ -144,29 +144,15 @@ const server=http.createServer((req,res)=>{
       s.cameraX=branch.x-300;
       s.drawObstacle(branch);
       const branchImage=s.obstacleSpriteObjects.get(branch);
-      const branchBack=s.obstacleBackObjects.get(branch);
       const branchSupport=s.obstacleSupportObjects.get(branch);
       const branchSkin=s.obstacleSkinFor(branch);
-      const [branchW,branchH]=branchSkin.slideSize??[74*3.25,Math.max(s.height*1.22,475)];
-      const expectedH=branchImage?.slideFront?.height??branchH;
-      const expectedOrigin=branchImage?.slideFront?.origin??1;
-      if(!branchImage||Math.abs(branchImage.displayWidth-branchW)>.001||
-        Math.abs(branchImage.displayHeight-expectedH)>.001||
-        branchImage.y!==224||branchImage.originY!==expectedOrigin){
-        renderMisses++;renderFailures.push({id:'actual-slide-render',actual:branchImage&&
-          {width:branchImage.displayWidth,height:branchImage.displayHeight,y:branchImage.y,
-            originY:branchImage.originY},skin:branchSkin?.id});
-      }
-      if(!branchBack||branchBack.y!==224||branchBack.depth!==.55||
-        Math.abs(branchBack.displayHeight-branchH)>.000001||
-        branchImage.depth!==16||branchImage.depth<=s.actor.depth){
-        renderMisses++;renderFailures.push({id:'painted-slide-backing-missing'});
-      }
       const mounted=branchSupport?.mountFeet;
-      if(!mounted||branchSupport.mountSource!==branchSkin?.supportKey||
-        branchSupport.depth!==.53||mounted.length!==2||
-        mounted.some(foot=>foot.y!==313)||branchSupport.alpha!==.95){
-        renderMisses++;renderFailures.push({id:'forest-slide-support-missing'});
+      if(!branchImage||!branchSupport||branchSupport.mountSource!==branchSkin?.key||
+        branchSupport.depth!==.53||branchSupport.depth>=s.terrainBase.depth||
+        branchImage.depth!==16||branchImage.depth<=s.actor.depth||
+        branchImage.y+branchImage.height<222||branchImage.y+branchImage.height>225||
+        !mounted||mounted.length!==2||mounted.some(foot=>foot.y!==313)){
+        renderMisses++;renderFailures.push({id:'actual-slide-registration-and-depth',mounted});
       }
       s.terrain.groundAt=z=>300+(z-branch.x)*.39;
       s.drawObstacle(branch);
@@ -181,10 +167,25 @@ const server=http.createServer((req,res)=>{
       s.cleanupObstacleSprites();
       const removedOffscreen=!s.textures.exists(mountKey)&&!s.obstacleSupportObjects.has(branch);
       s.cameraX=oldCamera;s.drawObstacle(branch);
-      const rebuilt=s.textures.exists(mountKey)&&s.obstacleSupportObjects.has(branch);
+      const rebuilt=s.obstacleSupportObjects.has(branch);
+      const rebuiltKey=s.obstacleSupportObjects.get(branch)?.texture.key;
       branch.destroyed=true;s.cleanupObstacleSprites();
-      if(!removedOffscreen||!rebuilt||s.textures.exists(mountKey)||s.obstacleSupportObjects.has(branch)){
+      if(!removedOffscreen||!rebuilt||s.textures.exists(rebuiltKey)||s.obstacleSupportObjects.has(branch)){
         renderMisses++;renderFailures.push({id:'slide-support-texture-lifecycle',removedOffscreen,rebuilt});
+      }
+      // A missing/failed painting still provides a clear procedural cue.
+      s.textures.remove(branchSkin.key);
+      const graphics=s.obstacleFront,original=graphics.fillRoundedRect;
+      let fallback;
+      graphics.fillRoundedRect=function(...args){fallback=args;return original.apply(this,args);};
+      branch.destroyed=false;
+      s.drawObstacle(branch);
+      graphics.fillRoundedRect=original;
+      const underside=window.GRIM_CORE.slideCeilingBottomAt(s.terrain.groundAt,branch.x+branch.width/2,
+        window.GRIM_CONFIG.slideClearancePx);
+      if(!fallback||fallback[0]!==branch.x||Math.abs(fallback[1]+fallback[3]-underside)>.001||
+        fallback[2]!==branch.width||s.obstacleSupportObjects.has(branch)||s.obstacleSpriteObjects.has(branch)){
+        renderMisses++;renderFailures.push({id:'slide-missing-paint-fallback',fallback});
       }
       s.obstacles=oldObstacles;
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;

@@ -58,33 +58,21 @@ for(const [category,count] of Object.entries(counts)){
     assert.ok(filename.startsWith(root+path.sep),'sprite path stays inside the project');
     assert.equal(path.basename(path.dirname(filename)),skin.biome,skin.id+' biome folder');
     assert.equal(path.basename(path.dirname(path.dirname(filename))),
-      skin.slideSize||skin.gateSize?'landscapes':category==='slide'?'slide-v3':category,skin.id+' category folder');
+      skin.landform?'slide-landforms':skin.gateSize?'landscapes':category,skin.id+' category folder');
     const bytes=fs.readFileSync(filename);
     const digest=crypto.createHash('sha256').update(bytes).digest('hex');
     assert.ok(!hashes.has(digest),'sprite art is unique across biome/category entries: '+skin.id);
     hashes.add(digest);
     if(category==='slide'){
-      assert.ok(skin.backSrc&&skin.backKey,skin.id+' has a matched upper painting');
-      assert.ok(!files.has(skin.backSrc)&&!keys.has(skin.backKey),skin.id+' backing is unique');
-      files.add(skin.backSrc);keys.add(skin.backKey);
-      const backing=fs.readFileSync(path.resolve(root,skin.backSrc));
-      assert.equal(bytes.toString('ascii',0,4),'RIFF',skin.id+' front WebP');
-      assert.equal(bytes.toString('ascii',8,12),'WEBP',skin.id+' front image');
-      assert.equal(backing.toString('ascii',8,12),'WEBP',skin.id+' upper image');
-      assert.ok(bytes.length>1000&&backing.length>1000,skin.id+' both painted layers present');
-      assert.ok(skin.supportSrc&&skin.supportKey,skin.id+' has its own terrain connection');
-      assert.ok(!files.has(skin.supportSrc)&&!keys.has(skin.supportKey),skin.id+' support is unique');
-      files.add(skin.supportSrc);keys.add(skin.supportKey);
-      const support=fs.readFileSync(path.resolve(root,skin.supportSrc));
-      assert.equal(support.toString('ascii',0,4),'RIFF',skin.id+' support WebP');
-      assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
-      assert.ok(support.length>1000,skin.id+' painted connection present');
-      if(skin.slideSize){
-        checkPaintedWebP(bytes,skin.id+' front');
-        checkPaintedWebP(backing,skin.id+' backing');
-        checkPaintedWebP(support,skin.id+' mount');
-        assert.ok(skin.slideSize[0]>=skin.gameW&&skin.slideSize[1]<90,skin.id+' broad low span');
-      }
+      checkPaintedWebP(bytes,skin.id);
+      const {lip,feet,footY,scale,title}=skin.landform;
+      const width=1+bytes.readUIntLE(24,3),height=1+bytes.readUIntLE(27,3);
+      assert.ok(lip[0]*scale>=skin.gameW/2 && (width-lip[0])*scale>=skin.gameW/2,
+        skin.id+' spans the full collision lane');
+      assert.ok(lip[1]>0 && footY>lip[1] && footY<=height && scale>0,skin.id+' valid vertical registration');
+      assert.ok(feet.length===2 && feet.every(x=>x>=0 && x<width) && feet[0]<feet[1],
+        skin.id+' distinct points on the groundward return');
+      assert.ok(typeof title==='string' && title.trim().length,skin.id+' art direction');
       continue;
     }
     if(category==='air-tuck'||category==='air-bramble'){
@@ -137,8 +125,8 @@ for(const [category,count] of Object.entries(counts)){
   assert.deepEqual(perBiome,biomeCounts[category],category+' biome coverage');
 }
 
-assert.equal(files.size,152);
-assert.equal(keys.size,152);
+assert.equal(files.size,104);
+assert.equal(keys.size,104);
 assert.equal(ids.size,96);
 assert.equal(hashes.size,96);
-console.log('PASS 96 biome-exclusive skins, 32 paired supports, and painted asset integrity verified.');
+console.log('PASS 96 biome-exclusive skins, 24 unified landforms, 8 airborne supports, and painted asset integrity verified.');

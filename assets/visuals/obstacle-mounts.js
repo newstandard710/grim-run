@@ -10,196 +10,143 @@
     }
     return null;
   }
-  function triangle(ctx,source,sourceX,sourceY,du,dv,a,b,c){
-    ctx.save();
-    const overlap=.55;
-    const cx=(a.x+b.x+c.x)/3,cy=(a.y+b.y+c.y)/3;
-    const expanded=p=>{
-      const scale=overlap/Math.max(1,Math.hypot(p.x-cx,p.y-cy));
-      return [p.x+(p.x-cx)*scale,p.y+(p.y-cy)*scale];
-    };
-    ctx.beginPath();
-    ctx.moveTo(...expanded(a));ctx.lineTo(...expanded(b));ctx.lineTo(...expanded(c));
-    ctx.closePath();ctx.clip();
-    const xx=(b.x-a.x)/du,yx=(b.y-a.y)/du,xy=(c.x-a.x)/dv,yy=(c.y-a.y)/dv;
-    ctx.transform(xx,yx,xy,yy,a.x-xx*sourceX-xy*sourceY,a.y-yx*sourceX-yy*sourceY);
-    ctx.drawImage(source,0,0);
-    ctx.restore();
-  }
-  function drawSlideMount(scene,ob,skin,x,underside,width,height,rotation){
-    const record=scope.GRIM_OBSTACLE_MOUNTS?.[skin.id];
-    const texture=scene.textures.get(skin.supportKey);
-    const source=texture?.getSourceImage?.();
-    if(!record||!source||!scene.textures.createCanvas)return false;
-    const [seam,ul,vl,ur,vr]=record,span=width*1.4;
-    const leftFoot=supportFoot(scene.terrain,x+(ul-.5)*span,x);
-    const rightFoot=supportFoot(scene.terrain,x+(ur-.5)*span,x);
-    if(!leftFoot||!rightFoot)return false;
-    const joint=underside-height*(1-seam);
-    const x0=x-span*.5,x1=x+span*.5;
-    const top=u=>joint-48+Math.sin(rotation)*(u-.5)*span;
-    const at=u=>{
-      const xx=u<ul?lerp(x0,leftFoot.x,u/ul):u>ur?
-        lerp(rightFoot.x,x1,(u-ur)/(1-ur)):lerp(leftFoot.x,rightFoot.x,(u-ul)/(ur-ul));
-      const weight=Math.max(0,Math.min(1,(u-ul)/(ur-ul)));
-      const line=top(u),foot=lerp(leftFoot.y,rightFoot.y,weight);
-      return [{x:xx,y:line},{x:xx,y:line+(foot-line)/lerp(vl,vr,weight)}];
-    };
-    const columns=[...new Set([0,ul,.25,.5,.75,ur,1])].sort((a,b)=>a-b);
-    const dest=columns.map(at);
-    const originX=Math.floor(x0)-1;
-    const originY=Math.floor(Math.min(...dest.map(strip=>strip[0].y)))-1;
-    const cutH=Math.ceil(Math.max(...dest.map(strip=>strip[1].y))-originY)+1;
-    const cutW=Math.ceil(x1-originX)+1;
-    const key='obstacle-mounted-'+skin.id+'-'+ob.x;
-    const signature=[height,originY,underside,rotation,leftFoot.x,leftFoot.y,rightFoot.x,rightFoot.y].join(':');
-    let view=scene.obstacleSupportObjects.get(ob);
-    if(view?.mountSignature===signature){view.setVisible(true);return true;}
-    if(view){view.destroy();scene.obstacleSupportObjects.delete(ob);}
-    const assembled=scene.textures.createCanvas(key,cutW,cutH);
-    if(!assembled)return false;
-    const ctx=assembled.getContext();
-    const local=p=>({x:p.x-originX,y:p.y-originY});
-    for(let i=0;i<columns.length-1;i++){
-      const sx0=columns[i]*source.width,sx1=columns[i+1]*source.width,du=sx1-sx0;
-      const [a,c]=dest[i].map(local),[b,d]=dest[i+1].map(local);
-      triangle(ctx,source,sx0,0,du,source.height,a,b,c);
-      triangle(ctx,source,sx1,source.height,-du,-source.height,d,c,b);
-    }
-    // Keep the recessed plate clear in the actual traversable opening.
-    // The front hazard supplies the hanging teeth, bark or masonry here.
-    ctx.globalCompositeOperation='destination-out';
-    ctx.beginPath();
-    const from=ob.x-9,to=ob.x+ob.width+9;
-    for(let xx=from;xx<=to;xx+=5){
-      const y=scope.GRIM_CORE.slideCeilingBottomAt(scene.terrain.groundAt,xx,scope.GRIM_CONFIG.slideClearancePx)??underside;
-      if(xx===from)ctx.moveTo(xx-originX,y-originY);
-      else ctx.lineTo(xx-originX,y-originY);
-    }
-    const edgeY=scope.GRIM_CORE.slideCeilingBottomAt(scene.terrain.groundAt,to,scope.GRIM_CONFIG.slideClearancePx)??underside;
-    ctx.lineTo(to-originX,edgeY-originY);
-    ctx.lineTo(to-originX,cutH);ctx.lineTo(from-originX,cutH);ctx.closePath();ctx.fill();
-    ctx.globalCompositeOperation='source-over';
-    assembled.refresh();
-    view=scene.add.image(originX,originY,key).setOrigin(0).setDepth(.53)
-      .setTint(0xbfc6bf).setAlpha(.95);
-    view.mountSignature=signature;
-    view.mountFeet=[leftFoot,rightFoot];
-    view.mountSource=skin.supportKey;
-    view.once('destroy',()=>{if(scene.textures.exists(key))scene.textures.remove(key);});
-    scene.obstacleSupportObjects.set(ob,view);
-    return true;
-  }
-
-  const REGISTERED_SLIDE_FRONTS=new Set([
-    'lava_slide_basalt-lip','foothills_slide_rock-lip','tundra_slide_snow-shelf'
-  ]);
-  const slideFrontProfiles=new WeakMap();
-
-  function slideFrontProfile(source){
-    let profile=slideFrontProfiles.get(source);
-    if(profile)return profile;
+  // Both depths come from one painting. The common canvas keeps the shelves,
+  // seams and footing continuous, even on a curved piece of terrain.
+  const slidePaint=new WeakMap();
+  let nextMount=0;
+  function readSlidePaint(source,art){
+    if(slidePaint.has(source))return slidePaint.get(source);
     const canvas=document.createElement('canvas');
-    canvas.width=source.width;canvas.height=source.height;
+    canvas.width=Math.round(source.width*art.scale);
+    canvas.height=Math.round(source.height*art.scale);
     const ctx=canvas.getContext('2d',{willReadFrequently:true});
-    ctx.drawImage(source,0,0);
-    const alpha=ctx.getImageData(0,0,source.width,source.height).data;
-    const edge=new Int16Array(source.width).fill(-1);
-    let top=source.height;
-    // Each registration needs only the first visible row and the lowest solid pixel per column.
-    const stride=source.width*4;
-    for(let i=3;i<alpha.length;i+=4){
-      if(alpha[i]){top=Math.floor(i/stride);break;}
+    ctx.drawImage(source,0,0,canvas.width,canvas.height);
+    const lipX=art.lip[0]*art.scale,lipY=Math.round(art.lip[1]*art.scale);
+    const footY=Math.round(art.footY*art.scale);
+    const alpha=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    const edge=new Int16Array(canvas.width);
+    for(let x=0;x<canvas.width;x++){
+      let y=Math.min(canvas.height-1,lipY+10);
+      while(y>0 && alpha[(y*canvas.width+x)*4+3]<100)y--;
+      edge[x]=y+1;
     }
-    for(let x=0;x<source.width;x++){
-      let i=alpha.length-stride+x*4+3;
-      for(let y=source.height-1;y>=0;y--,i-=stride){
-        if(alpha[i]>128){edge[x]=y;break;}
-      }
-    }
-    profile={top,join:top+Math.round(source.height*.05),edge};
-    slideFrontProfiles.set(source,profile);
-    return profile;
+    const paint={width:canvas.width,height:canvas.height,pixels:new Uint32Array(alpha.buffer),lipX,lipY,footY,edge};
+    slidePaint.set(source,paint);
+    return paint;
   }
-
-  function registerSlideFront(scene,ob,skin,image,placement){
-    if(!(skin?.slideSize||REGISTERED_SLIDE_FRONTS.has(skin?.id))||!scene.textures.createCanvas)return;
-    const {x,y,width,height,rotation}=placement;
-    const old=image.slideFront;
-    if(x<scene.cameraX-180||x>scene.cameraX+scene.width+180){
-      if(old){
-        image.setTexture(skin.key).setOrigin(.5,1).setDisplaySize(width,height);
-        scene.textures.remove(old.key);
-        image.slideFront=null;
+  function fitBank(scene,center,offsets,halfSpan,leftExtent,rightExtent){
+    const terrain=scene.terrain,C=scope.GRIM_CONFIG;
+    // Keep the toe and the whole collision lane the same size. Beside a gap
+    // prefer a full return on the opposite bank, then shorten only its rear.
+    for(const breadth of [1,.8,.6,.4,.2]){
+      for(const facing of [1,-1]){
+        const project=dx=>facing*Math.sign(dx)*(Math.min(Math.abs(dx),halfSpan)+
+          Math.max(0,Math.abs(dx)-halfSpan)*breadth);
+        const a=project(leftExtent),b=project(rightExtent);
+        if(scope.GRIM_CORE.intersectsVendorCorridor?.(center+Math.min(a,b),Math.abs(b-a),
+          scene.startX,C.vendorEveryMeters,C.pxPerMeter))continue;
+        const feet=offsets.map(dx=>center+project(dx));
+        if(feet.every(x=>[.25,.5,.75,1].every(t=>Number.isFinite(terrain.groundAt(lerp(center,x,t))))))
+          return {breadth,facing,project,feet:feet.map(x=>({x,y:terrain.groundAt(x)+13}))};
       }
-      return;
     }
-    const groundAt=scene.terrain.groundAt,clearance=scope.GRIM_CONFIG.slideClearancePx;
-    const ceilingBottom=scope.GRIM_CORE.slideCeilingBottomAt;
-    const ceiling=worldX=>ceilingBottom(groundAt,worldX,clearance)??y;
-    const halfSpan=ob.width/2,shoulder=20;
-    const samples=[-1,-.5,0,.5,1].map(u=>ceiling(x+u*halfSpan));
-    const signature=[y,width,height,rotation,...samples].join(':');
-    if(old?.signature===signature){
-      image.setOrigin(.5,old.origin).setDisplaySize(width,old.height);
-      return;
+    return null;
+  }
+  function drawLandform(scene,ob,skin,underside){
+    const art=skin?.landform;
+    if(!art||!scene.textures?.exists?.(skin.key)||!scene.textures.createCanvas)return false;
+    const center=ob.x+ob.width/2;
+    if(ob.x+550<scene.cameraX||ob.x-550>scene.cameraX+scene.width)return true;
+    const terrain=scene.terrain,groundAt=terrain.groundAt;
+    const prior=scene.obstacleSupportObjects.get(ob),texture=scene.textures.get(skin.key);
+    const left=groundAt(ob.x),right=groundAt(ob.x+ob.width);
+    if(prior && prior.mountTexture===texture && prior.mountTerrain===terrain &&
+      prior.mountFloor===groundAt && prior.mountLip===underside && prior.mountLeft===left &&
+      prior.mountRight===right && prior.mountFeet.every(p=>{const floor=groundAt(p.x);return floor!==null && floor+13===p.y;})){
+      return true;
     }
-    const source=scene.textures.get(skin.key).getSourceImage();
-    const {top,join,edge}=slideFrontProfile(source);
-    const scaleY=height/source.height,cos=Math.cos(rotation),sin=Math.sin(rotation);
-    const iterations=sin===0?1:3;
+    const source=texture.getSourceImage();
+    const {width,height,pixels,lipX,lipY,footY,edge}=readSlidePaint(source,art);
+    const offsets=art.feet.map(x=>x*art.scale-lipX);
+    const halfSpan=ob.width/2+2;
+    const bank=fitBank(scene,center,offsets,halfSpan,-lipX,width-lipX);
+    if(!bank)return false;
+    const {facing,breadth,feet}=bank;
+    const a=bank.project(-lipX),b=bank.project(width-lipX);
+    const originX=center+Math.min(a,b),displayWidth=Math.ceil(Math.abs(b-a));
+    const slope=Math.max(-.20,Math.min(.20,(right-left)/ob.width));
     const columns=[];
-    let bottom=source.height;
-    for(let u=0;u<source.width;u++){
-      const last=edge[u];
-      if(last<=join)continue;
-      const localX=((u+.5)/source.width-.5)*width;
-      let localY=0;
-      // Solve the existing local clearance in the already rotated image.
-      // Leave a small amount of the source's irregular edge in the cue.
-      const detail=Math.max(0,Math.min(1.7,(edge[Math.max(0,u-3)]+edge[Math.min(edge.length-1,u+3)]-2*last)*.18));
-      for(let i=0;i<iterations;i++){
-        const worldX=x+cos*localX-sin*localY;
-        const nextY=(ceiling(worldX)-y-sin*localX-1.35-detail)/cos;
-        if(nextY===localY)break;
-        localY=nextY;
+    let minY=Infinity,maxY=-Infinity;
+    for(let i=0;i<displayWidth;i++){
+      const x=originX+i+.5,dx=x-center,distance=Math.abs(dx);
+      const sourceOffset=Math.sign(dx)*facing*(Math.min(distance,halfSpan)+Math.max(0,distance-halfSpan)/breadth);
+      const sx=Math.min(width-1,Math.max(0,Math.floor(lipX+sourceOffset)));
+      const weight=Math.max(0,Math.min(1,(ob.width/2+18-distance)/18));
+      const ground=groundAt(x)??terrain.anchorAt(x);
+      const crown=underside+Math.max(-40,Math.min(40,slope*dx));
+      // On a steep uphill bank lift the far shoulder with its foot. Keeping
+      // at least 64px of visible return prevents the heel collapsing underground.
+      const natural=lerp(Math.min(crown,ground-64),crown,weight);
+      const ceiling=weight?(scope.GRIM_CORE.slideCeilingBottomAt(groundAt,x,
+        scope.GRIM_CONFIG.slideClearancePx)??natural):natural;
+      const lip=Math.floor(lerp(natural,ceiling-1,weight));
+      const constrained=distance<=ob.width/2+.5;
+      const srcLip=Math.round(lerp(lipY,Math.max(lipY-35,edge[sx]),weight));
+      const join=Math.max(0,Math.min(srcLip-1,lipY-42));
+      const top=Math.floor(natural-lipY);
+      const floor=ground+13;
+      const foot=Math.max(lip+1,Math.round(floor));
+      const bottom=Math.ceil(foot+(height-footY)*(foot-lip)/(footY-srcLip));
+      columns.push({sx,top,join,srcLip,lip,bottom,constrained});
+      minY=Math.min(minY,top);
+      maxY=Math.max(maxY,lip,bottom);
+    }
+    const id=++nextMount,keys=['obstacle-mounted-'+id,'obstacle-registered-'+id];
+    const frontLeft=Math.max(0,Math.floor(center-ob.width/2-8-originX));
+    const frontRight=Math.min(displayWidth,Math.ceil(center+ob.width/2+8-originX));
+    const frontTop=Math.min(...columns.slice(frontLeft,frontRight).map(c=>c.lip))-42;
+    const frontBottom=Math.max(...columns.slice(frontLeft,frontRight).map(c=>c.lip));
+    const rear=scene.textures.createCanvas(keys[0],displayWidth,maxY-minY+1);
+    const front=scene.textures.createCanvas(keys[1],frontRight-frontLeft,frontBottom-frontTop+1);
+    if(!front||!rear){
+      keys.forEach(key=>{if(scene.textures.exists(key))scene.textures.remove(key);});
+      return false;
+    }
+    const backCtx=rear.getContext(),frontCtx=front.getContext();
+    const backData=backCtx.createImageData(displayWidth,maxY-minY+1);
+    const frontWidth=frontRight-frontLeft;
+    const frontData=frontCtx.createImageData(frontWidth,frontBottom-frontTop+1);
+    const backPixels=new Uint32Array(backData.data.buffer);
+    const frontPixels=new Uint32Array(frontData.data.buffer);
+    for(let x=0;x<columns.length;x++){
+      const {sx,top,join,srcLip,lip,bottom,constrained}=columns[x];
+      const upper=top+join,inFront=x>=frontLeft && x<frontRight;
+      const rimScale=(srcLip-join)/Math.max(1,lip-upper);
+      const footScale=(height-srcLip)/Math.max(1,bottom-lip);
+      const end=constrained?lip:bottom;
+      // One nearest-row copy of already filtered, world-resolution paint.
+      // This avoids re-reading a live GPU canvas for every pixel column.
+      for(let y=top;y<end;y++){
+        const v=y<upper?y-top:y<lip?join+(y-upper+.5)*rimScale:srcLip+(y-lip+.5)*footScale;
+        const pixel=pixels[(v|0)*width+sx];
+        if(inFront && y>=frontTop && y<lip)frontPixels[(y-frontTop)*frontWidth+x-frontLeft]=pixel;
+        else backPixels[(y-minY)*displayWidth+x]=pixel;
       }
-      const distance=Math.abs(cos*localX-sin*localY);
-      const weight=Math.max(0,Math.min(1,(halfSpan+shoulder-distance)/shoulder));
-      if(!weight)continue;
-      const blend=weight*weight*(3-2*weight);
-      const target=lerp(last+1,source.height+localY/scaleY,blend);
-      const end=Math.min(source.height,last+5);
-      const destHeight=(end-join)*(target-join)/(last+1-join);
-      columns.push([u,end-join,destHeight]);
-      bottom=Math.max(bottom,Math.ceil(join+destHeight));
     }
-    const key='obstacle-registered-'+skin.id+'-'+ob.x;
-    if(old){
-      image.setTexture(skin.key);
-      scene.textures.remove(old.key);
-      image.slideFront=null;
+    backCtx.putImageData(backData,0,0);frontCtx.putImageData(frontData,0,0);
+    rear.refresh();front.refresh();
+    function replace(map,texture,x,y,depth){
+      map.get(ob)?.destroy();
+      const image=scene.add.image(x,y,texture.key).setOrigin(0).setDepth(depth);
+      image.once('destroy',()=>{if(scene.textures.exists(texture.key))scene.textures.remove(texture.key);});
+      map.set(ob,image);
+      return image;
     }
-    const texture=scene.textures.createCanvas(key,source.width,bottom-top);
-    if(!texture)return;
-    const ctx=texture.getContext();
-    ctx.drawImage(source,0,-top);
-    // Keep the rest of the painted front and the original source scale.
-    for(const [u,sourceHeight,displayHeight] of columns){
-      ctx.clearRect(u,join-top,1,bottom-join);
-      ctx.drawImage(source,u,join,1,sourceHeight,u,join-top,1,displayHeight);
-    }
-    texture.refresh();
-    const origin=(source.height-top)/(bottom-top),registeredHeight=(bottom-top)*scaleY;
-    image.setTexture(key).setOrigin(.5,origin).setDisplaySize(width,registeredHeight);
-    image.slideFront={key,source:skin.key,signature,origin,height:registeredHeight};
-    if(!image.slideFrontCleanup){
-      image.once('destroy',()=>{
-        const front=image.slideFront;
-        if(front&&scene.textures.exists(front.key))scene.textures.remove(front.key);
-      });
-      image.slideFrontCleanup=true;
-    }
+    const mount=replace(scene.obstacleSupportObjects,rear,originX,minY,.53);
+    Object.assign(mount,{mountTexture:texture,mountSource:skin.key,mountFeet:feet,mountTerrain:terrain,mountFloor:groundAt,
+      mountLip:underside,mountLeft:left,mountRight:right});
+    replace(scene.obstacleSpriteObjects,front,originX+frontLeft,frontTop,16);
+    return true;
   }
 
   const BRAMBLE_JOINTS=Object.freeze({
@@ -248,5 +195,5 @@
     image.plantRoot.setPosition(x,joint).setScale(width/frameW,(floor+3-joint)/(rootBottom-rootTop))
       .setVisible(true);
   }
-  scope.GRIM_OBSTACLE_ART={drawSlideMount,registerSlideFront,mountBramble,seatPlantRoot};
+  scope.GRIM_OBSTACLE_ART={drawLandform,mountBramble,seatPlantRoot};
 })(typeof window!=='undefined'?window:globalThis);

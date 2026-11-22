@@ -106,9 +106,9 @@ async function captureGallery(page){
   await fs.mkdir(dir,{recursive:true});
   const captures={};
   for(const id of ids){
-    await page.evaluate(id=>obstacleReview.prepare({id,gallery:true}),id);
+    const setup=await page.evaluate(id=>obstacleReview.prepare({id,gallery:true}),id);
     await waitForArt(page);
-    captures[id]=await page.evaluate(()=>obstacleReview.inspect());
+    captures[id]={mountMs:setup.mountMs,...await page.evaluate(()=>obstacleReview.inspect())};
     await page.screenshot({path:path.join(dir,id+'-phone-scene.png')});
     await page.evaluate(()=>obstacleReview.cleanup());
   }

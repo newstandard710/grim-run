@@ -1,6 +1,12 @@
 # Grim Run — Project Status and Roadmap
 
-**Current build:** v0.19.8 — *Steady Hands*.
+**Current build** is v0.19.19.
+
+## v0.19.19 — Ground-slide landforms
+
+All eight biomes draw three distinct ground-slide paintings through their original seeded encounter selector. A common source image provides the front collision cue and the weight-bearing rear mass. Terrain covers the embedded foot. The counter, terrain, spawn sequence, gates and cuttable trees retain their existing behavior.
+
+The release follows v0.19.18 at `82751bc826116c36f9626dbcde39316c703823a7`.
 
 ## v0.19.8 — Crossbow retrieval arm repair
 

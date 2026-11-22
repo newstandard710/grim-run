@@ -46,16 +46,21 @@
     "name": "dead-bough-curtain",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/forest/dead-bough-curtain-front.webp",
-    "backSrc": "assets/obstacles/landscapes/forest/dead-bough-curtain-back.webp",
-    "backKey": "obstacle-back-forest_dead-bough-curtain",
-    "supportSrc": "assets/obstacles/landscapes/forest/dead-bough-curtain-support.webp",
-    "supportKey": "obstacle-support-forest_dead-bough-curtain",
+    "src": "assets/obstacles/slide-landforms/forest/dead-bough-curtain.webp",
     "key": "obstacle-forest_slide_dead-bough-curtain",
-    "slideSize": [
-      154,
-      58
-    ]
+    "landform": {
+      "lip": [
+        88.78,
+        422
+      ],
+      "footY": 517,
+      "feet": [
+        258.32,
+        435.41
+      ],
+      "scale": 0.8,
+      "title": "Rootbound erratic"
+    }
   },
   {
     "id": "forest_slide_root-shelf",
@@ -65,16 +70,21 @@
     "name": "root-shelf",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/forest/root-shelf-front.webp",
-    "backSrc": "assets/obstacles/landscapes/forest/root-shelf-back.webp",
-    "backKey": "obstacle-back-forest_root-shelf",
-    "supportSrc": "assets/obstacles/landscapes/forest/root-shelf-support.webp",
-    "supportKey": "obstacle-support-forest_root-shelf",
+    "src": "assets/obstacles/slide-landforms/forest/root-shelf.webp",
     "key": "obstacle-forest_slide_root-shelf",
-    "slideSize": [
-      152,
-      55
-    ]
+    "landform": {
+      "lip": [
+        79.94,
+        225
+      ],
+      "footY": 320,
+      "feet": [
+        226.99,
+        383.46
+      ],
+      "scale": 0.8,
+      "title": "Windthrow root plate"
+    }
   },
   {
     "id": "forest_slide_thorn-canopy",
@@ -84,16 +94,21 @@
     "name": "thorn-canopy",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/forest/thorn-canopy-front.webp",
-    "backSrc": "assets/obstacles/landscapes/forest/thorn-canopy-back.webp",
-    "backKey": "obstacle-back-forest_thorn-canopy",
-    "supportSrc": "assets/obstacles/landscapes/forest/thorn-canopy-support.webp",
-    "supportKey": "obstacle-support-forest_thorn-canopy",
+    "src": "assets/obstacles/slide-landforms/forest/thorn-canopy.webp",
     "key": "obstacle-forest_slide_thorn-canopy",
-    "slideSize": [
-      163,
-      60
-    ]
+    "landform": {
+      "lip": [
+        83.58,
+        355
+      ],
+      "footY": 450,
+      "feet": [
+        217.15,
+        397.12
+      ],
+      "scale": 0.8,
+      "title": "Briar vault"
+    }
   },
   {
     "id": "forest_cut_thorny-young-pine",
@@ -185,16 +200,21 @@
     "name": "rock-lip",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/foothills/rock-lip-front.webp",
-    "backSrc": "assets/obstacles/landscapes/foothills/rock-lip-back.webp",
-    "backKey": "obstacle-back-foothills_rock-lip",
-    "supportSrc": "assets/obstacles/landscapes/foothills/rock-lip-support.webp",
-    "supportKey": "obstacle-support-foothills_rock-lip",
+    "src": "assets/obstacles/slide-landforms/foothills/rock-lip.webp",
     "key": "obstacle-foothills_slide_rock-lip",
-    "slideSize": [
-      159,
-      55
-    ]
+    "landform": {
+      "lip": [
+        90.78,
+        243
+      ],
+      "footY": 338,
+      "feet": [
+        256.06,
+        429.38
+      ],
+      "scale": 0.8,
+      "title": "Folded shale escarpment"
+    }
   },
   {
     "id": "foothills_slide_fallen-pine-overhang",
@@ -204,16 +224,21 @@
     "name": "fallen-pine-overhang",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/foothills/fallen-pine-overhang-front.webp",
-    "backSrc": "assets/obstacles/landscapes/foothills/fallen-pine-overhang-back.webp",
-    "backKey": "obstacle-back-foothills_fallen-pine-overhang",
-    "supportSrc": "assets/obstacles/landscapes/foothills/fallen-pine-overhang-support.webp",
-    "supportKey": "obstacle-support-foothills_fallen-pine-overhang",
+    "src": "assets/obstacles/slide-landforms/foothills/fallen-pine-overhang.webp",
     "key": "obstacle-foothills_slide_fallen-pine-overhang",
-    "slideSize": [
-      171,
-      64
-    ]
+    "landform": {
+      "lip": [
+        84.75,
+        197
+      ],
+      "footY": 292,
+      "feet": [
+        253.06,
+        408.72
+      ],
+      "scale": 0.8,
+      "title": "Landslide pine wedge"
+    }
   },
   {
     "id": "foothills_slide_grass-root-ledge",
@@ -223,16 +248,21 @@
     "name": "grass-root-ledge",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/foothills/grass-root-ledge-front.webp",
-    "backSrc": "assets/obstacles/landscapes/foothills/grass-root-ledge-back.webp",
-    "backKey": "obstacle-back-foothills_grass-root-ledge",
-    "supportSrc": "assets/obstacles/landscapes/foothills/grass-root-ledge-support.webp",
-    "supportKey": "obstacle-support-foothills_grass-root-ledge",
+    "src": "assets/obstacles/slide-landforms/foothills/grass-root-ledge.webp",
     "key": "obstacle-foothills_slide_grass-root-ledge",
-    "slideSize": [
-      153,
-      58
-    ]
+    "landform": {
+      "lip": [
+        81.37,
+        414
+      ],
+      "footY": 509,
+      "feet": [
+        217.55,
+        387.33
+      ],
+      "scale": 0.8,
+      "title": "Heather crag"
+    }
   },
   {
     "id": "foothills_cut_aspen-scrub",
@@ -320,16 +350,21 @@
     "name": "ice-lip",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/tundra/ice-lip-front.webp",
-    "backSrc": "assets/obstacles/landscapes/tundra/ice-lip-back.webp",
-    "backKey": "obstacle-back-tundra_ice-lip",
-    "supportSrc": "assets/obstacles/landscapes/tundra/ice-lip-support.webp",
-    "supportKey": "obstacle-support-tundra_ice-lip",
+    "src": "assets/obstacles/slide-landforms/tundra/ice-lip.webp",
     "key": "obstacle-tundra_slide_ice-lip",
-    "slideSize": [
-      147,
-      55
-    ]
+    "landform": {
+      "lip": [
+        83.4,
+        169
+      ],
+      "footY": 264,
+      "feet": [
+        224.02,
+        394.21
+      ],
+      "scale": 0.8,
+      "title": "Glacial cornice"
+    }
   },
   {
     "id": "tundra_slide_frozen-pine-limbs",
@@ -339,16 +374,21 @@
     "name": "frozen-pine-limbs",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/tundra/frozen-pine-limbs-front.webp",
-    "backSrc": "assets/obstacles/landscapes/tundra/frozen-pine-limbs-back.webp",
-    "backKey": "obstacle-back-tundra_frozen-pine-limbs",
-    "supportSrc": "assets/obstacles/landscapes/tundra/frozen-pine-limbs-support.webp",
-    "supportKey": "obstacle-support-tundra_frozen-pine-limbs",
+    "src": "assets/obstacles/slide-landforms/tundra/frozen-pine-limbs.webp",
     "key": "obstacle-tundra_slide_frozen-pine-limbs",
-    "slideSize": [
-      162,
-      64
-    ]
+    "landform": {
+      "lip": [
+        86.76,
+        248
+      ],
+      "footY": 343,
+      "feet": [
+        223.3,
+        390.02
+      ],
+      "scale": 0.8,
+      "title": "Avalanche timber pack"
+    }
   },
   {
     "id": "tundra_slide_snow-shelf",
@@ -358,16 +398,21 @@
     "name": "snow-shelf",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/tundra/snow-shelf-front.webp",
-    "backSrc": "assets/obstacles/landscapes/tundra/snow-shelf-back.webp",
-    "backKey": "obstacle-back-tundra_snow-shelf",
-    "supportSrc": "assets/obstacles/landscapes/tundra/snow-shelf-support.webp",
-    "supportKey": "obstacle-support-tundra_snow-shelf",
+    "src": "assets/obstacles/slide-landforms/tundra/snow-shelf.webp",
     "key": "obstacle-tundra_slide_snow-shelf",
-    "slideSize": [
-      157,
-      53
-    ]
+    "landform": {
+      "lip": [
+        76.86,
+        449
+      ],
+      "footY": 544,
+      "feet": [
+        255.84,
+        375.79
+      ],
+      "scale": 0.8,
+      "title": "Serac buttress"
+    }
   },
   {
     "id": "tundra_cut_frozen-dead-pine",
@@ -455,16 +500,21 @@
     "name": "stalactite-curtain",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/caves/stalactite-curtain-front.webp",
-    "backSrc": "assets/obstacles/landscapes/caves/stalactite-curtain-back.webp",
-    "backKey": "obstacle-back-caves_stalactite-curtain",
-    "supportSrc": "assets/obstacles/landscapes/caves/stalactite-curtain-support.webp",
-    "supportKey": "obstacle-support-caves_stalactite-curtain",
+    "src": "assets/obstacles/slide-landforms/caves/stalactite-curtain.webp",
     "key": "obstacle-caves_slide_stalactite-curtain",
-    "slideSize": [
-      146,
-      60
-    ]
+    "landform": {
+      "lip": [
+        79.52,
+        415
+      ],
+      "footY": 510,
+      "feet": [
+        237.03,
+        383.99
+      ],
+      "scale": 0.8,
+      "title": "Flowstone organ"
+    }
   },
   {
     "id": "caves_slide_fossil-rib-arch",
@@ -474,16 +524,21 @@
     "name": "fossil-rib-arch",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/caves/fossil-rib-arch-front.webp",
-    "backSrc": "assets/obstacles/landscapes/caves/fossil-rib-arch-back.webp",
-    "backKey": "obstacle-back-caves_fossil-rib-arch",
-    "supportSrc": "assets/obstacles/landscapes/caves/fossil-rib-arch-support.webp",
-    "supportKey": "obstacle-support-caves_fossil-rib-arch",
+    "src": "assets/obstacles/slide-landforms/caves/fossil-rib-arch.webp",
     "key": "obstacle-caves_slide_fossil-rib-arch",
-    "slideSize": [
-      146,
-      60
-    ]
+    "landform": {
+      "lip": [
+        95.54,
+        451
+      ],
+      "footY": 546,
+      "feet": [
+        276.68,
+        456.77
+      ],
+      "scale": 0.8,
+      "title": "Fossil reef"
+    }
   },
   {
     "id": "caves_slide_hanging-roots",
@@ -493,16 +548,21 @@
     "name": "hanging-roots",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/caves/hanging-roots-front.webp",
-    "backSrc": "assets/obstacles/landscapes/caves/hanging-roots-back.webp",
-    "backKey": "obstacle-back-caves_hanging-roots",
-    "supportSrc": "assets/obstacles/landscapes/caves/hanging-roots-support.webp",
-    "supportKey": "obstacle-support-caves_hanging-roots",
+    "src": "assets/obstacles/slide-landforms/caves/hanging-roots.webp",
     "key": "obstacle-caves_slide_hanging-roots",
-    "slideSize": [
-      160,
-      58
-    ]
+    "landform": {
+      "lip": [
+        88.14,
+        208
+      ],
+      "footY": 303,
+      "feet": [
+        264.45,
+        421.28
+      ],
+      "scale": 0.8,
+      "title": "Buried rootball"
+    }
   },
   {
     "id": "caves_cut_root-bramble",
@@ -584,16 +644,21 @@
     "name": "blue-crystal-ceiling",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/crystals/blue-crystal-ceiling-front.webp",
-    "backSrc": "assets/obstacles/landscapes/crystals/blue-crystal-ceiling-back.webp",
-    "backKey": "obstacle-back-crystals_blue-crystal-ceiling",
-    "supportSrc": "assets/obstacles/landscapes/crystals/blue-crystal-ceiling-support.webp",
-    "supportKey": "obstacle-support-crystals_blue-crystal-ceiling",
+    "src": "assets/obstacles/slide-landforms/crystals/blue-crystal-ceiling.webp",
     "key": "obstacle-crystals_slide_blue-crystal-ceiling",
-    "slideSize": [
-      146,
-      56
-    ]
+    "landform": {
+      "lip": [
+        82.78,
+        429
+      ],
+      "footY": 524,
+      "feet": [
+        237.04,
+        391.75
+      ],
+      "scale": 0.8,
+      "title": "Sapphire quartz vault"
+    }
   },
   {
     "id": "crystals_slide_violet-geode-shelf",
@@ -603,16 +668,21 @@
     "name": "violet-geode-shelf",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/crystals/violet-geode-shelf-front.webp",
-    "backSrc": "assets/obstacles/landscapes/crystals/violet-geode-shelf-back.webp",
-    "backKey": "obstacle-back-crystals_violet-geode-shelf",
-    "supportSrc": "assets/obstacles/landscapes/crystals/violet-geode-shelf-support.webp",
-    "supportKey": "obstacle-support-crystals_violet-geode-shelf",
+    "src": "assets/obstacles/slide-landforms/crystals/violet-geode-shelf.webp",
     "key": "obstacle-crystals_slide_violet-geode-shelf",
-    "slideSize": [
-      144,
-      62
-    ]
+    "landform": {
+      "lip": [
+        87.58,
+        213
+      ],
+      "footY": 308,
+      "feet": [
+        276.68,
+        424.16
+      ],
+      "scale": 0.8,
+      "title": "Split amethyst geode"
+    }
   },
   {
     "id": "crystals_slide_prism-canopy",
@@ -622,16 +692,21 @@
     "name": "prism-canopy",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/crystals/prism-canopy-front.webp",
-    "backSrc": "assets/obstacles/landscapes/crystals/prism-canopy-back.webp",
-    "backKey": "obstacle-back-crystals_prism-canopy",
-    "supportSrc": "assets/obstacles/landscapes/crystals/prism-canopy-support.webp",
-    "supportKey": "obstacle-support-crystals_prism-canopy",
+    "src": "assets/obstacles/slide-landforms/crystals/prism-canopy.webp",
     "key": "obstacle-crystals_slide_prism-canopy",
-    "slideSize": [
-      160,
-      63
-    ]
+    "landform": {
+      "lip": [
+        81.18,
+        304
+      ],
+      "footY": 399,
+      "feet": [
+        226.15,
+        386.18
+      ],
+      "scale": 0.8,
+      "title": "Prism fault"
+    }
   },
   {
     "id": "crystals_cut_crystal-vine",
@@ -713,16 +788,21 @@
     "name": "charred-bough",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/ashlands/charred-bough-front.webp",
-    "backSrc": "assets/obstacles/landscapes/ashlands/charred-bough-back.webp",
-    "backKey": "obstacle-back-ashlands_charred-bough",
-    "supportSrc": "assets/obstacles/landscapes/ashlands/charred-bough-support.webp",
-    "supportKey": "obstacle-support-ashlands_charred-bough",
+    "src": "assets/obstacles/slide-landforms/ashlands/charred-bough.webp",
     "key": "obstacle-ashlands_slide_charred-bough",
-    "slideSize": [
-      163,
-      62
-    ]
+    "landform": {
+      "lip": [
+        85.25,
+        207
+      ],
+      "footY": 302,
+      "feet": [
+        262.08,
+        413.9
+      ],
+      "scale": 0.8,
+      "title": "Burnt cedar blowdown"
+    }
   },
   {
     "id": "ashlands_slide_basalt-shelf",
@@ -732,16 +812,21 @@
     "name": "basalt-shelf",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/ashlands/basalt-shelf-front.webp",
-    "backSrc": "assets/obstacles/landscapes/ashlands/basalt-shelf-back.webp",
-    "backKey": "obstacle-back-ashlands_basalt-shelf",
-    "supportSrc": "assets/obstacles/landscapes/ashlands/basalt-shelf-support.webp",
-    "supportKey": "obstacle-support-ashlands_basalt-shelf",
+    "src": "assets/obstacles/slide-landforms/ashlands/basalt-shelf.webp",
     "key": "obstacle-ashlands_slide_basalt-shelf",
-    "slideSize": [
-      148,
-      55
-    ]
+    "landform": {
+      "lip": [
+        80.29,
+        161
+      ],
+      "footY": 256,
+      "feet": [
+        241.21,
+        386.82
+      ],
+      "scale": 0.8,
+      "title": "Basalt colonnade"
+    }
   },
   {
     "id": "ashlands_slide_blackroot-curtain",
@@ -751,16 +836,21 @@
     "name": "blackroot-curtain",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/ashlands/blackroot-curtain-front.webp",
-    "backSrc": "assets/obstacles/landscapes/ashlands/blackroot-curtain-back.webp",
-    "backKey": "obstacle-back-ashlands_blackroot-curtain",
-    "supportSrc": "assets/obstacles/landscapes/ashlands/blackroot-curtain-support.webp",
-    "supportKey": "obstacle-support-ashlands_blackroot-curtain",
+    "src": "assets/obstacles/slide-landforms/ashlands/blackroot-curtain.webp",
     "key": "obstacle-ashlands_slide_blackroot-curtain",
-    "slideSize": [
-      156,
-      58
-    ]
+    "landform": {
+      "lip": [
+        83.83,
+        423
+      ],
+      "footY": 518,
+      "feet": [
+        284.47,
+        411.8
+      ],
+      "scale": 0.8,
+      "title": "Cinder buttress"
+    }
   },
   {
     "id": "ashlands_cut_charred-sapling",
@@ -851,16 +941,21 @@
     "name": "basalt-lip",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/lava/basalt-lip-front.webp",
-    "backSrc": "assets/obstacles/landscapes/lava/basalt-lip-back.webp",
-    "backKey": "obstacle-back-lava_basalt-lip",
-    "supportSrc": "assets/obstacles/landscapes/lava/basalt-lip-support.webp",
-    "supportKey": "obstacle-support-lava_basalt-lip",
+    "src": "assets/obstacles/slide-landforms/lava/basalt-lip.webp",
     "key": "obstacle-lava_slide_basalt-lip",
-    "slideSize": [
-      153,
-      54
-    ]
+    "landform": {
+      "lip": [
+        88.61,
+        212
+      ],
+      "footY": 307,
+      "feet": [
+        255.37,
+        424.25
+      ],
+      "scale": 0.8,
+      "title": "Lava tube roof"
+    }
   },
   {
     "id": "lava_slide_slag-teeth",
@@ -870,16 +965,21 @@
     "name": "slag-teeth",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/lava/slag-teeth-front.webp",
-    "backSrc": "assets/obstacles/landscapes/lava/slag-teeth-back.webp",
-    "backKey": "obstacle-back-lava_slag-teeth",
-    "supportSrc": "assets/obstacles/landscapes/lava/slag-teeth-support.webp",
-    "supportKey": "obstacle-support-lava_slag-teeth",
+    "src": "assets/obstacles/slide-landforms/lava/slag-teeth.webp",
     "key": "obstacle-lava_slide_slag-teeth",
-    "slideSize": [
-      145,
-      58
-    ]
+    "landform": {
+      "lip": [
+        80.92,
+        433
+      ],
+      "footY": 528,
+      "feet": [
+        265.71,
+        392.3
+      ],
+      "scale": 0.8,
+      "title": "Spatter rampart"
+    }
   },
   {
     "id": "lava_slide_lava-glass-shelf",
@@ -889,16 +989,21 @@
     "name": "lava-glass-shelf",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/lava/lava-glass-shelf-front.webp",
-    "backSrc": "assets/obstacles/landscapes/lava/lava-glass-shelf-back.webp",
-    "backKey": "obstacle-back-lava_lava-glass-shelf",
-    "supportSrc": "assets/obstacles/landscapes/lava/lava-glass-shelf-support.webp",
-    "supportKey": "obstacle-support-lava_lava-glass-shelf",
+    "src": "assets/obstacles/slide-landforms/lava/lava-glass-shelf.webp",
     "key": "obstacle-lava_slide_lava-glass-shelf",
-    "slideSize": [
-      162,
-      50
-    ]
+    "landform": {
+      "lip": [
+        82.95,
+        262
+      ],
+      "footY": 357,
+      "feet": [
+        262.46,
+        400.95
+      ],
+      "scale": 0.8,
+      "title": "Obsidian fracture"
+    }
   },
   {
     "id": "lava_cut_ember-root-plant",
@@ -982,16 +1087,21 @@
     "name": "chain-stone-lintel",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/boss/chain-stone-lintel-front.webp",
-    "backSrc": "assets/obstacles/landscapes/boss/chain-stone-lintel-back.webp",
-    "backKey": "obstacle-back-boss_chain-stone-lintel",
-    "supportSrc": "assets/obstacles/landscapes/boss/chain-stone-lintel-support.webp",
-    "supportKey": "obstacle-support-boss_chain-stone-lintel",
+    "src": "assets/obstacles/slide-landforms/boss/chain-stone-lintel.webp",
     "key": "obstacle-boss_slide_chain-stone-lintel",
-    "slideSize": [
-      154,
-      56
-    ]
+    "landform": {
+      "lip": [
+        83.42,
+        251
+      ],
+      "footY": 346,
+      "feet": [
+        263.53,
+        407.91
+      ],
+      "scale": 0.8,
+      "title": "Fallen chainhouse"
+    }
   },
   {
     "id": "boss_slide_bone-arch",
@@ -1001,16 +1111,21 @@
     "name": "bone-arch",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/boss/bone-arch-front.webp",
-    "backSrc": "assets/obstacles/landscapes/boss/bone-arch-back.webp",
-    "backKey": "obstacle-back-boss_bone-arch",
-    "supportSrc": "assets/obstacles/landscapes/boss/bone-arch-support.webp",
-    "supportKey": "obstacle-support-boss_bone-arch",
+    "src": "assets/obstacles/slide-landforms/boss/bone-arch.webp",
     "key": "obstacle-boss_slide_bone-arch",
-    "slideSize": [
-      151,
-      61
-    ]
+    "landform": {
+      "lip": [
+        79.79,
+        408
+      ],
+      "footY": 503,
+      "feet": [
+        266.38,
+        391.49
+      ],
+      "scale": 0.8,
+      "title": "Ossuary abutment"
+    }
   },
   {
     "id": "boss_slide_ruined-portcullis",
@@ -1020,16 +1135,21 @@
     "name": "ruined-portcullis",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/landscapes/boss/ruined-portcullis-front.webp",
-    "backSrc": "assets/obstacles/landscapes/boss/ruined-portcullis-back.webp",
-    "backKey": "obstacle-back-boss_ruined-portcullis",
-    "supportSrc": "assets/obstacles/landscapes/boss/ruined-portcullis-support.webp",
-    "supportKey": "obstacle-support-boss_ruined-portcullis",
+    "src": "assets/obstacles/slide-landforms/boss/ruined-portcullis.webp",
     "key": "obstacle-boss_slide_ruined-portcullis",
-    "slideSize": [
-      153,
-      68
-    ]
+    "landform": {
+      "lip": [
+        89.42,
+        347
+      ],
+      "footY": 442,
+      "feet": [
+        278.89,
+        431.45
+      ],
+      "scale": 0.8,
+      "title": "Sealed gatehouse"
+    }
   },
   {
     "id": "boss_cut_bone-bramble",

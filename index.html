@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.18</title>
+  <title>GRIM RUN — v0.19.19</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -285,7 +285,7 @@ button {cursor:pointer;}
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.18</div>
+    <div class="home-edition">GRIM RUN · v0.19.19</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="critical-health-halo" class="hidden" aria-hidden="true"></div>
@@ -326,7 +326,7 @@ button {cursor:pointer;}
       <p id="portal-art-load-error" role="alert" class="hidden">Portal and mist artwork failed to load. Refresh to retry.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.18</div>
+      <div class="mini">v0.19.19</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -471,7 +471,7 @@ button {cursor:pointer;}
   </div>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.18',
+  version: '0.19.19',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -1999,9 +1999,9 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/reaper-reaction.js?v=rear-carry1"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=home1"></script>
   <script src="assets/visuals/visual-system.js?v=b04ba4700885"></script>
-  <script src="assets/visuals/obstacle-catalog.js?v=landscapes-1"></script>
-  <script src="assets/visuals/obstacle-mount-data.js?v=landscapes-1"></script>
-  <script src="assets/visuals/obstacle-mounts.js?v=landscapes-1"></script>
+  <script src="assets/visuals/obstacle-catalog.js?v=landforms-1"></script>
+  <script src="assets/visuals/obstacle-mount-data.js?v=landforms-1"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=landforms-1"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=vendor-greetings1"></script>
   <script src="assets/visuals/cutscene-motion.js?v=vendor-greetings1"></script>
@@ -2130,7 +2130,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.load.image('vendor-'+type,
           'assets/characters/vendors/'+type+'-vendor-v1.webp?v=0.14.8');
       for(const skin of scope.GRIM_OBSTACLE_SPRITES||[]){
-        this.load.image(skin.key,skin.src+'?v=0.14.5-forest-obstacles');
+        this.load.image(skin.key,skin.src+(skin.landform?'?v=0.19.19':'?v=0.14.5-forest-obstacles'));
         if(skin.backSrc)this.load.image(skin.backKey,skin.backSrc+'?v=0.14.5-forest-obstacles');
         if(skin.supportSrc)this.load.image(skin.supportKey,skin.supportSrc+'?v=0.15.1-curved-support');
       }
@@ -6060,32 +6060,6 @@ window.GRIM_CONFIG = Object.freeze({
       g.fillPoints([...points.map(p=>({x:p.x,y:p.y-p.thin*.32})),
         ...points.reverse().map(p=>({x:p.x,y:p.y+p.thin}))],true);
     }
-    drawObstacleBack(o,skin,x,y,width,height,rotation){
-      if(!skin?.backKey||!this.textures?.exists?.(skin.backKey))return;
-      let image=this.obstacleBackObjects.get(o);
-      if(image&&image.texture?.key!==skin.backKey){image.destroy();image=null;}
-      if(!image){
-        image=this.add.image(0,0,skin.backKey).setDepth(.55);
-        this.obstacleBackObjects.set(o,image);
-      }
-      image.setOrigin(.5,1).setPosition(x,y).setDisplaySize(width,height)
-        .setRotation(rotation).setVisible(true);
-    }
-    drawObstacleSupport(o,skin,x,underside,width,height,ground,rotation){
-      if(!skin?.supportKey||!this.textures?.exists?.(skin.supportKey))return;
-      if(x+width<this.cameraX-160||x-width>this.cameraX+this.width+160)return;
-      if(scope.GRIM_OBSTACLE_ART?.drawSlideMount(this,o,skin,x,underside,width,height,rotation))return;
-      let image=this.obstacleSupportObjects.get(o);
-      if(image&&image.texture?.key!==skin.supportKey){image.destroy();image=null;}
-      if(!image){
-        image=this.add.image(0,0,skin.supportKey).setDepth(.53);
-        this.obstacleSupportObjects.set(o,image);
-      }
-      const bottom=ground+20;
-      const fallbackHeight=Math.max(210,(bottom-underside+96)*1.6);
-      image.setOrigin(.5,1).setPosition(x,bottom).setDisplaySize(width*1.6,fallbackHeight)
-        .setRotation(rotation).setTint(0xbfc6bf).setAlpha(.95).setVisible(true);
-    }
     drawAirObstacleSupport(o,skin){
       if(o.x+410<this.cameraX||o.x-410>this.cameraX+this.width)return;
       if(!skin?.supportKey||!this.textures?.exists?.(skin.supportKey))return;
@@ -6124,7 +6098,7 @@ window.GRIM_CONFIG = Object.freeze({
         !this.obstacleSupportObjects?.size)return;
       const active=new Set(this.obstacles.filter(o=>!o.destroyed));
       for(const [ob,image] of this.obstacleSpriteObjects){
-        if(active.has(ob))continue;
+        if(active.has(ob)&&(ob.type!=='branch'||(ob.x+550>=this.cameraX&&ob.x-550<=this.cameraX+this.width)))continue;
         image.destroy();this.obstacleSpriteObjects.delete(ob);
       }
       for(const [ob,image] of this.obstacleBackObjects){
@@ -6142,7 +6116,7 @@ window.GRIM_CONFIG = Object.freeze({
       const plant=o.type==='snappingBramble'&&this.textures.exists('revision-plant');
       const textureKey=plant?'revision-plant':skin.key;
       let image=this.obstacleSpriteObjects.get(o);
-      if(image&&(image.slideFront?.source??image.texture?.key)!==textureKey){
+      if(image&&image.texture?.key!==textureKey){
         image.destroy();this.obstacleSpriteObjects.delete(o);image=null;
       }
       if(!image){
@@ -6287,29 +6261,14 @@ window.GRIM_CONFIG = Object.freeze({
         return;
       }
       if(o.type==='branch'){
-        // The sprite replaces the old full-height placeholder pillar. Its
-        // lowest illustrated point sits at the unchanged slide-clearance line.
-        const groundAt=this.terrain.groundAt.bind(this.terrain);
-        const centerX=x+o.width/2;
-        const skin=this.obstacleSkinFor(o);
-        const scale=skin?this.obstacleSpriteScaleFor(skin,o.type):{x:3.25,y:3.25};
-        const width=skin?.slideSize?.[0]??(skin?.gameW??o.width)*scale.x;
-        const height=skin?.slideSize?.[1]??Math.max(this.height*1.22,475);
-        const leftGround=groundAt(centerX-width/2),rightGround=groundAt(centerX+width/2);
-        const delta=Number.isFinite(leftGround)&&Number.isFinite(rightGround)
-          ?rightGround-leftGround:0;
-        const rotation=Math.max(-.22,Math.min(.22,Math.atan2(delta,width)));
-        const underside=Core.slideCeilingBottomAt(groundAt,centerX,C.slideClearancePx)
-          ??(this.terrain.anchorAt(centerX)-C.slideClearancePx);
-        const surface=groundAt(centerX)??this.terrain.anchorAt(centerX);
-        this.drawObstacleSupport(o,skin,centerX,underside,width,height,surface,rotation);
-        this.drawObstacleBack(o,skin,centerX,underside,width,height,rotation);
-        const placement={x:centerX,y:underside,width,height,rotation,originY:1};
-        if(this.drawObstacleSprite(o,placement)){
-          scope.GRIM_OBSTACLE_ART?.registerSlideFront?.(this,o,skin,this.obstacleSpriteObjects.get(o),placement);
-        }else{
-          // Texture loading fallback stays a short overhead ledge without
-          // restoring the old full-height pillar.
+        const center=x+o.width/2;
+        const underside=Core.slideCeilingBottomAt(this.terrain.groundAt,center,C.slideClearancePx)
+          ??(this.terrain.anchorAt(center)-C.slideClearancePx);
+        if(!scope.GRIM_OBSTACLE_ART?.drawLandform?.(this,o,this.obstacleSkinFor(o),underside)){
+          for(const map of [this.obstacleSpriteObjects,this.obstacleSupportObjects]){
+            map?.get(o)?.destroy();map?.delete(o);
+          }
+          // Missing paint still cues the same low shelf and Slide counter.
           g.fillStyle(0x3b4652,.98);g.fillRoundedRect(x,underside-20,o.width,20,5);
           g.lineStyle(3,0x91a4ae,.9);g.lineBetween(x,underside-18,x+o.width,underside-18);
         }

@@ -27,12 +27,7 @@ def foot_patch(channel, left, right):
 records = {}
 for skin in skins:
     family = skin['category']
-    if family == 'slide':
-        support = alpha(skin['supportSrc'])
-        backing = alpha(skin['backSrc'])
-        seam = backing.point(lambda value: 255 if value > 32 else 0).getbbox()[3] / backing.height
-        records[skin['id']] = [round(seam, 4), *foot_patch(support, 0, 196), *foot_patch(support, 316, 512)]
-    elif family in ('jump', 'cut', 'fire'):
+    if family in ('jump', 'cut', 'fire'):
         art = alpha(skin['src'])
         records[skin['id']] = foot_patch(art, 0, art.width)
 with (ROOT / 'assets/visuals/obstacle-mount-data.js').open('w') as output:

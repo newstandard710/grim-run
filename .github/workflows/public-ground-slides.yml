@@ -1,0 +1,51 @@
+name: Ground-slide release smoke
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/obstacles/slide-landforms/**'
+      - 'assets/visuals/obstacle*'
+      - 'tests/public-ground-slides.js'
+      - '.github/workflows/public-ground-slides.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/obstacles/slide-landforms/**'
+      - 'assets/visuals/obstacle*'
+      - 'tests/public-ground-slides.js'
+      - '.github/workflows/public-ground-slides.yml'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install chromium
+      - name: Verify served bytes and play the slide encounters
+        env:
+          RELEASE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          PUBLIC_RELEASE: ${{ github.event_name == 'push' && 'yes' || 'no' }}
+        run: |
+          if [ "$PUBLIC_RELEASE" = yes ]; then
+            export GAME_URL="https://newstandard710.github.io/grim-run/"
+          else
+            python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/slide-server.log" 2>&1 &
+            export GAME_URL="http://127.0.0.1:8765/"
+          fi
+          node tests/public-ground-slides.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ github.event_name == 'push' && 'pages-ground-slides' || 'candidate-ground-slides' }}
+          path: test-results/served-ground-slides/
