@@ -94,7 +94,7 @@ async function playTransitions(page,revision,results){
   }
 }
 
-async function measure(page,revision,cases){
+async function measure(page,revision,cases,extras=true){
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
@@ -155,6 +155,7 @@ async function measure(page,revision,cases){
       await page.evaluate(()=>obstacleReview.cleanup());
     }
   }
+  if(!extras){assert.deepEqual(errors,[]);return results;}
   const arrival=await page.evaluate(()=>{
     const q=obstacleReview;
     const states=q.startPortal();
@@ -182,6 +183,18 @@ async function measure(page,revision,cases){
       const page=await browser.newPage({viewport:{width,height},hasTouch:true});
       try{summary[revision]=await measure(page,revision,cases);}
       finally{await page.close();}
+      // Atlas downloads can time out on shared software-rendering runners.
+      // Retry a failed load once from a fresh page and preserve the diagnostic.
+      for(const [key,previous] of Object.entries(summary[revision])){
+        if(!previous.error?.includes('Scenery readiness:'))continue;
+        const spec=cases.find(([id,seed])=>key===id+'-'+seed);
+        if(!spec)continue;
+        const retry=await browser.newPage({viewport:{width,height},hasTouch:true});
+        try{
+          const checked=await measure(retry,revision,[spec],false);
+          summary[revision][key]={...checked[key],firstLoadError:previous.error};
+        }finally{await retry.close();}
+      }
       await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(summary,null,2));
     }
     for(const [revision,result] of Object.entries(summary))
