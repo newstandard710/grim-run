@@ -9,10 +9,18 @@ async function stopTrace(c,name){
  try{for(;;){const r=await c.send('IO.read',{handle:stream,size:512*1024});fs.writeSync(fd,Buffer.from(r.data,r.base64Encoded?'base64':'utf8'));if(r.eof)break;}}
  finally{fs.closeSync(fd);await c.send('IO.close',{handle:stream});}
 }
-function init(){
+function init(light){
  const obs=window.startupObs={draws:[],tasks:[],clicks:[],crc:[]},seen=new WeakSet();
+ const recordAvailability=()=>{
+  const btn=document.querySelector('#start-btn');
+  if(btn && !btn.disabled && btn.getClientRects().length){obs.available=performance.now();return;}
+  requestAnimationFrame(recordAvailability);
+ };
+ document.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#home-enter-btn')) requestAnimationFrame(recordAvailability);
+ },true);
  const draw=CanvasRenderingContext2D.prototype.drawImage;
- CanvasRenderingContext2D.prototype.drawImage=function(img,...args){
+ if(!light)CanvasRenderingContext2D.prototype.drawImage=function(img,...args){
    if(!seen.has(img)){seen.add(img);obs.draws.push({t:performance.now(),m:window.grimRun?.scene?.scenes[0]?.distance,src:img.currentSrc||img.src||img.constructor.name,size:[img.width,img.height]});}
    return draw.call(this,img,...args);
  };
@@ -39,7 +47,7 @@ function arm(label){
 }
 async function sample(browser,version,start,rep,trace,trial){
  const page=await browser.newPage({viewport:{width:740,height:360},hasTouch:true,deviceScaleFactor:1}),errors=[];
- page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(init);
+ page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(init,!trace&&!trial);
  if(trial){
   await page.route('**/assets/visuals/visual-system.js*',async route=>{
    const res=await route.fetch();let code=await res.text();
@@ -67,7 +75,7 @@ async function sample(browser,version,start,rep,trace,trial){
    const home=d.obs.clicks.find(k=>k[1]==='home-enter-btn'&&k[0]==='pointerdown')[2];
    const rows=d.rows,peaks=rows.filter(r=>r.m>=4&&r.m<=15).sort((a,b)=>b.gap-a.gap);
    const summary={label,n:rows.length,fromHome:tap-home,tapToPlay:rows[0].now-tap,tapToFirstDraw:d.firstPost-tap,firstInterval:rows[0].gap,
-    peak:peaks[0],over50:rows.filter(r=>r.gap>50.5).map(r=>[r.m,r.gap]),hp:d.hp,errors};
+    peak:peaks[0],over50:rows.filter(r=>r.gap>50.5).map(r=>[r.m,r.gap]),hp:d.hp,homeToAvailable:d.obs.available-home,errors};
    fs.writeFileSync(path.join(out,label+'.json'),JSON.stringify({d,summary}));console.log('RESULT '+JSON.stringify(summary));
    assert(d.engine===1&&d.hp===3&&rows.length>24);assert.deepEqual(errors,[]);
   }
@@ -78,7 +86,26 @@ async function sample(browser,version,start,rep,trace,trial){
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const b=await chromium.launch({args:['--disable-webgl']});
  try{
   const mode=process.env.CASE||'native';
+  if(mode==='paired'){
+   const cases=[['before','immediate'],['after','immediate'],['after','immediate'],['before','immediate'],
+    ['before','delayed'],['after','delayed'],['after','delayed'],['before','delayed'],
+    ['after','immediate'],['before','immediate'],['before','immediate'],['after','immediate']];
+   for(const [i,[version,start]] of cases.entries()) await sample(b,version,start,i+1,false,null);
+   const groups={before:[],after:[]};
+   for(const file of fs.readdirSync(out).filter(n=>n.includes('-immediate-')&&n.endsWith('-fresh.json'))){
+    const {d,summary}=JSON.parse(fs.readFileSync(path.join(out,file)));
+    const peak=Math.max(...d.rows.filter(r=>r.m>=5&&r.m<=12).map(r=>r.gap));
+    groups[file.split('-')[0]].push(peak);assert.equal(summary.errors.length,0);
+   }
+   const median=list=>{const sorted=[...list].sort((a,b)=>a-b);return (sorted[1]+sorted[2])/2;};
+   console.log('Fresh peak intervals 5–12 m',groups);
+   assert.equal(groups.before.length,4);assert.equal(groups.after.length,4);
+   assert(median(groups.before)>=65, 'Baseline must reproduce the cold hitch');
+   assert(median(groups.after)<=34 && median(groups.before)-median(groups.after)>32, 'Candidate must remove the repeatable stall');
+   assert(groups.after.every(p=>p<66),'Candidate still hitched in the target window');
+  }else{
   for(const [i,start] of ['immediate','delayed','immediate'].entries())
    await sample(b,'after',start,i+1,i===0||i===1,mode==='native'?null:mode);
+  }
  }finally{await b.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
