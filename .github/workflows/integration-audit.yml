@@ -7,11 +7,20 @@ permissions:
 jobs:
   pacing:
     runs-on: ubuntu-24.04
-    timeout-minutes: 9
+    timeout-minutes: 8
     strategy:
       fail-fast: false
       matrix:
-        base: ['fa9b464c04d0b516516f231d8a6d2af1ccdaa073', 'e0eb27c3de6e000c59d8b1430e8d5cd20773ef80']
+        base:
+          - fa9b464c04d0b516516f231d8a6d2af1ccdaa073
+          - b012d585985871bb70e2180c22b0e46925474476
+          - 5e17baa56557dd26adca9daed80e54dcddea7e3e
+          - a2297dac5865933d5abfb5ad88a44e8dea2fcac6
+          - 6a41ea1cdcd6ddd3317112cfc5abd77c78cfbdc7
+          - 2b501a20987a5dd64be48c2df1030b1192096c57
+          - 3d07db4a3efac2661dc9538a2e6ad6b9bea253bf
+          - e0eb27c3de6e000c59d8b1430e8d5cd20773ef80
+          - 2e5d0ed75546939b632df373d9cb0bd5d0a66eb9
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,7 +33,7 @@ jobs:
         run: |
           git fetch --depth 1 origin "$BASE"
           git worktree add --detach "$RUNNER_TEMP/comparison" "$BASE"
-          LANDING_BASELINE="$RUNNER_TEMP/comparison" node tests/forest-pacing-repro.js
+          TEST_SHA="$BASE" LANDING_BASELINE="$RUNNER_TEMP/comparison" node tests/forest-pacing-bisect.js
       - if: always()
         uses: actions/upload-artifact@v4
         with:
