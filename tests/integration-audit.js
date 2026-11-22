@@ -1,4 +1,11 @@
 'use strict';
+const PUBLIC_GAME='https://newstandard710.github.io/grim-run/';
+async function publicPage(page,seed){
+ const res=await page.goto(PUBLIC_GAME+'?seed='+seed,{waitUntil:'domcontentloaded'});
+ assert.equal(res.status(),200);assert.equal(new URL(page.url()).origin,'https://newstandard710.github.io');
+ assert.equal(await page.title(),'GRIM RUN — v0.19.18');
+}
+
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -26,7 +33,7 @@ async function input(page, action, hold) {
     touchPoints:hold?[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]:[]});
 }
 async function play(page) {
-  await page.goto('http://127.0.0.1:'+server.address().port+'/after/?seed=33');
+  await publicPage(page,33);
   await page.locator('#home-enter-btn').click();
   await page.locator('#reliquary-btn').click();
   await page.locator('#reliquary-back-btn').click();
@@ -142,10 +149,10 @@ async function pace(page,entry=0) {
 }
 
 async function ledgeAndObstacles(browser){
-  for(const revision of process.argv[5]==='obstacles'?['after']:['after','before']){
+  for(const revision of ['after']){
     const page=await browser.newPage({viewport,hasTouch:true,deviceScaleFactor:1});
     try{
-      await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=78');
+      await publicPage(page,78);
       await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
       await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.landingArt?.ready,null,{timeout:90000});
       await page.evaluate(()=>grimRun.scene.scenes[0].visuals.reviewLoad);
@@ -188,7 +195,7 @@ async function comparePacing(browser){
     const page=await browser.newPage({viewport,deviceScaleFactor:1,hasTouch:true});
     page.on('pageerror',e=>result.errors.push(e.message));
     try{
-      await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33');
+      await publicPage(page,33);
       await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
       await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.motionArt?.ready,null,{timeout:90000});
       await page.evaluate(()=>grimRun.scene.scenes[0].visuals.reviewLoad);

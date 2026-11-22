@@ -1,4 +1,11 @@
 'use strict';
+const PUBLIC_GAME='https://newstandard710.github.io/grim-run/';
+async function publicPage(page,seed){
+ const res=await page.goto(PUBLIC_GAME+'?seed='+seed,{waitUntil:'domcontentloaded'});
+ assert.equal(res.status(),200);assert.equal(new URL(page.url()).origin,'https://newstandard710.github.io');
+ assert.equal(await page.title(),'GRIM RUN — v0.19.18');
+}
+
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium,server}=require('./browser-landing');
 const out='test-results/startup';
@@ -73,7 +80,7 @@ async function sample(browser,version,start,rep,trace,trial){
  }
  try{
   const c=await page.context().newCDPSession(page);
-  await page.goto('http://127.0.0.1:'+server.address().port+'/'+version+'/?seed=33',{waitUntil:'domcontentloaded'});
+  await publicPage(page,33);
   if(trace)await c.send('Tracing.start',{transferMode:'ReturnAsStream',streamFormat:'json',streamCompression:'gzip',categories:'toplevel,devtools.timeline,blink.user_timing,loading,cc,gpu,v8,blink,skia,disabled-by-default-devtools.timeline,disabled-by-default-devtools.timeline.frame,disabled-by-default-v8.cpu_profiler,disabled-by-default-devtools.timeline.stack'});
   await page.locator('#home-enter-btn').click();await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.ui);
   if(start==='delayed')await page.waitForTimeout(4000);
@@ -97,7 +104,15 @@ async function sample(browser,version,start,rep,trace,trial){
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const b=await chromium.launch({args:['--disable-webgl']});
  try{
   const mode=process.env.CASE||'native';
-  if(mode==='traced'){
+  if(mode==='public'){
+   for(const [i,start] of ['immediate','delayed','immediate','immediate'].entries())await sample(b,'after',start,i+1,false,null);
+   const peaks=fs.readdirSync(out).filter(n=>n.includes('-immediate-')&&n.endsWith('-fresh.json')).map(n=>{
+    const {d}=JSON.parse(fs.readFileSync(path.join(out,n)));return Math.max(...d.rows.filter(r=>r.m>=0.4&&r.m<=12).map(r=>r.gap));
+   }).sort((a,b)=>a-b);
+   console.log('Public immediate-Start worst moving frame through 12 m',peaks);
+   assert.equal(peaks.length,3);assert(peaks[1]<=34 && peaks.every(p=>p<66),'Recurring public opening hitch');
+
+  }else if(mode==='traced'){
    for(const version of ['before','after'])await sample(b,version,'immediate',1,true,null);
   }else if(mode==='phases'||mode==='hold'||mode==='native-first'){
    for(let i=1;i<=3;i++)await sample(b,'after','immediate',i,i===2,mode==='native-first'?null:mode);

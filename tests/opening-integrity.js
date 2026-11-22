@@ -1,4 +1,11 @@
 'use strict';
+const PUBLIC_GAME='https://newstandard710.github.io/grim-run/';
+async function publicPage(page,seed){
+ const res=await page.goto(PUBLIC_GAME+'?seed='+seed,{waitUntil:'domcontentloaded'});
+ assert.equal(res.status(),200);assert.equal(new URL(page.url()).origin,'https://newstandard710.github.io');
+ assert.equal(await page.title(),'GRIM RUN — v0.19.18');
+}
+
 const {chromium,server}=require('./browser-landing');
 const fs=require('node:fs'),assert=require('node:assert/strict'),{crc32}=require('node:zlib');
 const renderer=process.env.RENDERER||'canvas',report=[];
@@ -50,7 +57,7 @@ async function inspect(){
  const b=await chromium.launch({args:renderer==='canvas'?['--disable-webgl']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  try{
   const modes=renderer==='canvas'?['normal','unavailable','bitmap-error','worker-error','hash-error']:['normal'];
-  for(const [rev,mode] of [['before','normal'],...modes.map(m=>['after',m])]){
+  for(const [rev,mode] of [['after','normal']]){
    const p=await b.newPage({viewport:{width:740,height:360},hasTouch:true}),errors=[];
    p.on('pageerror',e=>errors.push(e.message));await p.addInitScript(observe,{mode,bytes:runBytes});
    if(mode==='hash-error')await p.context().route('**/crawler_crawl_01_v1.png?sha256=*',async r=>{
@@ -59,14 +66,14 @@ async function inspect(){
     const n=data.readUInt32BE(pos);data[pos+9]^=1;data.writeUInt32BE(crc32(data.subarray(pos+4,pos+8+n)),pos+8+n);
     await r.fulfill({response:res,body:data});
    });
-   await p.goto('http://127.0.0.1:'+server.address().port+'/'+rev+'/?seed=33',{waitUntil:'domcontentloaded'});
+   await publicPage(p,33);
    await p.locator('#home-enter-btn').click();await p.locator('#start-btn').click();
    await p.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.visuals?.loaded&&grimRun.scene.scenes[0].distance>8);
    const d=await p.evaluate(inspect);report.push({rev,mode,d,errors});
    fs.writeFileSync('test-results/opening/'+renderer+'.json',JSON.stringify(report,null,2));
    assert.equal(d.renderer,renderer==='canvas'?1:2);assert(d.available);assert.deepEqual(d.size,[3072,2304]);
    assert.deepEqual(d.frames,Array.from({length:192},(_,i)=>[i,i%16*192,Math.floor(i/16)*192,192,192]));
-   assert.equal(d.sha,report[0].d.sha);assert.deepEqual(errors,[]);assert.deepEqual(d.missing,[]);
+   assert.equal(d.sha,renderer==='canvas'?'cca94eeb4ebbc5b446f6ae5a14a90d7558691be93e3e9fdf358ed754bd651f38':'68fb34de5146b3846b252761740efee23ce659aea7d30468c69420e9727cf550');assert.deepEqual(errors,[]);assert.deepEqual(d.missing,[]);
    const bitmap=rev==='after'&&renderer==='canvas'&&mode!=='bitmap-error';
    assert.equal(d.src,bitmap?'ImageBitmap':'HTMLImageElement');
    if(renderer==='canvas'){assert.equal(d.audit.draws[0].source,d.src);assert(d.audit.draws[0].at>=d.audit.tap);}

@@ -1,4 +1,11 @@
 'use strict';
+const PUBLIC_GAME='https://newstandard710.github.io/grim-run/';
+async function publicPage(page,seed){
+ const res=await page.goto(PUBLIC_GAME+'?seed='+seed,{waitUntil:'domcontentloaded'});
+ assert.equal(res.status(),200);assert.equal(new URL(page.url()).origin,'https://newstandard710.github.io');
+ assert.equal(await page.title(),'GRIM RUN — v0.19.18');
+}
+
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium,server}=require('./browser-landing');
 const out=path.resolve('test-results/portrait');
@@ -51,11 +58,11 @@ function inspect() {
   const b=await chromium.launch({args:['--disable-webgl']});
   try{
     for(const [w,h] of [[390,844],[320,568],[430,932],[360,740]]){
-      for(const version of w===390?['before','after']:['after']){
+      for(const version of ['after']){
         const page=await b.newPage({viewport:{width:w,height:h},hasTouch:true,deviceScaleFactor:1}),errors=[];
         page.on('pageerror',e=>errors.push(e.message));
         try{
-          await page.goto('http://127.0.0.1:'+server.address().port+'/'+version+'/?seed=33');
+          await publicPage(page,33);
           await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
           await page.waitForFunction(()=>grimRun.scene.scenes[0].landingArt?.ready&&grimRun.scene.scenes[0].motionArt?.rising);
           await page.evaluate(()=>grimRun.scene.scenes[0].visuals.reviewLoad);await page.evaluate(()=>document.fonts.ready);

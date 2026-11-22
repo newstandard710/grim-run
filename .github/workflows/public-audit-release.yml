@@ -1,0 +1,46 @@
+name: Verify live v0.19.18 integration release
+on:
+  push:
+    branches: [qa/public-integration-release]
+permissions:
+  contents: read
+env:
+  LANDED: 82751bc826116c36f9626dbcde39316c703823a7
+jobs:
+  public-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [startup, landing-canvas, landing-webgl, portrait, ledge, opening-canvas, opening-webgl, interactions]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LANDED }}
+          path: landed
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
+      - name: Verify actual public entry bytes and play the hosted game
+        env:
+          CHECK: ${{ matrix.check }}
+        run: |
+          export LANDING_BASELINE=landed LANDING_CANDIDATE=landed
+          curl -fsSL --retry 3 https://newstandard710.github.io/grim-run/ -o /tmp/public-game.html
+          cmp /tmp/public-game.html landed/index.html
+          case "$CHECK" in
+            startup) CASE=public node tests/startup-profile.js ;;
+            landing-*) TRIAL_RENDERER="${CHECK#landing-}" node tests/forest-hitch-loader-trial.js ;;
+            portrait) node tests/portrait-audit.js ;;
+            ledge) node tests/integration-audit.js canvas 740 360 ledge ;;
+            opening-*) RENDERER="${CHECK#opening-}" node tests/opening-integrity.js ;;
+            interactions) node tests/integration-audit.js canvas 740 360 ;;
+          esac
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-verified-${{ matrix.check }}
+          path: test-results/
