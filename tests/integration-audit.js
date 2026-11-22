@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
-process.env.LANDING_BASELINE = root;
+process.env.LANDING_BASELINE ||= root;
 const {chromium, server, setup, trace, rates, routes} = require('./browser-landing');
 const [mode, width, height] = process.argv.slice(2);
 const viewport = {width:Number(width), height:Number(height)};
@@ -14,17 +14,16 @@ const result = {mode, viewport, runs:[], errors:[]};
 function save() {
   fs.writeFileSync(path.join(output,'observations.json'),JSON.stringify(result,null,2));
 }
+const fingers = new WeakMap();
 async function input(page, action, hold) {
   const keys = {slide:'ArrowDown',jump:'ArrowUp',cut:'a',shoot:'f'};
   if (!mobile) return hold ? page.keyboard.down(keys[action]) : page.keyboard.up(keys[action]);
   const selector = {slide:'slide-btn',jump:'jump-btn',cut:'attack-btn',shoot:'crossbow-btn'}[action];
   const box = await page.locator('#'+selector).boundingBox();
   assert(box, selector+' is visible');
-  const finger = await page.context().newCDPSession(page);
-  try {
-    await finger.send('Input.dispatchTouchEvent',{type:hold?'touchStart':'touchEnd',
-      touchPoints:hold?[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]:[]});
-  } finally {await finger.detach();}
+  if(!fingers.has(page)) fingers.set(page,await page.context().newCDPSession(page));
+  await fingers.get(page).send('Input.dispatchTouchEvent',{type:hold?'touchStart':'touchEnd',
+    touchPoints:hold?[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]:[]});
 }
 async function play(page) {
   await page.goto('http://127.0.0.1:'+server.address().port+'/after/?seed=33');
@@ -105,9 +104,20 @@ async function play(page) {
     result.bow.push({ticks,before,after});save();
   }
   // Warm real RAF on a populated Forest opening, one full Phaser draw per tick.
-  result.pacing=await page.evaluate(async()=>{
+  result.pacing=await pace(page);
+  save();assert.deepEqual(result.errors,[]);
+}
+async function pace(page,entry=0) {
+  return page.evaluate(async entry=>{
     const s=grimRun.scene.scenes[0],g=grimRun;
     history.replaceState(null,'','?seed=33');s.startRun();g.loop.sleep();clearInterval(s.loopWatchdogId);s.sys.sceneUpdate=()=>{};
+    if(entry){
+      const x=s.startX+entry*GRIM_CONFIG.pxPerMeter;
+      s.terrain.advance(x+2100);s.player.x=x;s.player.y=s.terrain.groundAt(x)??s.terrain.anchorAt(x);
+      s.cameraX=x-s.width*GRIM_CONFIG.reaperXRatio;s.cameraY=s.player.y-s.groundY;
+      s.distance=entry;s.nextVendorNumber=2;s.lastVendorNumber=1;s.nextEncounterX=x+400;s.speed=GRIM_CORE.runSpeed(entry);
+      s.godMode=true;s.drawScene();
+    }
     const cpu=[],gap=[];let prev;
     for(let i=0;i<245;i++){
       const now=await new Promise(requestAnimationFrame);
@@ -119,13 +129,30 @@ async function play(page) {
     }
     function stats(a){a.sort((x,y)=>x-y);return {n:a.length,median:a[99],p95:a[189],p99:a[197],over50:a.filter(x=>x>50).length,max:a.at(-1)};}
     return {cpu:stats(cpu),raf:stats(gap),end:s.distance,state:s.state};
-  });
-  save();assert.deepEqual(result.errors,[]);
+  },entry);
+}
+
+async function comparePacing(browser){
+  result.pairs=[];
+  for(const revision of ['before','after','after','before']){
+    const page=await browser.newPage({viewport,deviceScaleFactor:1,hasTouch:true});
+    page.on('pageerror',e=>result.errors.push(e.message));
+    try{
+      await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33');
+      await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
+      await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.motionArt?.ready,null,{timeout:90000});
+      await page.evaluate(()=>grimRun.scene.scenes[0].visuals.reviewLoad);
+      const forest=await pace(page),boundary=await pace(page,850);
+      result.pairs.push({revision,forest,boundary});save();
+    }finally{await page.close();}
+  }
+  assert.deepEqual(result.errors,[]);
 }
 (async()=>{
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const b=await chromium.launch({args:mode==='canvas'?['--disable-webgl']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try{
+    if(process.argv[5]==='compare')return await comparePacing(b);
     const page=await b.newPage({viewport,hasTouch:mobile,deviceScaleFactor:1});
     page.on('pageerror',e=>result.errors.push(e.message));
     await play(page);
