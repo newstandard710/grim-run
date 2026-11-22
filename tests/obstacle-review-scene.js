@@ -126,15 +126,56 @@
     function read() {render();ctx.drawImage(game.canvas,0,0);return ctx.getImageData(0,0,sample.width,sample.height).data;}
     const shown = read(); front.setVisible(false);
     const hidden = read(); front.setVisible(true); render();
-    let changed = 0;
-    for (let p=0;p<shown.length;p+=4)
-      if (Math.abs(shown[p]-hidden[p])+Math.abs(shown[p+1]-hidden[p+1])+Math.abs(shown[p+2]-hidden[p+2])>15) changed++;
-    if (changed < 25) throw Error('Foreground absent from real pixels: '+JSON.stringify({id:skin.id,changed,x:front.x,y:front.y,camera:[cam.scrollX,cam.scrollY],view:[s.width,s.height],actor:[s.player.x,s.player.y]}));
+    function difference(other) {
+      let count=0;
+      for(let p=0;p<shown.length;p+=4)
+        if(Math.abs(shown[p]-other[p])+Math.abs(shown[p+1]-other[p+1])+Math.abs(shown[p+2]-other[p+2])>15)count++;
+      return count;
+    }
+    const changed=difference(hidden);
+    if(changed<25)throw Error('Foreground absent from real pixels: '+skin.id+' '+changed);
+    let rearPixels,clearanceError,cacheMs;
+    if(skin.landform){
+      if(!(support?.visible && support.depth>s.abyssFallback.depth && support.depth<s.terrainBase.depth &&
+        support.depth<s.actor.depth && s.actor.depth<front.depth && support.mountSource===skin.key))
+        throw Error('Incorrect slide landform registration or depth: '+skin.id);
+      support.setVisible(false);
+      rearPixels=difference(read());
+      support.setVisible(true);render();
+      if(rearPixels<120)throw Error('Weight-bearing mass absent from real pixels: '+skin.id+' '+rearPixels);
+      const paint=front.texture.getSourceImage(),w=paint.width,h=paint.height;
+      const rgba=paint.getContext('2d').getImageData(0,0,w,h).data;
+      const errors=[];
+      for(let col=0;col<w;col++){
+        const x=front.x+col+.5;
+        if(x<obstacle.x+1||x>obstacle.x+obstacle.width-1)continue;
+        let y=h-1;
+        while(y>=0 && rgba[(y*w+col)*4+3]<96)y--;
+        const clearance=GRIM_CORE.slideCeilingBottomAt(s.terrain.groundAt,x,C.slideClearancePx);
+        errors.push(clearance-(front.y+y+1));
+      }
+      clearanceError=[Math.min(...errors),Math.max(...errors)];
+      if(clearanceError[0]<-.1||clearanceError[1]>5)
+        throw Error('Painted edge disagrees with collision: '+skin.id+' '+clearanceError);
+      const bank=support.texture.getSourceImage(),ctx=bank.getContext('2d');
+      // Check paint at the turf itself, independently of the two metadata anchors.
+      for(const foot of support.mountFeet){
+        const x=Math.floor(foot.x-support.x),y=Math.floor(s.terrain.groundAt(foot.x)-support.y);
+        const patch=ctx.getImageData(x-2,y-2,5,5).data;
+        if(!patch.some((alpha,i)=>i%4===3 && alpha>96))
+          throw Error('Groundward mass leaves the tread: '+skin.id+' '+x+','+y);
+      }
+      const start=performance.now();
+      for(let i=0;i<60;i++)s.drawObstacle(obstacle);
+      cacheMs=(performance.now()-start)/60;
+      if(s.obstacleSupportObjects.get(obstacle)!==support || s.obstacleSpriteObjects.get(obstacle)!==front)
+        throw Error('Static landform rebuilt while running: '+skin.id);
+    }
     if (skin.supportKey && !(support?.visible && support.depth > s.abyssFallback.depth && support.depth < front.depth))
       throw Error('Incorrect support visibility/depth: '+skin.id);
     if (skin.backKey && !(back?.visible && support.depth < back.depth && back.depth < front.depth))
       throw Error('Incorrect upper backing depth: '+skin.id);
-    return {changed, depths:[support?.depth,back?.depth,front.depth], size:[front.displayWidth,front.displayHeight],
+    return {changed,rearPixels,clearanceError,cacheMs, depths:[support?.depth,back?.depth,front.depth], size:[front.displayWidth,front.displayHeight],
       mountedFeet:support?.mountFeet?.map(p=>p.y-s.terrain.groundAt(p.x)), masked:!!front.mask};
   }
   function step(action = true) {
