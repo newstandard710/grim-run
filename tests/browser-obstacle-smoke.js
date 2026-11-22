@@ -119,7 +119,7 @@ const server=http.createServer((req,res)=>{
             {width:image.displayWidth,height:image.displayHeight}});
         }
         const reg=window.GRIM_OBSTACLE_MOUNTS[skin.id];
-        const contactX=o.x+o.width/2+((reg?.[0]??.5)-.5)*(image?.displayWidth||0);
+        const contactX=o.x+o.width/2+((reg?.[0]??.5)-.5)*(image?.displayWidth||0)+(skin.treeOffsetX??0);
         const visualGround=s.terrain.groundAt(contactX)??o.y+o.height;
         if(grounded&&(!image||image.originX!==reg[0]||Math.abs(image.x-contactX)>.001||
             image.originY!==(skin.groundAnchorY??1)||

@@ -6182,7 +6182,7 @@ window.GRIM_CONFIG = Object.freeze({
         const scale=this.obstacleSpriteScaleFor(skin,o.type);
         width=o.width*scale.x;height=o.height*scale.y;
         originX=scope.GRIM_OBSTACLE_MOUNTS?.[skin.id]?.[0]??.5;
-        x=o.x+o.width/2+(originX-.5)*width;
+        x=o.x+o.width/2+(originX-.5)*width+(skin.treeOffsetX??0);
         const baseline=this.terrain.groundAt(x)??o.y+o.height;
         if(o.type!=='bramble'){
           const gap=Math.min(40,width*.28);

@@ -36,7 +36,7 @@
     if (!obstacle || s.obstacleSkinFor(obstacle)?.id !== skin.id) throw Error('Seed/skin mismatch: '+skin.id+' at '+x);
     gap = type === 'tuckGate' ? s.terrain.sectionAt(x) : null;
     if (gap && gap.kind !== 'gap') throw Error('Gate requires a generated gap');
-    const approach = spec.gallery ? Math.min(140,s.width*.24) : Math.min(300,s.width*.47);
+    const approach = spec.gallery ? Math.min(140,s.width*.24) : Math.min(type === 'rock' ? 154 : 300,s.width*.47);
     // Begin on the connected approach bank. A wider viewport can otherwise
     // select a previous gap, making the first takeoff occur at the wrong bank.
     const bank = gap ? gap.start - 1 : x;
@@ -78,6 +78,12 @@
     return s.biomeBackdropReady && s.terrainMaterialIds.has(skin.biome) &&
       Object.keys(weights).every(id => id === 'forest' || s.biomeMidground.stream.loaded.has(id));
   }
+  function diagnostics(){
+    const stream=s.biomeMidground.stream;
+    return {state:s.state,skin:skin.id,weights:window.GRIM_WORLD_ART.biomeWeights(s.distance),
+      backdrop:s.biomeBackdropReady,materials:[...s.terrainMaterialIds],wanted:stream.wanted,
+      loaded:[...stream.loaded.keys()],failed:[...stream.failed],pending:stream.pending?.id};
+  }
   function inspect() {
     const front = s.obstacleSpriteObjects.get(obstacle);
     const support = s.obstacleSupportObjects.get(obstacle), back = s.obstacleBackObjects.get(obstacle);
@@ -98,7 +104,7 @@
     let changed = 0;
     for (let p=0;p<shown.length;p+=4)
       if (Math.abs(shown[p]-hidden[p])+Math.abs(shown[p+1]-hidden[p+1])+Math.abs(shown[p+2]-hidden[p+2])>15) changed++;
-    if (changed < 25) throw Error('Foreground absent from real pixels: '+skin.id+' '+changed);
+    if (changed < 25) throw Error('Foreground absent from real pixels: '+JSON.stringify({id:skin.id,changed,x:front.x,y:front.y,camera:[cam.scrollX,cam.scrollY],view:[s.width,s.height],actor:[s.player.x,s.player.y]}));
     if (skin.supportKey && !(support?.visible && support.depth > s.abyssFallback.depth && support.depth < front.depth))
       throw Error('Incorrect support visibility/depth: '+skin.id);
     if (skin.backKey && !(back?.visible && support.depth < back.depth && back.depth < front.depth))
@@ -212,6 +218,6 @@
     const leaked=Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-mounted-')||k.startsWith('obstacle-registered-'));
     if (leaked.length) throw Error('Leaked obsolete art: '+leaked.join(', '));
   }
-  window.obstacleReview={prepare,ready,inspect,step,signature,image,cleanup,render,startPortal,beginRoute,seekRoute,routeFrame,
+  window.obstacleReview={prepare,ready,diagnostics,inspect,step,signature,image,cleanup,render,startPortal,beginRoute,seekRoute,routeFrame,
     get result(){return {firstCut,firstHit,airTucked,inputSent,passed:s.player.x>obstacle.x+obstacle.width};}};
 })();

@@ -108,7 +108,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     // Every sprite uses the real local terrain at its painted foot.
     for(const [i,skin]of skins.entries()){
      const [foot]=window.GRIM_OBSTACLE_MOUNTS[skin.id];
-     const offset=30+(foot-.5)*60*s.obstacleSpriteScaleFor(skin,'bramble').x;
+     const offset=30+(foot-.5)*60*s.obstacleSpriteScaleFor(skin,'bramble').x+(skin.treeOffsetX??0);
      let x=s.player.x+105+i*205;
      for(let j=0;j<120&&s.terrain.groundAt(x+offset)===null;j++)x+=6;
      const floor=s.terrain.groundAt(x+offset);

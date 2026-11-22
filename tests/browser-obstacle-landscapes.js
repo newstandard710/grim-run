@@ -53,6 +53,14 @@ function stats(values){
   return {n:values.length,median:at(.5),p95:at(.95),p99:at(.99)};
 }
 
+async function waitForArt(page) {
+  try {
+    await page.waitForFunction(()=>obstacleReview.ready(),null,{polling:180,timeout:45000});
+  } catch (error) {
+    throw Error('Scenery readiness: '+JSON.stringify(await page.evaluate(()=>obstacleReview.diagnostics())),{cause:error});
+  }
+}
+
 async function playTransitions(page,revision,results){
   const routes=[
     [34,[
@@ -70,7 +78,7 @@ async function playTransitions(page,revision,results){
       for(let segment=0;segment<32&&!encounter;segment++)
         encounter=await page.evaluate(spec=>obstacleReview.seekRoute(spec),{id,m,range:2});
       assert(encounter,key+' naturally spawned in the populated scene');
-      await page.waitForFunction(()=>obstacleReview.ready(),null,{timeout:45000});
+      await waitForArt(page);
       const art=await page.evaluate(()=>obstacleReview.inspect());
       const dir=path.join(out,key,revision);
       await fs.mkdir(dir,{recursive:true});
@@ -101,43 +109,51 @@ async function measure(page,revision,cases){
     const key=id+'-'+seed;
     const dir=path.join(out,key,revision);
     await fs.mkdir(dir,{recursive:true});
-    const start=Date.now();
-    const setup=await page.evaluate(spec=>obstacleReview.prepare(spec),{id,seed,x,variant});
-    await page.waitForFunction(()=>obstacleReview.ready(),null,{timeout:45000});
-    const coldMs=Date.now()-start;
-    const art=await page.evaluate(()=>obstacleReview.inspect());
-    const states=[],times=[];
-    for(let sample=0;sample<30;sample++){
-      const save=width===740||[0,5,11,17,23,29].includes(sample);
-      const value=await page.evaluate(save=>{
-        const q=obstacleReview,states=[],times=[];
-        for(let j=0;j<4;j++){
-          const begin=performance.now();q.step();q.render();times.push(performance.now()-begin);states.push(q.signature());
-        }
-        return {states,times,bytes:save?q.image():null};
-      },save);
-      states.push(...value.states);times.push(...value.times);
-      if(value.bytes)await fs.writeFile(path.join(dir,String(sample).padStart(3,'0')+'.jpg'),Buffer.from(value.bytes,'base64'));
+    try {
+      const start=Date.now();
+      const setup=await page.evaluate(spec=>obstacleReview.prepare(spec),{id,seed,x,variant});
+      await waitForArt(page);
+      const coldMs=Date.now()-start;
+      const art=await page.evaluate(()=>obstacleReview.inspect());
+      const states=[],times=[];
+      for(let sample=0;sample<30;sample++){
+        const save=width===740||[0,5,11,17,23,29].includes(sample);
+        const value=await page.evaluate(save=>{
+          const q=obstacleReview,states=[],times=[];
+          for(let j=0;j<4;j++){
+            const begin=performance.now();q.step();q.render();times.push(performance.now()-begin);states.push(q.signature());
+          }
+          return {states,times,bytes:save?q.image():null};
+        },save);
+        states.push(...value.states);times.push(...value.times);
+        if(value.bytes)await fs.writeFile(path.join(dir,String(sample).padStart(3,'0')+'.jpg'),Buffer.from(value.bytes,'base64'));
+      }
+      const outcome=await page.evaluate(()=>obstacleReview.result);
+      results[key]={setup,art,coldMs,cpu:stats(times.slice(20)),trace:hash(states),outcome};
+      console.log(revision,key,JSON.stringify(results[key]));
+      assert(outcome.inputSent && outcome.passed,key+' counter exercised through target');
+      if(setup.type==='bramble')assert(outcome.firstCut!==null,key+' Cut contact exercised');
+      if(setup.type==='tuckGate')assert(outcome.airTucked,key+' airborne tuck exercised');
+      assert.equal(outcome.firstHit,null,key+' intended counter clears the contact');
+      await page.evaluate(()=>obstacleReview.cleanup());
+      const missed=await page.evaluate(spec=>{
+        const q=obstacleReview;
+        q.prepare(spec);
+        for(let tick=0;tick<120 && q.result.firstHit===null;tick++)q.step(false);
+        const result=q.result;
+        q.cleanup();
+        return {firstHit:result.firstHit,signature:q.signature()};
+      },{id,seed,x,variant});
+      assert.notEqual(missed.firstHit,null,key+' hazard damages the unprotected Reaper');
+      results[key].unprotectedHitTick=missed.firstHit;
+      results[key].unprotectedTrace=hash(missed.signature);
+    } catch(error) {
+      results[key]={error:error.message};
+      console.error(revision,key,error.message);
+      const frame=await page.evaluate(()=>obstacleReview.image());
+      await fs.writeFile(path.join(dir,'diagnostic.jpg'),Buffer.from(frame,'base64'));
+      await page.evaluate(()=>obstacleReview.cleanup());
     }
-    const outcome=await page.evaluate(()=>obstacleReview.result);
-    results[key]={setup,art,coldMs,cpu:stats(times.slice(20)),trace:hash(states),outcome};
-    console.log(revision,key,JSON.stringify(results[key]));
-    assert(outcome.inputSent && outcome.passed,key+' counter exercised through target');
-    if(setup.type==='bramble')assert(outcome.firstCut!==null,key+' Cut contact exercised');
-    if(setup.type==='tuckGate')assert(outcome.airTucked,key+' airborne tuck exercised');
-    assert.equal(outcome.firstHit,null,key+' intended counter clears the contact');
-    await page.evaluate(()=>obstacleReview.cleanup());
-    const missed=await page.evaluate(spec=>{
-      const q=obstacleReview;
-      q.prepare(spec);
-      for(let tick=0;tick<120 && q.result.firstHit===null;tick++)q.step(false);
-      const result=q.result;
-      q.cleanup();
-      return {firstHit:result.firstHit,signature:q.signature()};
-    },{id,seed,x,variant});
-    assert.notEqual(missed.firstHit,null,key+' hazard damages the unprotected Reaper');
-    results[key].unprotectedHitTick=missed.firstHit;
-    results[key].unprotectedTrace=hash(missed.signature);
   }
   const arrival=await page.evaluate(()=>{
     const q=obstacleReview;
@@ -146,7 +162,10 @@ async function measure(page,revision,cases){
   });
   results.portal={trace:hash(arrival.states),ticks:arrival.states.length};
   await fs.writeFile(path.join(out,'first-portal-'+revision+'.jpg'),Buffer.from(arrival.frame,'base64'));
-  if(width===950)await playTransitions(page,revision,results);
+  if(width===950) {
+    try {await playTransitions(page,revision,results);}
+    catch(error){results.routesFailure={error:error.message};console.error(revision,error.message);}
+  }
   assert.deepEqual(errors,[]);
   return results;
 }
@@ -165,6 +184,8 @@ async function measure(page,revision,cases){
       finally{await page.close();}
       await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(summary,null,2));
     }
+    for(const [revision,result] of Object.entries(summary))
+      assert.deepEqual(Object.entries(result).filter(([,v])=>v.error),[],revision+' all captures complete');
     for(const key of Object.keys(summary.before)){
       assert.equal(summary.after[key].trace,summary.before[key].trace,key+' frame-for-frame gameplay parity');
       assert.equal(summary.after[key].unprotectedTrace,summary.before[key].unprotectedTrace,key+' missed counter parity');
