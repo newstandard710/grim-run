@@ -55,7 +55,7 @@ const server=http.createServer((req,res)=>{
         s.cameras.main.setScroll(s.cameraX,s.cameraY);
         s.drawScene();game.step(performance.now(),0);
         const front=s.obstacleSpriteObjects.get(o),support=s.obstacleSupportObjects.get(o);
-        const info={biome:s.obstacleBiomeFor(o),type,collision:{x:o.x,y:o.y,w:o.width,h:o.height},
+        const info={biome:s.obstacleBiomeFor(o),type,gateSize:s.obstacleSkinFor(o)?.gateSize,collision:{x:o.x,y:o.y,w:o.width,h:o.height},
           front:{key:front?.texture.key,w:front?.displayWidth,h:front?.displayHeight,
             y:front?.y,originY:front?.originY,depth:front?.depth},
           support:{key:support?.texture.key,w:support?.displayWidth,h:support?.displayHeight,
@@ -74,11 +74,20 @@ const server=http.createServer((req,res)=>{
       assert.equal(view.collision.w,80,type+' collision width stays unchanged');
       assert.equal(view.collision.h,type==='tuckGate'?1433:143,type+' collision height stays unchanged');
       if(type==='tuckGate'){
-        assert(view.front.w>=176&&view.front.h===400,'air-tuck gate art is larger');
         assert.equal(view.front.y,view.collision.y+view.collision.h,
           'illustrated lower edge aligns with the unchanged ducking line');
-        assert.equal(view.support.y,view.collision.y+view.collision.h+167-210,
-          'painted ceiling chains descend visibly into the upper gate');
+        if(view.gateSize){
+          assert.deepEqual([view.front.w,view.front.h],view.gateSize,'strike bar uses its painted registration');
+          assert.equal(view.front.originY,1);
+          const barTop=view.front.y-view.front.h;
+          assert(view.support.y>barTop&&view.support.y<barTop+view.front.h/2,
+            'recessed chains join the top half of the solid bar');
+          assert(view.support.y-view.support.h<barTop-view.front.h,'mount continues overhead');
+        }else{
+          assert(view.front.w>=176&&view.front.h===400,'legacy air gate frame');
+          assert.equal(view.support.y,view.collision.y+view.collision.h+167-210,
+            'legacy ceiling chains descend into the gate');
+        }
       }else {
         assert(view.front.w===148&&view.front.h===218,'air attack art is larger');
         assert(view.support.foot&&view.support.foot.y===view.support.floor+13,

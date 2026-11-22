@@ -46,12 +46,16 @@
     "name": "dead-bough-curtain",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/slide-v3/forest/forest_dead-bough-curtain-front.webp",
-    "backSrc": "assets/obstacles/slide-v3/forest/forest_dead-bough-curtain-back.webp",
+    "src": "assets/obstacles/landscapes/forest/dead-bough-curtain-front.webp",
+    "backSrc": "assets/obstacles/landscapes/forest/dead-bough-curtain-back.webp",
     "backKey": "obstacle-back-forest_dead-bough-curtain",
-    "supportSrc": "assets/obstacles/slide-support/forest/forest_dead-bough-curtain-support-v2.webp",
+    "supportSrc": "assets/obstacles/landscapes/forest/dead-bough-curtain-support.webp",
     "supportKey": "obstacle-support-forest_dead-bough-curtain",
-    "key": "obstacle-forest_slide_dead-bough-curtain"
+    "key": "obstacle-forest_slide_dead-bough-curtain",
+    "slideSize": [
+      154,
+      58
+    ]
   },
   {
     "id": "forest_slide_root-shelf",
@@ -104,9 +108,14 @@
     "name": "dead-oak-sapling",
     "gameW": 60,
     "gameH": 288,
-    "visualInsetPx": 10,
+    "visualInsetPx": 15,
     "src": "assets/obstacles/cut/forest/forest_cut_dead-oak-sapling.png",
-    "key": "obstacle-forest_cut_dead-oak-sapling"
+    "key": "obstacle-forest_cut_dead-oak-sapling",
+    "treeScale": [
+      3.18,
+      3.06
+    ],
+    "buryRoots": true
   },
   {
     "id": "forest_cut_corn-tangle",
@@ -223,8 +232,12 @@
     "groundAnchorY": 0.7546,
     "src": "assets/obstacles/cut/foothills/foothills_cut_dead-mountain-tree-roots-v2.png",
     "key": "obstacle-foothills_cut_dead-mountain-tree",
-    "visualInsetPx": 16,
-    "buryRoots": true
+    "visualInsetPx": 20,
+    "buryRoots": true,
+    "treeScale": [
+      2.14,
+      2.06
+    ]
   },
   {
     "id": "foothills_cut_antler-thicket",
@@ -416,12 +429,16 @@
     "name": "fossil-rib-arch",
     "gameW": 74,
     "gameH": 70,
-    "src": "assets/obstacles/slide-v3/caves/caves_fossil-rib-arch-front.webp",
-    "backSrc": "assets/obstacles/slide-v3/caves/caves_fossil-rib-arch-back.webp",
+    "src": "assets/obstacles/landscapes/caves/fossil-rib-arch-front.webp",
+    "backSrc": "assets/obstacles/landscapes/caves/fossil-rib-arch-back.webp",
     "backKey": "obstacle-back-caves_fossil-rib-arch",
-    "supportSrc": "assets/obstacles/slide-support/caves/caves_fossil-rib-arch-support.webp",
+    "supportSrc": "assets/obstacles/landscapes/caves/fossil-rib-arch-support.webp",
     "supportKey": "obstacle-support-caves_fossil-rib-arch",
-    "key": "obstacle-caves_slide_fossil-rib-arch"
+    "key": "obstacle-caves_slide_fossil-rib-arch",
+    "slideSize": [
+      146,
+      60
+    ]
   },
   {
     "id": "caves_slide_hanging-roots",
@@ -1149,10 +1166,18 @@
     "name": "molten-chain-tuck-gate",
     "gameW": 80,
     "gameH": 340,
-    "src": "assets/obstacles/air-tuck/lava/lava_air-tuck_molten-chain-tuck-gate.png",
+    "src": "assets/obstacles/landscapes/lava/molten-chain-tuck-gate-front.webp",
     "key": "obstacle-lava_air-tuck_molten-chain-tuck-gate",
-    "supportSrc": "assets/obstacles/air-tuck-support/lava/lava_molten-chain-tuck-gate-support.webp",
-    "supportKey": "obstacle-support-lava_molten-chain-tuck-gate"
+    "supportSrc": "assets/obstacles/landscapes/lava/molten-chain-tuck-gate-support.webp",
+    "supportKey": "obstacle-support-lava_molten-chain-tuck-gate",
+    "gateSize": [
+      104,
+      42
+    ],
+    "gateMountSize": [
+      78,
+      240
+    ]
   },
   {
     "id": "foothills_air-bramble_windblown-root-tangle",

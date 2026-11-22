@@ -119,7 +119,7 @@
   }
 
   function registerSlideFront(scene,ob,skin,image,placement){
-    if(!REGISTERED_SLIDE_FRONTS.has(skin?.id)||!scene.textures.createCanvas)return;
+    if(!(skin?.slideSize||REGISTERED_SLIDE_FRONTS.has(skin?.id))||!scene.textures.createCanvas)return;
     const {x,y,width,height,rotation}=placement;
     const old=image.slideFront;
     if(x<scene.cameraX-180||x>scene.cameraX+scene.width+180){

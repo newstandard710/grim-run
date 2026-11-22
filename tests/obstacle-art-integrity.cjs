@@ -25,6 +25,14 @@ const biomeCounts={
   'snapping-bramble':{tundra:1}
 };
 const files=new Set(),keys=new Set(),ids=new Set(),hashes=new Set();
+function checkPaintedWebP(bytes,id){
+  assert.equal(bytes.toString('ascii',0,4),'RIFF',id+' RIFF header');
+  assert.equal(bytes.readUInt32LE(4)+8,bytes.length,id+' complete file');
+  assert.equal(bytes.toString('ascii',8,12),'WEBP',id+' WebP');
+  assert.equal(bytes.toString('ascii',12,16),'VP8X',id+' extended WebP header');
+  assert.ok(bytes[20]&0x10,id+' has an alpha channel');
+  assert.ok(bytes.length>1000,id+' contains painting');
+}
 function crc32(buf){
   let crc=0xffffffff;
   for(const byte of buf){crc^=byte;for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}
@@ -50,7 +58,7 @@ for(const [category,count] of Object.entries(counts)){
     assert.ok(filename.startsWith(root+path.sep),'sprite path stays inside the project');
     assert.equal(path.basename(path.dirname(filename)),skin.biome,skin.id+' biome folder');
     assert.equal(path.basename(path.dirname(path.dirname(filename))),
-      category==='slide'?'slide-v3':category,skin.id+' category folder');
+      skin.slideSize||skin.gateSize?'landscapes':category==='slide'?'slide-v3':category,skin.id+' category folder');
     const bytes=fs.readFileSync(filename);
     const digest=crypto.createHash('sha256').update(bytes).digest('hex');
     assert.ok(!hashes.has(digest),'sprite art is unique across biome/category entries: '+skin.id);
@@ -71,6 +79,12 @@ for(const [category,count] of Object.entries(counts)){
       assert.equal(support.toString('ascii',0,4),'RIFF',skin.id+' support WebP');
       assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
       assert.ok(support.length>1000,skin.id+' painted connection present');
+      if(skin.slideSize){
+        checkPaintedWebP(bytes,skin.id+' front');
+        checkPaintedWebP(backing,skin.id+' backing');
+        checkPaintedWebP(support,skin.id+' mount');
+        assert.ok(skin.slideSize[0]>=skin.gameW&&skin.slideSize[1]<90,skin.id+' broad low span');
+      }
       continue;
     }
     if(category==='air-tuck'||category==='air-bramble'){
@@ -87,6 +101,12 @@ for(const [category,count] of Object.entries(counts)){
         assert.equal(support.toString('ascii',8,12),'WEBP',skin.id+' support image');
       }
       assert.ok(support.length>1000,skin.id+' support painted');
+    }
+    if(skin.gateSize){
+      checkPaintedWebP(bytes,skin.id);
+      assert.ok(skin.gateSize[0]>=skin.gameW&&skin.gateSize[1]<70,skin.id+' compact strike bar');
+      assert.ok(skin.gateMountSize[1]>skin.gateSize[1],skin.id+' recessed overhead suspension');
+      continue;
     }
     assert.deepEqual([...bytes.subarray(0,8)],[137,80,78,71,13,10,26,10],skin.id+' PNG signature');
     let pos=8,width=0,height=0,colorType=0,bitDepth=0,ended=false;
@@ -121,4 +141,4 @@ assert.equal(files.size,152);
 assert.equal(keys.size,152);
 assert.equal(ids.size,96);
 assert.equal(hashes.size,96);
-console.log('PASS v0.14.9: 96 biome-exclusive skins, 32 unique paired supports, and original PNG integrity verified.');
+console.log('PASS 96 biome-exclusive skins, 32 paired supports, and painted asset integrity verified.');
