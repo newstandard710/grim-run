@@ -1,0 +1,30 @@
+name: Immediate Start pacing profile
+on:
+  push:
+    branches: [qa/immediate-start-profile]
+permissions:
+  contents: read
+jobs:
+  measure:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [native, timed, table]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 4cd13aea011607f0376817128506454a617fa393
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
+      - run: LANDING_CANDIDATE=candidate LANDING_BASELINE=candidate CASE=${{ matrix.mode }} node tests/startup-profile.js
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-${{ matrix.mode }}
+          path: test-results/startup
