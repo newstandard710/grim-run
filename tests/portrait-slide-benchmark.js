@@ -39,8 +39,54 @@ function stats(values){
   const at=q=>round(a[Math.ceil(q*a.length)-1]);
   return {n:a.length,median:at(.5),p95:at(.95),p99:at(.99),max:at(1)};
 }
-async function ready(page){
-  await page.waitForFunction(()=>obstacleReview.ready(),null,{polling:180,timeout:45000});
+async function diagnostics(page){
+  return page.evaluate(()=>{
+    const s=grimRun.scene.scenes[0];
+    return {...obstacleReview.diagnostics(),backdropGroup:s.biomeBackdropGroup,
+      backdropPending:s.biomeBackdropPendingGroup,backdropFailures:[...s.biomeBackdropFailedGroups],
+      terrainLoading:[...s.terrainMaterialLoading],terrainFailed:[...s.terrainMaterialFailed],
+      terrainQueued:s.terrainMaterialQueue,contextLost:grimRun.renderer.gl.isContextLost(),
+      recentResources:performance.getEntriesByType('resource').slice(-9).map(r=>({
+        url:r.name.split('/').slice(-2).join('/'),ms:Math.round(r.duration),size:r.encodedBodySize}))};
+  }).catch(e=>({diagnosticError:e.message}));
+}
+async function stage(page,spec){
+  // Decode the exact production stream payloads before the stationary lab scene
+  // requests them. Large SwiftShader queues can otherwise starve the stream's
+  // 12s arrival timer and leave a required biome in its terminal failed set.
+  // Phaser still registers the original source images through its own pump.
+  const primed=await page.evaluate(async spec=>{
+    const s=grimRun.scene.scenes[0],art=GRIM_BIOME_MIDGROUND,stream=s.biomeMidground.stream;
+    const underworld=spec.x>=s.terrain.portalX;
+    const wanted=new Set([spec.x-170,spec.x].flatMap(x=>art.planAtlases(
+      (x-s.startX)/GRIM_CONFIG.pxPerMeter,underworld,true).wanted));
+    const start=performance.now(),cache=new Map(),loader=stream.loader;
+    for(const id of wanted)cache.set(id,await loader(id,AbortSignal.timeout(35000)));
+    stream.loader=(id,signal)=>cache.has(id)?Promise.resolve(cache.get(id)):loader(id,signal);
+    window.restorePortraitLoader=()=>{stream.loader=loader;cache.clear();};
+    return {ids:[...wanted],ms:performance.now()-start};
+  },spec);
+  const placement=await page.evaluate(spec=>{
+    const setup=obstacleReview.prepare(spec),s=grimRun.scene.scenes[0];
+    s.requestTerrainMaterial(spec.id.split('_')[0]);
+    return setup;
+  },spec);
+  try{
+    const state=await page.waitForFunction(()=>{
+      if(obstacleReview.ready())return 'ready';
+      const d=obstacleReview.diagnostics(),s=grimRun.scene.scenes[0];
+      if(d.failed.some(id=>d.weights[id]>0) || s.terrainMaterialFailed.has(d.skin.split('_')[0]) ||
+        s.biomeBackdropFailedGroups.has(s.biomeBackdropGroup) || grimRun.renderer.gl.isContextLost())return 'failed';
+      return false;
+    },null,{polling:600,timeout:35000});
+    if(await state.jsonValue()!=='ready')throw Error('Required scene art failed to register');
+    return {placement,primed,diagnostics:await diagnostics(page)};
+  }catch(cause){
+    const state=await diagnostics(page);
+    throw Error('Scenery readiness: '+JSON.stringify(state),{cause});
+  }finally{
+    await page.evaluate(()=>window.restorePortraitLoader?.()).catch(()=>{});
+  }
 }
 async function boot(browser,rev){
   const page=await browser.newPage({viewport:{width:360,height:740},hasTouch:true,deviceScaleFactor:1});
@@ -62,10 +108,8 @@ async function boot(browser,rev){
 }
 async function sample(page,spec,steadyOrder){
   const begin=Date.now();
-  const placement=await page.evaluate(s=>obstacleReview.prepare(s),spec);
-  await ready(page);
+  const {placement,primed,diagnostics:readyState}=await stage(page,spec);
   const readinessMs=Date.now()-begin;
-  const paint=await page.evaluate(()=>obstacleReview.inspect());
   await page.evaluate(()=>{
     const s=grimRun.scene.scenes[0],ob=s.obstacles[0],camera=s.cameras.main;
     const maps=[s.obstacleSpriteObjects,s.obstacleSupportObjects,s.obstacleBackObjects];
@@ -88,6 +132,28 @@ async function sample(page,spec,steadyOrder){
         pending:s.biomeMidground?.stream?.pending?.id??null};
     };
   });
+  // One stage per fresh context. Freeze the already prepared scene for the
+  // identical shown/hidden trials, then use the original pixel check and its
+  // readbacks directly before moving. No simulation ticks elapse here.
+  const steady=await page.evaluate(order=>{
+    const game=grimRun,s=game.scene.scenes[0],gl=game.renderer.gl,ob=s.obstacles[0];
+    const views=[s.obstacleSpriteObjects,s.obstacleSupportObjects,s.obstacleBackObjects]
+      .map(map=>map?.get(ob)).filter(Boolean);
+    const phases=[];
+    for(const shown of order){
+      for(const v of views)v.setVisible(shown);
+      obstacleReview.render();gl.finish();
+      const times=[];
+      for(let i=0;i<12;i++){
+        const start=performance.now();obstacleReview.render();const submit=performance.now();
+        gl.finish();times.push({ms:performance.now()-start,cpu:submit-start});
+      }
+      phases.push({shown,times});
+    }
+    for(const v of views)v.setVisible(true);
+    return phases;
+  },steadyOrder);
+  const paint=await page.evaluate(()=>obstacleReview.inspect());
   const frames=[],trace=[];
   for(let batch=0;batch<40;batch++){
     // Original review uses four ticks/evaluation and six synchronized JPEG
@@ -116,34 +182,32 @@ async function sample(page,spec,steadyOrder){
     summary[name]=stats(part.map(f=>f.ms));
   }
   summary.warmUpdate=stats(warm.map(f=>f.update));summary.warmRender=stats(warm.map(f=>f.render));
-  // Re-stage after the timed traversal so the synchronized diagnostic cannot
-  // influence its queues. Compare identical stationary frames with the target
-  // display objects visible or hidden. An explicit finish includes GPU work.
-  await page.evaluate(s=>obstacleReview.prepare(s),spec);await ready(page);
-  const steady=await page.evaluate(order=>{
-    const game=grimRun,s=game.scene.scenes[0],gl=game.renderer.gl,ob=s.obstacles[0];
-    const views=[s.obstacleSpriteObjects,s.obstacleSupportObjects,s.obstacleBackObjects]
-      .map(map=>map?.get(ob)).filter(Boolean);
-    const phases=[];
-    for(const shown of order){
-      for(const v of views)v.setVisible(shown);
-      obstacleReview.render();gl.finish();
-      const times=[];
-      for(let i=0;i<12;i++){
-        const start=performance.now();obstacleReview.render();const submit=performance.now();
-        gl.finish();times.push({ms:performance.now()-start,cpu:submit-start});
-      }
-      phases.push({shown,times});
-    }
-    for(const v of views)v.setVisible(true);
-    return phases;
-  },steadyOrder);
   for(const shown of [true,false]){
     const times=steady.filter(p=>p.shown===shown).flatMap(p=>p.times);
     summary[shown?'stationaryShown':'stationaryHidden']=stats(times.map(t=>t.ms));
   }
   await page.evaluate(()=>obstacleReview.cleanup());
-  return {placement,readinessMs,paint,outcome,signature:hash(trace),summary,frames,steady};
+  return {placement,primed,readyState,readinessMs,paint,outcome,signature:hash(trace),summary,frames,steady};
+}
+async function freshSample(browser,rev,spec,order,prefix){
+  for(let attempt=1;attempt<=2;attempt++){
+    let page,failures=[];
+    try{
+      page=await boot(browser,rev);
+      page.on('requestfailed',req=>failures.push([req.url(),req.failure()?.errorText]));
+      const r=await sample(page,spec,order);
+      r.attempt=attempt;
+      return r;
+    }catch(error){
+      const state=page?await diagnostics(page):null;
+      const evidence={attempt,rev,spec,error:error.stack,cause:error.cause?.message,state,requests:failures};
+      await fs.writeFile(path.join(out,prefix+'-attempt-'+attempt+'-error.json'),JSON.stringify(evidence,null,2));
+      console.error(prefix,'attempt',attempt,error.message,state);
+      // A new context resets terminal loader failures. Keep assertions about
+      // a measured trace or its controls definitive.
+      if(attempt===2 || error.name==='AssertionError')throw error;
+    }finally{if(page)await page.close();}
+  }
 }
 function compare(a,b){
   const result={};
@@ -173,13 +237,12 @@ async function main(){
       const order=block%2?'BAAB':'ABBA';
       const segment=[];
       for(let slot=0;slot<4;slot++){
-        const rev=order[slot],page=await boot(browser,rev);
-        try{
+        const rev=order[slot];
           const results={};
-          // Alternate which encounter pays first-scene overhead between blocks,
-          // keeping that choice identical for all four A/B trials in a block.
+          // Alternate encounter order while keeping every measured scene isolated.
           for(const label of block%2?['control',target]:[target,'control']){
-            const r=await sample(page,cases[label],block%2?[false,true,true,false]:[true,false,false,true]);
+            const prefix='block-'+(block+1)+'-slot-'+(slot+1)+'-'+rev+'-'+label;
+            const r=await freshSample(browser,rev,cases[label],block%2?[false,true,true,false]:[true,false,false,true],prefix);
             const ref=baseline.get(label);
             if(ref)assert.equal(r.signature,ref,label+' identical moving gameplay trace');else baseline.set(label,r.signature);
             const name='block-'+(block+1)+'-slot-'+(slot+1)+'-'+rev+'-'+label+'.json';
@@ -197,7 +260,6 @@ async function main(){
           console.log(block+1,slot+1,rev,JSON.stringify(Object.fromEntries(Object.entries(results)
             .map(([k,v])=>[k,v.summary.warm]))));
           await save();
-        }finally{await page.close();}
       }
       const blockPairs=[];
       for(const [i,j] of [[0,1],[2,3]]){
