@@ -77,7 +77,7 @@ async function opening(browser,url){
     await firstPoseGate;
     await route.continue();
   });
-  await tab.page.route(/reaper_idle_v1|v0194\/reaper-run\.webp/,async route=>{
+  await tab.page.route(/reaper_idle_v1|v0200\/reaper-forward-carry\.webp/,async route=>{
     held++;
     await new Promise(resolve=>release.push(resolve));
     await route.continue();

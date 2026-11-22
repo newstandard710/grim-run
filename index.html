@@ -1986,7 +1986,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
   <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
   <script src="assets/visuals/rising-cut.js?v=ground-drag1"></script>
-  <script src="assets/visuals/motion-animations.js?v=bbd1821018db"></script>
+  <script src="assets/visuals/motion-animations.js?v=36d3839169fa"></script>
   <script src="assets/motion/landing/poses.js?v=1"></script>
   <script src="assets/visuals/landing-motion.js?v=1"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=eadfe1fa192f"></script>
@@ -2642,7 +2642,7 @@ window.GRIM_CONFIG = Object.freeze({
         enemies,obstacles,bullets,fireballs,
         coins:this.coins.map(o=>({...o})),souls:this.souls.map(o=>({...o})),
         combatViews:this.combatArt?.snapshot()||[],
-        rubble,rngState:this.rng.state
+        slideRotation:this.slideRotation,rubble,rngState:this.rng.state
       });
       this.downhillCamera?.capture(this.rewindFrames.at(-1));
       // 8 seconds max rewind plus one sample, at about 10 samples / second.
@@ -2669,6 +2669,7 @@ window.GRIM_CONFIG = Object.freeze({
     applyRewindSnapshot(saved){
       const copy=a=>a.map(o=>({...o}));
       this.player={...saved.player};
+      this.slideRotation=saved.slideRotation??null;
       // Don't leave touch controls held after teleporting the player back.
       this.player.jumpHeld=false;this.player.holdSlide=false;
       this.player.slideConsumed=false;
@@ -2822,6 +2823,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
       const startingHP=C.startingHP+Meta.healthBonus(this.meta);
       this.rng = Core.makeRng(this.seed);
+      this.slideRotation=null;
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
       this.cameraY=0;this.fallFeedbackMs=0;this.respawnMs=0;this.respawnCamera=null;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;this.shrineClaimed=false;
@@ -3304,6 +3306,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(surface===null)return;
       const ob=Core.obstacle(type,x,surface,this.rng.integer(0,5),C.slideClearancePx,this.height);
       if(this.vendorObstacleBlocked(type,x,ob.width))return;
+      if(type==='branch')this.chooseSlideSkin(ob);
       this.obstacles.push(ob);this.makeTip(type,ob);
     }
     vendorObstacleBounds(type,x,width){
@@ -4581,7 +4584,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.reaperFormation?.render();
       this.worldPolish?.endFrame();
     }
-    groundFogHash(index,salt){
+    worldVisualHash(index,salt){
       let h=Math.imul(index^salt,0x45d9f3b);
       h=Math.imul(h^(h>>>16),0x45d9f3b);
       return (h^(h>>>16))>>>0;
@@ -4883,21 +4886,21 @@ window.GRIM_CONFIG = Object.freeze({
       for(const layer of GROUND_FOG_LAYERS){
         const placedCenters=[];
         for(let index=first;index<=last;index++){
-          const variant=this.groundFogHash(index,37+layer.salt)%GROUND_FOG_KEYS.length;
+          const variant=this.worldVisualHash(index,37+layer.salt)%GROUND_FOG_KEYS.length;
           const key=GROUND_FOG_KEYS[variant];
           if(!this.textures?.exists?.(key))continue;
-          const spread=(this.groundFogHash(index,91+layer.salt)%105-52)*GROUND_FOG_SCALE;
+          const spread=(this.worldVisualHash(index,91+layer.salt)%105-52)*GROUND_FOG_SCALE;
           const x=(index+.5+layer.offset)*GROUND_FOG_STRIDE+spread;
           const ground=this.groundFogSurfaceAt(x);
           if(!Number.isFinite(ground))continue;
-          const width=350+this.groundFogHash(index,131+layer.salt)%180;
+          const width=350+this.worldVisualHash(index,131+layer.salt)%180;
           const shade=this.groundFogColorAt(x);
-          const alpha=this.groundFogLayerAlpha(shade.opacity*(.68+(this.groundFogHash(index,211)%43)/100));
+          const alpha=this.groundFogLayerAlpha(shade.opacity*(.68+(this.worldVisualHash(index,211)%43)/100));
           const id=layer.id+':bank:'+index;
           const sprite=this.groundFogView(id,key,layer);
           const drift=Math.sin(this.elapsed*layer.rate+index*1.83+layer.salt)*6;
           this.placeGroundFog(sprite,key,x+drift,width,
-            Boolean(this.groundFogHash(index,251+layer.salt)&1),shade,alpha,
+            Boolean(this.worldVisualHash(index,251+layer.salt)&1),shade,alpha,
             this.groundFogSurfaceAt(x+drift)??ground,gaps);
           active.add(id);
           placedCenters.push(x);
@@ -4912,13 +4915,13 @@ window.GRIM_CONFIG = Object.freeze({
           const x=(from+to)/2,ground=this.groundFogSurfaceAt(x);
           if(!Number.isFinite(ground))continue;
           const seed=Math.round(section.start*10);
-          const key=GROUND_FOG_KEYS[this.groundFogHash(seed,313+layer.salt)%GROUND_FOG_KEYS.length];
+          const key=GROUND_FOG_KEYS[this.worldVisualHash(seed,313+layer.salt)%GROUND_FOG_KEYS.length];
           if(!this.textures?.exists?.(key))continue;
           const id=layer.id+':section:'+section.start+':'+section.end;
           const shade=this.groundFogColorAt(x);
           const sprite=this.groundFogView(id,key,layer);
           this.placeGroundFog(sprite,key,x+Math.sin(this.elapsed*layer.rate+seed*.017+layer.salt)*3,
-            Math.min(430,Math.max(200,to-from+50)),Boolean(this.groundFogHash(seed,503+layer.salt)&1),
+            Math.min(430,Math.max(200,to-from+50)),Boolean(this.worldVisualHash(seed,503+layer.salt)&1),
             shade,this.groundFogLayerAlpha(shade.opacity*.70),ground,gaps);
           active.add(id);
         }
@@ -5423,7 +5426,7 @@ window.GRIM_CONFIG = Object.freeze({
       const signature=[gap.start,gap.end,gap.y0,gap.y1,side,bankWidth,this.height].join(':');
       const cache=this.abyssWallCache??=new Map();
       if(cache.has(signature))return cache.get(signature);
-      const hash=i=>this.groundFogHash(Math.round(gap.start*16)^Math.round(gap.end*32),side==='left'?1109+i:1613+i)/0x100000000;
+      const hash=i=>this.worldVisualHash(Math.round(gap.start*16)^Math.round(gap.end*32),side==='left'?1109+i:1613+i)/0x100000000;
       const spread=Math.min(40,width*.19),setback=Math.min(spread*.49,bankWidth*.18);
       const span=bottom-y;
       const points=[{x:start,y},{
@@ -6001,6 +6004,21 @@ window.GRIM_CONFIG = Object.freeze({
       if(meters<9999)return 'lava';
       return 'boss';
     }
+    chooseSlideSkin(ob){
+      const biome=this.obstacleBiomeFor(ob);
+      const skins=this.obstacleSpriteFamilies.get('slide:'+biome);
+      if(!skins?.length)return;
+      const previous=this.slideRotation?.biome===biome?this.slideRotation:null;
+      const all=skins.map(skin=>skin.id);
+      const bag=previous?.remaining.length?previous.remaining:all;
+      const choices=bag.length>1?bag.filter(id=>id!==previous?.last):bag;
+      // Mix this accepted encounter's position and run seed without drawing gameplay RNG.
+      const hash=this.worldVisualHash(Math.round((ob.x-this.startX)*10),this.seed);
+      const id=choices[hash%choices.length];
+      ob.slideSkin=id;
+      // Replace the whole value so rewind snapshots can share it safely.
+      this.slideRotation={biome,last:id,remaining:bag.filter(other=>other!==id)};
+    }
     obstacleSkinFor(o){
       const biome=this.obstacleBiomeFor(o);
       let family={rock:'jump',branch:'slide',fire:'fire',bramble:'cut',
@@ -6012,6 +6030,10 @@ window.GRIM_CONFIG = Object.freeze({
       if(o.type==='airBramble'&&!skins.length)
         skins=this.obstacleSpriteFamilies?.get(`cut:${biome}`)||[];
       if(!skins.length)return null;
+      if(o.type==='branch'&&o.slideSkin){
+        const assigned=skins.find(skin=>skin.id===o.slideSkin);
+        if(assigned)return assigned;
+      }
       const token=`${biome}:${family}:${Math.round((o.x-(this.startX??200))*10)}`;
       let hash=2166136261;
       for(let i=0;i<token.length;i++)hash=Math.imul(hash^token.charCodeAt(i),16777619);
