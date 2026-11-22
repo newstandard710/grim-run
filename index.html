@@ -2097,6 +2097,9 @@ window.GRIM_CONFIG = Object.freeze({
   const TERRAIN_TILE_SCALE=.75;
   const TUNDRA_TERRAIN_TILE_SCALE=.48;
 
+  function feetOverlapPlatform(x, platform) {
+    return x + 14 >= platform.x && x - 14 <= platform.x + platform.width;
+  }
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
     preload(){
@@ -3653,7 +3656,7 @@ window.GRIM_CONFIG = Object.freeze({
         const currentPlatform=platforms.find(plat=>plat.id===p.onSoulPlatform);
         if(p.grounded){
           if(p.onSoulPlatform!==false){
-            if(currentPlatform&&p.x>=currentPlatform.x&&p.x<=currentPlatform.x+currentPlatform.width){
+            if(currentPlatform&&feetOverlapPlatform(p.x,currentPlatform)){
               p.y=currentPlatform.y;p.velocityY=0;
             }else{p.onSoulPlatform=false;p.grounded=false;p.coyoteMs=0;p.velocityY=0;this.refillFlightHover();}
           }else if(localGround===null){
@@ -3680,7 +3683,7 @@ window.GRIM_CONFIG = Object.freeze({
           // One-way ledges: collide only when crossing their top from above
           // while falling. Horizontal/underside contact is never blocking.
           const landed=(!p.hovering&&p.velocityY>=0)
-            ? platforms.filter(plat=>p.x+14>=plat.x&&p.x-14<=plat.x+plat.width&&
+            ? platforms.filter(plat=>feetOverlapPlatform(p.x,plat)&&
                 priorY<=plat.y+2&&p.y>=plat.y).sort((a,b)=>a.y-b.y)[0]
             : null;
           // A rising hillside can cross the feet before the jump reaches its apex.
