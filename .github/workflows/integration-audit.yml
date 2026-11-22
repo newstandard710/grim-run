@@ -5,32 +5,28 @@ on:
 permissions:
   contents: read
 jobs:
-  replay:
+  pacing:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 9
     strategy:
       fail-fast: false
       matrix:
-        args: ['webgl 1280 720', 'canvas 740 360', 'webgl 390 844', 'canvas 740 360 compare', 'canvas 740 360 ledge']
+        base: ['fa9b464c04d0b516516f231d8a6d2af1ccdaa073', 'e0eb27c3de6e000c59d8b1430e8d5cd20773ef80']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
-      - if: endsWith(matrix.args, 'ledge')
+      - name: Compare seed 33 on the normal Phaser clock
+        env:
+          BASE: ${{ matrix.base }}
         run: |
-          git fetch --depth 1 origin d44cd3c861394f421e5198a837b9f2e7bec44036
-          git worktree add --detach "$RUNNER_TEMP/ledge-fix" d44cd3c861394f421e5198a837b9f2e7bec44036
-          echo "LANDING_BASELINE=$RUNNER_TEMP/ledge-fix" >> "$GITHUB_ENV"
-      - if: endsWith(matrix.args, 'compare')
-        run: |
-          git fetch --depth 1 origin fa9b464c04d0b516516f231d8a6d2af1ccdaa073
-          git worktree add --detach "$RUNNER_TEMP/before-foreground" fa9b464c04d0b516516f231d8a6d2af1ccdaa073
-          echo "LANDING_BASELINE=$RUNNER_TEMP/before-foreground" >> "$GITHUB_ENV"
-      - run: node tests/integration-audit.js ${{ matrix.args }}
+          git fetch --depth 1 origin "$BASE"
+          git worktree add --detach "$RUNNER_TEMP/comparison" "$BASE"
+          LANDING_BASELINE="$RUNNER_TEMP/comparison" node tests/forest-pacing-repro.js
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-${{ matrix.args }}
-          path: test-results/integration/
+          name: forest-pacing-${{ matrix.base }}
+          path: test-results/pacing/
