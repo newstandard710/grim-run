@@ -1,0 +1,26 @@
+name: Isolated integration audit
+on:
+  push:
+    branches: [qa/integration-2e5d0ed7]
+permissions:
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        args: ['webgl 1280 720', 'canvas 740 360', 'webgl 390 844']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
+      - run: node tests/integration-audit.js ${{ matrix.args }}
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-${{ matrix.args }}
+          path: test-results/integration/
