@@ -60,12 +60,22 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    assert.deepEqual(await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return {hp:s.player.hp,gold:s.coinCount,state:s.state};}),{hp:3,gold:0,state:'upgrade'});
    await page.getByRole('button',{name:'CONTINUE RUN ▶',exact:true}).click();
    await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.ui.showGun(true);s.gunUnlocked=true;s.setGodMode(true);s.powerArt.reset();s.worldPolish.reset();s.drawScene();});await shot('controls');
-   if(viewport.width>viewport.height){
+   if(viewport.width<viewport.height){
+    const wallet=await page.locator('.top-right').boundingBox();
+    const score=await page.locator('.score-inline').boundingBox();
+    assert(wallet&&score&&wallet.y+wallet.height<=score.y, label+' score clears currency');
+   }
+   {
     const boxes=await page.locator('#controls button').evaluateAll(es=>es.filter(e=>getComputedStyle(e).display!=='none').map(e=>{const r=e.getBoundingClientRect();return {id:e.id,x:r.x,y:r.y,w:r.width,h:r.height};}));
     for(const b of boxes){assert(b.x>=0&&b.y>=0&&b.x+b.w<=viewport.width+1&&b.y+b.h<=viewport.height+1,label+' '+b.id+' inside viewport');}
     for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];assert(!(a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y),label+' '+a.id+' overlaps '+b.id);}
     const jump=boxes.find(b=>b.id==='jump-btn'),slide=boxes.find(b=>b.id==='slide-btn'),cut=boxes.find(b=>b.id==='attack-btn'),shoot=boxes.find(b=>b.id==='crossbow-btn');
-    assert(Math.abs(slide.w-Math.min(91,Math.max(70,viewport.height*.21))*1.15)<.1);assert(Math.abs(slide.y-(jump.y+jump.h)-26*1.15)<.1);assert(jump.x<viewport.width/2&&cut.x>viewport.width/2&&shoot.x>viewport.width/2);
+    if(viewport.width>viewport.height){
+     assert(Math.abs(slide.w-Math.min(91,Math.max(70,viewport.height*.21))*1.15)<.1);assert(Math.abs(slide.y-(jump.y+jump.h)-26*1.15)<.1);
+    }else{
+     assert(jump.w>=44&&jump.y+jump.h<slide.y, label+' stacked portrait movement targets');
+    }
+    assert(jump.x<viewport.width/2&&cut.x>viewport.width/2&&shoot.x>viewport.width/2);
     const session=await context.newCDPSession(page);
     const point=b=>({x:b.x+b.w/2,y:b.y+b.h/2});const j=point(jump),c=point(cut);
     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...j,id:0},{...c,id:1}]});
