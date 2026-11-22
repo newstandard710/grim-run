@@ -39,6 +39,8 @@ const server=http.createServer((req,res)=>{
       const wrongSize=skins.filter(skin=>{
         if(!s.textures.exists(skin.key))return false;
         const source=s.textures.get(skin.key).getSourceImage();
+        if(skin.slideSize)return source.width!==512||source.height<120;
+        if(skin.gateSize)return source.width<skin.gateSize[0]||source.height<skin.gateSize[1];
         return skin.category==='slide'?
           source.width!==512||source.height<350:
           source.width!==skin.gameW*3||source.height!==skin.gameH*3;
@@ -106,7 +108,7 @@ const server=http.createServer((req,res)=>{
         if(grounded)s.terrain.groundAt=x=>300+(x-o.x)*.32;
         const ok=s.drawObstacleSprite(o,placement),image=s.obstacleSpriteObjects.get(o);
         const expected=placement?{width:placement.width,height:placement.height}:
-          type==='tuckGate'?{width:skin.biome==='ashlands'?196:176,height:400}:
+          type==='tuckGate'?{width:skin.gateSize?.[0]??(skin.biome==='ashlands'?196:176),height:skin.gateSize?.[1]??400}:
           type==='airBramble'?{width:148,height:218}:
           type==='snappingBramble'?{width:384*.768,height:400*.768}:
           {width:o.width*scale.x,height:o.height*scale.y};
@@ -117,7 +119,7 @@ const server=http.createServer((req,res)=>{
             {width:image.displayWidth,height:image.displayHeight}});
         }
         const reg=window.GRIM_OBSTACLE_MOUNTS[skin.id];
-        const contactX=o.x+o.width/2+((reg?.[0]??.5)-.5)*(image?.displayWidth||0);
+        const contactX=o.x+o.width/2+((reg?.[0]??.5)-.5)*(image?.displayWidth||0)+(skin.treeOffsetX??0);
         const visualGround=s.terrain.groundAt(contactX)??o.y+o.height;
         if(grounded&&(!image||image.originX!==reg[0]||Math.abs(image.x-contactX)>.001||
             image.originY!==(skin.groundAnchorY??1)||
@@ -144,16 +146,19 @@ const server=http.createServer((req,res)=>{
       const branchImage=s.obstacleSpriteObjects.get(branch);
       const branchBack=s.obstacleBackObjects.get(branch);
       const branchSupport=s.obstacleSupportObjects.get(branch);
-      const branchSkin=branchImage&&skins.find(skin=>skin.key===branchImage.texture.key);
-      if(!branchImage||Math.abs(branchImage.displayWidth-74*3.25)>.001||
-        Math.abs(branchImage.displayHeight-Math.max(s.height*1.22,475))>.001||
-        branchImage.y!==224||branchImage.originY!==1){
+      const branchSkin=s.obstacleSkinFor(branch);
+      const [branchW,branchH]=branchSkin.slideSize??[74*3.25,Math.max(s.height*1.22,475)];
+      const expectedH=branchImage?.slideFront?.height??branchH;
+      const expectedOrigin=branchImage?.slideFront?.origin??1;
+      if(!branchImage||Math.abs(branchImage.displayWidth-branchW)>.001||
+        Math.abs(branchImage.displayHeight-expectedH)>.001||
+        branchImage.y!==224||branchImage.originY!==expectedOrigin){
         renderMisses++;renderFailures.push({id:'actual-slide-render',actual:branchImage&&
           {width:branchImage.displayWidth,height:branchImage.displayHeight,y:branchImage.y,
             originY:branchImage.originY},skin:branchSkin?.id});
       }
       if(!branchBack||branchBack.y!==224||branchBack.depth!==.55||
-        branchBack.displayHeight!==branchImage?.displayHeight||
+        Math.abs(branchBack.displayHeight-branchH)>.000001||
         branchImage.depth!==16||branchImage.depth<=s.actor.depth){
         renderMisses++;renderFailures.push({id:'painted-slide-backing-missing'});
       }
@@ -183,161 +188,29 @@ const server=http.createServer((req,res)=>{
       }
       s.obstacles=oldObstacles;
       s.terrain.groundAt=oldGroundAt;s.terrain.anchorAt=oldAnchorAt;
-      const board=[
-        ['forest_jump_root-knot',106,328,'rock'],
-        ['forest_slide_root-shelf',322,252,'branch'],
-        ['forest_cut_thorny-young-pine',552,328,'bramble'],
-        ['forest_cut_corn-tangle',700,328,'bramble'],
-        ['lava_fire_lava-flare',855,328,'fire']
-      ];
-      s.add.graphics().setScrollFactor(0).setDepth(37)
-        .fillStyle(0x111722,1).fillRect(0,0,950,430);
-      const ground=s.add.graphics().setScrollFactor(0).setDepth(39);
-      ground.fillStyle(0x273339,1).fillRect(0,328,950,102);
-      ground.lineStyle(4,0x617b70,.85).lineBetween(0,328,950,328);
-      const forestSkin=skins.find(item=>item.id==='forest_slide_root-shelf');
-      s.add.image(322,348,forestSkin.supportKey).setOrigin(.5,1)
-        .setDisplaySize(74*3.25*1.6,(348-252+96)*1.6).setScrollFactor(0).setDepth(37.5)
-        .setTint(0xbfc6bf).setAlpha(.95);
-      s.add.image(322,252,forestSkin.backKey).setOrigin(.5,1)
-        .setDisplaySize(74*3.25,Math.max(s.height*1.22,475)).setScrollFactor(0).setDepth(38);
-      s.add.text(475,18,'OBSTACLE ART — PHONE-SCALE PREVIEW',{
-        fontFamily:'system-ui,Arial',fontSize:'16px',fontStyle:'bold',color:'#e8f5f4'
-      }).setOrigin(.5).setScrollFactor(0).setDepth(42);
-      for(const [id,x,y,type] of board){
-        const skin=skins.find(item=>item.id===id);
-        const scale=s.obstacleSpriteScaleFor(skin,type);
-        const baseHeight=type==='bramble'?220:skin.gameH;
-        const groundAnchored=['jump','slide','cut','fire'].includes(skin.category);
-        const inset=s.obstacleVisualInset({type});
-        const image=s.add.image(x,y+inset,skin.key).setOrigin(.5,type==='branch'?1:
-          groundAnchored?(skin.groundAnchorY??1):.5).setScrollFactor(0).setDepth(41)
-          .setDisplaySize(skin.gameW*scale.x,type==='branch'?Math.max(s.height*1.22,475):baseHeight*scale.y);
-        s.add.text(x,409,skin.category.toUpperCase(),{
-          fontFamily:'system-ui,Arial',fontSize:'10px',fontStyle:'bold',color:'#a9c4c7'
-        }).setOrigin(.5).setScrollFactor(0).setDepth(42);
-        image.setVisible(true);
-      }
       return {checked:checked.length,selectorMisses,renderMisses,renderFailures};
     });
     assert.deepEqual(exercise,{checked:96,selectorMisses:0,renderMisses:0,renderFailures:[]},
       'every biome skin is selectable, scaled, and anchored at its intended baseline');
 
-    await page.waitForTimeout(100);
-    const resultDir=path.join(root,'test-results');
-    fs.mkdirSync(resultDir,{recursive:true});
-    await page.locator('#game canvas').screenshot({path:path.join(resultDir,'obstacle-sprites-phone-scale.png')});
+    const resultDir=path.join(root,'test-results');fs.mkdirSync(resultDir,{recursive:true});
     await page.reload({waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>['home','menu'].includes(window.grimRun?.scene?.scenes?.[0]?.state));
-    const slides=[
-      ['forest','dead-bough-curtain'],['forest','root-shelf'],['forest','thorn-canopy'],
-      ['foothills','rock-lip'],['foothills','fallen-pine-overhang'],['foothills','grass-root-ledge'],
-      ['tundra','ice-lip'],['tundra','frozen-pine-limbs'],['tundra','snow-shelf'],
-      ['caves','stalactite-curtain'],['caves','fossil-rib-arch'],['caves','hanging-roots'],
-      ['crystals','blue-crystal-ceiling'],['crystals','violet-geode-shelf'],['crystals','prism-canopy'],
-      ['ashlands','charred-bough'],['ashlands','basalt-shelf'],['ashlands','blackroot-curtain'],
-      ['lava','basalt-lip'],['lava','slag-teeth'],['lava','lava-glass-shelf'],
-      ['boss','chain-stone-lintel'],['boss','bone-arch'],['boss','ruined-portcullis']
-    ];
-    for(const [biome,name] of slides){
-      const view=await page.evaluate(({biome,name})=>{
-        const s=window.grimRun.scene.scenes[0];
-        const skin=window.GRIM_OBSTACLE_SPRITES.find(item=>item.id===biome+'_slide_'+name);
-        document.querySelector('#menu')?.classList.add('hidden');
-        for(const image of window.forestArtPreview||[])image.destroy();
-        const x=475,underside=252,width=74*3.25;
-        const height=Math.max(s.height*1.22,475);
-        const staged={x:x-37,width:74};
-        const oldFloor=s.terrain.groundAt;
-        s.terrain.groundAt=wx=>328+(wx-x)*.24;
-        const fit=window.GRIM_OBSTACLE_ART.drawSlideMount(s,staged,skin,x,underside,width,height,.22);
-        const support=s.obstacleSupportObjects.get(staged);
-        const contacts=support?.mountFeet?.map(foot=>foot.y-s.terrain.groundAt(foot.x));
-        s.terrain.groundAt=oldFloor;
-        s.obstacleSupportObjects.delete(staged);
-        window.forestArtPreview=[
-          support.setScrollFactor(0),
-          s.add.image(x,underside,skin.backKey).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(.55).setScrollFactor(0).setRotation(.22),
-          s.add.image(x,underside,skin.key).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(16).setScrollFactor(0).setRotation(.22)
-        ];
-        return {fit,contacts,views:window.forestArtPreview.map(image=>
-          ({key:image.mountSource||image.texture.key,depth:image.depth}))};
-      },{biome,name});
-      assert(view.fit,biome+' '+name+' uses the production mount');
-      assert(view.contacts?.every(y=>Math.abs(y-13)<.001),
-        biome+' '+name+' places both painted feet in the slope');
-      assert.deepEqual(view.views,[
-        {key:'obstacle-support-'+biome+'_'+name,depth:.53},
-        {key:'obstacle-back-'+biome+'_'+name,depth:.55},
-        {key:'obstacle-'+biome+'_slide_'+name,depth:16}
-      ],biome+' '+name+' retains its unique aligned layer pair');
-      await page.waitForTimeout(35);
-      await page.locator('#game canvas').screenshot({path:path.join(resultDir,
-        biome+'-slide-'+name+'-phone-scene.png')});
-    }
-    await page.reload({waitUntil:'domcontentloaded'});
-    await page.waitForFunction(()=>['home','menu'].includes(window.grimRun?.scene?.scenes?.[0]?.state));
-    await page.locator('#home-enter-btn').click();await page.waitForTimeout(380);await page.locator('#start-btn').click();
-    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.state==='playing');
-    await page.evaluate(()=>{
-      const s=window.grimRun.scene.scenes[0];
-      s.state='paused';s.enemies=[];s.obstacles=[];
-    });
-    const biomePreviews=[
-      [1500,'foothills','fallen-pine-overhang'],[3400,'tundra','snow-shelf'],
-      [5500,'caves','fossil-rib-arch'],[6500,'crystals','blue-crystal-ceiling'],
-      [7500,'ashlands','charred-bough'],[9000,'lava','basalt-lip'],
-      [11000,'boss','ruined-portcullis']
-    ];
-    for(const [meters,biome,name] of biomePreviews){
-      await page.evaluate(m=>{
-        const game=window.grimRun,s=game.scene.scenes[0],ppm=window.GRIM_CONFIG.pxPerMeter;
-        s.distance=m;s.hasTeleported=m>=5000;
-        s.player.x=s.startX+m*ppm;
-        s.player.y=s.terrain.groundAt(s.player.x)??s.terrain.anchorAt(s.player.x);
-        s.player.grounded=true;s.player.velocityY=0;
-        s.cameraX=s.player.x-s.width*window.GRIM_CONFIG.reaperXRatio;
-        s.cameraY=s.player.y-s.groundY;
-        s.cameras.main.setScroll(s.cameraX,s.cameraY);
-        s.drawScene();game.step(performance.now(),0);
-      },meters);
-      await page.waitForFunction(id=>{
-        const s=window.grimRun?.scene?.scenes?.[0];
-        return s?.terrainMaterialIds?.has(id)&&
-          [...s.terrainTextureViews.values()].some(view=>view.id===id&&view.sprite.visible);
-      },biome,{timeout:45000});
-      const view=await page.evaluate(({biome,name})=>{
-        const s=window.grimRun.scene.scenes[0];
-        const skin=window.GRIM_OBSTACLE_SPRITES.find(item=>item.id===biome+'_slide_'+name);
-        for(const image of window.biomeArtPreview||[])image.destroy();
-        let worldX=s.cameraX+475;
-        for(const offset of [0,40,-40,80,-80,120,-120]){
-          const candidate=s.cameraX+475+offset;
-          if(Number.isFinite(s.terrain.groundAt(candidate))){worldX=candidate;break;}
-        }
-        const ground=s.terrain.groundAt(worldX)??s.terrain.anchorAt(worldX);
-        const underside=ground-window.GRIM_CONFIG.slideClearancePx;
-        const width=74*3.25,height=Math.max(s.height*1.22,475);
-        const staged={x:worldX-37,width:74};
-        const fit=window.GRIM_OBSTACLE_ART.drawSlideMount(s,staged,skin,worldX,underside,width,height,0);
-        const support=s.obstacleSupportObjects.get(staged);
-        s.obstacleSupportObjects.delete(staged);
-        window.biomeArtPreview=[
-          support,
-          s.add.image(worldX,underside,skin.backKey).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(.55),
-          s.add.image(worldX,underside,skin.key).setOrigin(.5,1)
-            .setDisplaySize(width,height).setDepth(16)
-        ];
-        return {fit,biome,ground,under:underside,source:support.mountSource};
-      },{biome,name});
-      assert(view.fit);
-      assert.equal(view.source,'obstacle-support-'+biome+'_'+name);
-      await page.waitForTimeout(80);
-      await page.locator('#game canvas').screenshot({path:path.join(resultDir,
-        biome+'-slide-in-biome-phone.png')});
+    await page.locator('#home-enter-btn').click();
+    await page.locator('#start-btn').click();
+    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.state==='playing');
+    await page.addScriptTag({path:path.join(__dirname,'obstacle-review-scene.js')});
+    const skins=await page.evaluate(()=>GRIM_OBSTACLE_SPRITES.filter(s=>s.category==='slide'));
+    const representative=new Set(['fallen-pine-overhang','snow-shelf','fossil-rib-arch',
+      'blue-crystal-ceiling','charred-bough','basalt-lip','ruined-portcullis']);
+    for(const skin of skins){
+      await page.evaluate(id=>obstacleReview.prepare({id,gallery:true}),skin.id);
+      await page.waitForFunction(()=>obstacleReview.ready(),null,{polling:180,timeout:60000});
+      await page.evaluate(()=>obstacleReview.inspect());
+      const file=path.join(resultDir,skin.biome+'-slide-'+skin.name+'-phone-scene.png');
+      await page.screenshot({path:file});
+      if(representative.has(skin.name))fs.copyFileSync(file,path.join(resultDir,skin.biome+'-slide-in-biome-phone.png'));
+      if(skin.id==='forest_slide_root-shelf')fs.copyFileSync(file,path.join(resultDir,'obstacle-sprites-phone-scale.png'));
+      await page.evaluate(()=>obstacleReview.cleanup());
     }
     assert.deepEqual(errors,[],'obstacle loading and rendering produce no browser exceptions');
     console.log('PASS actual Chromium: all 96 biome-exclusive obstacle sprites load, select deterministically, and render at assigned phone scale.');

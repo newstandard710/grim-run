@@ -303,9 +303,12 @@ async function parity(browser) {
     };
     // Compare the Forest scenery independently of revised supports and Reaper art.
     // The obstacle and motion suites exercise those layers at their own entry points.
-    for (const sprite of b.scene.obstacleSupportObjects.values()) sprite.destroy();
-    b.scene.obstacleSupportObjects.clear();
-    b.scene.drawObstacleSupport = () => {};
+    for (const sprites of [b.scene.obstacleSpriteObjects, b.scene.obstacleBackObjects,
+      b.scene.obstacleSupportObjects]) {
+      for (const sprite of sprites.values()) sprite.destroy();
+      sprites.clear();
+    }
+    b.scene.drawObstacle = () => {};
     b.game.events.on(Phaser.Core.Events.PRE_RENDER, () => {
       b.scene.motionArt?.hide();
       b.scene.powerArt?.hideBase();

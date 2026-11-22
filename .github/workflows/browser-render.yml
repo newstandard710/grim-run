@@ -157,7 +157,12 @@ jobs:
         run: node tests/browser-vendor-sanctuaries.js
       - name: Verify rounded ground, collectible sprites, floating ledges, destruction and smoke respawn
         if: ${{ !cancelled() && matrix.group == 'powers' }}
-        run: node tests/browser-world-polish.js
+        run: |
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          xvfb-run -a -s "-screen 0 1280x800x24" node tests/browser-world-polish.js
       - name: Verify animated powers, combined wings and summit acquisition
         if: ${{ !cancelled() && matrix.group == 'powers' }}
         run: node tests/browser-power-animations.js
