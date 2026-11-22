@@ -1,0 +1,55 @@
+name: Verify the complete integration release
+on:
+  push:
+    branches: [qa/complete-audit-verification]
+permissions:
+  contents: read
+env:
+  CANDIDATE: 5c17bc60fb4ac18af8fd0859d21e1a3a530f3449
+  PRIOR: a94b580e77493ec592672b9c99c613e884ea59d8
+  LIVE: 2e5d0ed75546939b632df373d9cb0bd5d0a66eb9
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        treatment: [startup, traced, opening-canvas, opening-webgl, landing-canvas, landing-webgl, lifecycle, portrait, ledge, landscape, desktop]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE }}
+          path: candidate
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ (matrix.treatment == 'startup' || matrix.treatment == 'traced' || startsWith(matrix.treatment, 'opening-')) && env.PRIOR || env.LIVE }}
+          path: baseline
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
+      - env:
+          TREATMENT: ${{ matrix.treatment }}
+        run: |
+          export LANDING_CANDIDATE=candidate LANDING_BASELINE=baseline
+          test "$(git -C candidate rev-parse HEAD)" = "$CANDIDATE"
+          case "$TREATMENT" in
+            startup)
+              test "$(git -C baseline rev-parse HEAD)" = "$PRIOR"
+              CASE=paired node tests/startup-profile.js ;;
+            traced) CASE=traced node tests/startup-profile.js ;;
+            opening-*) RENDERER="${TREATMENT#opening-}" node tests/opening-integrity.js ;;
+            ledge) node tests/integration-audit.js canvas 740 360 ledge ;;
+            landscape) node tests/integration-audit.js canvas 740 360 ;;
+            desktop) node tests/integration-audit.js webgl 1280 720 ;;
+            landing-*) TRIAL_RENDERER="${TREATMENT#landing-}" node tests/forest-hitch-loader-trial.js ;;
+            lifecycle) node tests/landing-lifecycle-audit.js ;;
+            portrait) node tests/portrait-audit.js ;;
+          esac
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complete-audit-${{ matrix.treatment }}
+          path: test-results

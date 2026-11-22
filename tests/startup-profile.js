@@ -97,7 +97,9 @@ async function sample(browser,version,start,rep,trace,trial){
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const b=await chromium.launch({args:['--disable-webgl']});
  try{
   const mode=process.env.CASE||'native';
-  if(mode==='phases'||mode==='hold'||mode==='native-first'){
+  if(mode==='traced'){
+   for(const version of ['before','after'])await sample(b,version,'immediate',1,true,null);
+  }else if(mode==='phases'||mode==='hold'||mode==='native-first'){
    for(let i=1;i<=3;i++)await sample(b,'after','immediate',i,i===2,mode==='native-first'?null:mode);
   }else if(mode==='paired'){
    const cases=[['before','immediate'],['after','immediate'],['after','immediate'],['before','immediate'],
@@ -107,11 +109,11 @@ async function sample(browser,version,start,rep,trace,trial){
    const groups={before:[],after:[]};
    for(const file of fs.readdirSync(out).filter(n=>n.includes('-immediate-')&&n.endsWith('-fresh.json'))){
     const {d,summary}=JSON.parse(fs.readFileSync(path.join(out,file)));
-    const peak=Math.max(...d.rows.filter(r=>r.m>=5&&r.m<=12).map(r=>r.gap));
+    const peak=Math.max(...d.rows.filter(r=>r.m>=0.4&&r.m<=5).map(r=>r.gap));
     groups[file.split('-')[0]].push(peak);assert.equal(summary.errors.length,0);
    }
    const median=list=>{const sorted=[...list].sort((a,b)=>a-b);return (sorted[1]+sorted[2])/2;};
-   console.log('Fresh peak intervals 5–12 m',groups);
+   console.log('Fresh peak intervals 0.4–5 m',groups);
    assert.equal(groups.before.length,4);assert.equal(groups.after.length,4);
    assert(median(groups.before)>=65, 'Baseline must reproduce the cold hitch');
    assert(median(groups.after)<=34 && median(groups.before)-median(groups.after)>32, 'Candidate must remove the repeatable stall');

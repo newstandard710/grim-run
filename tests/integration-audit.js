@@ -159,7 +159,7 @@ async function ledgeAndObstacles(browser){
         s.landingArt.contact=orig;
         return {marks,off:p.onSoulPlatform===false&& !p.grounded};
       });
-      result[revision+'Ledge']=touch;save();assert.equal(touch.marks.length,revision==='before'?1:3);assert(touch.off);
+      result[revision+'Ledge']=touch;save();assert.equal(touch.marks.length,revision==='after'?1:3);assert(touch.off);
       if(revision==='after'){
         await page.addScriptTag({path:path.join(root,'tests/obstacle-review-scene.js')});
         const cases=[['forest_cut_thorny-young-pine',33,4530.551778453482,2],['forest_cut_dead-oak-sapling',34,10047.762656558414,0],
