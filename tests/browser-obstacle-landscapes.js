@@ -7,7 +7,8 @@ const {createHash}=require('node:crypto');
 const {chromium}=require('playwright');
 
 const candidate=path.resolve(__dirname,'..');
-const [baselineArg,renderer,viewport]=process.argv.slice(2);
+const [baselineArg,renderer,viewport,phase='complete']=process.argv.slice(2);
+const summaryFile=['route33','route34','gallery'].includes(phase)?phase+'-summary.json':'summary.json';
 if(!baselineArg||!['canvas','webgl'].includes(renderer)||!/^\d+x\d+$/.test(viewport))
   throw Error('Usage: node tests/browser-obstacle-landscapes.js BASELINE canvas|webgl WIDTHxHEIGHT');
 const [width,height]=viewport.split('x').map(Number);
@@ -61,7 +62,7 @@ async function waitForArt(page) {
   }
 }
 
-async function playTransitions(page,revision,results){
+async function playTransitions(page,revision,results,onlySeed){
   const routes=[
     [34,[
       ['forest_cut_dead-oak-sapling',821],['foothills_slide_grass-root-ledge',2174],
@@ -71,12 +72,16 @@ async function playTransitions(page,revision,results){
     [33,[['lava_slide_lava-glass-shelf',9918]]]
   ];
   for(const [seed,stops] of routes){
+    if(onlySeed && seed!==onlySeed)continue;
     await page.evaluate(seed=>obstacleReview.beginRoute(seed),seed);
     for(const [id,m] of stops){
       const key='route-'+id+'-'+seed;
       let encounter;
-      for(let segment=0;segment<32&&!encounter;segment++)
+      for(let segment=0;segment<160&&!encounter;segment++){
         encounter=await page.evaluate(spec=>obstacleReview.seekRoute(spec),{id,m,range:2});
+        if(!encounter)await page.waitForFunction(()=>!grimRun.scene.scenes[0].biomeMidground.stream.pending,
+          null,{polling:150,timeout:30000});
+      }
       assert(encounter,key+' naturally spawned in the populated scene');
       await waitForArt(page);
       const art=await page.evaluate(()=>obstacleReview.inspect());
@@ -121,6 +126,14 @@ async function measure(page,revision,cases,extras=true){
   const actual=await page.evaluate(()=>[grimRun.renderer.type,grimRun.canvas.width,grimRun.canvas.height]);
   assert.deepEqual(actual,[renderer==='canvas'?1:2,width,height]);
   const results={};
+  if(phase.startsWith('route')){
+    await playTransitions(page,revision,results,Number(phase.slice(5)));
+    assert.deepEqual(errors,[]);return results;
+  }
+  if(phase==='gallery'){
+    if(revision==='after')results.gallery=await captureGallery(page);
+    assert.deepEqual(errors,[]);return results;
+  }
   for(const [id,seed,x,variant] of cases){
     const key=id+'-'+seed;
     const dir=path.join(out,key,revision);
@@ -185,8 +198,8 @@ async function measure(page,revision,cases,extras=true){
   });
   results.portal={trace:hash(arrival.states),ticks:arrival.states.length};
   await fs.writeFile(path.join(out,'first-portal-'+revision+'.jpg'),Buffer.from(arrival.frame,'base64'));
-  if(revision==='after' && width===740)results.gallery=await captureGallery(page);
-  if(width===950) {
+  if(phase==='complete' && revision==='after' && width===740)results.gallery=await captureGallery(page);
+  if(phase==='complete' && width===950) {
     try {await playTransitions(page,revision,results);}
     catch(error){results.routesFailure={error:error.message};console.error(revision,error.message);}
   }
@@ -200,7 +213,7 @@ async function measure(page,revision,cases,extras=true){
   const browser=await chromium.launch({headless:true,args:renderer==='canvas'?['--no-sandbox','--disable-webgl']:
     ['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try{
-    const cases=[...pilot,...remaining];
+    const cases=['complete','controls'].includes(phase)?[...pilot,...remaining]:[];
     const summary={};
     for(const revision of ['before','after']){
       // Independent seeded starts use a fresh WebGL context. Natural
@@ -208,11 +221,21 @@ async function measure(page,revision,cases,extras=true){
       const batches=renderer==='webgl' ? [...cases.map(spec=>[spec]),[]] : [cases];
       summary[revision]={};
       for(let i=0;i<batches.length;i++){
-        const page=await browser.newPage({viewport:{width,height},hasTouch:true});
-        try{
-          Object.assign(summary[revision],await measure(page,revision,batches[i],i===batches.length-1));
-        }finally{await page.close();}
-        await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(summary,null,2));
+        let firstLoadError;
+        for(let attempt=0;attempt<2;attempt++){
+          const page=await browser.newPage({viewport:{width,height},hasTouch:true});
+          try{
+            const captures=await measure(page,revision,batches[i],i===batches.length-1);
+            Object.assign(summary[revision],captures);
+            if(firstLoadError)summary[revision].sceneLoadRetry={firstLoadError};
+            break;
+          }catch(error){
+            if(attempt || !error.message.includes('Scenery readiness:'))throw error;
+            firstLoadError=error.message;
+            console.warn(revision,phase,firstLoadError);
+          }finally{await page.close();}
+        }
+        await fs.writeFile(path.join(out,summaryFile),JSON.stringify(summary,null,2));
       }
       // Atlas downloads can time out on shared software-rendering runners.
       // Retry a failed load once from a fresh page and preserve the diagnostic.
@@ -226,11 +249,11 @@ async function measure(page,revision,cases,extras=true){
           summary[revision][key]={...checked[key],firstLoadError:previous.error};
         }finally{await retry.close();}
       }
-      await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(summary,null,2));
+      await fs.writeFile(path.join(out,summaryFile),JSON.stringify(summary,null,2));
     }
     for(const [revision,result] of Object.entries(summary))
       assert.deepEqual(Object.entries(result).filter(([,v])=>v.error),[],revision+' all captures complete');
-    for(const key of Object.keys(summary.before)){
+    for(const key of Object.keys(summary.before).filter(k=>k!=='sceneLoadRetry')){
       assert.equal(summary.after[key].trace,summary.before[key].trace,key+' frame-for-frame gameplay parity');
       assert.equal(summary.after[key].unprotectedTrace,summary.before[key].unprotectedTrace,key+' missed counter parity');
     }

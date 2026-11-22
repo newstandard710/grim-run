@@ -204,7 +204,7 @@ const server=http.createServer((req,res)=>{
       'blue-crystal-ceiling','charred-bough','basalt-lip','ruined-portcullis']);
     for(const skin of skins){
       await page.evaluate(id=>obstacleReview.prepare({id,gallery:true}),skin.id);
-      await page.waitForFunction(()=>obstacleReview.ready(),null,{timeout:60000});
+      await page.waitForFunction(()=>obstacleReview.ready(),null,{polling:180,timeout:60000});
       await page.evaluate(()=>obstacleReview.inspect());
       const file=path.join(resultDir,skin.biome+'-slide-'+skin.name+'-phone-scene.png');
       await page.screenshot({path:file});

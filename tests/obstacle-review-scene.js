@@ -22,9 +22,16 @@
     }
     throw Error('No legal gallery position for ' + skin.id);
   }
+  let galleryWorld;
   function prepare(spec) {
-    history.replaceState(null,'','?seed=' + (spec.seed ?? 33));
-    s.startRun();
+    const seed=spec.seed??33;
+    history.replaceState(null,'','?seed='+seed);
+    // The static gallery moves around one course. Restarting between skins
+    // briefly loads Forest and aborts legitimate in-flight scenery requests.
+    if(!spec.gallery || galleryWorld?.seed!==seed){
+      s.startRun();
+      galleryWorld=spec.gallery?{seed,coins:s.coins,souls:s.souls}:null;
+    }
     game.loop.sleep();
     skin = window.GRIM_OBSTACLE_SPRITES.find(item => item.id === spec.id);
     const type = familyTypes[skin.category];
@@ -64,8 +71,8 @@
     s.nextEncounterX = x + 1800;
     s.nextEnemySpawnX = s.nextGroundSpawnX = s.nextSnapSpawnX = x + 2600;
     s.obstacles = [obstacle]; s.enemies = []; s.fireballs = []; s.bullets = [];
-    s.coins = s.coins.filter(c => Math.abs(c.x-x) < 1500);
-    s.souls = s.souls.filter(c => Math.abs(c.x-x) < 1500);
+    s.coins = (galleryWorld?.coins??s.coins).filter(c => Math.abs(c.x-x) < 1500);
+    s.souls = (galleryWorld?.souls??s.souls).filter(c => Math.abs(c.x-x) < 1500);
     for (const tip of s.tips) tip.label.destroy();
     s.tips = [];
     s.tipped = new Set(['rock','fire','bramble','branch','tuckGate','airBramble','abyss']);
@@ -176,7 +183,7 @@
   }
   function seekRoute(spec) {
     s.drawScene=()=>{};
-    for(let i=0;i<900;i++) {
+    for(let i=0;i<180;i++) {
       routeStep();
       if(s.state!=='playing')continue;
       const o=s.obstacles.find(o=>!o.destroyed && o.x-s.player.x>=170 && o.x-s.player.x<=280 &&
@@ -184,7 +191,6 @@
       if(o){
         obstacle=o;skin=s.obstacleSkinFor(o);
         s.drawScene=drawWorld;
-        s.biomeMidground?.prioritizeTeleport(s.distance);
         s.drawScene();render();
         return {x:o.x,m:(o.x-s.startX)/C.pxPerMeter,playerX:s.player.x,
           weights:window.GRIM_WORLD_ART.biomeWeights((o.x-s.startX)/C.pxPerMeter),
@@ -194,6 +200,9 @@
       }
       if(s.distance>spec.m+spec.range)throw Error('Natural encounter missed: '+spec.id+' at '+s.distance);
     }
+    // Give the production streamer its normal camera progression between
+    // recorded encounters, including prefetch as the next biome approaches.
+    s.drawScene=drawWorld;s.drawScene();render();
     return null;
   }
   function routeFrame() {

@@ -17,8 +17,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        renderer: [canvas, webgl]
-        viewport: [740x360, 950x430, 360x740]
+        include:
+          - { renderer: canvas, viewport: 740x360, phase: complete }
+          - { renderer: canvas, viewport: 950x430, phase: complete }
+          - { renderer: canvas, viewport: 360x740, phase: complete }
+          - { renderer: webgl, viewport: 740x360, phase: controls }
+          - { renderer: webgl, viewport: 950x430, phase: controls }
+          - { renderer: webgl, viewport: 360x740, phase: controls }
+          - { renderer: webgl, viewport: 950x430, phase: route33, artifact_suffix: -route33 }
+          - { renderer: webgl, viewport: 950x430, phase: route34, artifact_suffix: -route34 }
+          - { renderer: webgl, viewport: 740x360, phase: gallery, artifact_suffix: -gallery }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,13 +43,14 @@ jobs:
           BASE_REVISION: ${{ github.event.pull_request.base.sha }}
           RENDERER: ${{ matrix.renderer }}
           VIEWPORT: ${{ matrix.viewport }}
+          PHASE: ${{ matrix.phase }}
         run: |
           git fetch --depth 1 origin "$BASE_REVISION"
           git worktree add --detach "$RUNNER_TEMP/obstacle-base" "$BASE_REVISION"
-          node tests/browser-obstacle-landscapes.js "$RUNNER_TEMP/obstacle-base" "$RENDERER" "$VIEWPORT"
+          node tests/browser-obstacle-landscapes.js "$RUNNER_TEMP/obstacle-base" "$RENDERER" "$VIEWPORT" "$PHASE"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: obstacle-${{ matrix.renderer }}-${{ matrix.viewport }}
+          name: obstacle-${{ matrix.renderer }}-${{ matrix.viewport }}${{ matrix.artifact_suffix }}
           path: test-results/obstacle-landscapes/
           if-no-files-found: ignore
