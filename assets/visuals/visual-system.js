@@ -227,6 +227,13 @@
     'crawler_crawl_04_v1.png':{bytes:759683,sha256:'c553ee9797f533486e8cfcf2a736f5fbb6efda8aca616d91668acdaed1ef86e2'},
     'ember_imp_atlas_v1.png':{bytes:282882,sha256:'e07deb8e2b82355c8b89333d8aec3f1c98fcc4a411828128623d90874f1f194c'}
   });
+  // Precompute the eight CRC-32 shifts for each byte once. PNG verification
+  // runs as artwork arrives, including during the opening Forest frames.
+  const PNG_CRC_TABLE=Uint32Array.from({length:256},(_,byte)=>{
+    let crc=byte;
+    for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);
+    return crc;
+  });
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);
     if(b.length!==meta.bytes)throw new Error('PNG byte count mismatch');
@@ -235,7 +242,7 @@
     while(p+12<=b.length){
       const n=v.getUint32(p);if(n>b.length-p-12)throw new Error('Incomplete PNG chunk');
       let crc=0xffffffff;
-      for(let i=p+4;i<p+8+n;i++){crc^=b[i];for(let k=0;k<8;k++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}
+      for(let i=p+4;i<p+8+n;i++)crc=(crc>>>8)^PNG_CRC_TABLE[(crc^b[i])&255];
       if(((crc^0xffffffff)>>>0)!==v.getUint32(p+8+n))throw new Error('PNG checksum mismatch');
       const type=String.fromCharCode(...b.subarray(p+4,p+8));p+=n+12;
       if(type==='IEND'){end=true;break;}
