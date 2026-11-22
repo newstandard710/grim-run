@@ -40,6 +40,7 @@
     const ground = s.terrain.groundAt(x);
     obstacle = type === 'tuckGate' ? s.obstacles.find(o => o.type === type && Math.abs(o.x-x) < .01) :
       window.GRIM_CORE.obstacle(type,x,ground,spec.variant ?? 0,C.slideClearancePx,s.height);
+    if (spec.slideSkin && obstacle) obstacle.slideSkin=spec.slideSkin;
     if (!obstacle || s.obstacleSkinFor(obstacle)?.id !== skin.id) throw Error('Seed/skin mismatch: '+skin.id+' at '+x);
     gap = type === 'tuckGate' ? s.terrain.sectionAt(x) : null;
     if (gap && gap.kind !== 'gap') throw Error('Gate requires a generated gap');
@@ -228,12 +229,14 @@
       routeStep();
       if(s.state!=='playing')continue;
       const o=s.obstacles.find(o=>!o.destroyed && o.x-s.player.x>=170 && o.x-s.player.x<=280 &&
-        Math.abs((o.x-s.startX)/C.pxPerMeter-spec.m)<=spec.range && s.obstacleSkinFor(o)?.id===spec.id);
+        Math.abs((o.x-s.startX)/C.pxPerMeter-spec.m)<=spec.range &&
+        (o.slideSkin ? spec.id.startsWith(s.obstacleBiomeFor(o)+'_slide_') &&
+          s.obstacleSkinFor(o)?.id===o.slideSkin : s.obstacleSkinFor(o)?.id===spec.id));
       if(o){
         obstacle=o;skin=s.obstacleSkinFor(o);
         s.drawScene=drawWorld;
         s.drawScene();render();
-        return {x:o.x,m:(o.x-s.startX)/C.pxPerMeter,playerX:s.player.x,
+        return {skin:skin.id,x:o.x,m:(o.x-s.startX)/C.pxPerMeter,playerX:s.player.x,
           weights:window.GRIM_WORLD_ART.biomeWeights((o.x-s.startX)/C.pxPerMeter),
           actors:s.enemies.filter(e=>Math.abs(e.x-s.player.x)<s.width).map(e=>e.kind),
           objects:s.obstacles.filter(b=>Math.abs(b.x-s.player.x)<s.width).map(b=>b.type),

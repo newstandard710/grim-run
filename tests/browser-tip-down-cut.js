@@ -171,6 +171,13 @@ async function measure(browser,renderer,revision){
       const flags=renderer==='canvas'?['--disable-webgl']:['--use-angle=swiftshader','--enable-unsafe-swiftshader'];
       const browser=await chromium.launch({args:['--no-sandbox',...flags]});
       try{
+        if(renderer==='canvas'){
+          const run=require('./browser-running-grip');
+          const origin='http://127.0.0.1:'+server.address().port;
+          const previous=baseline&&await run(browser,origin,'before');
+          const current=await run(browser,origin,'after');
+          if(previous)assert.deepEqual(current,previous,'fully loaded body, planted gait and rigid scythe match the base');
+        }
         if(baseline)await measure(browser,renderer,'before');
         await measure(browser,renderer,'after');
       }finally{await browser.close();}

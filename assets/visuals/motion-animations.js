@@ -282,9 +282,11 @@
     }
     return boxes;
   }
-  function queueRunSheet(scene){
-    const key='motion-reaper-run-solid',url='assets/motion/v0194/reaper-run.webp?v=5';
-    const frames={frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1};
+  const legacyRun={key:'motion-reaper-run-solid',url:'assets/motion/v0194/reaper-run.webp?v=5',
+    width:RUN?.cell,height:RUN?.cell,frames:RUN?.frames};
+  function queueRunSheet(scene,art){
+    const {key,url}=art;
+    const frames={frameWidth:art.width,frameHeight:art.height,endFrame:art.frames-1};
     const phaser=scope.Phaser,game=scene.sys?.game;
     if(!phaser?.Loader?.FileTypes?.SpriteSheetFile || game?.renderer?.type!==phaser.CANVAS ||
        !scope.createImageBitmap || scene.load.imageLoadType==='HTMLImageElement'){
@@ -325,7 +327,9 @@
     if(DATA.visualCutWeapon)s.load.image('motion-cut-scythe',ROOT+'reaper-cut-scythe.png?v=1');
     if(CUT_HANDOFF)s.load.spritesheet(CUT_HANDOFF_KEY,ROOT+'reaper-cut-handoffs.webp?v=2',
       {frameWidth:CUT_HANDOFF.cell,frameHeight:CUT_HANDOFF.cell,endFrame:CUT_HANDOFF.poses.length-1});
-    if(RUN)queueRunSheet(s);
+    if(RUN){
+      for(const art of FORWARD?[FORWARD.carry,FORWARD.weapon]:[legacyRun])queueRunSheet(s,art);
+    }
   }
   function queueAirDetails(s){
     const motion=s.motionArt,loader=scope.GRIM_ACTOR_TEXTURES;
@@ -334,12 +338,16 @@
     loader.load(s,AIR_CUT_ART,()=>{motion.airCutReady=motion.airDetailsValid(AIR_CUT_ART);});
     if(FORWARD){
       loader.load(s,AIR_CLOTH,()=>{motion.airClothReady=true;});
-      const stages=[FORWARD.carry,FORWARD.cut,FORWARD.weapon],available=new Set();
-      for(const art of stages)loader.load(s,art,()=>{
-        const isWeapon=art===FORWARD.weapon;
-        if(motion.airDetailsValid(art,isWeapon?100:25,isWeapon?850:280))available.add(art.key);
-        motion.forwardReady=available.size===stages.length;
+      loader.load(s,FORWARD.cut,()=>{
+        motion.forwardReady=motion.carryReady&&motion.airDetailsValid(FORWARD.cut);
       });
+      // Keep the older planted strip available if either held component failed.
+      if(RUN&&!motion.runReady){
+        s.load.once('filecomplete-spritesheet-'+legacyRun.key,()=>{
+          motion.runReady=motion.legacyRunValid();
+        });
+        queueRunSheet(s,legacyRun);
+      }
       scope.GRIM_RISING_CUT?.preload(s,motion);
     }
   }
@@ -367,9 +375,10 @@
         }catch(e){this.ready=false;s.visuals?.failedAssets?.push(String(e));}
       }
       if(!this.ready)return;
-      this.runReady=!!RUN&&s.textures.exists('motion-reaper-run-solid')&&
-        Array.from({length:RUN.frames},(_,i)=>s.textures.get('motion-reaper-run-solid').has(i)).every(Boolean);
-      this.cutHandoffReady=this.runReady&&!!CUT_HANDOFF&&s.textures.exists(CUT_HANDOFF_KEY)&&
+      this.carryReady=!!(RUN&&FORWARD&&s.textures.exists(FORWARD.carry.key)&&s.textures.exists(FORWARD.weapon.key)&&
+        this.airDetailsValid(FORWARD.carry)&&this.airDetailsValid(FORWARD.weapon,100,850));
+      this.runReady=this.carryReady||this.legacyRunValid();
+      this.cutHandoffReady=!!RUN&&!!CUT_HANDOFF&&s.textures.exists(CUT_HANDOFF_KEY)&&
         CUT_HANDOFF.poses.every((_,i)=>s.textures.get(CUT_HANDOFF_KEY).has(i));
       this.body=[0,1].map(()=>s.add.image(0,0,'motion-reaper-run',0).setDepth(12.09)
         .setOrigin(DATA.anchor[0]/DATA.cell[0],DATA.anchor[1]/DATA.cell[1]).setVisible(false));
@@ -381,6 +390,11 @@
         .setDepth(12.08).setVisible(false);
       this.trail=s.add.graphics().setDepth(12.07);
       s.events?.once?.('shutdown',()=>this.destroy());
+    }
+    legacyRunValid(){
+      const textures=this.scene.textures;
+      return !!RUN&&textures.exists(legacyRun.key)&&
+        Array.from({length:RUN.frames},(_,i)=>textures.get(legacyRun.key).has(i)).every(Boolean);
     }
     airDetailsValid(art,minOpaque=25,maxOpaque=280){
       const {key,width,height,columns,frames}=art;
@@ -446,9 +460,9 @@
       }
     }
     forwardPose(p,name,progress,runCell,registeredFrame,solidRun){
-      if(!this.forwardActive)return null;
       const body=FORWARD.carry;
-      if(name==='reaper-run'&&solidRun)return {art:body,frame:runCell%(RUN.frames/RUN.gaitsPerSheet)};
+      if(name==='reaper-run'&&solidRun&&this.carryReady)return {art:body,frame:runCell%(RUN.frames/RUN.gaitsPerSheet)};
+      if(!this.forwardActive)return null;
       if(name==='reaper-jump'&&this.forwardAir&&registeredFrame!==null&&registeredFrame<26)
         return {art:body,frame:96+registeredFrame};
       if(name!=='reaper-cut-body'||!this.forwardAttack)return null;
