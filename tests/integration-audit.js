@@ -60,7 +60,7 @@ async function play(page) {
       if(!o) return {missing:true,meters:s.distance,obstacles:s.obstacles.map(x=>[x.type,x.x])};
       grimRun.step(performance.now(),0);return {x:o.x,meters:s.distance,skin:s.obstacleSkinFor(o).id,hp:s.player.hp};
     });
-    if(start.missing) {result.runs.push(start);save();break;}
+    assert(!start.missing,'seed 33 must reach its first overhead gate');
     if(run===0)await page.screenshot({path:path.join(output,'forest-approach.png')});
     await input(page,'slide',true);
     const cross=await page.evaluate(()=>{
@@ -142,7 +142,7 @@ async function pace(page,entry=0) {
 }
 
 async function ledgeAndObstacles(browser){
-  for(const revision of ['after','before']){
+  for(const revision of process.argv[5]==='obstacles'?['after']:['after','before']){
     const page=await browser.newPage({viewport,hasTouch:true,deviceScaleFactor:1});
     try{
       await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=78');
@@ -202,7 +202,7 @@ async function comparePacing(browser){
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const b=await chromium.launch({args:mode==='canvas'?['--disable-webgl']:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try{
-    if(process.argv[5]==='ledge')return await ledgeAndObstacles(b);
+    if(['ledge','obstacles'].includes(process.argv[5]))return await ledgeAndObstacles(b);
     if(process.argv[5]==='compare')return await comparePacing(b);
     const page=await b.newPage({viewport,hasTouch:mobile,deviceScaleFactor:1});
     page.on('pageerror',e=>result.errors.push(e.message));

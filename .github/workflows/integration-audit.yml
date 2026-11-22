@@ -1,27 +1,51 @@
-name: Isolated integration audit
+name: Verify Grim Runner audit candidate
 on:
   push:
-    branches: [qa/integration-2e5d0ed7]
+    branches: [qa/integration-113]
 permissions:
   contents: read
+env:
+  BASE_REV: 2e5d0ed75546939b632df373d9cb0bd5d0a66eb9
+  AUDIT_REV: 4cd13aea011607f0376817128506454a617fa393
 jobs:
-  trial:
+  verify:
     strategy:
       fail-fast: false
       matrix:
-        renderer: [canvas, webgl]
+        check: [canvas, webgl, portrait, portrait-combos, landscape-combos, desktop-combos, obstacles]
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
+    timeout-minutes: 14
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_REV }}
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.AUDIT_REV }}
+          path: candidate
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
-      - name: Play seed 33 with an isolated browser-response trial
-        run: LANDING_BASELINE="$GITHUB_WORKSPACE" TRIAL_RENDERER=${{ matrix.renderer }} node tests/forest-hitch-loader-trial.js
+      - name: Play both exact trees and save observed results
+        env:
+          CHECK: ${{ matrix.check }}
+        run: |
+          export LANDING_BASELINE="$GITHUB_WORKSPACE/baseline" LANDING_CANDIDATE="$GITHUB_WORKSPACE/candidate"
+          test "$(git -C baseline rev-parse HEAD)" = "$BASE_REV"
+          test "$(git -C candidate rev-parse HEAD)" = "$AUDIT_REV"
+          case "$CHECK" in
+            canvas|webgl) TRIAL_RENDERER="$CHECK" node tests/forest-hitch-loader-trial.js ;;
+            portrait) node tests/portrait-audit.js ;;
+            portrait-combos) node tests/integration-audit.js webgl 390 844 ;;
+            landscape-combos) node tests/integration-audit.js canvas 740 360 ;;
+            desktop-combos) node tests/integration-audit.js webgl 1280 720 ;;
+            obstacles) node tests/integration-audit.js canvas 740 360 obstacles ;;
+          esac
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: loader-trial-${{ matrix.renderer }}
-          path: test-results/loader-trial/
+          name: integration-${{ matrix.check }}
+          path: test-results/
