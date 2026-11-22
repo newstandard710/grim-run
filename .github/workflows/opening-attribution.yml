@@ -1,0 +1,30 @@
+name: Opening frame attribution
+on:
+  push:
+    branches: [qa/opening-frame-attribution]
+permissions:
+  contents: read
+jobs:
+  measure:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [native-first, phases, hold]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: a94b580e77493ec592672b9c99c613e884ea59d8
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
+      - run: LANDING_CANDIDATE=candidate LANDING_BASELINE=candidate CASE=${{ matrix.mode }} node tests/startup-profile.js
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opening-attribution-${{ matrix.mode }}
+          path: test-results/startup

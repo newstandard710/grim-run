@@ -56,8 +56,18 @@ async function sample(browser,version,start,rep,trace,trial){
     assert(code.includes(old));code=code.replace('  function validateReviewPNG(', '  const lookup=Uint32Array.from({length:256},(_,v)=>{for(let bit=0;bit<8;bit++)v=(v>>>1)^((v&1)?0xedb88320:0);return v;});\n  function validateReviewPNG(')
       .replace(old,'for(let i=p+4;i<p+8+n;i++)crc=(crc>>>8)^lookup[(crc^b[i])&255];');
    }
+   if(trial==='phases'||trial==='hold'){
+    const fn='async function verifiedReviewURL(path,meta){';
+    const awaitChecksum="const digest=await scope.crypto.subtle.digest('SHA-256',buffer);";
+    const makeURL="return URL.createObjectURL(new Blob([buffer],{type:'image/png'}));";
+    assert(code.includes(fn)&&code.includes(awaitChecksum)&&code.includes(makeURL));
+    const gate=trial==='hold' ? "if(!path.includes('run-cycle-balanced-v1/') && !path.includes('run-cycle-mobile-v1/'))await (window.secondaryGate??=new Promise(r=>{window.releaseSecondary=r;}));" : '';
+    code=code.replace(fn,fn+gate+"const stamp=(kind,t)=>window.startupObs.crc.push({url:path,kind,t,dt:performance.now()-t});")
+      .replace(awaitChecksum,"const beginDigest=performance.now();const promise=scope.crypto.subtle.digest('SHA-256',buffer);stamp('digest dispatch',beginDigest);const digest=await promise;")
+      .replace(makeURL,"const beginBlob=performance.now();const data=new Blob([buffer],{type:'image/png'});stamp('blob',beginBlob);const beginURL=performance.now();const url=URL.createObjectURL(data);stamp('url',beginURL);return url;");
+   }
    const call='validateReviewPNG(buffer,meta);';assert(code.includes(call));
-   code=code.replace(call,'const auditT=performance.now();'+call+'window.startupObs.crc.push({url:path,t:auditT,dt:performance.now()-auditT});');
+   code=code.replace(call,'const auditT=performance.now();'+call+'window.startupObs.crc.push({url:path,kind:"crc",t:auditT,dt:performance.now()-auditT});');
    await route.fulfill({response:res,body:code});
   });
  }
@@ -68,6 +78,7 @@ async function sample(browser,version,start,rep,trace,trial){
   await page.locator('#home-enter-btn').click();await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.ui);
   if(start==='delayed')await page.waitForTimeout(4000);
   for(let i=0;i<2;i++){
+   if(i&&trial==='hold')await page.evaluate(async()=>{window.releaseSecondary();await grimRun.scene.scenes[0].visuals.reviewLoad;});
    if(i)await page.evaluate(()=>grimRun.scene.scenes[0].goToMenu());
    const label=[version,start,rep,trial||'native',i?'warm':'fresh'].join('-');
    await page.evaluate(arm,label);await page.locator('#start-btn').click();const d=await page.evaluate(()=>observed);
@@ -86,7 +97,9 @@ async function sample(browser,version,start,rep,trace,trial){
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const b=await chromium.launch({args:['--disable-webgl']});
  try{
   const mode=process.env.CASE||'native';
-  if(mode==='paired'){
+  if(mode==='phases'||mode==='hold'||mode==='native-first'){
+   for(let i=1;i<=3;i++)await sample(b,'after','immediate',i,i===2,mode==='native-first'?null:mode);
+  }else if(mode==='paired'){
    const cases=[['before','immediate'],['after','immediate'],['after','immediate'],['before','immediate'],
     ['before','delayed'],['after','delayed'],['after','delayed'],['before','delayed'],
     ['after','immediate'],['before','immediate'],['before','immediate'],['after','immediate']];
