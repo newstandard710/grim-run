@@ -5,40 +5,23 @@ on:
 permissions:
   contents: read
 jobs:
-  trace:
+  trial:
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [canvas, webgl]
     runs-on: ubuntu-24.04
-    timeout-minutes: 9
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
-      - name: Trace consecutive landed revisions on the same runner
-        run: |
-          for sha in 2b501a20987a5dd64be48c2df1030b1192096c57 3d07db4a3efac2661dc9538a2e6ad6b9bea253bf; do
-            git fetch --depth 1 origin "$sha"
-            git worktree add --detach "$RUNNER_TEMP/$sha" "$sha"
-            TEST_SHA="$sha" LANDING_BASELINE="$RUNNER_TEMP/$sha" node tests/forest-hitch-profile.js
-          done
+      - name: Play seed 33 with an isolated browser-response trial
+        run: LANDING_BASELINE="$GITHUB_WORKSPACE" TRIAL_RENDERER=${{ matrix.renderer }} node tests/forest-hitch-loader-trial.js
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: adjacent-browser-traces
-          path: test-results/hitch-profile/
-  controls:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
-      - name: Compare first-action and image-source controls on live game bytes
-        run: LANDING_BASELINE="$GITHUB_WORKSPACE" node tests/forest-hitch-controls.js
-      - if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: first-use-controls
-          path: test-results/hitch-controls/
+          name: loader-trial-${{ matrix.renderer }}
+          path: test-results/loader-trial/
