@@ -8,7 +8,6 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader']});
  const context=await browser.newContext({viewport:{width:950,height:430},recordVideo:{dir,size:{width:950,height:430}}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
- const captureSession=await context.newCDPSession(page);
  async function bounded(stage,operation){
   let timer;
   try{
@@ -20,23 +19,50 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
  const shot=async name=>{
   const floating=name.startsWith('floating-encounter-');
   console.log(name+' Phaser step started');
-  await bounded(name+' Phaser step',page.evaluate(()=>window.grimRun.step(performance.now(),0)));
-  console.log(name+' Phaser step finished');
   const file=path.join(dir,'polish-'+name+'.png');
   let pixels;
   if(floating){
-   // The page records video throughout. Check GPU completion separately from
-   // Chromium's viewport capture, and retain the full composited page and HUD.
-   await bounded(name+' GPU completion',page.evaluate(()=>{
-    const gl=window.grimRun.renderer.gl;
+   // Freeze this exact WebGL frame in the same browser task as the draw. The
+   // recorder can keep the real viewport and HUD while the still is captured.
+   const samples=await bounded(name+' render and readback',page.evaluate(()=>{
+    const game=window.grimRun,canvas=game.canvas,gl=game.renderer.gl;
+    game.step(performance.now(),0);
     gl.finish();
     if(gl.isContextLost())throw Error('WebGL context lost before platform capture');
+    const rect=canvas.getBoundingClientRect();
+    if(rect.x!==0||rect.y!==0||rect.width!==950||rect.height!==430||
+       canvas.width!==950||canvas.height!==430||!document.querySelector('#hud').getClientRects().length)
+     throw Error('Expected a 950×430 game frame with the HUD visible');
+    const still=document.createElement('canvas');
+    still.id='platform-capture-frame';
+    still.width=canvas.width;still.height=canvas.height;
+    const ctx=still.getContext('2d',{willReadFrequently:true});
+    ctx.drawImage(canvas,0,0);
+    const data=ctx.getImageData(0,0,still.width,still.height).data,samples=[];
+    for(let y=120;y<=260;y+=20)for(let x=180;x<=740;x+=40){
+     const i=(y*still.width+x)*4;
+     samples.push([x,y,data[i],data[i+1],data[i+2]]);
+    }
+    // Keep the original canvas attached and preserve its layout and all UI layers.
+    Object.assign(still.style,{position:'fixed',left:'0',top:'0',width:'950px',height:'430px'});
+    canvas.after(still);
+    canvas.style.visibility='hidden';
+    return samples;
    }));
-   console.log(name+' GPU finished, viewport capture started');
-   const capture=await bounded(name+' viewport capture',
-    captureSession.send('Page.captureScreenshot',{format:'png',fromSurface:false}));
-   pixels=Buffer.from(capture.data,'base64');
+   try{
+    pixels=await page.screenshot({timeout:30000});
+   }finally{
+    await page.evaluate(()=>{
+     window.grimRun.canvas.style.removeProperty('visibility');
+     document.getElementById('platform-capture-frame')?.remove();
+    });
+   }
    const frame=PNG.sync.read(pixels);
+   const matched=samples.filter(([x,y,r,g,b])=>{
+    const i=4*(y*frame.width+x);
+    return Math.max(Math.abs(r-frame.data[i]),Math.abs(g-frame.data[i+1]),Math.abs(b-frame.data[i+2]))<=2;
+   });
+   assert(matched.length>=samples.length*.95,name+' viewport contains this exact rendered game frame');
    assert.equal(frame.width,950);assert.equal(frame.height,430);
    const colors=new Set();
    for(let y=80;y<350;y+=8)for(let x=40;x<910;x+=8){
@@ -45,7 +71,10 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    }
    assert(colors.size>64,name+' viewport contains rendered scenery');
    fs.writeFileSync(file,pixels);
-  }else pixels=await page.screenshot({path:file,timeout:30000});
+  }else{
+   await bounded(name+' Phaser step',page.evaluate(()=>window.grimRun.step(performance.now(),0)));
+   pixels=await page.screenshot({path:file,timeout:30000});
+  }
   console.log(name+' screenshot finished');
   return pixels;
  };
