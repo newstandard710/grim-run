@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.17</title>
+  <title>GRIM RUN — v0.19.18</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -278,14 +278,14 @@ button {cursor:pointer;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
 </style>
-  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=home1">
+  <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=f6193372dcea">
   <link rel="preload" as="script" href="assets/vendor/phaser-3.90.0/phaser.min.js">
 </head>
 <body>
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.17</div>
+    <div class="home-edition">GRIM RUN · v0.19.18</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="critical-health-halo" class="hidden" aria-hidden="true"></div>
@@ -326,7 +326,7 @@ button {cursor:pointer;}
       <p id="portal-art-load-error" role="alert" class="hidden">Portal and mist artwork failed to load. Refresh to retry.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.17</div>
+      <div class="mini">v0.19.18</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -471,7 +471,7 @@ button {cursor:pointer;}
   </div>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.17',
+  version: '0.19.18',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -1986,10 +1986,10 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
   <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
   <script src="assets/visuals/rising-cut.js?v=ground-drag1"></script>
-  <script src="assets/visuals/motion-animations.js?v=tuck-scale1"></script>
+  <script src="assets/visuals/motion-animations.js?v=bbd1821018db"></script>
   <script src="assets/motion/landing/poses.js?v=1"></script>
   <script src="assets/visuals/landing-motion.js?v=1"></script>
-  <script src="assets/visuals/actor-transition-textures.js?v=0.19.12"></script>
+  <script src="assets/visuals/actor-transition-textures.js?v=eadfe1fa192f"></script>
   <script src="assets/visuals/slide-animations.js?v=rear-carry1"></script>
   <script src="assets/combat/v0170/animation-data.js?v=0.19.3"></script>
   <script src="assets/visuals/bat-flight.js?v=0.19.3"></script>
@@ -1998,7 +1998,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/combat/v0201/animation-data.js?v=1"></script>
   <script src="assets/visuals/reaper-reaction.js?v=rear-carry1"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=home1"></script>
-  <script src="assets/visuals/visual-system.js?v=character-motion1"></script>
+  <script src="assets/visuals/visual-system.js?v=b04ba4700885"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=landscapes-1"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=landscapes-1"></script>
   <script src="assets/visuals/obstacle-mounts.js?v=landscapes-1"></script>
@@ -2097,6 +2097,9 @@ window.GRIM_CONFIG = Object.freeze({
   const TERRAIN_TILE_SCALE=.75;
   const TUNDRA_TERRAIN_TILE_SCALE=.48;
 
+  function feetOverlapPlatform(x, platform) {
+    return x + 14 >= platform.x && x - 14 <= platform.x + platform.width;
+  }
   class GameScene extends Phaser.Scene {
     constructor() { super('GrimRun'); }
     preload(){
@@ -3653,7 +3656,7 @@ window.GRIM_CONFIG = Object.freeze({
         const currentPlatform=platforms.find(plat=>plat.id===p.onSoulPlatform);
         if(p.grounded){
           if(p.onSoulPlatform!==false){
-            if(currentPlatform&&p.x>=currentPlatform.x&&p.x<=currentPlatform.x+currentPlatform.width){
+            if(currentPlatform&&feetOverlapPlatform(p.x,currentPlatform)){
               p.y=currentPlatform.y;p.velocityY=0;
             }else{p.onSoulPlatform=false;p.grounded=false;p.coyoteMs=0;p.velocityY=0;this.refillFlightHover();}
           }else if(localGround===null){
@@ -3680,7 +3683,7 @@ window.GRIM_CONFIG = Object.freeze({
           // One-way ledges: collide only when crossing their top from above
           // while falling. Horizontal/underside contact is never blocking.
           const landed=(!p.hovering&&p.velocityY>=0)
-            ? platforms.filter(plat=>p.x+14>=plat.x&&p.x-14<=plat.x+plat.width&&
+            ? platforms.filter(plat=>feetOverlapPlatform(p.x,plat)&&
                 priorY<=plat.y+2&&p.y>=plat.y).sort((a,b)=>a.y-b.y)[0]
             : null;
           // A rising hillside can cross the feet before the jump reaches its apex.

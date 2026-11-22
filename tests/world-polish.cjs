@@ -8,6 +8,33 @@ for(const [,attrs,body]of html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g))
 vm.runInContext(fs.readFileSync(path.join(root,'assets/visuals/obstacle-catalog.js'),'utf8'),w);
 const C=w.GRIM_CONFIG;
 function scene(seed=33){w.location.search='?seed='+seed;const s=new w.GrimGameScene();s.scale={width:950,height:430,on(){},off(){}};s.events={once(){}};s.add={graphics:node,text:node};s.cameras={main:{setScroll(){}}};s.create();s.drawScene=()=>{};s.startRun();return s;}
+// A single jump onto the first summit ledge must produce only one touchdown,
+// including the last frames when just the back of the foot overlaps the ledge.
+for (const step of [1000/30, 1000/60, 1000/120]) {
+  const run = scene(78);
+  const ledge = run.soulPlatform[0];
+  const p = run.player;
+  p.x = ledge.x - 220;
+  p.y = run.terrain.groundAt(p.x);
+  run.distance = (p.x - run.startX) / C.pxPerMeter;
+  run.nextVendorNumber = 8;
+  run.jump();
+  run.startSlide();
+  let contacts = 0;
+  let previousSlideMs = 0;
+  run.landingArt = {contact() { if (p.onSoulPlatform === ledge.id) contacts++; }};
+  while (p.x <= ledge.x + ledge.width + 14) {
+    run.update(0, step);
+    if (p.onSoulPlatform === ledge.id) {
+      assert.equal(p.y, ledge.y);
+      assert(p.sliding && p.slideMs > previousSlideMs, 'Held Slide should advance across the ledge');
+      previousSlideMs = p.slideMs;
+    }
+  }
+  assert.equal(contacts, 1, 'One jump produces one ledge touchdown');
+  assert.equal(p.onSoulPlatform, false, 'The foot has cleared the far edge');
+  assert.equal(p.grounded, false);
+}
 let hills=0,crests=0,samples=0,maxChordError=0;
 for(let seed=1;seed<=30;seed++){
  const t=w.GRIM_TERRAIN.makeTerrain(seed,339,200,12);t.advance(242000);

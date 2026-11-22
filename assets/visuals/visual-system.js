@@ -227,6 +227,13 @@
     'crawler_crawl_04_v1.png':{bytes:759683,sha256:'c553ee9797f533486e8cfcf2a736f5fbb6efda8aca616d91668acdaed1ef86e2'},
     'ember_imp_atlas_v1.png':{bytes:282882,sha256:'e07deb8e2b82355c8b89333d8aec3f1c98fcc4a411828128623d90874f1f194c'}
   });
+  // Precompute the eight CRC-32 shifts for each byte once. PNG verification
+  // runs as artwork arrives, including during the opening Forest frames.
+  const PNG_CRC_TABLE=Uint32Array.from({length:256},(_,byte)=>{
+    let crc=byte;
+    for(let bit=0;bit<8;bit++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);
+    return crc;
+  });
   function validateReviewPNG(buffer,meta){
     const b=new Uint8Array(buffer),v=new DataView(buffer);
     if(b.length!==meta.bytes)throw new Error('PNG byte count mismatch');
@@ -235,7 +242,7 @@
     while(p+12<=b.length){
       const n=v.getUint32(p);if(n>b.length-p-12)throw new Error('Incomplete PNG chunk');
       let crc=0xffffffff;
-      for(let i=p+4;i<p+8+n;i++){crc^=b[i];for(let k=0;k<8;k++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}
+      for(let i=p+4;i<p+8+n;i++)crc=(crc>>>8)^PNG_CRC_TABLE[(crc^b[i])&255];
       if(((crc^0xffffffff)>>>0)!==v.getUint32(p+8+n))throw new Error('PNG checksum mismatch');
       const type=String.fromCharCode(...b.subarray(p+4,p+8));p+=n+12;
       if(type==='IEND'){end=true;break;}
@@ -243,7 +250,7 @@
     if(!end||p!==b.length)throw new Error('PNG end marker missing or trailing data');
     return true;
   }
-  async function verifiedReviewURL(path,meta){
+  async function verifiedReviewBlob(path,meta){
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
     try{
       const response=await fetch(path+'?sha256='+meta.sha256,{cache:'no-store',signal:controller.signal});
@@ -254,8 +261,51 @@
         const hex=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
         if(hex!==meta.sha256)throw new Error('PNG SHA-256 mismatch');
       }
-      return URL.createObjectURL(new Blob([buffer],{type:'image/png'}));
+      return new Blob([buffer],{type:'image/png'});
     }finally{clearTimeout(timeout);}
+  }
+
+  // Use the same versioned script and integrity checks in both contexts.
+  if(typeof DedicatedWorkerGlobalScope!=='undefined' && scope instanceof DedicatedWorkerGlobalScope){
+    scope.onmessage=async({data:{id,path,meta}})=>{
+      try{
+        const blob=await verifiedReviewBlob(path,meta);
+        scope.postMessage({id,blob});
+      }catch(error){scope.postMessage({id,error:String(error)});}
+    };
+    return;
+  }
+  const verifierScript=scope.document?.currentScript?.src;
+  function backgroundVerifier(scene){
+    if(!verifierScript || !scope.Worker || !scope.Phaser ||
+       scene.sys?.game?.renderer?.type!==scope.Phaser.CANVAS)return null;
+    let worker;
+    try{worker=new scope.Worker(verifierScript);}catch{return null;}
+    const pending=new Map();
+    let nextId=0;
+    function stop(){
+      worker?.terminate();worker=null;
+      for(const job of pending.values())job.resolve(null);
+      pending.clear();
+    }
+    worker.onerror=event=>{event.preventDefault();stop();};
+    worker.onmessageerror=stop;
+    worker.onmessage=({data:{id,blob,error}})=>{
+      const job=pending.get(id);
+      if(!job)return;
+      pending.delete(id);
+      if(error)job.reject(new Error(error));
+      else job.resolve(blob);
+    };
+    return {stop,read(path,meta){
+      if(!worker)return null;
+      const id=++nextId;
+      return new Promise((resolve,reject)=>{
+        pending.set(id,{resolve,reject});
+        try{worker.postMessage({id,path:new URL(path,scope.document.baseURI).href,meta});}
+        catch{stop();}
+      });
+    }};
   }
 
   class GrimVisualSystem{
@@ -445,7 +495,13 @@
       const firstRunPose=V2_REAPER_RUN[0];
       const fetchVerified=async(base,meta)=>{
         try{
-          const url=await verifiedReviewURL(base+meta.file,REVIEW_INTEGRITY[meta.file]);
+          if(this.disposed)return null;
+          const path=base+meta.file,integrity=REVIEW_INTEGRITY[meta.file];
+          let blob=await this.reviewVerifier?.read(path,integrity);
+          if(this.disposed)return null;
+          if(!blob)blob=await verifiedReviewBlob(path,integrity);
+          if(this.disposed)return null;
+          const url=URL.createObjectURL(blob);
           urls.push(url);return {meta,url};
         }catch(e){errors.add(meta.key);this.failedAssets.push(meta.file+': '+String(e));return null;}
       };
@@ -464,6 +520,7 @@
         for(const {url} of entries){const i=urls.indexOf(url);if(i>=0)urls.splice(i,1);URL.revokeObjectURL(url);}
       };
       const installReaper=names=>{
+        if(this.disposed)return;
         for(const name of names){
           const meta=V2_REAPER[name];
           if(errors.has(meta.key)||!s.textures.exists(meta.key))continue;
@@ -491,6 +548,7 @@
         if(this.disposed)return;
 
         // Finish all twelve compact run drawings before starting secondary art.
+        this.reviewVerifier=backgroundVerifier(s);
         const runNames=V2_REAPER_RUN.filter(name=>name!==firstRunPose);
         await loadNames(reaperBase,runNames.map(name=>[name,V2_REAPER[name]]));
         installReaper(V2_REAPER_RUN);
@@ -507,6 +565,7 @@
           loadNames(reaperBase,otherReaper),
           loadNames(batBase,batEntries)
         ]);
+        if(this.disposed)return;
         installReaper(otherReaper.map(([name])=>name));
         for(const [name,meta] of Object.entries(V2_BAT))
           if(errors.has(meta.key)||!s.textures.exists(meta.key))
@@ -597,7 +656,7 @@
         for(const url of urls)URL.revokeObjectURL(url);
         this.reviewV2=false;setStartReady(true);
         this.failedAssets.push('v2 loader: '+String(e));this.loaded=true;
-      });
+      }).finally(()=>{this.reviewVerifier?.stop();this.reviewVerifier=null;});
       return true;
     }
     illustratedReaperPose(){
@@ -845,6 +904,7 @@
     }
     shutdown(){
       this.disposed=true;
+      this.reviewVerifier?.stop();
       if(this.reaper){this.reaper.destroy();this.reaper=null;}
       for(const sprite of Object.values(this.reaperPoseSprites))if(sprite!==this.reaper)sprite.destroy();
       this.reaperPoseSprites={};

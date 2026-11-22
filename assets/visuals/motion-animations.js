@@ -282,6 +282,40 @@
     }
     return boxes;
   }
+  function queueRunSheet(scene){
+    const key='motion-reaper-run-solid',url='assets/motion/v0194/reaper-run.webp?v=5';
+    const frames={frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1};
+    const phaser=scope.Phaser,game=scene.sys?.game;
+    if(!phaser?.Loader?.FileTypes?.SpriteSheetFile || game?.renderer?.type!==phaser.CANVAS ||
+       !scope.createImageBitmap || scene.load.imageLoadType==='HTMLImageElement'){
+      scene.load.spritesheet(key,url,frames);return;
+    }
+    // Reuse Phaser's original request, frame parser and error path. Decode this
+    // required sheet during preload so its first Canvas draw already has pixels.
+    const file=new phaser.Loader.FileTypes.SpriteSheetFile(scene.load,key,url,frames);
+    const normal=file.onProcess;
+    file.onProcess=async function(){
+      const blob=this.xhrLoader?.response;
+      if(!(blob instanceof Blob)){normal.call(this);return;}
+      const loader=this.loader;
+      const active=()=>loader.queue?.contains(this) && !game.pendingDestroy;
+      this.state=phaser.Loader.FILE_PROCESSING;
+      let bitmap;
+      try{bitmap=await scope.createImageBitmap(blob);}
+      catch{if(active())normal.call(this);return;}
+      if(!active()){bitmap.close();return;}
+      this.data=bitmap;
+      const textures=this.cache;
+      this.onProcessComplete();
+      if(!textures.exists(key)||textures.get(key).getSourceImage()!==bitmap){bitmap.close();return;}
+      const remove=phaser.Textures.Events.REMOVE_KEY+key;
+      const close=()=>{
+        textures.off(remove,close);game.events.off('destroy',close);bitmap.close();
+      };
+      textures.once(remove,close);game.events.once('destroy',close);
+    };
+    scene.load.addFile(file);
+  }
   function preload(s){
     if(!DATA||!s.load?.spritesheet)return;
     for(const [name,m]of Object.entries(DATA.sheets))s.load.spritesheet('motion-'+name,
@@ -291,8 +325,7 @@
     if(DATA.visualCutWeapon)s.load.image('motion-cut-scythe',ROOT+'reaper-cut-scythe.png?v=1');
     if(CUT_HANDOFF)s.load.spritesheet(CUT_HANDOFF_KEY,ROOT+'reaper-cut-handoffs.webp?v=2',
       {frameWidth:CUT_HANDOFF.cell,frameHeight:CUT_HANDOFF.cell,endFrame:CUT_HANDOFF.poses.length-1});
-    if(RUN)s.load.spritesheet('motion-reaper-run-solid','assets/motion/v0194/reaper-run.webp?v=5',
-      {frameWidth:RUN.cell,frameHeight:RUN.cell,endFrame:RUN.frames-1});
+    if(RUN)queueRunSheet(s);
   }
   function queueAirDetails(s){
     const motion=s.motionArt,loader=scope.GRIM_ACTOR_TEXTURES;
