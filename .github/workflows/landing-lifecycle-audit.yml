@@ -1,0 +1,26 @@
+name: Landing loader lifecycle audit
+on:
+  push:
+    branches: [qa/landing-lifecycle-113]
+permissions:
+  contents: read
+jobs:
+  lifecycle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 4cd13aea011607f0376817128506454a617fa393
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.56.1 && npx playwright install chromium
+      - run: LANDING_BASELINE=candidate LANDING_CANDIDATE=candidate node tests/landing-lifecycle-audit.js
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecycle
+          path: test-results/lifecycle/
