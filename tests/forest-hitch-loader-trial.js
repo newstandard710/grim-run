@@ -46,7 +46,15 @@ function installTrial(mode) {
           frameWidth: art.width, frameHeight: art.height, endFrame: art.frames - 1
         });
         if (!texture) { bitmap.close(); fallback(); return; }
-        texture.once('destroy', () => bitmap.close());
+        const removeKey = Phaser.Textures.Events.REMOVE_KEY + art.key;
+        const gameEvents = scene.sys.game.events;
+        function closeSource() {
+          scene.textures.off(removeKey, closeSource);
+          gameEvents.off('destroy', closeSource);
+          bitmap.close();
+        }
+        scene.textures.once(removeKey, closeSource);
+        gameEvents.once('destroy', closeSource);
         trial.registered = performance.now();
         ready();
       }, fallback);
