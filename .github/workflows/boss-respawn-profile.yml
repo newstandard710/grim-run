@@ -1,0 +1,40 @@
+name: Boss respawn source profile
+on:
+  push:
+    branches: ['qa-boss/**']
+    paths:
+      - 'tests/boss-respawn-profile.js'
+      - '.github/workflows/boss-respawn-profile.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paired:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        block: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare the two exact builds and Chromium
+        env:
+          BASE: 82751bc826116c36f9626dbcde39316c703823a7
+          CANDIDATE: f7ade1d0c2621fa90a51cd8abcc815b0d57077c7
+        run: |
+          git fetch --depth 1 origin "$BASE" "$CANDIDATE"
+          git worktree add --detach "$RUNNER_TEMP/slide-A" "$BASE"
+          git worktree add --detach "$RUNNER_TEMP/slide-B" "$CANDIDATE"
+          npm install --no-save playwright@1.56.1
+          npx playwright install chromium
+      - name: Run paired WebGL trials at 360 × 740
+        run: node tests/boss-respawn-profile.js "$RUNNER_TEMP/slide-A" "$RUNNER_TEMP/slide-B" "${{ matrix.block }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: boss-profile-${{ matrix.block }}
+          path: test-results/boss-respawn-profile/
