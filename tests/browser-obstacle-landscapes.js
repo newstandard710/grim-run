@@ -94,6 +94,22 @@ async function playTransitions(page,revision,results){
   }
 }
 
+async function captureGallery(page){
+  const ids=await page.evaluate(()=>GRIM_OBSTACLE_SPRITES.filter(s=>s.category==='slide').map(s=>s.id));
+  assert.equal(ids.length,24);
+  const dir=path.join(out,'gallery');
+  await fs.mkdir(dir,{recursive:true});
+  const captures={};
+  for(const id of ids){
+    await page.evaluate(id=>obstacleReview.prepare({id,gallery:true}),id);
+    await waitForArt(page);
+    captures[id]=await page.evaluate(()=>obstacleReview.inspect());
+    await page.screenshot({path:path.join(dir,id+'-phone-scene.png')});
+    await page.evaluate(()=>obstacleReview.cleanup());
+  }
+  return captures;
+}
+
 async function measure(page,revision,cases,extras=true){
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33',{waitUntil:'domcontentloaded'});
@@ -169,6 +185,7 @@ async function measure(page,revision,cases,extras=true){
   });
   results.portal={trace:hash(arrival.states),ticks:arrival.states.length};
   await fs.writeFile(path.join(out,'first-portal-'+revision+'.jpg'),Buffer.from(arrival.frame,'base64'));
+  if(revision==='after' && width===740)results.gallery=await captureGallery(page);
   if(width===950) {
     try {await playTransitions(page,revision,results);}
     catch(error){results.routesFailure={error:error.message};console.error(revision,error.message);}
@@ -186,9 +203,17 @@ async function measure(page,revision,cases,extras=true){
     const cases=[...pilot,...remaining];
     const summary={};
     for(const revision of ['before','after']){
-      const page=await browser.newPage({viewport:{width,height},hasTouch:true});
-      try{summary[revision]=await measure(page,revision,cases);}
-      finally{await page.close();}
+      // Independent seeded starts use a fresh WebGL context. Natural
+      // transitions and the rotation/rewind replay keep their context live.
+      const batches=renderer==='webgl' ? [...cases.map(spec=>[spec]),[]] : [cases];
+      summary[revision]={};
+      for(let i=0;i<batches.length;i++){
+        const page=await browser.newPage({viewport:{width,height},hasTouch:true});
+        try{
+          Object.assign(summary[revision],await measure(page,revision,batches[i],i===batches.length-1));
+        }finally{await page.close();}
+        await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(summary,null,2));
+      }
       // Atlas downloads can time out on shared software-rendering runners.
       // Retry a failed load once from a fresh page and preserve the diagnostic.
       for(const [key,previous] of Object.entries(summary[revision])){

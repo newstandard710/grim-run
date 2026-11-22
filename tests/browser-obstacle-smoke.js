@@ -158,7 +158,7 @@ const server=http.createServer((req,res)=>{
             originY:branchImage.originY},skin:branchSkin?.id});
       }
       if(!branchBack||branchBack.y!==224||branchBack.depth!==.55||
-        branchBack.displayHeight!==branchH||
+        Math.abs(branchBack.displayHeight-branchH)>.000001||
         branchImage.depth!==16||branchImage.depth<=s.actor.depth){
         renderMisses++;renderFailures.push({id:'painted-slide-backing-missing'});
       }
