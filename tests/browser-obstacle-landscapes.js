@@ -53,6 +53,39 @@ function stats(values){
   return {n:values.length,median:at(.5),p95:at(.95),p99:at(.99)};
 }
 
+async function playTransitions(page,revision,results){
+  const routes=[
+    [34,[
+      ['forest_cut_dead-oak-sapling',821],['foothills_slide_grass-root-ledge',2174],
+      ['crystals_air-bramble_floating-prism-briar',6091],['ashlands_slide_basalt-shelf',7032],
+      ['lava_air-bramble_ember-air-briar',8122]
+    ]],
+    [33,[['lava_slide_lava-glass-shelf',9918]]]
+  ];
+  for(const [seed,stops] of routes){
+    await page.evaluate(seed=>obstacleReview.beginRoute(seed),seed);
+    for(const [id,m] of stops){
+      const key='route-'+id+'-'+seed;
+      let encounter;
+      for(let segment=0;segment<32&&!encounter;segment++)
+        encounter=await page.evaluate(spec=>obstacleReview.seekRoute(spec),{id,m,range:2});
+      assert(encounter,key+' naturally spawned in the populated scene');
+      await page.waitForFunction(()=>obstacleReview.ready(),null,{timeout:45000});
+      const art=await page.evaluate(()=>obstacleReview.inspect());
+      const dir=path.join(out,key,revision);
+      await fs.mkdir(dir,{recursive:true});
+      const trace=[];
+      for(let frame=0;frame<18;frame++){
+        const sample=await page.evaluate(()=>obstacleReview.routeFrame());
+        trace.push(...sample.states);
+        await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
+      }
+      results[key]={encounter,art,trace:hash(trace)};
+      console.log(revision,key,JSON.stringify(results[key]));
+    }
+  }
+}
+
 async function measure(page,revision,cases){
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33',{waitUntil:'domcontentloaded'});
@@ -113,6 +146,7 @@ async function measure(page,revision,cases){
   });
   results.portal={trace:hash(arrival.states),ticks:arrival.states.length};
   await fs.writeFile(path.join(out,'first-portal-'+revision+'.jpg'),Buffer.from(arrival.frame,'base64'));
+  if(width===950)await playTransitions(page,revision,results);
   assert.deepEqual(errors,[]);
   return results;
 }

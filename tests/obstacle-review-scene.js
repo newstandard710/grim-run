@@ -131,6 +131,56 @@
       s.nextEncounterX,s.nextVendorNumber,s.terrain.groundAt(p.x),s.fallCount];
   }
   function image() { render();return game.canvas.toDataURL('image/jpeg',.87).split(',')[1]; }
+  // Play the seeded route with its own spawner, actors, rewards and state
+  // transitions. Only skip drawing the stretches between review windows.
+  const drawWorld=s.drawScene;
+  function beginRoute(seed) {
+    history.replaceState(null,'','?seed='+seed);
+    s.drawScene=drawWorld;
+    s.startRun();
+    game.loop.sleep();
+    s.godMode=true;
+    for(const tip of s.tips)tip.label.destroy();
+    s.tips=[];
+    s.tipped=new Set(['rock','fire','bramble','branch','tuckGate','airBramble','snappingBramble','abyss']);
+  }
+  function routeStep() {
+    if(s.state==='upgrade')s.leaveVendor();
+    const next=s.terrain.segments.find(segment=>segment.kind==='gap' && segment.start>=s.player.x-5);
+    if(s.player.grounded && next && next.start-s.player.x<=20)s.jump();
+    s.update(0,1000/60);
+  }
+  function seekRoute(spec) {
+    s.drawScene=()=>{};
+    for(let i=0;i<900;i++) {
+      routeStep();
+      if(s.state!=='playing')continue;
+      const o=s.obstacles.find(o=>!o.destroyed && o.x-s.player.x>=170 && o.x-s.player.x<=280 &&
+        Math.abs((o.x-s.startX)/C.pxPerMeter-spec.m)<=spec.range && s.obstacleSkinFor(o)?.id===spec.id);
+      if(o){
+        obstacle=o;skin=s.obstacleSkinFor(o);
+        s.drawScene=drawWorld;
+        s.biomeMidground?.prioritizeTeleport(s.distance);
+        s.drawScene();render();
+        return {x:o.x,m:(o.x-s.startX)/C.pxPerMeter,playerX:s.player.x,
+          weights:window.GRIM_WORLD_ART.biomeWeights((o.x-s.startX)/C.pxPerMeter),
+          actors:s.enemies.filter(e=>Math.abs(e.x-s.player.x)<s.width).map(e=>e.kind),
+          objects:s.obstacles.filter(b=>Math.abs(b.x-s.player.x)<s.width).map(b=>b.type),
+          coins:s.coins.filter(c=>!c.taken && Math.abs(c.x-s.player.x)<s.width).length};
+      }
+      if(s.distance>spec.m+spec.range)throw Error('Natural encounter missed: '+spec.id+' at '+s.distance);
+    }
+    return null;
+  }
+  function routeFrame() {
+    const states=[];
+    for(let i=0;i<4;i++){
+      routeStep();render();
+      states.push([s.state,s.player.x,s.player.y,s.player.hp,s.rng.state,s.distance,s.points,
+        s.nextEncounterX,obstacle.dealtDamage,s.enemies.map(e=>[e.kind,e.x,e.y,e.hp])]);
+    }
+    return {frame:image(),states};
+  }
   function startPortal() {
     history.replaceState(null,'','?seed=35');
     s.startRun();
@@ -162,6 +212,6 @@
     const leaked=Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-mounted-')||k.startsWith('obstacle-registered-'));
     if (leaked.length) throw Error('Leaked obsolete art: '+leaked.join(', '));
   }
-  window.obstacleReview={prepare,ready,inspect,step,signature,image,cleanup,render,startPortal,
+  window.obstacleReview={prepare,ready,inspect,step,signature,image,cleanup,render,startPortal,beginRoute,seekRoute,routeFrame,
     get result(){return {firstCut,firstHit,airTucked,inputSent,passed:s.player.x>obstacle.x+obstacle.width};}};
 })();
