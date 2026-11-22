@@ -111,6 +111,56 @@
     }
   },
   {
+    "id": "forest_slide_cathedral-cedar",
+    "category": "slide",
+    "biome": "forest",
+    "biomeTitle": "Forest",
+    "name": "cathedral-cedar",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/forest/cathedral-cedar.webp",
+    "key": "obstacle-forest_slide_cathedral-cedar",
+    "landform": {
+      "lip": [
+        59,
+        406
+      ],
+      "footY": 473,
+      "feet": [
+        227,
+        284
+      ],
+      "scale": 1.3,
+      "openTop": true,
+      "title": "Cathedral cedar"
+    }
+  },
+  {
+    "id": "forest_slide_nurse-log-colonnade",
+    "category": "slide",
+    "biome": "forest",
+    "biomeTitle": "Forest",
+    "name": "nurse-log-colonnade",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/forest/nurse-log-colonnade.webp",
+    "key": "obstacle-forest_slide_nurse-log-colonnade",
+    "landform": {
+      "lip": [
+        59,
+        425
+      ],
+      "footY": 492,
+      "feet": [
+        230,
+        284
+      ],
+      "scale": 1.3,
+      "openTop": true,
+      "title": "Nurse-log colonnade"
+    }
+  },
+  {
     "id": "forest_cut_thorny-young-pine",
     "category": "cut",
     "biome": "forest",
@@ -265,6 +315,54 @@
     }
   },
   {
+    "id": "foothills_slide_pinnacle-window",
+    "category": "slide",
+    "biome": "foothills",
+    "biomeTitle": "Foothills",
+    "name": "pinnacle-window",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/foothills/pinnacle-window.webp",
+    "key": "obstacle-foothills_slide_pinnacle-window",
+    "landform": {
+      "lip": [
+        59,
+        444
+      ],
+      "footY": 511,
+      "feet": [
+        247,
+        293
+      ],
+      "scale": 1.3,
+      "title": "Sandstone window"
+    }
+  },
+  {
+    "id": "foothills_slide_hanging-cirque",
+    "category": "slide",
+    "biome": "foothills",
+    "biomeTitle": "Foothills",
+    "name": "hanging-cirque",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/foothills/hanging-cirque.webp",
+    "key": "obstacle-foothills_slide_hanging-cirque",
+    "landform": {
+      "lip": [
+        59,
+        463
+      ],
+      "footY": 530,
+      "feet": [
+        233,
+        287
+      ],
+      "scale": 1.3,
+      "title": "Hanging cirque"
+    }
+  },
+  {
     "id": "foothills_cut_aspen-scrub",
     "category": "cut",
     "biome": "foothills",
@@ -412,6 +510,54 @@
       ],
       "scale": 0.8,
       "title": "Serac buttress"
+    }
+  },
+  {
+    "id": "tundra_slide_serac-bridge",
+    "category": "slide",
+    "biome": "tundra",
+    "biomeTitle": "Tundra",
+    "name": "serac-bridge",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/tundra/serac-bridge.webp",
+    "key": "obstacle-tundra_slide_serac-bridge",
+    "landform": {
+      "lip": [
+        59,
+        406
+      ],
+      "footY": 473,
+      "feet": [
+        240,
+        288
+      ],
+      "scale": 1.3,
+      "title": "Serac bridge"
+    }
+  },
+  {
+    "id": "tundra_slide_avalanche-gallery",
+    "category": "slide",
+    "biome": "tundra",
+    "biomeTitle": "Tundra",
+    "name": "avalanche-gallery",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/tundra/avalanche-gallery.webp",
+    "key": "obstacle-tundra_slide_avalanche-gallery",
+    "landform": {
+      "lip": [
+        59,
+        425
+      ],
+      "footY": 492,
+      "feet": [
+        231,
+        288
+      ],
+      "scale": 1.3,
+      "title": "Avalanche gallery"
     }
   },
   {
@@ -565,6 +711,56 @@
     }
   },
   {
+    "id": "caves_slide_flowstone-organ",
+    "category": "slide",
+    "biome": "caves",
+    "biomeTitle": "Caves",
+    "name": "flowstone-organ",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/caves/flowstone-organ.webp",
+    "key": "obstacle-caves_slide_flowstone-organ",
+    "landform": {
+      "lip": [
+        59,
+        444
+      ],
+      "footY": 511,
+      "feet": [
+        241,
+        292
+      ],
+      "scale": 1.3,
+      "openTop": true,
+      "title": "Flowstone organ"
+    }
+  },
+  {
+    "id": "caves_slide_vault-pendant",
+    "category": "slide",
+    "biome": "caves",
+    "biomeTitle": "Caves",
+    "name": "vault-pendant",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/caves/vault-pendant.webp",
+    "key": "obstacle-caves_slide_vault-pendant",
+    "landform": {
+      "lip": [
+        59,
+        463
+      ],
+      "footY": 530,
+      "feet": [
+        240,
+        290
+      ],
+      "scale": 1.3,
+      "openTop": true,
+      "title": "Limestone vault pendant"
+    }
+  },
+  {
     "id": "caves_cut_root-bramble",
     "category": "cut",
     "biome": "caves",
@@ -709,6 +905,54 @@
     }
   },
   {
+    "id": "crystals_slide_amethyst-cathedral",
+    "category": "slide",
+    "biome": "crystals",
+    "biomeTitle": "Crystal Caverns",
+    "name": "amethyst-cathedral",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/crystals/amethyst-cathedral.webp",
+    "key": "obstacle-crystals_slide_amethyst-cathedral",
+    "landform": {
+      "lip": [
+        58,
+        406
+      ],
+      "footY": 473,
+      "feet": [
+        237,
+        287
+      ],
+      "scale": 1.3,
+      "title": "Amethyst cathedral"
+    }
+  },
+  {
+    "id": "crystals_slide_gypsum-fan",
+    "category": "slide",
+    "biome": "crystals",
+    "biomeTitle": "Crystal Caverns",
+    "name": "gypsum-fan",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/crystals/gypsum-fan.webp",
+    "key": "obstacle-crystals_slide_gypsum-fan",
+    "landform": {
+      "lip": [
+        59,
+        425
+      ],
+      "footY": 492,
+      "feet": [
+        236,
+        288
+      ],
+      "scale": 1.3,
+      "title": "Selenite fan vault"
+    }
+  },
+  {
     "id": "crystals_cut_crystal-vine",
     "category": "cut",
     "biome": "crystals",
@@ -850,6 +1094,54 @@
       ],
       "scale": 0.8,
       "title": "Cinder buttress"
+    }
+  },
+  {
+    "id": "ashlands_slide_caldera-chimney",
+    "category": "slide",
+    "biome": "ashlands",
+    "biomeTitle": "Ashlands",
+    "name": "caldera-chimney",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/ashlands/caldera-chimney.webp",
+    "key": "obstacle-ashlands_slide_caldera-chimney",
+    "landform": {
+      "lip": [
+        59,
+        444
+      ],
+      "footY": 511,
+      "feet": [
+        233,
+        288
+      ],
+      "scale": 1.3,
+      "title": "Caldera chimney"
+    }
+  },
+  {
+    "id": "ashlands_slide_petrified-crown",
+    "category": "slide",
+    "biome": "ashlands",
+    "biomeTitle": "Ashlands",
+    "name": "petrified-crown",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/ashlands/petrified-crown.webp",
+    "key": "obstacle-ashlands_slide_petrified-crown",
+    "landform": {
+      "lip": [
+        59,
+        463
+      ],
+      "footY": 530,
+      "feet": [
+        233,
+        288
+      ],
+      "scale": 1.3,
+      "title": "Petrified crown"
     }
   },
   {
@@ -1006,6 +1298,55 @@
     }
   },
   {
+    "id": "lava_slide_basalt-palisade",
+    "category": "slide",
+    "biome": "lava",
+    "biomeTitle": "Lava",
+    "name": "basalt-palisade",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/lava/basalt-palisade.webp",
+    "key": "obstacle-lava_slide_basalt-palisade",
+    "landform": {
+      "lip": [
+        59,
+        406
+      ],
+      "footY": 473,
+      "feet": [
+        226,
+        285
+      ],
+      "scale": 1.3,
+      "openTop": true,
+      "title": "Basalt palisade"
+    }
+  },
+  {
+    "id": "lava_slide_hornito-vault",
+    "category": "slide",
+    "biome": "lava",
+    "biomeTitle": "Lava",
+    "name": "hornito-vault",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/lava/hornito-vault.webp",
+    "key": "obstacle-lava_slide_hornito-vault",
+    "landform": {
+      "lip": [
+        59,
+        425
+      ],
+      "footY": 492,
+      "feet": [
+        227,
+        283
+      ],
+      "scale": 1.3,
+      "title": "Hornito vault"
+    }
+  },
+  {
     "id": "lava_cut_ember-root-plant",
     "category": "cut",
     "biome": "lava",
@@ -1149,6 +1490,54 @@
       ],
       "scale": 0.8,
       "title": "Sealed gatehouse"
+    }
+  },
+  {
+    "id": "boss_slide_flying-buttress",
+    "category": "slide",
+    "biome": "boss",
+    "biomeTitle": "Boss",
+    "name": "flying-buttress",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/boss/flying-buttress.webp",
+    "key": "obstacle-boss_slide_flying-buttress",
+    "landform": {
+      "lip": [
+        59,
+        444
+      ],
+      "footY": 511,
+      "feet": [
+        261,
+        298
+      ],
+      "scale": 1.3,
+      "title": "Belfry buttress"
+    }
+  },
+  {
+    "id": "boss_slide_ossuary-aqueduct",
+    "category": "slide",
+    "biome": "boss",
+    "biomeTitle": "Boss",
+    "name": "ossuary-aqueduct",
+    "gameW": 74,
+    "gameH": 70,
+    "src": "assets/obstacles/slide-landforms/boss/ossuary-aqueduct.webp",
+    "key": "obstacle-boss_slide_ossuary-aqueduct",
+    "landform": {
+      "lip": [
+        59,
+        463
+      ],
+      "footY": 530,
+      "feet": [
+        246,
+        292
+      ],
+      "scale": 1.3,
+      "title": "Ossuary aqueduct"
     }
   },
   {

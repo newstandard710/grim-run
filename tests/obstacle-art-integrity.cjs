@@ -10,14 +10,14 @@ const root=path.resolve(__dirname,'..');
 const scope={};
 vm.runInNewContext(fs.readFileSync(path.join(root,'assets/visuals/obstacle-catalog.js'),'utf8'),{window:scope});
 const skins=scope.GRIM_OBSTACLE_SPRITES;
-assert.equal(skins.length,96,'all planned obstacle skins are cataloged');
+assert.equal(skins.length,112,'all planned obstacle skins are cataloged');
 
-const counts={jump:24,slide:24,cut:24,fire:15,'air-tuck':2,'air-bramble':6,'snapping-bramble':1};
+const counts={jump:24,slide:40,cut:24,fire:15,'air-tuck':2,'air-bramble':6,'snapping-bramble':1};
 const dimensions={jump:[54,48],slide:[74,70],cut:[60,288],fire:[58,41],
   'air-tuck':[80,340],'air-bramble':[80,143],'snapping-bramble':[62,78]};
 const biomeCounts={
   jump:{forest:3,foothills:3,tundra:3,caves:3,crystals:3,ashlands:3,lava:3,boss:3},
-  slide:{forest:3,foothills:3,tundra:3,caves:3,crystals:3,ashlands:3,lava:3,boss:3},
+  slide:{forest:5,foothills:5,tundra:5,caves:5,crystals:5,ashlands:5,lava:5,boss:5},
   cut:{forest:3,foothills:3,tundra:3,caves:3,crystals:3,ashlands:3,lava:3,boss:3},
   fire:{caves:3,crystals:3,ashlands:3,lava:3,boss:3},
   'air-tuck':{ashlands:1,lava:1},
@@ -125,8 +125,8 @@ for(const [category,count] of Object.entries(counts)){
   assert.deepEqual(perBiome,biomeCounts[category],category+' biome coverage');
 }
 
-assert.equal(files.size,104);
-assert.equal(keys.size,104);
-assert.equal(ids.size,96);
-assert.equal(hashes.size,96);
-console.log('PASS 96 biome-exclusive skins, 24 unified landforms, 8 airborne supports, and painted asset integrity verified.');
+assert.equal(files.size,120);
+assert.equal(keys.size,120);
+assert.equal(ids.size,112);
+assert.equal(hashes.size,112);
+console.log('PASS 112 biome-exclusive skins, 40 unified landforms, 8 airborne supports, and painted asset integrity verified.');

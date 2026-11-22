@@ -31,10 +31,14 @@ function game(seed){
   return s;
 }
 const found=new Map(),expected=w.GRIM_OBSTACLE_SPRITES.filter(s=>s.category==='slide');
-for(const seed of [33,34,35,36,37,38,39,41,46,59,12,104]){
+const seeds=[33,34,35,36,37,38,39,41,46,59,12,104,...Array.from({length:32},(_,i)=>i+60)];
+const counts=new Map();
+let courses=0;
+for(const seed of seeds){
+  courses++;
   const s=game(seed);
   s.godMode=true;
-  const seen=new Set(),bag=[];
+  const seen=new WeakSet(),bag=new Set();
   let previous=null,biome=null;
   for(let frame=0;frame<26000 && s.distance<11800;frame++){
     if(s.state==='upgrade')s.leaveVendor();
@@ -42,6 +46,17 @@ for(const seed of [33,34,35,36,37,38,39,41,46,59,12,104]){
     if(s.player.grounded&&gap&&gap.start-s.player.x<=20)s.jump();
     s.update(0,1000/60);
     for(const ob of s.obstacles){
+      if(ob.type==='branch' && !seen.has(ob)){
+        seen.add(ob);
+        counts.set(ob.slideSkin,(counts.get(ob.slideSkin)??0)+1);
+        const skin=s.obstacleSkinFor(ob);
+        if(skin.biome!==biome){bag.clear();previous=null;biome=skin.biome;}
+        assert.notEqual(skin.id,previous,'no repeat across refill or intervening encounters');
+        assert.ok(!bag.has(skin.id),'five distinct designs before refill');
+        bag.add(skin.id);
+        if(bag.size===5)bag.clear();
+        previous=skin.id;
+      }
       if(ob.type!=='branch'||ob.destroyed||ob.x-s.player.x<120||ob.x-s.player.x>190)continue;
       // Pick a natural encounter where the standing collider meets the lip
       // throughout the span. Sharp downhill crowns can clear a standing box.
@@ -54,6 +69,7 @@ for(const seed of [33,34,35,36,37,38,39,41,46,59,12,104]){
       if(!found.has(skin.id))found.set(skin.id,{id:skin.id,seed,x:ob.x,variant:ob.variant,slideSkin:ob.slideSkin});
     }
   }
+  if(found.size===expected.length)break;
 }
 assert.deepEqual([...found.keys()].sort(),Array.from(expected,s=>s.id).sort(),'every catalog design appears ahead in normal play');
 for(const {id,seed,x,variant,slideSkin} of found.values()){
@@ -104,8 +120,18 @@ function place(type,meters){
   return [ob.variant,ob.slideSkin];
 }
 function sequence(){
-  place('rock',730);
-  return [740,748,756,764,906,914,922].map(m=>place('branch',m));
+  return [740,748,756,764,772,780,788,796,804,812,906,914,922,930,938].map(m=>{
+    place('rock',m-2);
+    return place('branch',m);
+  });
+}
+// A restored branch without an assigned ID follows the pre-bag position hash.
+const legacyIds=w.GRIM_OBSTACLE_SPRITES.filter(s=>s.biome==='forest' && s.category==='slide').slice(0,3).map(s=>s.id);
+for(let x=1200;x<1260;x++){
+  const token='forest:slide:'+Math.round((x-replay.startX)*10);
+  let hash=2166136261;
+  for(const ch of token)hash=Math.imul(hash^ch.charCodeAt(0),16777619);
+  assert.equal(replay.obstacleSkinFor({type:'branch',x}).id,legacyIds[(hash>>>0)%3]);
 }
 const opening=place('branch',720);
 replay.godMode=true;replay.captureRewind();
@@ -118,6 +144,12 @@ for(let i=0;i<2;i++){
 replay.startRun();
 assert.deepEqual(place('branch',720),opening);
 assert.deepEqual(sequence(),expectedReplay,'same-seed restart');
-assert.equal(new Set(expectedReplay.slice(-3).map(row=>row[1])).size,3);
-console.log('PASS 24 naturally spawned landforms and 96 moving input replays');
+const forest=[opening,...expectedReplay.slice(0,10)].map(row=>row[1]);
+assert.equal(new Set(forest.slice(0,5)).size,5);
+assert.equal(new Set(forest.slice(5,10)).size,5);
+assert.notEqual(forest[4],forest[5]);
+assert.notEqual(forest[9],forest[10]);
+assert.equal(new Set(expectedReplay.slice(-5).map(row=>row[1])).size,5);
+console.log('PASS 40 naturally spawned landforms and 160 moving input replays across '+courses+' seeded courses');
+console.log(JSON.stringify(Object.fromEntries(counts)));
 console.log(JSON.stringify([...found.values()]));

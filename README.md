@@ -1,3 +1,11 @@
+# Grim Run — v0.19.20
+
+[Play Grim Run](https://newstandard710.github.io/grim-run/?release=0.19.20)
+
+Each biome rotates five ground-slide paintings. Sixteen towering structures join the original twenty-four, from the Forest’s rooted cedar to the Ossuary aqueduct. Slide beneath the lowest solid edge.
+
+---
+
 # Grim Run — v0.19.19
 
 [Play Grim Run](https://newstandard710.github.io/grim-run/?release=0.19.19)
