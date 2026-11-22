@@ -89,12 +89,30 @@ async function measure(page,revision,cases){
     const outcome=await page.evaluate(()=>obstacleReview.result);
     results[key]={setup,art,coldMs,cpu:stats(times.slice(20)),trace:hash(states),outcome};
     console.log(revision,key,JSON.stringify(results[key]));
-    assert(outcome.inputSent,key+' counter input exercised');
+    assert(outcome.inputSent && outcome.passed,key+' counter exercised through target');
     if(setup.type==='bramble')assert(outcome.firstCut!==null,key+' Cut contact exercised');
     if(setup.type==='tuckGate')assert(outcome.airTucked,key+' airborne tuck exercised');
     assert.equal(outcome.firstHit,null,key+' intended counter clears the contact');
     await page.evaluate(()=>obstacleReview.cleanup());
+    const missed=await page.evaluate(spec=>{
+      const q=obstacleReview;
+      q.prepare(spec);
+      for(let tick=0;tick<120 && q.result.firstHit===null;tick++)q.step(false);
+      const result=q.result;
+      q.cleanup();
+      return {firstHit:result.firstHit,signature:q.signature()};
+    },{id,seed,x,variant});
+    assert.notEqual(missed.firstHit,null,key+' hazard damages the unprotected Reaper');
+    results[key].unprotectedHitTick=missed.firstHit;
+    results[key].unprotectedTrace=hash(missed.signature);
   }
+  const arrival=await page.evaluate(()=>{
+    const q=obstacleReview;
+    const states=q.startPortal();
+    return {states,frame:q.image()};
+  });
+  results.portal={trace:hash(arrival.states),ticks:arrival.states.length};
+  await fs.writeFile(path.join(out,'first-portal-'+revision+'.jpg'),Buffer.from(arrival.frame,'base64'));
   assert.deepEqual(errors,[]);
   return results;
 }
@@ -105,8 +123,7 @@ async function measure(page,revision,cases){
   const browser=await chromium.launch({headless:true,args:renderer==='canvas'?['--no-sandbox','--disable-webgl']:
     ['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
   try{
-    const catalog=await fs.readFile(path.join(candidate,'assets/visuals/obstacle-catalog.js'),'utf8');
-    const cases=(catalog.match(/"slideSize"/g)||[]).length>2?[...pilot,...remaining]:pilot;
+    const cases=[...pilot,...remaining];
     const summary={};
     for(const revision of ['before','after']){
       const page=await browser.newPage({viewport:{width,height},hasTouch:true});
@@ -116,6 +133,7 @@ async function measure(page,revision,cases){
     }
     for(const key of Object.keys(summary.before)){
       assert.equal(summary.after[key].trace,summary.before[key].trace,key+' frame-for-frame gameplay parity');
+      assert.equal(summary.after[key].unprotectedTrace,summary.before[key].unprotectedTrace,key+' missed counter parity');
     }
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

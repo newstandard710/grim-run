@@ -37,8 +37,12 @@
     gap = type === 'tuckGate' ? s.terrain.sectionAt(x) : null;
     if (gap && gap.kind !== 'gap') throw Error('Gate requires a generated gap');
     const approach = spec.gallery ? Math.min(140,s.width*.24) : Math.min(300,s.width*.47);
-    let entry = x - approach;
-    while (s.terrain.groundAt(entry) === null) entry -= 5;
+    // Begin on the connected approach bank. A wider viewport can otherwise
+    // select a previous gap, making the first takeoff occur at the wrong bank.
+    const bank = gap ? gap.start - 1 : x;
+    let entry = bank;
+    const target = Math.min(bank - 8, x - approach);
+    while (entry - 1 >= target && s.terrain.groundAt(entry - 1) !== null) entry--;
     s.player.x = entry; s.player.y = s.terrain.groundAt(entry);
     s.distance = (entry-s.startX)/C.pxPerMeter;
     s.speed = window.GRIM_CORE.runSpeed(s.distance);
@@ -104,6 +108,7 @@
   }
   function step(action = true) {
     const dx = obstacle.x - s.player.x;
+    if (!action && !inputSent && gap && gap.start-s.player.x <= 22) {s.jump();inputSent=true;}
     if (action && !inputSent) {
       if (obstacle.type === 'branch' && dx <= 80) {s.startSlide();inputSent=true;}
       if (obstacle.type === 'bramble' && dx <= 95) {s.attack();inputSent=true;}
@@ -126,11 +131,37 @@
       s.nextEncounterX,s.nextVendorNumber,s.terrain.groundAt(p.x),s.fallCount];
   }
   function image() { render();return game.canvas.toDataURL('image/jpeg',.87).split(',')[1]; }
+  function startPortal() {
+    history.replaceState(null,'','?seed=35');
+    s.startRun();
+    game.loop.sleep();
+    const x=s.terrain.portalX-12;
+    s.terrain.advance(x+1600);
+    const y=s.terrain.groundAt(x)??s.terrain.anchorAt(x);
+    Object.assign(s.player,{x,y,grounded:true});
+    s.distance=(x-s.startX)/C.pxPerMeter;
+    s.speed=window.GRIM_CORE.runSpeed(s.distance);
+    s.shrineClaimed=true;
+    s.nextVendorNumber=Math.floor(s.distance/C.vendorEveryMeters)+1;
+    s.cameraX=x-s.width*C.reaperXRatio;
+    s.cameraY=y-s.groundY;
+    s.syncWorldScroll();
+    const states=[];
+    for(let i=0;i<120;i++){
+      s.update(0,1000/60);
+      render();
+      states.push([s.state,s.player.x,s.player.y,s.player.hp,s.distance,s.portalMs,s.rng.state]);
+      if (s.hasTeleported && s.state==='playing') break;
+    }
+    if (!states.some(frame=>frame[0]==='portal') || s.state!=='playing' ||
+        s.player.x!==s.terrain.portalExitX) throw Error('Portal destination missed');
+    return states;
+  }
   function cleanup() {
     s.obstacles=[];s.drawScene();
     const leaked=Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-mounted-')||k.startsWith('obstacle-registered-'));
     if (leaked.length) throw Error('Leaked obsolete art: '+leaked.join(', '));
   }
-  window.obstacleReview={prepare,ready,inspect,step,signature,image,cleanup,render,
+  window.obstacleReview={prepare,ready,inspect,step,signature,image,cleanup,render,startPortal,
     get result(){return {firstCut,firstHit,airTucked,inputSent,passed:s.player.x>obstacle.x+obstacle.width};}};
 })();
