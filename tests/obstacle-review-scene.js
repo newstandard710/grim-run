@@ -75,10 +75,19 @@
     s.cameraY = s.player.y - s.groundY;
     s.syncWorldScroll();
     s.biomeMidground?.prioritizeTeleport(s.distance);
-    s.drawScene();
+    const drawObstacle=s.drawObstacle;
+    let mountMs=null;
+    s.drawObstacle=function(o){
+      if(o!==obstacle)return drawObstacle.call(this,o);
+      const t=performance.now();
+      try{return drawObstacle.call(this,o);}
+      finally{mountMs=performance.now()-t;}
+    };
+    try{s.drawScene();}
+    finally{s.drawObstacle=drawObstacle;}
     render();
     inputSent = false; tick = 0; firstCut = null; firstHit = null; airTucked = false;
-    return {x, type, skin:skin.id, entry, seed:s.seed,
+    return {x, type, skin:skin.id, entry, seed:s.seed, mountMs,
       weights:window.GRIM_WORLD_ART.biomeWeights((x-s.startX)/C.pxPerMeter)};
   }
   function ready() {

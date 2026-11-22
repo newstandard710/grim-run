@@ -106,11 +106,15 @@
     const alpha=ctx.getImageData(0,0,source.width,source.height).data;
     const edge=new Int16Array(source.width).fill(-1);
     let top=source.height;
-    for(let y=0;y<source.height;y++){
-      for(let x=0;x<source.width;x++){
-        const opacity=alpha[(y*source.width+x)*4+3];
-        if(opacity>0)top=Math.min(top,y);
-        if(opacity>128)edge[x]=y;
+    // Each registration needs only the first visible row and the lowest solid pixel per column.
+    const stride=source.width*4;
+    for(let i=3;i<alpha.length;i+=4){
+      if(alpha[i]){top=Math.floor(i/stride);break;}
+    }
+    for(let x=0;x<source.width;x++){
+      let i=alpha.length-stride+x*4+3;
+      for(let y=source.height-1;y>=0;y--,i-=stride){
+        if(alpha[i]>128){edge[x]=y;break;}
       }
     }
     profile={top,join:top+Math.round(source.height*.05),edge};
@@ -130,8 +134,9 @@
       }
       return;
     }
-    const ceiling=worldX=>scope.GRIM_CORE.slideCeilingBottomAt(
-      scene.terrain.groundAt,worldX,scope.GRIM_CONFIG.slideClearancePx)??y;
+    const groundAt=scene.terrain.groundAt,clearance=scope.GRIM_CONFIG.slideClearancePx;
+    const ceilingBottom=scope.GRIM_CORE.slideCeilingBottomAt;
+    const ceiling=worldX=>ceilingBottom(groundAt,worldX,clearance)??y;
     const halfSpan=ob.width/2,shoulder=20;
     const samples=[-1,-.5,0,.5,1].map(u=>ceiling(x+u*halfSpan));
     const signature=[y,width,height,rotation,...samples].join(':');
@@ -142,6 +147,7 @@
     const source=scene.textures.get(skin.key).getSourceImage();
     const {top,join,edge}=slideFrontProfile(source);
     const scaleY=height/source.height,cos=Math.cos(rotation),sin=Math.sin(rotation);
+    const iterations=sin===0?1:3;
     const columns=[];
     let bottom=source.height;
     for(let u=0;u<source.width;u++){
@@ -152,9 +158,11 @@
       // Solve the existing local clearance in the already rotated image.
       // Leave a small amount of the source's irregular edge in the cue.
       const detail=Math.max(0,Math.min(1.7,(edge[Math.max(0,u-3)]+edge[Math.min(edge.length-1,u+3)]-2*last)*.18));
-      for(let i=0;i<3;i++){
+      for(let i=0;i<iterations;i++){
         const worldX=x+cos*localX-sin*localY;
-        localY=(ceiling(worldX)-y-sin*localX-1.35-detail)/cos;
+        const nextY=(ceiling(worldX)-y-sin*localX-1.35-detail)/cos;
+        if(nextY===localY)break;
+        localY=nextY;
       }
       const distance=Math.abs(cos*localX-sin*localY);
       const weight=Math.max(0,Math.min(1,(halfSpan+shoulder-distance)/shoulder));
