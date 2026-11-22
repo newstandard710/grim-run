@@ -5,29 +5,22 @@ hold the complete composition for one. Either phase can be skipped directly
 to its vendor menu. Reduced motion opens on the same settled composition and
 retains the visible-time contract.
 
-Two distance-registered cycles of the vendor Reaper finish at 2.2 seconds.
-Painted boots pivot over a fixed forefoot through heel rise. The articulated
-leg chains, pelvis, chest, free arm and delayed cloak register to each load.
-The scythe retains its shape and grip, with floor clearance. The gather starts
-on the same touchdown painting. The lead boot holds as the trailing boot
-comes in, the pelvis rises, and the hood looks up. Frame 192 holds at 3 seconds.
+The two approaches are sampled at 48 Hz. The Angel receives an open, upright
+stop with a low last step. The Devil draws a shorter approach and a wide rear
+support. Their boot marks, root travel, hood turns and weapon grips are
+baked per encounter. Identical drawings share a cell in a cropped sheet.
+The vendor section of `animation-data.js` supplies each track's frame IDs
+and floor anchor. The hood backing uses premultiplied color once.
 
-The merchant feet stay fixed. The Devil dips, then opens the offering claw.
-The Angel dips and softens the shoulder while the lantern sways below its hook.
-The left stage elements move just outside the final sightline. WebGL uses the
-existing articulated mesh. Canvas samples 24 poses per merchant from the same
-deformation. The Canvas WebP is 599,126 bytes at 2176 × 1344. The approach WebP is
-4,544,524 bytes at 3584 × 2912. Both fit the existing transfer limits.
+The Angel acknowledges the approach before inclining, with a delayed lantern
+arc beneath the fixed hook. The Devil watches, shifts, then extends the arm,
+wrist and fingers. WebGL deforms the original paintings. Canvas uses 32
+registered samples per merchant. Narrow portrait stages size the actors from
+the available width. At three seconds the entire composition holds.
 
-Rebuild the approach with `python scripts/prepare-cutscene-art.py --vendor-only`.
-It uses the PR96 vendor atlas blob from local Git history, including the released
-greave contours. The restored cloth follows the existing neck transform and is
-composited behind the released pose. RGB is rounded to the nearest multiple of
-three before lossless WebP compression. Unedited visible pixels differ by at
-most one code value per color channel, and alpha changes only at the hood.
-The generator preserves Bow assets and registration. Rebuild the separate
-merchant strip with `python scripts/prepare-vendor-canvas.py`. No source art
-is modified.
+Rebuild with `python scripts/prepare-cutscene-art.py --vendor-only` followed
+by `python scripts/prepare-vendor-canvas.py`. The vendor-only build retains
+the Bow drawings and registration. The original paintings are read-only.
 
 The summit acquisition uses one matching painted body/hood/scythe layer and
 separate painted arm components. A continuous body hinge, knee/hip bend and
