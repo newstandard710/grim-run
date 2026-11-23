@@ -1,9 +1,10 @@
-name: Isolated Tundra paint diagnostic
+name: Replay both observed Tundra tiles
 on:
   push:
     branches: [audit-summit-paint-diagnostic]
 permissions:
   contents: read
+  actions: read
 jobs:
   paint:
     runs-on: ubuntu-24.04
@@ -17,7 +18,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Capture both releases and compare source and composite pixels
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45105363154
+          name: isolated-summit-paint-default
+          path: sample-tiles
+      - name: Replay each observed tile through each game revision
         run: |
           git fetch --depth 1 origin 0750e2738af065072f650e9cd39fa83fee217783
           git worktree add --detach "$RUNNER_TEMP/before" 0750e2738af065072f650e9cd39fa83fee217783
@@ -26,8 +33,3 @@ jobs:
           python3 -m http.server 8764 --bind 127.0.0.1 --directory "$RUNNER_TEMP/before" > "$RUNNER_TEMP/before.log" 2>&1 &
           python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/after.log" 2>&1 &
           node tests/isolated-summit-paint.js ${{ matrix.mode }}
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: isolated-summit-paint-${{ matrix.mode }}
-          path: test-results/paint-*/
