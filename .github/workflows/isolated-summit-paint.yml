@@ -1,35 +1,20 @@
-name: Replay both observed Tundra tiles
+name: Public v0.19.21 Tundra and damage smoke
 on:
   push:
     branches: [audit-summit-paint-diagnostic]
 permissions:
   contents: read
-  actions: read
 jobs:
-  paint:
+  public:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
-    strategy:
-      fail-fast: false
-      matrix:
-        mode: [default, cpu2d]
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: 45105363154
-          name: isolated-summit-paint-default
-          path: sample-tiles
-      - name: Replay each observed tile through each game revision
+      - name: Play the deployed game and check the summit texture
         run: |
-          git fetch --depth 1 origin 0750e2738af065072f650e9cd39fa83fee217783
-          git worktree add --detach "$RUNNER_TEMP/before" 0750e2738af065072f650e9cd39fa83fee217783
-          npm install --no-save playwright@1.56.1 pngjs@7.0.0
+          npm install --no-save playwright@1.56.1
           npx playwright install chromium
-          python3 -m http.server 8764 --bind 127.0.0.1 --directory "$RUNNER_TEMP/before" > "$RUNNER_TEMP/before.log" 2>&1 &
-          python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/after.log" 2>&1 &
-          node tests/isolated-summit-paint.js ${{ matrix.mode }}
+          node tests/isolated-summit-paint.js
