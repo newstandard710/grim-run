@@ -114,7 +114,8 @@ async function nativeReplay(browser, revision) {
     await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready && window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,
       null,{timeout:90000});
     await page.locator('#home-enter-btn').click();
-    await page.locator('#start-btn').click();
+    await page.locator('#start-btn').press('Enter');
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing',null,{timeout:10000});
     const rows=[];
     for (const stage of ['opening','opening-restart','lava','lava-restart']) {
       const result=await page.evaluate(async stage=>{
@@ -142,10 +143,10 @@ async function nativeReplay(browser, revision) {
             function check(){if(samples.length>=36){clearTimeout(timeout);g.events.off('postrender',check);resolve();}}
             g.events.on('postrender',check);
           });
-          return {stage,start,end:s.distance,samples};
+          return {stage,start,end:s.distance,state:s.state,samples};
         }finally{g.events.off('prestep',preStep);g.events.off('postrender',postRender);}
       },stage);
-      assert(result.end>result.start,stage+' native game advanced');
+      assert(result.end>result.start,stage+' native game advanced in '+result.state+' from '+result.start+' to '+result.end);
       rows.push(result);
       console.log('NATIVE',revision,stage,JSON.stringify(summary(result.samples.map(a=>a[0]))));
     }
