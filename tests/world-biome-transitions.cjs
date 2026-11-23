@@ -99,4 +99,21 @@ for(const meters of [641,720,900,1080,2120,2300,2480,4820,4999.99,5000,
   assert.ok(commands.length>0,`${meters}m ground renderer produced drawing commands`);
 }
 
+// A flat Tundra sanctuary has fractional elevation. Subpixel camera movement
+// must not change the full section's render bounds and invalidate its texture.
+const summit=gameScope.GRIM_TERRAIN.makeTerrain(33,284,200,12);
+const ledge=summit.sectionAt(200+4840*12),bottoms=new Set();
+Object.assign(drawGame,{terrain:summit,width:740,height:360,hasTeleported:false,distance:4840});
+const bodyPoints=drawGame.terrainBodyPoints;
+drawGame.terrainBodyPoints=function(section,from,to,y0,y1,bottom,walls){
+  if(section===ledge)bottoms.add(bottom);
+  return bodyPoints.call(this,section,from,to,y0,y1,bottom,walls);
+};
+for(let i=0;i<120;i++){
+  drawGame.cameraX=ledge.start+150+i*4;
+  commands.length=0;
+  drawGame.drawGround();
+}
+assert.equal(bottoms.size,1,'Summit texture bounds must stay constant while scrolling');
+
 console.log('PASS: approved image backdrops only; actual ground rendering, biome fades, portal handoff, and palettes');
