@@ -1,0 +1,41 @@
+name: Terrain texture reuse
+on:
+  pull_request:
+    paths:
+      - 'tests/browser-terrain-reuse.js'
+      - '.github/workflows/terrain-reuse.yml'
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [canvas, webgl]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare matched revisions and Chromium
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --depth 1 origin "$BASE"
+          git worktree add --detach "$RUNNER_TEMP/terrain-before" "$BASE"
+          npm install --no-save playwright@1.56.1
+          npx playwright install chromium
+      - name: Profile first visits, return visits and seeded gameplay
+        run: |
+          python3 -m http.server 8764 --bind 127.0.0.1 --directory "$RUNNER_TEMP/terrain-before" > "$RUNNER_TEMP/terrain-before.log" 2>&1 &
+          python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/terrain-after.log" 2>&1 &
+          node tests/browser-terrain-reuse.js ${{ matrix.renderer }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: terrain-reuse-${{ matrix.renderer }}
+          path: test-results/terrain-reuse/
