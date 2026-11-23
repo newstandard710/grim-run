@@ -24,10 +24,12 @@
       const taper=Math.min(1,inset/8);
       let y=height-1;
       while(y>=0 && data[(y*width+x)*4+3]===0)y--;
-      for(let row=0;row<3 && y>=0;row++,y--){
+      // Keep the outermost painted row dark against the scenery below.
+      y--;
+      for(let row=1;row<3 && y>=0;row++,y--){
         const offset=(y*width+x)*4;
         if(!data[offset+3])break;
-        const lift=(3-row)*.04*taper;
+        const lift=(3-row)*.06*taper;
         for(let c=offset;c<offset+3;c++)data[c]+=(255-data[c])*lift;
       }
     }

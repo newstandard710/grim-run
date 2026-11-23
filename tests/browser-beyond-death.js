@@ -88,14 +88,32 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...j,id:0},{...c,id:1}]});
     const held=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return {jump:s.player.jumpHeld,attack:s.player.attackMs>0};});assert(held.jump&&held.attack,'Two thumbs can jump and cut simultaneously');
     await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await page.evaluate(()=>{
+     const s=grimRun.scene.scenes[0],p=s.player;
+     s.setGodMode(false);
+     const floor=s.terrain.groundAt(p.x);
+     Object.assign(p,{y:floor,grounded:true,onSoulPlatform:false,velocityY:0,invulMs:0});
+     s.obstacles=[GRIM_CORE.obstacle('branch',p.x,floor,0,GRIM_CONFIG.slideClearancePx,s.height)];
+    });
     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point(slide),id:0}]});
-    assert(await page.evaluate(()=>grimRun.scene.scenes[0].player.holdSlide));
+    assert(await page.evaluate(()=>{
+     const s=grimRun.scene.scenes[0];s.checkHazards();
+     return s.player.sliding && !s.obstacles[0].dealtDamage && s.player.hp===3;
+    }),label+' held touch Slide clears the overhead');
     await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     await page.keyboard.down('ArrowDown');
     assert(await page.evaluate(()=>grimRun.scene.scenes[0].player.holdSlide));
     await page.keyboard.up('ArrowDown');
-    await page.keyboard.press('ArrowUp');
+    await page.keyboard.down('ArrowUp');
+    assert(await page.evaluate(()=>grimRun.scene.scenes[0].player.jumpHeld));
     assert.deepEqual(await page.evaluate(()=>window.damagePulses),[],label+' clean inputs and vendor events are silent');
+    await page.evaluate(()=>{
+     const s=grimRun.scene.scenes[0],p=s.player;
+     s.obstacles=[GRIM_CORE.obstacle('rock',p.x,s.terrain.groundAt(p.x))];
+     s.checkHazards();s.checkHazards();
+    });
+    await page.keyboard.up('ArrowUp');
+    assert.deepEqual(await page.evaluate(()=>window.damagePulses),[[30,2]],label+' overlapping rock triggers one pulse during Jump');
    }
    await page.locator('#pause-btn').click();await shot('pause');await page.locator('#quit-btn').click();await shot('abandon');await page.locator('#abandon-cancel-btn').click();
    if(viewport.width===950){
@@ -116,7 +134,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].player.hp),1);
     await page.getByRole('button',{name:'REROLL · 1 LEFT',exact:true}).click();assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].rerollsRemaining),0);
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=2;s.showVendor();});await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();await shot('devil-healing');
-    assert.deepEqual(await page.evaluate(()=>window.damagePulses),[[30,0],[30,0],[30,0]],
+    assert.deepEqual(await page.evaluate(()=>window.damagePulses),[[30,2],[30,0],[30,0],[30,0]],
       'one committed pulse for each lethal hit across free life, paid revive, results and retry');
    }
    console.log('PASS actual Chromium '+label+': home → menu → purchases, old save, Angel reroll/heal/reward/heal, text bounds, enlarged swapped controls, touch combination, pause and confirmation.');
