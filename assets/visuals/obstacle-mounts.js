@@ -13,6 +13,25 @@
   // Both depths come from one painting. The common canvas keeps the shelves,
   // seams and footing continuous, even on a curved piece of terrain.
   let nextMount=0;
+  // These two shaded undersides lose their edge against the rear roots and ribs.
+  const shadedLips=new Set(['forest_slide_dead-bough-curtain','caves_slide_fossil-rib-arch']);
+  function liftLip(image,left,ob){
+    const {data,width,height}=image;
+    for(let x=0;x<width;x++){
+      const worldX=left+x+.5;
+      const inset=Math.min(worldX-ob.x,ob.x+ob.width-worldX);
+      if(inset<=0)continue;
+      const taper=Math.min(1,inset/8);
+      let y=height-1;
+      while(y>=0 && data[(y*width+x)*4+3]===0)y--;
+      for(let row=0;row<3 && y>=0;row++,y--){
+        const offset=(y*width+x)*4;
+        if(!data[offset+3])break;
+        const lift=(3-row)*.04*taper;
+        for(let c=offset;c<offset+3;c++)data[c]+=(255-data[c])*lift;
+      }
+    }
+  }
   function readSlidePaint(scene,source,art){
     // Keep one biome's working set. An active mount owns its finished textures.
     const cache=scene.slidePaintCache??=new Map();
@@ -152,6 +171,7 @@
         else backPixels[(y-minY)*displayWidth+x]=pixel;
       }
     }
+    if(shadedLips.has(skin.id))liftLip(frontData,originX+frontLeft,ob);
     backCtx.putImageData(backData,0,0);frontCtx.putImageData(frontData,0,0);
     rear.refresh();front.refresh();
     function replace(map,texture,x,y,depth){

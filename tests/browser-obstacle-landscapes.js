@@ -125,7 +125,8 @@ async function captureGallery(page){
   return captures;
 }
 
-async function measure(page,revision,cases,extras=true){
+async function measure(page,revision,cases,extras=true,reviewPhase=phase,output=out){
+  const {width,height}=page.viewportSize();
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
@@ -136,17 +137,17 @@ async function measure(page,revision,cases,extras=true){
   const actual=await page.evaluate(()=>[grimRun.renderer.type,grimRun.canvas.width,grimRun.canvas.height]);
   assert.deepEqual(actual,[renderer==='canvas'?1:2,width,height]);
   const results={};
-  if(phase.startsWith('route')){
-    await playTransitions(page,revision,results,Number(phase.slice(5)));
+  if(reviewPhase.startsWith('route')){
+    await playTransitions(page,revision,results,Number(reviewPhase.slice(5)));
     assert.deepEqual(errors,[]);return results;
   }
-  if(phase==='gallery'){
+  if(reviewPhase==='gallery'){
     if(revision==='after')results.gallery=await captureGallery(page);
     assert.deepEqual(errors,[]);return results;
   }
   for(const [id,seed,x,variant] of cases){
     const key=id+'-'+seed;
-    const dir=path.join(out,key,revision);
+    const dir=path.join(output,key,revision);
     await fs.mkdir(dir,{recursive:true});
     try {
       const start=Date.now();
@@ -266,6 +267,23 @@ async function measure(page,revision,cases,extras=true){
     for(const key of Object.keys(summary.before).filter(k=>k!=='sceneLoadRetry')){
       assert.equal(summary.after[key].trace,summary.before[key].trace,key+' frame-for-frame gameplay parity');
       assert.equal(summary.after[key].unprotectedTrace,summary.before[key].unprotectedTrace,key+' missed counter parity');
+    }
+    // Reuse each renderer's landscape review to check the two shaded lips at desktop scale.
+    if(viewport==='740x360' && phase===(renderer==='canvas'?'complete':'gallery')){
+      const desktopDir=path.join(out,'desktop-1280x900'),desktop={};
+      const shaded=pilot.filter(([id])=>id==='forest_slide_dead-bough-curtain'||id==='caves_slide_fossil-rib-arch');
+      for(const revision of ['before','after']){
+        const page=await browser.newPage({viewport:{width:1280,height:900}});
+        try {desktop[revision]=await measure(page,revision,shaded,false,'controls',desktopDir);}
+        finally {await page.close();}
+      }
+      await fs.writeFile(path.join(desktopDir,'summary.json'),JSON.stringify(desktop,null,2));
+      for(const key of Object.keys(desktop.before)){
+        const before=desktop.before[key],after=desktop.after[key];
+        assert.ifError(before.error);assert.ifError(after.error);
+        assert.equal(after.trace,before.trace,key+' desktop Slide parity');
+        assert.equal(after.unprotectedTrace,before.unprotectedTrace,key+' desktop contact parity');
+      }
     }
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

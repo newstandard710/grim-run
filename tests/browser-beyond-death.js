@@ -12,6 +12,13 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
   for(const viewport of [{width:950,height:430},{width:812,height:375},{width:667,height:375},{width:390,height:844}]){
    const label=viewport.width+'x'+viewport.height;
    const context=await browser.newContext({viewport,hasTouch:true,deviceScaleFactor:1,...(viewport.width===950?{recordVideo:{dir,size:viewport}}:{})});
+   await context.addInitScript(()=>{
+     window.damagePulses=[];
+     navigator.vibrate=ms=>{
+       window.damagePulses.push([ms,window.grimRun.scene.scenes[0].player.hp]);
+       return true;
+     };
+   });
    await context.addInitScript(()=>localStorage.setItem('grim-run-v07-meta',JSON.stringify({version:1,souls:100,levels:{boneheart:0,graveWealth:1,deathsLeap:0,graveGlide:0}})));
    const page=await context.newPage();page.on('pageerror',e=>errors.push(label+': '+e));page.on('response',r=>{if(r.status()>=400)failures.push(r.url());});
    const completeDefeat=async()=>{assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'dying');for(const dt of [...Array(9).fill(250),150])await page.evaluate(dt=>window.grimRun.scene.scenes[0].update(0,dt),dt);};
@@ -81,6 +88,14 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...j,id:0},{...c,id:1}]});
     const held=await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];return {jump:s.player.jumpHeld,attack:s.player.attackMs>0};});assert(held.jump&&held.attack,'Two thumbs can jump and cut simultaneously');
     await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{...point(slide),id:0}]});
+    assert(await page.evaluate(()=>grimRun.scene.scenes[0].player.holdSlide));
+    await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await page.keyboard.down('ArrowDown');
+    assert(await page.evaluate(()=>grimRun.scene.scenes[0].player.holdSlide));
+    await page.keyboard.up('ArrowDown');
+    await page.keyboard.press('ArrowUp');
+    assert.deepEqual(await page.evaluate(()=>window.damagePulses),[],label+' clean inputs and vendor events are silent');
    }
    await page.locator('#pause-btn').click();await shot('pause');await page.locator('#quit-btn').click();await shot('abandon');await page.locator('#abandon-cancel-btn').click();
    if(viewport.width===950){
@@ -101,6 +116,8 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
     assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].player.hp),1);
     await page.getByRole('button',{name:'REROLL · 1 LEFT',exact:true}).click();assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].rerollsRemaining),0);
     await page.evaluate(()=>{const s=window.grimRun.scene.scenes[0];s.player.hp=2;s.showVendor();});await page.getByRole('button',{name:'HEAL 1 HP · 8 GOLD',exact:true}).click();await shot('devil-healing');
+    assert.deepEqual(await page.evaluate(()=>window.damagePulses),[[30,0],[30,0],[30,0]],
+      'one committed pulse for each lethal hit across free life, paid revive, results and retry');
    }
    console.log('PASS actual Chromium '+label+': home → menu → purchases, old save, Angel reroll/heal/reward/heal, text bounds, enlarged swapped controls, touch combination, pause and confirmation.');
    const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'beyond-death-preview.webm'));
