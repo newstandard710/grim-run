@@ -2001,7 +2001,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=b04ba4700885"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=landforms-2"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=landforms-1"></script>
-  <script src="assets/visuals/obstacle-mounts.js?v=landforms-2"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=landforms-3"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=vendor-greetings1"></script>
   <script src="assets/visuals/cutscene-motion.js?v=vendor-greetings1"></script>
@@ -4082,7 +4082,11 @@ window.GRIM_CONFIG = Object.freeze({
       // This retains reliable test feedback for Brittle Bones and future powers.
       this.triggerBrittleBones();
       if(this.godMode)return false;
-      this.player.hp=Math.max(0,this.player.hp-amount);
+      const previousHp=this.player.hp;
+      this.player.hp=Math.max(0,previousHp-amount);
+      if(this.player.hp<previousHp){
+        try {scope.navigator?.vibrate?.(30);} catch (_) { /* Optional device feedback. */ }
+      }
       if(amount>0)this.player.visualHurtMs=scope.GRIM_REAPER_REACTION?.HURT_MS||340;
       if(this.player.hp<=0)this.die(kind,lipX,impactStart);
       return true;

@@ -93,3 +93,75 @@ const fall=game({deathDenied:1});fall.player.hp=1;fall.player.x=fall.terrain.seq
 // Distance curve is continuous at 5km and cannot accelerate again after teleport/resurrection.
 assert.equal(Core.runSpeed(-100),300);assert.equal(Core.runSpeed(0),300);assert.equal(Core.runSpeed(2500),362.5);assert.equal(Core.runSpeed(5000),425);for(const m of [5001,6666,9999,20000])assert.equal(Core.runSpeed(m),425);assert(Math.abs(Core.runSpeed(5000)-Core.runSpeed(4999))<.04);
 console.log('PASS Beyond Death: six upgrades, old-save migration, 15-Soul single rank, exact 215-Soul refund, Angel purchase/heal permutations, shared fresh rerolls and exhausted pool, 3→2→1→0 quotas, free/paid/third death, lethal chasm, frozen smoke + countdown, 5km acceleration plateau.');
+
+// Exercise the real collision callers. Some assign invulnerability immediately before the HP debit.
+function checkDamage(scene,label,action,loss){
+  const pulses=[],before=scene.player.hp;
+  w.navigator={vibrate(ms){pulses.push([ms,scene.player.hp,scene.state]);return true;}};
+  action();
+  assert.equal(scene.player.hp,before-loss,label+' HP');
+  assert.deepEqual(pulses,loss?[[30,before-loss,'playing']]:[],label+' device requests');
+}
+const contact=game(),player=contact.player;
+function hazard(type,offset=0){
+  contact.obstacles=[Core.obstacle(type,player.x+offset,player.y,0,C.slideClearancePx,contact.height)];
+}
+hazard('branch',100);
+checkDamage(contact,'near miss',()=>contact.checkHazards(),0);
+hazard('branch');
+checkDamage(contact,'grounded Slide',()=>{contact.startSlide();contact.checkHazards();contact.endSlide();},0);
+player.sliding=false;
+checkDamage(contact,'standing contact',()=>{contact.checkHazards();contact.checkHazards();},1);
+hazard('rock');
+checkDamage(contact,'different hazard during immunity',()=>contact.checkHazards(),0);
+player.invulMs=0;
+checkDamage(contact,'new contact after immunity',()=>contact.checkHazards(),1);
+contact.godMode=true;
+hazard('rock');
+checkDamage(contact,'God Mode feedback',()=>contact.checkHazards(),0);
+assert(contact.damageFlashMs>0);
+contact.godMode=false;
+checkDamage(contact,'zero damage',()=>contact.takeDamage(0,'rock'),0);
+
+const combat=game(),body=combat.player;
+combat.gunUnlocked=true;
+function fireball(){combat.fireballs=[{x:body.x,y:body.y-25,vx:0,vy:0,ageMs:0}];}
+fireball();
+checkDamage(combat,'projectile',()=>combat.updateCombat(16,0),1);
+body.invulMs=0;
+combat.enemies=[{kind:'crawler',x:body.x,y:body.y,hp:1}];
+checkDamage(combat,'enemy body',()=>combat.updateCombat(16,0),1);
+combat.powerManager.apply('infernalBoots',body,()=>{});
+body.invulMs=0;fireball();
+checkDamage(combat,'blocked projectile',()=>combat.updateCombat(16,0),0);
+body.fireproofCooldownMs=0;body.invulMs=0;
+combat.obstacles=[Core.obstacle('fire',body.x,body.y)];
+checkDamage(combat,'blocked ground fire',()=>combat.checkHazards(),0);
+for(const [meters,hp,loss] of [[200,3,1],[8500,3,2],[8500,1,1]]){
+  const fall=game();
+  fall.distance=meters;fall.player.hp=hp;
+  fall.player.x=fall.terrain.sequences[0].startX+30;
+  checkDamage(fall,'fall at '+meters+' m from '+hp+' HP',()=>fall.rescueFromAbyss(),loss);
+  assert.equal(fall.state,hp===loss?'dying':'respawning');
+}
+const other=game(),silent=[];
+w.navigator={vibrate(ms){silent.push(ms);return true;}};
+other.powerManager.apply('deathsReversal',other.player,()=>{});
+other.captureRewind();
+const saved=other.rewindFrames.at(-1);
+other.collectSoul();vendor(other,8);
+other.pendingOffers=[other.powerManager.devilEligible().find(o=>o.id==='skeletalWings')];
+other.chooseUpgrade('skeletalWings');
+assert.equal(other.player.hp,1,'Devil price was paid');
+other.applyRewindSnapshot(saved);
+assert.equal(other.player.hp,3,'rewind restored health');
+assert.deepEqual(silent,[],'purchases, pickups and rewind restoration are silent');
+
+for(const api of [undefined,{}, {vibrate(){return false;}}, {vibrate(){throw Error('unavailable');}}]){
+  w.navigator=api;
+  const run=game();
+  assert(run.takeDamage(1,'fireball'));assert.equal(run.player.hp,2);
+  assert(run.takeDamage(3,'lava'));assert.equal(run.player.hp,0);
+  defeat(run);assert.equal(run.state,'revive');
+}
+console.log('PASS damage pulses: all four damage routes, immunity, zero damage, 2 HP and lethal falls, silent vendor/rewind and browser failures.');
