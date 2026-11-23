@@ -5283,11 +5283,15 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrainTextureViews.set(key,view);
       return view;
     }
-    drawTerrainTexture(section,sectionY0,sectionY1,underside,meters,activeKeys,walls){
+    drawTerrainTexture(section,from,to,h0,h1,underside,depth,meters,activeKeys,walls){
       if(!this.terrainBase||!this.add?.tileSprite||!this.make?.graphics)return;
       const sectionFrom=section.start,sectionTo=section.end;
+      const sectionY0=Number.isFinite(section.y0)?section.y0:h0;
+      const sectionY1=Number.isFinite(section.y1)?section.y1:h1;
       const sectionTop=Math.min(sectionY0,sectionY1);
-      const sectionBottom=Math.max(sectionTop+1,underside);
+      const renderBottom=section.kind==='platform'||section.kind==='soul-platform'
+        ?underside:Math.max(sectionY0,sectionY1,h0,h1)+this.height+1500;
+      const sectionBottom=Math.max(sectionTop+1,renderBottom);
       const geometrySignature=[section.kind,sectionFrom,sectionTo,sectionY0,sectionY1,
         ...(this.terrain.surfaceSlopes?.(section)||[]),sectionBottom,
         walls?.start?.signature,walls?.end?.signature].join(':');
@@ -5867,11 +5871,17 @@ window.GRIM_CONFIG = Object.freeze({
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
         const m=(section.start+section.end-2*startX)/(2*C.pxPerMeter);
-        const surfaceY0=Number.isFinite(section.y0)?section.y0:this.terrain.groundAt(from);
-        const surfaceY1=Number.isFinite(section.y1)?section.y1:this.terrain.groundAt(to-.001);
-        // A monotone section is bounded by its endpoints. Camera-clipped samples
-        // can differ by an ulp even on flat ground and invalidate the texture.
-        const depth=Math.max(surfaceY0,surfaceY1)+this.height+
+        const weights=this.terrainBiomeWeights(m);
+        // The snow composite spans the entire section. Interpolating two equal
+        // endpoints at the viewport edges can shift its cache key by one ulp.
+        const flatSnow=weights.tundra>.003&&Number.isFinite(section.y0)&&section.y0===section.y1;
+        const h0=flatSnow?section.y0:this.terrain.groundAt(from);
+        const h1=flatSnow?section.y1:this.terrain.groundAt(to-.001);
+        const surfaceY0=Number.isFinite(section.y0)?section.y0:h0;
+        const surfaceY1=Number.isFinite(section.y1)?section.y1:h1;
+        // End the world-space texture mask safely below this section's own
+        // profile. The bound stays fixed while the camera scrolls vertically.
+        const depth=Math.max(surfaceY0,surfaceY1,h0,h1)+this.height+
           (section.kind==='platform'?500:1500);
         const openingWorldArt=!this.hasTeleported&&m>=-40&&m<=900&&
           section.kind!=='platform'&&scope.GRIM_WORLD_ART;
@@ -5895,7 +5905,7 @@ window.GRIM_CONFIG = Object.freeze({
         const bankWalls=walls.get(section);
         const bodyPoints=this.terrainBodyPoints(section,section.start,section.end,surfaceY0,surfaceY1,underside,bankWalls);
         base.fillPoints(bodyPoints,true);
-        if(!boneBridge)this.drawTerrainTexture(section,surfaceY0,surfaceY1,underside,m,activeTerrainViews,bankWalls);
+        if(!boneBridge)this.drawTerrainTexture(section,from,to,h0,h1,underside,depth,m,activeTerrainViews,bankWalls);
         if(bankWalls){
           const wallPalette=scope.GRIM_WORLD_ART?.worldGroundPalette?.(m)||[body,edge,sheen,detail];
           this.drawAbyssWallDetails(section,bankWalls.start,wallPalette);
@@ -5919,7 +5929,6 @@ window.GRIM_CONFIG = Object.freeze({
         if(section.kind==='platform'){
           g.lineStyle(3,detail,.6);g.lineBetween(from+5,underside-3,to-5,underside-3);
         }
-        const weights=this.terrainBiomeWeights(m);
         const surfaceBiome=Object.entries(weights).sort((a,b)=>b[1]-a[1])[0]?.[0]||'caves';
         if(!this.terrainSurfaceView(section,edge,sheen,detail,activeSurfaceViews,surfaceBiome,weights,bankWalls))
           this.drawTerrainSurfaceFallback(section,edge,sheen,detail,surfaceBiome);

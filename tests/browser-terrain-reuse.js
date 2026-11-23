@@ -107,6 +107,52 @@ async function run(browser, revision, sequence) {
   } finally { await page.close(); }
 }
 
+async function nativeReplay(browser, revision) {
+  const page = await browser.newPage({viewport:{width:740,height:360},hasTouch:true});
+  try {
+    await page.goto(origins[revision]+'?seed=33',{waitUntil:'domcontentloaded'});
+    await page.waitForFunction(()=>window.GRIM_FRONTEND?.ready && window.grimRun?.scene.scenes[0]?.visuals?.reaperReady,
+      null,{timeout:90000});
+    await page.locator('#home-enter-btn').click();
+    await page.locator('#start-btn').click();
+    const rows=[];
+    for (const stage of ['opening','opening-restart','lava','lava-restart']) {
+      const result=await page.evaluate(async stage=>{
+        const g=grimRun,s=g.scene.scenes[0];
+        if(stage.endsWith('-restart')) { s.goToMenu(); s.startRun(); }
+        if(stage==='lava'){
+          const m=9445,x=s.startX+m*GRIM_CONFIG.pxPerMeter,y=s.terrain.groundAt(x);
+          Object.assign(s.player,{x,y,velocityY:0,grounded:true,onSoulPlatform:false});
+          Object.assign(s,{distance:m,hasTeleported:true,shrineClaimed:true,lastVendorNumber:14,nextVendorNumber:15,
+            speed:GRIM_CORE.runSpeed(m),cameraX:x-s.width*GRIM_CONFIG.reaperXRatio,cameraY:y-s.groundY});
+          s.nextEncounterX=s.nextEnemySpawnX=s.nextGroundSpawnX=s.nextSnapSpawnX=x+4000;
+          s.syncWorldScroll();
+        }
+        const start=s.distance,samples=[];
+        let last=performance.now(),pre=last;
+        const preStep=()=>{pre=performance.now();};
+        const postRender=()=>{
+          const now=performance.now();
+          samples.push([now-last,now-pre,s.distance,s.terrainTextureViews?.size??0]); last=now;
+        };
+        g.events.on('prestep',preStep); g.events.on('postrender',postRender);
+        try{
+          await new Promise((resolve,reject)=>{
+            const timeout=setTimeout(()=>{g.events.off('postrender',check);reject(Error('Native replay timed out: '+stage));},90000);
+            function check(){if(samples.length>=36){clearTimeout(timeout);g.events.off('postrender',check);resolve();}}
+            g.events.on('postrender',check);
+          });
+          return {stage,start,end:s.distance,samples};
+        }finally{g.events.off('prestep',preStep);g.events.off('postrender',postRender);}
+      },stage);
+      assert(result.end>result.start,stage+' native game advanced');
+      rows.push(result);
+      console.log('NATIVE',revision,stage,JSON.stringify(summary(result.samples.map(a=>a[0]))));
+    }
+    return {revision,rows};
+  }finally{await page.close();}
+}
+
 (async () => {
   assert(['canvas','webgl'].includes(renderer));
   const args = renderer==='canvas' ? ['--disable-webgl'] : ['--use-angle=swiftshader','--enable-unsafe-swiftshader'];
@@ -124,6 +170,10 @@ async function run(browser, revision, sequence) {
         assert(after.every(v=>v.allocs<Math.min(...before.map(b=>b.allocs))),'summit allocations decreased');
       }
     }
+    const native=[];
+    for(const revision of ['before','after']) native.push(await nativeReplay(browser,revision));
+    fs.mkdirSync('test-results/terrain-reuse',{recursive:true});
+    fs.writeFileSync('test-results/terrain-reuse/native-'+renderer+'.json',JSON.stringify(native));
   } finally {
     fs.mkdirSync('test-results/terrain-reuse',{recursive:true});
     fs.writeFileSync('test-results/terrain-reuse/'+renderer+'.json',JSON.stringify(rows));
