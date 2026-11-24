@@ -1,0 +1,31 @@
+name: Forest opening Soul
+on:
+  pull_request:
+    paths: ['index.html', 'tests/browser-opening-soul.py', '.github/workflows/opening-soul.yml']
+  push:
+    branches: [main]
+    paths: ['index.html', 'tests/browser-opening-soul.py', '.github/workflows/opening-soul.yml']
+permissions:
+  contents: read
+jobs:
+  phone:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.56.0 && python -m playwright install chromium
+      - name: Verify candidate or deployed release through touch controls
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = push ]; then
+            export GAME_URL="https://newstandard710.github.io/grim-run/"
+          else
+            python -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/opening-soul.log" 2>&1 &
+          fi
+          python tests/browser-opening-soul.py
