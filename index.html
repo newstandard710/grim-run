@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.21</title>
+  <title>GRIM RUN — v0.19.22</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -285,7 +285,7 @@ button {cursor:pointer;}
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.21</div>
+    <div class="home-edition">GRIM RUN · v0.19.22</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="critical-health-halo" class="hidden" aria-hidden="true"></div>
@@ -326,7 +326,7 @@ button {cursor:pointer;}
       <p id="portal-art-load-error" role="alert" class="hidden">Portal and mist artwork failed to load. Refresh to retry.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.21</div>
+      <div class="mini">v0.19.22</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -336,7 +336,7 @@ button {cursor:pointer;}
       <div class="eyebrow">POWERS THAT OUTLIVE DEATH</div>
       <h2 id="reliquary-title" tabindex="-1">THE RELIQUARY</h2>
       <div class="meta-wallet"><span class="soul-icon">✦</span> <span id="reliquary-souls">0</span> SOULS AVAILABLE</div>
-      <p class="meta-intro">Spend Souls to strengthen every future run.</p>
+      <p id="opening-soul-progress" class="meta-intro"></p>
       <div id="reliquary-cards" class="meta-grid"></div>
       <div id="reliquary-notice" class="meta-notice" aria-live="polite"></div>
       <button id="reliquary-reset-btn" class="secondary meta-reset">REFUND UPGRADES · 1 SOUL FEE</button>
@@ -471,7 +471,7 @@ button {cursor:pointer;}
   </div>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.21',
+  version: '0.19.22',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -511,6 +511,7 @@ window.GRIM_CONFIG = Object.freeze({
   vendorEveryMeters: 666,
   finishMeters: 9999,
   worldArtEndMeters: 20000,
+  openingSoulLimit: 5,
   soulAtMeters: 4856,
   finalSoulMeters: 9500,
   goldPerInterval: 7,
@@ -786,7 +787,8 @@ window.GRIM_CONFIG = Object.freeze({
     const source=obj.levels&&typeof obj.levels==='object'?obj.levels:{};
     const levels={};
     for(const entry of DEFINITIONS)levels[entry.id]=boundedInt(source[entry.id],0,entry.amounts.length-1);
-    return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels};
+    return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,
+      openingSouls:boundedInt(obj.openingSouls,0,scope.GRIM_CONFIG.openingSoulLimit)};
   }
   function load(){
     try{
@@ -804,7 +806,8 @@ window.GRIM_CONFIG = Object.freeze({
     try{localStorage.setItem(KEY,JSON.stringify(normalize(state)));}catch(_){}
     try{localStorage.setItem(LEGACY,String(state.souls));}catch(_){}
   }
-  function earn(state,amount=1){
+  function earn(state,amount=1,opening=false){
+    if(opening)state.openingSouls++; // Persist the credit and its lifetime count together.
     state.souls=boundedInt(state.souls+boundedInt(amount,0,MAX_SOULS),0,MAX_SOULS);
     save(state);
     return state.souls;
@@ -1837,6 +1840,10 @@ window.GRIM_CONFIG = Object.freeze({
     updateReliquary(meta,notice='') {
       const {DEFINITIONS,COSTS}=window.GRIM_META;
       el('reliquary-souls').textContent=meta.souls.toLocaleString();
+      const cap=window.GRIM_CONFIG.openingSoulLimit;
+      el('opening-soul-progress').textContent=meta.openingSouls<cap
+        ? `Clear the first Forest obstacle unhurt to reveal a Soul. Opening Souls: ${meta.openingSouls}/${cap}.`
+        : `All ${cap} opening Souls collected. Find more on the run.`;
       const holder=el('reliquary-cards');holder.replaceChildren();
       for(const item of DEFINITIONS){
         const level=meta.levels[item.id],maxLevel=item.amounts.length-1,nextCost=level<maxLevel?(item.costs||COSTS)[level]:null;
@@ -2864,6 +2871,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.coins = [];
       this.particles = [];
       this.soulCount = 0;
+      // null awaits the first Forest obstacle, a world X tracks it, and -1 closes the trial.
+      this.player.openingGateX=this.meta.openingSouls<C.openingSoulLimit?null:-1;
+      this.openingSoulClaimed=false;this.openingPracticeUsed=false;
       this.runSoulsAvailable=0;this.reviveUsed=false;
       this.freeLifeAvailable=this.meta.levels.deathDenied>0;this.freeLifeUsed=false;
       this.rerollsRemaining=this.meta.levels.fatesBargain||0;
@@ -2979,6 +2989,10 @@ window.GRIM_CONFIG = Object.freeze({
       const had=this.rewindLevel();
       const previous=this.practicePowerLevels?this.practiceAbilityEffects():null;
       this.godMode=Boolean(on);
+      if(this.godMode){
+        this.openingPracticeUsed=true;
+        this.souls=this.souls.filter(soul=>soul.kind!=='opening');
+      }
       this.powerManager.setPracticeLevels(this.godMode?this.practicePowerLevels:null);
       this.ui.showGodMode(this.godMode);
       if(!this.godMode){this.practiceSlow=false;this.practiceTimeMode=0;this.ui.showPracticeSlow(false);}
@@ -3233,14 +3247,19 @@ window.GRIM_CONFIG = Object.freeze({
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
-    collectSoul(){
+    collectSoul(opening=false){
+      if(opening){
+        if(this.openingSoulClaimed||this.openingPracticeUsed||this.teleportUsed||
+           this.meta.openingSouls>=C.openingSoulLimit)return false;
+        this.openingSoulClaimed=true;
+      }
       this.resetRewindHistory(); // Banked currency can never be time-reversed.
       this.soulCount++;
       // Teleport-assisted testing can examine Soul pickup visuals without
       // generating permanent currency by repeatedly jumping to 9500m.
       if(!this.teleportUsed){
         this.runSoulsAvailable++;
-        this.totalSouls=Meta.earn(this.meta,1);
+        this.totalSouls=Meta.earn(this.meta,1,opening);
         document.getElementById('banked-souls').textContent=String(this.totalSouls);
       }
     }
@@ -3291,8 +3310,8 @@ window.GRIM_CONFIG = Object.freeze({
     makeTip(type,ob) {
       if (this.tipped.has(type)) return;
       this.tipped.add(type);
-      const title={rock:'JUMP ↑',fire:'JUMP FIRE ↑',branch:'SLIDE ↓',bramble:'ATTACK ⚔',
-        tuckGate:'JUMP + TUCK',airBramble:'JUMP + ATTACK'}[type];
+      const title={rock:'JUMP ↑',fire:'JUMP FIRE ↑',branch:'SLIDE ↓',bramble:'CUT ⚔',
+        tuckGate:'JUMP + SLIDE',airBramble:'JUMP + CUT',snappingBramble:'CUT AS THE JAWS OPEN'}[type];
       if(!title) return;
       const label=this.add.text(ob.x+ob.width/2,this.terrain.anchorAt(ob.x)-145,title,{
         fontFamily:'system-ui,Arial,sans-serif',fontSize:'20px',fontStyle:'900',
@@ -3307,6 +3326,9 @@ window.GRIM_CONFIG = Object.freeze({
       const ob=Core.obstacle(type,x,surface,this.rng.integer(0,5),C.slideClearancePx,this.height);
       if(this.vendorObstacleBlocked(type,x,ob.width))return;
       if(type==='branch')this.chooseSlideSkin(ob);
+      if(this.player?.openingGateX===null && (x-this.startX)/C.pxPerMeter<900){
+        this.player.openingGateX=x;
+      }
       this.obstacles.push(ob);this.makeTip(type,ob);
     }
     vendorObstacleBounds(type,x,width){
@@ -3473,8 +3495,9 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.coins.some(c=>!c.taken&&Math.abs(c.x-x)<110))continue;
         const ground=this.terrain.groundAt(x),height=62;
         if(ground===null)continue;
-        this.obstacles.push({type:'snappingBramble',x,y:ground-height,width:62,height,
-          variant:this.rng.integer(0,5),dealtDamage:false,destroyed:false});
+        const plant={type:'snappingBramble',x,y:ground-height,width:62,height,
+          variant:this.rng.integer(0,5),dealtDamage:false,destroyed:false};
+        this.obstacles.push(plant);this.makeTip(plant.type,plant);
       }
     }
     updatePlants(frameMs){
@@ -3755,6 +3778,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.state==='upgrade'){this.drawScene();return;}
         this.checkHazards();
         if(this.state!=='playing'){this.drawScene();return;}
+        if(p.openingGateX>0)this.resolveOpeningTrial();
         this.obstacles = this.obstacles.filter(ob => !ob.destroyed && ob.x + ob.width > p.x - this.width);
         this.souls = this.souls.filter(s => !s.taken && s.x > p.x-this.width);
         this.coins = this.coins.filter(s => !s.taken && s.x > p.x-this.width);
@@ -4015,6 +4039,16 @@ window.GRIM_CONFIG = Object.freeze({
       this.fireballs=this.fireballs.filter(b=>!b.dead&&
         !Core.intersectsVendorCorridor(b.x-9,18,this.startX,C.vendorEveryMeters,C.pxPerMeter));
     }
+    resolveOpeningTrial(){
+      const gate=this.obstacles.find(ob=>ob.x===this.player.openingGateX);
+      if(!gate||gate.dealtDamage||this.openingPracticeUsed||this.teleportUsed||this.player.invulMs>0){
+        this.player.openingGateX=-1;return;
+      }
+      if(!gate.destroyed && this.player.x-27<gate.x+gate.width)return;
+      this.player.openingGateX=-1;
+      const x=gate.x+gate.width+185,baseY=this.terrain.groundAt(x);
+      if(baseY!==null)this.souls.push({x,baseY,offset:-38,kind:'opening',taken:false});
+    }
     checkCollectibles() {
       const p=this.player;
       const centerY=this.feetY-(this.lowProfile?16:43);
@@ -4030,7 +4064,8 @@ window.GRIM_CONFIG = Object.freeze({
         if(soul.taken) continue;
         const y=soul.baseY+soul.offset;
         if(Math.abs(p.x-soul.x)<34 && Math.abs(centerY-y)<41) {
-          soul.taken=true;this.collectSoul();
+          soul.taken=true;
+          if(this.collectSoul(soul.kind==='opening')===false)continue;
           this.puff(soul.x,y,CYAN,23);
           // Souls are no longer a reward trigger.
           break;
