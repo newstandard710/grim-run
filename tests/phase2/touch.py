@@ -10,6 +10,7 @@ baseline = label == "before"
 output = Path("test-results/phase2") / (label + "-" + renderer)
 output.mkdir(parents=True, exist_ok=True)
 logs = []
+failures = []
 with sync_playwright() as w:
     args = ["--disable-webgl"] if renderer == "canvas" else ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
     browser = w.chromium.launch(args=args)
@@ -34,6 +35,8 @@ with sync_playwright() as w:
         points=[]
         if down:
             box=page.locator("#"+action+"-btn").bounding_box()
+            if not box:
+                raise AssertionError(page.evaluate("()=>({state:scene.state,x:scene.player.x,hp:scene.player.hp,trial,sample})"))
             points=[{"x":box["x"]+box["width"]/2,"y":box["y"]+box["height"]/2}]
         cdp.send("Input.dispatchTouchEvent",{"type":"touchStart" if down else "touchEnd","touchPoints":points})
 
@@ -72,10 +75,13 @@ with sync_playwright() as w:
         print(json.dumps(result),flush=True)
         if offset_override is not None: return result
         if timing=="timed":
-            assert result["hp"]==result["before"]==3 and result["state"]=="playing",result
-            if not baseline: assert result["tree"]["destroyed"] and not result["tree"]["hit"],result
+            if result["hp"]!=3 or result["before"]!=3 or result["state"]!="playing":
+                failures.append(result)
+            if not baseline and (not result.get("tree",{}).get("destroyed") or result["tree"]["hit"]):
+                failures.append(result)
         if not baseline and timing!="timed":
-            assert result["hp"]<result["before"] and result["tree"]["hit"],result
+            if result["hp"]>=result["before"] or not result.get("tree",{}).get("hit"):
+                failures.append(result)
         return result
 
     run("foothills","timed",capture=os.getenv("CAPTURE")=="1")
@@ -122,3 +128,4 @@ with sync_playwright() as w:
         assert page.evaluate("notes.length")==count
     (output/"touch.json").write_text(json.dumps(logs,indent=2))
     browser.close()
+    assert not failures,failures

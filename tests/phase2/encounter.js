@@ -37,6 +37,20 @@
       s.update(0,dt);
     }
     s.godMode=false;
+    if(zone==='chain'){
+      // A rolled rock just before chain 4 can put the reference runner in
+      // midair at the fixture boundary. Sample the four-gap geometry from
+      // the same grounded launch strip on both builds.
+      const x=s.terrain.sequences[4].startX-185, p=s.player;
+      Object.assign(p,{x,y:s.terrain.groundAt(x),grounded:true,velocityY:0,jumpHeld:false,
+        jumpsUsed:0,airJumpUsed:false,invulMs:0,attackMs:0,attackCooldownMs:0,
+        holdSlide:false,sliding:false,airTuck:false,onSoulPlatform:false});
+      s.distance=(x-s.startX)/GRIM_CONFIG.pxPerMeter;
+      s.obstacles=s.obstacles.filter(o=>o.x>=s.terrain.sequences[4].startX);
+      s.cameraX=x-s.width*GRIM_CONFIG.reaperXRatio;
+      s.cameraY=p.y-s.groundY;
+      s.syncWorldScroll();
+    }
     window.tracked=null;
     window.sample={frame:0, landed:[], cues:[], costs:[], events:[], before:s.player.hp};
     const group = s.terrain.sequences[zone==='chain'?4:1];
