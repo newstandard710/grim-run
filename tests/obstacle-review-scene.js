@@ -248,7 +248,7 @@
           if(prior && score>=prior.score)continue;
           s.captureRewind();
           selected.set(id,{score,m,x:ob.x,seed:s.seed,version:C.version,snapshot:s.rewindFrames.at(-1),
-            player:{...s.player},nextVendorNumber:s.nextVendorNumber,lastVendorNumber:s.lastVendorNumber,
+            cutLessons:s.cutLessons?.slice()??[],player:{...s.player},nextVendorNumber:s.nextVendorNumber,lastVendorNumber:s.lastVendorNumber,
             hasTeleported:s.hasTeleported,shrineClaimed:s.shrineClaimed,gunUnlocked:s.gunUnlocked,
             soulCount:s.soulCount,powers:{...s.powerManager.levels}});
         }
@@ -258,9 +258,21 @@
     return s.distance>=until;
   }
   function loadRoute(record){
-    beginRoute(record.seed);
+    // Do not stream the opening biome between restoring two distant poses.
+    history.replaceState(null,'','?seed='+record.seed);
+    s.drawScene=()=>{};
+    s.startRun();
+    s.drawScene=drawWorld;
+    game.loop.sleep();
+    s.godMode=true;
+    for(const tip of s.tips)tip.label.destroy();
+    s.tips=[];
+    s.tipped=new Set(['rock','fire','bramble','branch','tuckGate','airBramble','snappingBramble','abyss']);
     const {snapshot,player,nextVendorNumber,lastVendorNumber,hasTeleported,shrineClaimed,gunUnlocked,soulCount}=record;
     Object.assign(s,{nextVendorNumber,lastVendorNumber,hasTeleported,shrineClaimed,gunUnlocked,soulCount});
+    // The next scheduled Forest/Foothills decision is part of the course just
+    // like nextEncounterX and the RNG. Older snapshots have no authored slots.
+    if(s.cutLessons)s.cutLessons=record.cutLessons.slice();
     Object.assign(s.powerManager.levels,record.powers);
     s.applyRewindSnapshot(snapshot);
     Object.assign(s.player,player);

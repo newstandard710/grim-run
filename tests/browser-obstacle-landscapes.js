@@ -105,19 +105,32 @@ async function playTransitions(page,revision,results,onlySeed){
       if(revision==='before')routeReferences.set(key,live);
       const records=revision==='before'?[[key,live]]:[[key,routeReferences.get(key)],[key+'-native',live]];
       for(const [name,record] of records){
-        const encounter=await page.evaluate(r=>obstacleReview.loadRoute(r),record);
-        await waitForArt(page);
-        const art=await page.evaluate(()=>obstacleReview.inspect());
-        const dir=path.join(out,name,revision);
-        await fs.mkdir(dir,{recursive:true});
-        const trace=[];
-        for(let frame=0;frame<18;frame++){
-          const sample=await page.evaluate(()=>obstacleReview.routeFrame());
-          trace.push(...sample.states);
-          await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
-        }
-        results[name]={encounter,art,trace:hash(trace)};
-        console.log(revision,name,JSON.stringify(results[name]));
+        // Replaying a stored world is a separate render, not a second trip
+        // through Forest. Release the scan's GPU working set from the capture
+        // path; especially important for the large Lava/Boss texture pair.
+        const isolated=renderer==='webgl';
+        const view=isolated?await page.context().browser().newPage({viewport:page.viewportSize(),hasTouch:true}):page;
+        try{
+          const renderErrors=[];
+          if(isolated){
+            view.on('pageerror',error=>renderErrors.push(error.message));
+            await openReview(view,revision);
+          }
+          const encounter=await view.evaluate(r=>obstacleReview.loadRoute(r),record);
+          await waitForArt(view);
+          const art=await view.evaluate(()=>obstacleReview.inspect());
+          const dir=path.join(out,name,revision);
+          await fs.mkdir(dir,{recursive:true});
+          const trace=[];
+          for(let frame=0;frame<18;frame++){
+            const sample=await view.evaluate(()=>obstacleReview.routeFrame());
+            trace.push(...sample.states);
+            await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
+          }
+          results[name]={encounter,art,trace:hash(trace)};
+          console.log(revision,name,JSON.stringify(results[name]));
+          assert.deepEqual(renderErrors,[]);
+        }finally{if(isolated)await view.close();}
       }
     }
   }
@@ -149,15 +162,19 @@ async function captureGallery(page){
   return captures;
 }
 
-async function measure(page,revision,cases,extras=true,reviewPhase=phase,output=out){
-  const {width,height}=page.viewportSize();
-  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+async function openReview(page,revision){
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   await page.waitForFunction(()=>{const s=window.grimRun?.scene.scenes[0];
     return s?.state==='playing'&&s.motionArt?.rising&&s.motionArt.airReady&&s.motionArt.cutWeaponReady;},null,{timeout:90000});
   await page.evaluate(async()=>{await grimRun.scene.scenes[0].visuals.reviewLoad;});
   await page.addScriptTag({path:path.join(__dirname,'obstacle-review-scene.js')});
+}
+
+async function measure(page,revision,cases,extras=true,reviewPhase=phase,output=out){
+  const {width,height}=page.viewportSize();
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await openReview(page,revision);
   const actual=await page.evaluate(()=>[grimRun.renderer.type,grimRun.canvas.width,grimRun.canvas.height]);
   assert.deepEqual(actual,[renderer==='canvas'?1:2,width,height]);
   const results={};
