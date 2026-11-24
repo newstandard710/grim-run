@@ -244,10 +244,10 @@
           if(art.biome!==biome||art.category!==family)continue;
           const prior=selected.get(id);
           // Prefer the appropriate transition, then its originally reviewed painting.
-          const score=Math.abs(m-center)+(family!=='slide'&&art.id!==id?400:0);
+          const score=Math.abs(m-center)+(family!=='slide'&&art.id!==id?1:0);
           if(prior && score>=prior.score)continue;
           s.captureRewind();
-          selected.set(id,{score,m,x:ob.x,seed:s.seed,snapshot:s.rewindFrames.at(-1),
+          selected.set(id,{score,m,x:ob.x,seed:s.seed,version:C.version,snapshot:s.rewindFrames.at(-1),
             player:{...s.player},nextVendorNumber:s.nextVendorNumber,lastVendorNumber:s.lastVendorNumber,
             hasTeleported:s.hasTeleported,shrineClaimed:s.shrineClaimed,gunUnlocked:s.gunUnlocked,
             soulCount:s.soulCount,powers:{...s.powerManager.levels}});

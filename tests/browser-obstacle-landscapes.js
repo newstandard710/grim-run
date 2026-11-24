@@ -74,21 +74,32 @@ async function playTransitions(page,revision,results,onlySeed){
   ];
   for(const [seed,stops] of routes){
     if(onlySeed && seed!==onlySeed)continue;
-    await page.evaluate(seed=>obstacleReview.beginRoute(seed),seed);
-    // Select actual encounters on each seeded route. Shared gameplay RNG can
-    // legitimately change later positions after an earlier input or hazard changes.
-    const until=seed===33?10002:8750;
-    let complete=false;
-    for(let part=0;part<250&&!complete;part++){
-      complete=await page.evaluate(([stops,until])=>obstacleReview.scanRoute(stops,until),[stops,until]);
-      if(!complete)await page.waitForFunction(()=>!grimRun.scene.scenes[0].biomeMidground.stream.pending,
-        null,{polling:150,timeout:30000});
+    // Look for the same obstacle family near each biome transition. A changed
+    // early decision can move later rolls, including every slide on one seed.
+    let native;
+    for(const routeSeed of [seed,seed+1,seed+2,seed+3]){
+      await page.evaluate(seed=>obstacleReview.beginRoute(seed),routeSeed);
+      const pending=stops.filter(([,m],i)=>!native?.[i]||Math.abs(native[i].m-m)>160);
+      const until=Math.min(10002,Math.max(...pending.map(([,m])=>m))+720);
+      let complete=false;
+      for(let part=0;part<250&&!complete;part++){
+        complete=await page.evaluate(([stops,until])=>obstacleReview.scanRoute(stops,until),[pending,until]);
+        if(!complete)await page.waitForFunction(()=>!grimRun.scene.scenes[0].biomeMidground.stream.pending,
+          null,{polling:150,timeout:30000});
+      }
+      assert(complete,'seeded route reached its last sample');
+      native=await page.evaluate(stops=>stops.map(([id])=>obstacleReview.routeRecord(id)),stops);
+      if(native.every((r,i)=>r&&Math.abs(r.m-stops[i][1])<=160))break;
     }
-    assert(complete,'seeded route reached its last sample');
-    const native=await page.evaluate(stops=>stops.map(([id])=>obstacleReview.routeRecord(id)),stops);
     for(const [i,[id]] of stops.entries()){
       const key='route-'+id+'-'+seed, live=native[i];
       assert(live,key+' naturally spawned on '+revision);
+      assert(Math.abs(live.m-stops[i][1])<=240,key+' stays near the biome transition');
+      const reference=routeReferences.get(key);
+      if(revision==='after' && !(reference.version==='0.19.22' && live.version==='0.19.23')){
+        assert.deepEqual([live.seed,live.x,live.snapshot.rngState],
+          [reference.seed,reference.x,reference.snapshot.rngState],key+' native route parity');
+      }
       // Preserve exact cross-revision physics checks by replaying the same
       // populated world, including actors, pickups, RNG and the pending spawn.
       if(revision==='before')routeReferences.set(key,live);
