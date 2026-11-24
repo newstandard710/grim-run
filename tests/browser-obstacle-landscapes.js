@@ -91,6 +91,11 @@ async function playTransitions(page,revision,results,onlySeed){
       native=await page.evaluate(stops=>stops.map(([id])=>obstacleReview.routeRecord(id)),stops);
       if(native.every((r,i)=>r&&Math.abs(r.m-stops[i][1])<=160))break;
     }
+    // Each WebGL route job owns a single seed. Close its planner before the
+    // first capture so SwiftShader never hosts two texture-heavy games at once.
+    const isolated=renderer==='webgl' && Boolean(onlySeed);
+    const browser=page.context().browser(), viewport=page.viewportSize();
+    if(isolated)await page.close();
     for(const [i,[id]] of stops.entries()){
       const key='route-'+id+'-'+seed, live=native[i];
       assert(live,key+' naturally spawned on '+revision);
@@ -105,11 +110,7 @@ async function playTransitions(page,revision,results,onlySeed){
       if(revision==='before')routeReferences.set(key,live);
       const records=revision==='before'?[[key,live]]:[[key,routeReferences.get(key)],[key+'-native',live]];
       for(const [name,record] of records){
-        // Replaying a stored world is a separate render, not a second trip
-        // through Forest. Release the scan's GPU working set from the capture
-        // path; especially important for the large Lava/Boss texture pair.
-        const isolated=renderer==='webgl';
-        const view=isolated?await page.context().browser().newPage({viewport:page.viewportSize(),hasTouch:true}):page;
+        const view=isolated?await browser.newPage({viewport,hasTouch:true}):page;
         try{
           const renderErrors=[];
           if(isolated){
@@ -127,6 +128,7 @@ async function playTransitions(page,revision,results,onlySeed){
             trace.push(...sample.states);
             await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
           }
+          await fs.writeFile(path.join(dir,'states.json'),JSON.stringify(trace));
           results[name]={encounter,art,trace:hash(trace)};
           console.log(revision,name,JSON.stringify(results[name]));
           assert.deepEqual(renderErrors,[]);
