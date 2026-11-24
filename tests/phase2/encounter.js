@@ -10,6 +10,8 @@
   window.scene = s;
   window.begin = (seed, zone) => {
     history.replaceState({}, '', '?seed=' + seed);
+    s.meta=GRIM_META.normalize({});
+    GRIM_META.save(s.meta);
     s.startRun();
     s.drawScene = () => {};
     const firstTree = 205 + seed%13, secondTree = 365 + seed%17;
@@ -35,6 +37,7 @@
       s.update(0,dt);
     }
     s.godMode=false;
+    window.tracked=null;
     window.sample={frame:0, landed:[], cues:[], costs:[], events:[], before:s.player.hp};
     const group = s.terrain.sequences[zone==='chain'?4:1];
     const targetX = zone==='forest'||zone==='practice'
@@ -55,7 +58,8 @@
       v.costs.push(performance.now()-t);
       ++v.frame;
       if(!was&&scene.player.grounded)v.landed.push(v.frame);
-      const ob=scene.obstacles.find(o=>o.x===trial.targetX);
+      window.tracked??=scene.obstacles.find(o=>o.x===trial.targetX);
+      const ob=window.tracked;
       if(ob && !v.cues.length && ob.x<=scene.cameraX+scene.width)v.cues.push(v.frame);
       if(ob) v.tree={type:ob.type, destroyed:ob.destroyed, hit:ob.dealtDamage};
       if(v.frame>1800)throw Error('sample did not advance');

@@ -37,7 +37,7 @@ with sync_playwright() as w:
             points=[{"x":box["x"]+box["width"]/2,"y":box["y"]+box["height"]/2}]
         cdp.send("Input.dispatchTouchEvent",{"type":"touchStart" if down else "touchEnd","touchPoints":points})
 
-    def run(zone, timing, seed=33, capture=False):
+    def run(zone, timing, seed=33, capture=False, offset_override=None):
         page.evaluate("([seed,zone])=>begin(seed,zone)",[seed,zone])
         trial=page.evaluate("trial")
         target=trial.get("targetX")
@@ -46,6 +46,7 @@ with sync_playwright() as w:
             events += [(x-58,"jump",True),(x+190,"jump",False)]
         if target and timing!="miss":
             offset={"early":-260,"timed":-90,"late":8}[timing]
+            if offset_override is not None: offset=offset_override
             events += [(target+offset,"attack",True),(target+offset+8,"attack",False)]
         events.sort()
         if capture:
@@ -69,7 +70,8 @@ with sync_playwright() as w:
         result.update(zone=zone,timing=timing,seed=seed)
         logs.append(result)
         print(json.dumps(result),flush=True)
-        if timing=="timed" and (not baseline or zone=="foothills"):
+        if offset_override is not None: return result
+        if timing=="timed":
             assert result["hp"]==result["before"]==3 and result["state"]=="playing",result
             if not baseline: assert result["tree"]["destroyed"] and not result["tree"]["hit"],result
         if not baseline and timing!="timed":
@@ -77,10 +79,38 @@ with sync_playwright() as w:
         return result
 
     run("foothills","timed",capture=os.getenv("CAPTURE")=="1")
+    if baseline: run("chain","timed")
     if not baseline:
+        if renderer=="canvas":
+            for seed in (1,2,3,17,73):
+                run("foothills","timed",seed)
+            for offset in (-180,-150,-120,-60,-48,-36,-24,-12):
+                run("foothills","timed",offset_override=offset)
         for zone in ("forest","practice","foothills","chain"):
             for timing in ("early","timed","late","miss"):
                 run(zone,timing)
+        page.evaluate(Path(__file__).with_name("pressure.js").read_text())
+        for frame in [47,50,53,56,59,None]:
+            page.evaluate("pressure('plant')")
+            if frame is not None:
+                page.evaluate("n=>approach(n,null)",frame)
+                touch("attack",True)
+                touch("attack",False)
+            outcome=page.evaluate("approach(120,null)")
+            print("Tundra",frame,outcome,flush=True)
+            assert outcome["windup"]==29 and outcome["tip"]
+            assert outcome["hp"]==(3 if frame in (47,50,53,56) else 2)
+            assert outcome["dead"]==(frame is not None)
+        for action,lead in [("jump",105),("attack",128),("crossbow",310),(None,0)]:
+            page.evaluate("pressure('crawler')")
+            if action:
+                page.evaluate("lead=>approach(300,lead)",lead)
+                touch(action,True)
+            outcome=page.evaluate("approach(180,null)")
+            if action: touch(action,False)
+            print("Lava",action,outcome,flush=True)
+            if action=="crossbow": assert outcome["dead"] and outcome["hp"]==3
+            if action is None: assert outcome["hp"]<3
         assert page.evaluate("notes.some(n=>n.state==='running')")
         page.evaluate("scene.togglePause()")
         page.locator("#mute-actions").check()
