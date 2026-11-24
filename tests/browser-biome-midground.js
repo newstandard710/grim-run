@@ -309,6 +309,12 @@ async function parity(browser) {
       sprites.clear();
     }
     b.scene.drawObstacle = () => {};
+    // This flat-ground sample measures scenery pixels. A seeded prompt,
+    // damage flash or debris from an unseen obstacle changes the framebuffer.
+    b.scene.nextEncounterX=Infinity;
+    b.scene.obstacles=[];
+    for(const tip of b.scene.tips)tip.label.destroy();
+    b.scene.tips=[];
     b.game.events.on(Phaser.Core.Events.PRE_RENDER, () => {
       b.scene.motionArt?.hide();
       b.scene.powerArt?.hideBase();

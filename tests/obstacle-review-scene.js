@@ -227,31 +227,52 @@
     if(s.player.grounded && next && next.start-s.player.x<=20)s.jump();
     s.update(0,1000/60);
   }
-  function seekRoute(spec) {
+  const selected=new Map();
+  function scanRoute(stops,until){
     s.drawScene=()=>{};
-    for(let i=0;i<180;i++) {
+    for(let i=0;i<180 && s.distance<until;i++){
       routeStep();
       if(s.state!=='playing')continue;
-      const o=s.obstacles.find(o=>!o.destroyed && o.x-s.player.x>=170 && o.x-s.player.x<=280 &&
-        Math.abs((o.x-s.startX)/C.pxPerMeter-spec.m)<=spec.range &&
-        (o.slideSkin ? spec.id.startsWith(s.obstacleBiomeFor(o)+'_slide_') &&
-          s.obstacleSkinFor(o)?.id===o.slideSkin : s.obstacleSkinFor(o)?.id===spec.id));
-      if(o){
-        obstacle=o;skin=s.obstacleSkinFor(o);
-        s.drawScene=drawWorld;
-        s.drawScene();render();
-        return {skin:skin.id,x:o.x,m:(o.x-s.startX)/C.pxPerMeter,playerX:s.player.x,
-          weights:window.GRIM_WORLD_ART.biomeWeights((o.x-s.startX)/C.pxPerMeter),
-          actors:s.enemies.filter(e=>Math.abs(e.x-s.player.x)<s.width).map(e=>e.kind),
-          objects:s.obstacles.filter(b=>Math.abs(b.x-s.player.x)<s.width).map(b=>b.type),
-          coins:s.coins.filter(c=>!c.taken && Math.abs(c.x-s.player.x)<s.width).length};
+      for(const ob of s.obstacles){
+        const ahead=ob.x-s.player.x;
+        if(ob.destroyed||ahead<170||ahead>280)continue;
+        const art=s.obstacleSkinFor(ob);
+        if(!art)continue;
+        const m=(ob.x-s.startX)/C.pxPerMeter;
+        for(const [id,center] of stops){
+          const [biome,family]=id.split('_');
+          if(art.biome!==biome||art.category!==family)continue;
+          const prior=selected.get(id);
+          // Prefer the appropriate transition, then its originally reviewed painting.
+          const score=Math.abs(m-center)+(family!=='slide'&&art.id!==id?400:0);
+          if(prior && score>=prior.score)continue;
+          s.captureRewind();
+          selected.set(id,{score,m,x:ob.x,seed:s.seed,snapshot:s.rewindFrames.at(-1),
+            player:{...s.player},nextVendorNumber:s.nextVendorNumber,lastVendorNumber:s.lastVendorNumber,
+            hasTeleported:s.hasTeleported,shrineClaimed:s.shrineClaimed,gunUnlocked:s.gunUnlocked,
+            soulCount:s.soulCount,powers:{...s.powerManager.levels}});
+        }
       }
-      if(s.distance>spec.m+spec.range)throw Error('Natural encounter missed: '+spec.id+' at '+s.distance);
     }
-    // Give the production streamer its normal camera progression between
-    // recorded encounters, including prefetch as the next biome approaches.
     s.drawScene=drawWorld;s.drawScene();render();
-    return null;
+    return s.distance>=until;
+  }
+  function loadRoute(record){
+    beginRoute(record.seed);
+    const {snapshot,player,nextVendorNumber,lastVendorNumber,hasTeleported,shrineClaimed,gunUnlocked,soulCount}=record;
+    Object.assign(s,{nextVendorNumber,lastVendorNumber,hasTeleported,shrineClaimed,gunUnlocked,soulCount});
+    Object.assign(s.powerManager.levels,record.powers);
+    s.applyRewindSnapshot(snapshot);
+    Object.assign(s.player,player);
+    obstacle=s.obstacles.find(o=>o.x===record.x&&!o.destroyed);
+    skin=s.obstacleSkinFor(obstacle);
+    s.biomeMidground?.prioritizeTeleport(s.distance);
+    s.drawScene();render();
+    return {skin:skin.id,x:obstacle.x,m:record.m,playerX:s.player.x,
+      weights:window.GRIM_WORLD_ART.biomeWeights(record.m),
+      actors:s.enemies.filter(e=>Math.abs(e.x-s.player.x)<s.width).map(e=>e.kind),
+      objects:s.obstacles.filter(o=>Math.abs(o.x-s.player.x)<s.width).map(o=>o.type),
+      coins:s.coins.filter(c=>!c.taken&&Math.abs(c.x-s.player.x)<s.width).length};
   }
   function routeFrame() {
     const states=[];
@@ -271,6 +292,8 @@
     const y=s.terrain.groundAt(x)??s.terrain.anchorAt(x);
     Object.assign(s.player,{x,y,grounded:true});
     s.distance=(x-s.startX)/C.pxPerMeter;
+    // Start the portal sample with the same local spawn frontier on both courses.
+    s.nextEncounterX=x+1000;s.nextSnapSpawnX=x+1200;
     s.speed=window.GRIM_CORE.runSpeed(s.distance);
     s.shrineClaimed=true;
     s.nextVendorNumber=Math.floor(s.distance/C.vendorEveryMeters)+1;
@@ -324,6 +347,6 @@
     const leaked=Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-mounted-')||k.startsWith('obstacle-registered-'));
     if (leaked.length) throw Error('Leaked obsolete art: '+leaked.join(', '));
   }
-  window.obstacleReview={prepare,ready,diagnostics,inspect,step,signature,image,cleanup,render,startPortal,exerciseMountLifecycle,beginRoute,seekRoute,routeFrame,
+  window.obstacleReview={prepare,ready,diagnostics,inspect,step,signature,image,cleanup,render,startPortal,exerciseMountLifecycle,beginRoute,scanRoute,loadRoute,routeRecord:id=>selected.get(id),routeFrame,
     get result(){return {firstCut,firstHit,airTucked,inputSent,passed:s.player.x>obstacle.x+obstacle.width};}};
 })();

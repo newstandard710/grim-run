@@ -62,6 +62,7 @@ async function waitForArt(page) {
   }
 }
 
+const routeReferences=new Map();
 async function playTransitions(page,revision,results,onlySeed){
   const routes=[
     [34,[
@@ -74,27 +75,39 @@ async function playTransitions(page,revision,results,onlySeed){
   for(const [seed,stops] of routes){
     if(onlySeed && seed!==onlySeed)continue;
     await page.evaluate(seed=>obstacleReview.beginRoute(seed),seed);
-    for(const [id,m] of stops){
-      const key='route-'+id+'-'+seed;
-      let encounter;
-      for(let segment=0;segment<160&&!encounter;segment++){
-        encounter=await page.evaluate(spec=>obstacleReview.seekRoute(spec),{id,m,range:2});
-        if(!encounter)await page.waitForFunction(()=>!grimRun.scene.scenes[0].biomeMidground.stream.pending,
-          null,{polling:150,timeout:30000});
+    // Select actual encounters on each seeded route. Shared gameplay RNG can
+    // legitimately change later positions after an earlier input or hazard changes.
+    const until=seed===33?10002:8750;
+    let complete=false;
+    for(let part=0;part<250&&!complete;part++){
+      complete=await page.evaluate(([stops,until])=>obstacleReview.scanRoute(stops,until),[stops,until]);
+      if(!complete)await page.waitForFunction(()=>!grimRun.scene.scenes[0].biomeMidground.stream.pending,
+        null,{polling:150,timeout:30000});
+    }
+    assert(complete,'seeded route reached its last sample');
+    const native=await page.evaluate(stops=>stops.map(([id])=>obstacleReview.routeRecord(id)),stops);
+    for(const [i,[id]] of stops.entries()){
+      const key='route-'+id+'-'+seed, live=native[i];
+      assert(live,key+' naturally spawned on '+revision);
+      // Preserve exact cross-revision physics checks by replaying the same
+      // populated world, including actors, pickups, RNG and the pending spawn.
+      if(revision==='before')routeReferences.set(key,live);
+      const records=revision==='before'?[[key,live]]:[[key,routeReferences.get(key)],[key+'-native',live]];
+      for(const [name,record] of records){
+        const encounter=await page.evaluate(r=>obstacleReview.loadRoute(r),record);
+        await waitForArt(page);
+        const art=await page.evaluate(()=>obstacleReview.inspect());
+        const dir=path.join(out,name,revision);
+        await fs.mkdir(dir,{recursive:true});
+        const trace=[];
+        for(let frame=0;frame<18;frame++){
+          const sample=await page.evaluate(()=>obstacleReview.routeFrame());
+          trace.push(...sample.states);
+          await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
+        }
+        results[name]={encounter,art,trace:hash(trace)};
+        console.log(revision,name,JSON.stringify(results[name]));
       }
-      assert(encounter,key+' naturally spawned in the populated scene');
-      await waitForArt(page);
-      const art=await page.evaluate(()=>obstacleReview.inspect());
-      const dir=path.join(out,key,revision);
-      await fs.mkdir(dir,{recursive:true});
-      const trace=[];
-      for(let frame=0;frame<18;frame++){
-        const sample=await page.evaluate(()=>obstacleReview.routeFrame());
-        trace.push(...sample.states);
-        await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
-      }
-      results[key]={encounter,art,trace:hash(trace)};
-      console.log(revision,key,JSON.stringify(results[key]));
     }
   }
 }
