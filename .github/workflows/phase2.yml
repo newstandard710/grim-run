@@ -1,0 +1,64 @@
+name: Forest and Foothills touch pacing
+on:
+  pull_request:
+    paths: ['index.html', 'assets/audio/**', 'tests/phase2/**', '.github/workflows/phase2.yml']
+  push:
+    branches: [main]
+    paths: ['index.html', 'assets/audio/**', 'tests/phase2/**', '.github/workflows/phase2.yml']
+permissions:
+  contents: read
+jobs:
+  touch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [canvas, webgl]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.56.0 && python -m playwright install chromium
+      - name: Compare rendered encounters through touch controls
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          RENDERER: ${{ matrix.renderer }}
+        run: |
+          if [ -n "$BASE" ]; then
+            git fetch --depth 1 origin "$BASE"
+            git worktree add --detach "$RUNNER_TEMP/before" "$BASE"
+            python -m http.server 8766 --bind 127.0.0.1 --directory "$RUNNER_TEMP/before" > /tmp/before.log 2>&1 &
+            python -m http.server 8765 --bind 127.0.0.1 > /tmp/candidate.log 2>&1 &
+            if [ "$RENDERER" = canvas ]; then export CAPTURE=1; fi
+            python tests/phase2/touch.py http://127.0.0.1:8766/ before "$RENDERER"
+            python tests/phase2/touch.py http://127.0.0.1:8765/ candidate "$RENDERER"
+          else
+            url=https://newstandard710.github.io/grim-run/
+            for path in index.html assets/audio/action-sounds.js; do
+              for i in {1..90}; do
+                curl -fsSL "$url$path?release=$GITHUB_SHA" -o /tmp/deployed && cmp -s "$path" /tmp/deployed && break
+                sleep 5
+              done
+              cmp "$path" /tmp/deployed
+            done
+            python tests/phase2/touch.py "$url" public "$RENDERER"
+          fi
+      - name: Encode game-speed motion
+        if: always() && matrix.renderer == 'canvas' && github.event_name == 'pull_request'
+        run: |
+          pip install imageio-ffmpeg==0.6.0
+          encoder=$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')
+          for dir in test-results/phase2/*/motion; do
+            [ -d "$dir" ] || continue
+            "$encoder" -loglevel error -framerate 30 -pattern_type glob -i "$dir/*.jpg" -pix_fmt yuv420p "${dir%/motion}/foothills.mp4"
+            rm -r "$dir"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase2-${{ matrix.renderer }}
+          path: test-results/phase2

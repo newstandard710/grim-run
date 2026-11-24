@@ -62,6 +62,7 @@ async function waitForArt(page) {
   }
 }
 
+const routeReferences=new Map();
 async function playTransitions(page,revision,results,onlySeed){
   const routes=[
     [34,[
@@ -73,28 +74,66 @@ async function playTransitions(page,revision,results,onlySeed){
   ];
   for(const [seed,stops] of routes){
     if(onlySeed && seed!==onlySeed)continue;
-    await page.evaluate(seed=>obstacleReview.beginRoute(seed),seed);
-    for(const [id,m] of stops){
-      const key='route-'+id+'-'+seed;
-      let encounter;
-      for(let segment=0;segment<160&&!encounter;segment++){
-        encounter=await page.evaluate(spec=>obstacleReview.seekRoute(spec),{id,m,range:2});
-        if(!encounter)await page.waitForFunction(()=>!grimRun.scene.scenes[0].biomeMidground.stream.pending,
+    // Look for the same obstacle family near each biome transition. A changed
+    // early decision can move later rolls, including every slide on one seed.
+    let native;
+    for(const routeSeed of [seed,seed+1,seed+2,seed+3]){
+      await page.evaluate(seed=>obstacleReview.beginRoute(seed),routeSeed);
+      const pending=stops.filter(([,m],i)=>!native?.[i]||Math.abs(native[i].m-m)>160);
+      const until=Math.min(10002,Math.max(...pending.map(([,m])=>m))+720);
+      let complete=false;
+      for(let part=0;part<250&&!complete;part++){
+        complete=await page.evaluate(([stops,until])=>obstacleReview.scanRoute(stops,until),[pending,until]);
+        if(!complete)await page.waitForFunction(()=>!grimRun.scene.scenes[0].biomeMidground.stream.pending,
           null,{polling:150,timeout:30000});
       }
-      assert(encounter,key+' naturally spawned in the populated scene');
-      await waitForArt(page);
-      const art=await page.evaluate(()=>obstacleReview.inspect());
-      const dir=path.join(out,key,revision);
-      await fs.mkdir(dir,{recursive:true});
-      const trace=[];
-      for(let frame=0;frame<18;frame++){
-        const sample=await page.evaluate(()=>obstacleReview.routeFrame());
-        trace.push(...sample.states);
-        await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
+      assert(complete,'seeded route reached its last sample');
+      native=await page.evaluate(stops=>stops.map(([id])=>obstacleReview.routeRecord(id)),stops);
+      if(native.every((r,i)=>r&&Math.abs(r.m-stops[i][1])<=160))break;
+    }
+    // Each WebGL route job owns a single seed. Close its planner before the
+    // first capture so SwiftShader never hosts two texture-heavy games at once.
+    const isolated=renderer==='webgl' && Boolean(onlySeed);
+    const browser=page.context().browser(), viewport=page.viewportSize();
+    if(isolated)await page.close();
+    for(const [i,[id]] of stops.entries()){
+      const key='route-'+id+'-'+seed, live=native[i];
+      assert(live,key+' naturally spawned on '+revision);
+      assert(Math.abs(live.m-stops[i][1])<=240,key+' stays near the biome transition');
+      const reference=routeReferences.get(key);
+      if(revision==='after' && !(reference.version==='0.19.22' && live.version==='0.19.23')){
+        assert.deepEqual([live.seed,live.x,live.snapshot.rngState],
+          [reference.seed,reference.x,reference.snapshot.rngState],key+' native route parity');
       }
-      results[key]={encounter,art,trace:hash(trace)};
-      console.log(revision,key,JSON.stringify(results[key]));
+      // Preserve exact cross-revision physics checks by replaying the same
+      // populated world, including actors, pickups, RNG and the pending spawn.
+      if(revision==='before')routeReferences.set(key,live);
+      const records=revision==='before'?[[key,live]]:[[key,routeReferences.get(key)],[key+'-native',live]];
+      for(const [name,record] of records){
+        const view=isolated?await browser.newPage({viewport,hasTouch:true}):page;
+        try{
+          const renderErrors=[];
+          if(isolated){
+            view.on('pageerror',error=>renderErrors.push(error.message));
+            await openReview(view,revision);
+          }
+          const encounter=await view.evaluate(r=>obstacleReview.loadRoute(r),record);
+          await waitForArt(view);
+          const art=await view.evaluate(()=>obstacleReview.inspect());
+          const dir=path.join(out,name,revision);
+          await fs.mkdir(dir,{recursive:true});
+          const trace=[];
+          for(let frame=0;frame<18;frame++){
+            const sample=await view.evaluate(()=>obstacleReview.routeFrame());
+            trace.push(...sample.states);
+            await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
+          }
+          await fs.writeFile(path.join(dir,'states.json'),JSON.stringify(trace));
+          results[name]={encounter,art,trace:hash(trace)};
+          console.log(revision,name,JSON.stringify(results[name]));
+          assert.deepEqual(renderErrors,[]);
+        }finally{if(isolated)await view.close();}
+      }
     }
   }
 }
@@ -125,15 +164,19 @@ async function captureGallery(page){
   return captures;
 }
 
-async function measure(page,revision,cases,extras=true,reviewPhase=phase,output=out){
-  const {width,height}=page.viewportSize();
-  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+async function openReview(page,revision){
   await page.goto('http://127.0.0.1:'+server.address().port+'/'+revision+'/?seed=33',{waitUntil:'domcontentloaded'});
   await page.locator('#home-enter-btn').click();await page.locator('#start-btn').click();
   await page.waitForFunction(()=>{const s=window.grimRun?.scene.scenes[0];
     return s?.state==='playing'&&s.motionArt?.rising&&s.motionArt.airReady&&s.motionArt.cutWeaponReady;},null,{timeout:90000});
   await page.evaluate(async()=>{await grimRun.scene.scenes[0].visuals.reviewLoad;});
   await page.addScriptTag({path:path.join(__dirname,'obstacle-review-scene.js')});
+}
+
+async function measure(page,revision,cases,extras=true,reviewPhase=phase,output=out){
+  const {width,height}=page.viewportSize();
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await openReview(page,revision);
   const actual=await page.evaluate(()=>[grimRun.renderer.type,grimRun.canvas.width,grimRun.canvas.height]);
   assert.deepEqual(actual,[renderer==='canvas'?1:2,width,height]);
   const results={};
