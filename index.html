@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a1022">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>GRIM RUN — v0.19.22</title>
+  <title>GRIM RUN — v0.19.23</title>
   <link rel="preload" href="assets/ui/v0160/fonts/cinzel.ttf" as="font" type="font/ttf" crossorigin>
   <style>
 :root { color-scheme: dark; --cyan:#8cebe7; --dark:#0a1020; --ink:#0e1428; --white:#ecf5fa; }
@@ -285,7 +285,7 @@ button {cursor:pointer;}
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
-    <div class="home-edition">GRIM RUN · v0.19.22</div>
+    <div class="home-edition">GRIM RUN · v0.19.23</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
   <div id="critical-health-halo" class="hidden" aria-hidden="true"></div>
@@ -326,7 +326,7 @@ button {cursor:pointer;}
       <p id="portal-art-load-error" role="alert" class="hidden">Portal and mist artwork failed to load. Refresh to retry.</p>
       <button id="start-btn" class="primary">START RUN <span>▶</span></button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
-      <div class="mini">v0.19.22</div>
+      <div class="mini">v0.19.23</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
@@ -373,6 +373,7 @@ button {cursor:pointer;}
   <div id="pause-screen" class="modal-wrap hidden">
     <div class="modal compact"><h2>PAUSED</h2><p>The Underworld can wait.</p>
       <div class="god-mode-actions">
+        <label class="god-mode-setting"><input id="mute-actions" type="checkbox"><span>MUTE SOUND</span></label>
         <label class="god-mode-setting"><input id="god-mode-checkbox" type="checkbox"><span> GOD MODE — INVINCIBLE</span></label>
         <button id="god-abilities-btn" type="button" class="secondary god-abilities-launch hidden">ABILITIES</button>
       </div>
@@ -463,6 +464,7 @@ button {cursor:pointer;}
     };
   })(window);
   </script>
+  <script src="assets/audio/action-sounds.js?v=1"></script>
   <script src="assets/ui/v0160/startup.js?v=1"></script>
   <div id="vendor-intro-screen" class="vendor-intro-scene hidden" role="dialog" aria-modal="true" aria-labelledby="vendor-intro-title">
     <div id="vendor-intro-title">THE HEAVENLY MERCHANT</div>
@@ -471,7 +473,7 @@ button {cursor:pointer;}
   </div>
   <script>
 window.GRIM_CONFIG = Object.freeze({
-  version: '0.19.22',
+  version: '0.19.23',
   groundRatio: 0.79,
   reaperXRatio: 0.32,
   initialSpeed: 300,
@@ -1260,13 +1262,22 @@ window.GRIM_CONFIG = Object.freeze({
     function addSequence(group){
       const initialY=elevation,start=cursor,p=plan(group,Math.max(0,meters(cursor)));
       const trendAcross=profileAt(start+p.length+420)-initialY;
+      // In two Foothills chains the final takeoff becomes a supported approach to a tree.
+      // Keep the same profile, random draws and distance to the next sequence.
+      const combineCut=group===1||group===4;
+      let lastGapEnd=start;
       p.widths.forEach((width,i)=>{
-        add(cursor+width,elevation,'gap',group);
         const m=Math.max(0,meters(start));
         const maxStep=group===0?0:Math.min(58,33+Math.max(0,m-1000)*.006);
         const directional=clamp(trendAcross/p.widths.length*.58,-35,35);
         const vertical=group===0?0:clamp(directional+(random()-.5)*maxStep*1.08,-maxStep,maxStep);
-        elevation+=vertical;
+        if(combineCut && i===p.widths.length-1){
+          add(cursor+width,elevation+vertical);
+        }else{
+          add(cursor+width,elevation,'gap',group);
+          lastGapEnd=cursor;
+          elevation+=vertical;
+        }
         if(i<p.widths.length-1){
           // Platforms can climb or descend, rather than remaining a chain
           // of identical flat ledges. Keep their slopes gentler than hills.
@@ -1275,8 +1286,9 @@ window.GRIM_CONFIG = Object.freeze({
           add(end,elevation+platformSlope,'platform',group);
         }
       });
-      const endX=cursor;
-      sequences.push({id:group,startX:start,endX,respawnX:endX+170,initialY});
+      const sequence={id:group,startX:start,endX:lastGapEnd,respawnX:lastGapEnd+170,initialY};
+      if(combineCut)sequence.treeX=cursor+30;
+      sequences.push(sequence);
       add(cursor+420,elevation,'ground');
     }
     function makePortalBoundary(){
@@ -1588,6 +1600,7 @@ window.GRIM_CONFIG = Object.freeze({
       for (const id of ['attack-btn','crossbow-btn','rewind-btn','practice-slow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
+      scope.GRIM_ACTION_AUDIO?.setPlaying(mode==='playing'||mode==='dying');
       if(this.abilitiesLauncher&&this.mode!==mode)this.closeAbilities(false);
       this.mode=mode;
       if(mode==='dying'){
@@ -2891,6 +2904,10 @@ window.GRIM_CONFIG = Object.freeze({
       this.souls.push({x:this.startX+C.soulAtMeters*C.pxPerMeter,baseY:this.soulPlatform[1].y,offset:-113,kind:'optional',taken:false});
       this.souls.push({x:this.startX+C.finalSoulMeters*C.pxPerMeter,baseY:this.soulPlatform[8].y,offset:-100,kind:'optional',taken:false});
       this.populateGold();
+      // Reserve ordinary spawn slots for two grounded rehearsals and two landing counters.
+      // Geometry and collectible exclusions still have final say.
+      this.cutLessons=[205+this.seed%13,365+this.seed%17].map(m=>this.startX+m*C.pxPerMeter)
+        .concat(this.terrain.sequences.filter(group=>group.treeX).map(group=>group.treeX));
       this.populateComboObstacles();
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
@@ -3017,6 +3034,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(!grounded&&!airAvailable&&!canHover)return;
       if(Core.canAirTuck(p.holdSlide,p.slideReleaseBufferMs))p.airTuck=true;
       p.slideReleaseBufferMs=0;
+      if(grounded||airAvailable)scope.GRIM_ACTION_AUDIO?.play('jump');
       if(grounded){
         p.jumpsUsed=1;p.sliding=false;p.slideConsumed=false;
         p.y-=1;p.grounded=false;p.onSoulPlatform=false;p.coyoteMs=0;
@@ -3050,6 +3068,7 @@ window.GRIM_CONFIG = Object.freeze({
     attack() {
       const p = this.player;
       if (this.state!=='playing' || this.practiceScale()===0 || p.attackCooldownMs > 0) return;
+      scope.GRIM_ACTION_AUDIO?.play('swing');
       p.attackMs = C.attackDurationMs;
       p.previousAttackMs=p.attackMs;p.visualLandingMs=0;
       // Cut owns the body from this input forward. A launched bolt keeps its cue.
@@ -3289,6 +3308,7 @@ window.GRIM_CONFIG = Object.freeze({
         const target=ob.type==='snappingBramble'?this.snappingBox(ob):ob;
         if(!hits(target))continue;
         this.destroyObstacle(ob,target);
+        scope.GRIM_ACTION_AUDIO?.play('cut');
         // Cutting removes the obstruction; only placed gold pickups grant currency.
         this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12,Boolean(this.worldPolish?.ready['polish-fragments']));
         this.puff(ob.x+ob.width/2,ob.y+ob.height-45,0x9bc3a2,13,Boolean(this.worldPolish?.ready['polish-fragments']));
@@ -3298,6 +3318,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(e.dead||e.lastScytheSwing===this.swingSequence)continue;
         if(!hits(Combat.rectFor(e)))continue;
         e.lastScytheSwing=this.swingSequence;
+        scope.GRIM_ACTION_AUDIO?.play('cut');
         this.hitEnemy(e,1,false);
       }
       for(const ball of this.fireballs){
@@ -3547,7 +3568,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.terrain.advance(ahead+700);
       while(this.nextEncounterX<ahead){
         const x=this.nextEncounterX;
-        const type=Core.chooseEncounter(this.rng,this.distance);
+        const rolled=Core.chooseEncounter(this.rng,this.distance);
+        const type=this.cutLessons?.includes(x)?'bramble':rolled;
         const width=type==='branch'?74:type==='bramble'?60:type==='fire'?58:54;
         if(x>this.brittleClearUntilX && this.terrain.canPlace(x,width) &&
            Core.canClearJumpObstacle(this.terrain.groundAt.bind(this.terrain),
@@ -3563,6 +3585,8 @@ window.GRIM_CONFIG = Object.freeze({
           this.placeEncounter(type,x);
         }
         this.nextEncounterX+=Core.encounterGap(this.speed,this.rng)*(this.distance>=5000?.72:1);
+        const lesson=this.cutLessons?.find(at=>at>x && this.nextEncounterX>=at-380);
+        if(lesson!==undefined)this.nextEncounterX=lesson;
       }
       this.spawnCombatAhead(ahead);
       if(!this.tipped.has('abyss') && this.terrain.firstGapX-395<ahead){
@@ -3725,6 +3749,7 @@ window.GRIM_CONFIG = Object.freeze({
             p.y=groundHit;p.velocityY=0;p.grounded=true;p.onSoulPlatform=false;p.coyoteMs=0;
           }
           if(p.grounded){
+            if(arrivalVy>115)scope.GRIM_ACTION_AUDIO?.play('land');
             this.landingArt?.contact(arrivalVy);
             snowLanding=groundHit!==null&&groundHit!==undefined;
             if(this.motionArt?.ready)p.visualLandingMs=scope.GRIM_MOTION_ART.LAND_MS;
@@ -4120,6 +4145,7 @@ window.GRIM_CONFIG = Object.freeze({
       const previousHp=this.player.hp;
       this.player.hp=Math.max(0,previousHp-amount);
       if(this.player.hp<previousHp){
+        scope.GRIM_ACTION_AUDIO?.play('damage');
         try {scope.navigator?.vibrate?.(30);} catch (_) { /* Optional device feedback. */ }
       }
       if(amount>0)this.player.visualHurtMs=scope.GRIM_REAPER_REACTION?.HURT_MS||340;

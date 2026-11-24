@@ -69,7 +69,7 @@ const server=http.createServer((req,res)=>{
         baselineErrors};
     });
     assert.equal(loaded.count,112,'catalog is loaded in the game');
-    assert.equal(loaded.badge,'v0.19.22','visible version badge matches the current art release');
+    assert.equal(loaded.badge,'v0.19.23','visible version badge matches the current art release');
     assert.deepEqual(loaded.missing,[],'all 112 obstacle textures load in actual Phaser');
     assert.deepEqual(loaded.wrongSize,[],'all textures retain their intended 3x source size');
     assert.equal(loaded.images,120,'40 landforms use one load each and 8 airborne supports load');
