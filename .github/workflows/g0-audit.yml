@@ -1,0 +1,29 @@
+name: G0 phone-size gameplay audit
+on:
+  pull_request:
+    paths:
+      - 'tests/g0/**'
+      - '.github/workflows/g0-audit.yml'
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.56.0 && python -m playwright install chromium
+      - name: Run release scene in phone-size Chromium
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/g0-server.log" 2>&1 &
+          python tests/g0/replay.py windows extra economy runs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: g0-gameplay-evidence
+          path: tests/g0/*.json
