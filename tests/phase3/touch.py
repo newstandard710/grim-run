@@ -60,5 +60,36 @@ with sync_playwright() as playwright:
                                     assert row["events"].count({"plant":"plant","imp":"imp","skeletalBat":"bat"}[enemy]) >= 1
                             if not muted and row["events"]:
                                 assert row["oscillators"] > 0
+            # Two-hit enemies also get an ordinary winning sequence with a fresh bow.
+            for enemy in ("skeletalBat", "imp"):
+                page.evaluate("kind=>pressure(kind,33)", enemy)
+                page.locator("#crossbow-btn").tap()
+                page.evaluate("approach(61,null)")
+                page.locator("#crossbow-btn").tap()
+                outcome = page.evaluate("approach(180,null)")
+                print(build, enemy, "two shots", outcome, flush=True)
+                if enemy == "skeletalBat":
+                    assert outcome["hp"] == 3 and outcome["enemyHp"] <= 0
+            survived = []
+            for frame in (40, 46, 52, 58):
+                page.evaluate("pressure('imp',33)")
+                page.locator("#crossbow-btn").tap()
+                page.evaluate("n=>approach(n,null)", frame)
+                page.locator("#attack-btn").tap()
+                result = page.evaluate("approach(180,null)")
+                if result["hp"] == 3 and result["enemyHp"] <= 0:
+                    survived.append(frame)
+            print(build, "Imp shot and Cut", survived, flush=True)
+            assert survived
+            # Use the real Tundra generator, restoring normal health before scoring.
+            start = (Path(__file__).with_name("tundra.js")).read_text()
+            pair = page.evaluate(start, 33)
+            assert pair and pair["type"] == "bramble", pair
+            for name in ("plant", "next"):
+                page.evaluate("x=>travelTo(x)", pair[name]-90)
+                page.locator("#attack-btn").tap()
+            result = page.evaluate("x=>travelTo(x)", pair["next"]+115)
+            print(build, "natural Tundra", pair, result, flush=True)
+            assert result["hp"] == 3 and result["plant"] and not result["nextHit"], result
         page.close()
     browser.close()
