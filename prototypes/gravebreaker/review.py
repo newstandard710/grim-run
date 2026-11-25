@@ -148,22 +148,6 @@ with sync_playwright() as runner:
                 for f in frames.glob("*.jpg"):
                     f.unlink()
             page.get_by_role("button",name="Replay course").tap()
-        if renderer=="canvas":
-            # Let Phaser own the clock on a fresh entry; send touches through the same CDP device.
-            page.reload()
-            page.get_by_role("button",name="Start course").tap(timeout=90000)
-            frame=page.frames[1]
-            for target, move in [("wall","heavy"),("crawler","heavy"),("branch","slide")]:
-                lead=65 if move=="slide" else timing[target]["heavy"]
-                page.wait_for_function("([key,lead])=>trial[key].x-scene.player.x<=lead",
-                                       arg=[target,lead], polling="raf")
-                touch(move)
-                if move=="slide":
-                    page.wait_for_function("scene.player.x>trial.branch.x+trial.branch.width+25")
-                touch(move,False)
-            page.get_by_role("button",name="Replay course").wait_for()
-            assert page.evaluate("scene.player.hp===3 && trial.wall.broken && trial.crawler.staggered")
-            print("Native-loop touch course cleared",width,flush=True)
         assert not errors, errors
         context.close()
     check_controls(browser, "http://localhost:8765/")

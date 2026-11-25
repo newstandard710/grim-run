@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        renderer: [canvas, webgl]
+        renderer: [canvas, webgl, native]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,7 +20,11 @@ jobs:
       - run: pip install playwright==1.56.0 imageio-ffmpeg && python -m playwright install chromium
       - run: |
           python -m http.server 8765 --bind 127.0.0.1 >/tmp/serve.log 2>&1 &
-          python prototypes/gravebreaker/review.py ${{ matrix.renderer }} 2>&1 | tee grave-${{ matrix.renderer }}.log
+          if [[ "${{ matrix.renderer }}" == native ]]; then
+            python prototypes/gravebreaker/native.py 2>&1 | tee grave-native.log
+          else
+            python prototypes/gravebreaker/review.py ${{ matrix.renderer }} 2>&1 | tee grave-${{ matrix.renderer }}.log
+          fi
         shell: bash
       - uses: actions/upload-artifact@v4
         if: always()
