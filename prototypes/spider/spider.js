@@ -64,19 +64,28 @@ function paint(){
   g.lineStyle(2,0xd6cdde,.76);g.lineBetween(x+2,top+22,x,a.dead?top+37:y-10);
   if(a.dead)return;
   for(const side of [-1,1])for(let leg=0;leg<4;leg++){
-    const dx=side*(19+leg*3-a.fold*8),dy=-12+leg*4;
-    const endX=x+side*(35+leg*2-a.fold*14);
-    const endY=y+(-10+leg*7)*(1-a.fold);
-    for(const [width,color] of [[4,0x251b31],[1.6,0xc69d9e]]){
-      g.lineStyle(width,color,1);g.beginPath();g.moveTo(x+side*7,y+leg-1);
-      g.lineTo(x+dx,y+dy);g.lineTo(endX,endY);g.strokePath();
-    }
+    const stride=Math.sin(a.clock*.012+leg*1.7+side)*1.6*(1-a.fold);
+    const kneeX=x+side*(18+leg*2.8-a.fold*8), kneeY=y-20+leg*7+stride;
+    const ankleX=x+side*(30+leg*2-a.fold*13), ankleY=y-17+leg*8+stride;
+    const toeX=ankleX+side*(4-leg*.7),toeY=ankleY+7-a.fold*4;
+    g.lineStyle(3.5,0x28202a,1);g.beginPath();g.moveTo(x+side*7,y+leg-2);
+    g.lineTo(kneeX,kneeY);g.lineTo(ankleX,ankleY);g.lineTo(toeX,toeY);g.strokePath();
+    g.lineStyle(1.6,0xb29987,1);g.lineBetween(x+side*8,y+leg-3,kneeX,kneeY-1);
+    g.lineStyle(1.2,0x8e7979,1);g.lineBetween(kneeX,kneeY-1,ankleX,ankleY);
+    g.fillStyle(0xc6af93);g.fillEllipse(kneeX,kneeY,3,2);
   }
-  g.fillStyle(0x281c30);g.fillEllipse(x,y-2,33,27);
-  g.lineStyle(2,0xd6a9a1);g.strokeEllipse(x,y-2,33,27);
-  g.fillStyle(0x97535d);g.fillTriangle(x-7,y-8,x+7,y-8,x,y+2);
-  g.fillStyle(0x493547);g.fillEllipse(x-2,y+6,21,16);
-  g.fillStyle(0xffc895);for(const dx of [-6,-2,2])g.fillCircle(x+dx,y+7,1.7);
+  // Layer the domed abdomen over the leg roots. Its split dorsal stripe reads during the drop.
+  g.fillStyle(0x201a23);g.fillEllipse(x+2,y-4,34,26);
+  g.fillStyle(0x62525c);g.fillEllipse(x+1,y-6,29,20);
+  g.fillStyle(0x473440);g.fillEllipse(x+2,y-4,25,16);
+  for(const side of [-1,1]){
+    g.fillStyle(0xb88671);g.fillTriangle(x+side*11,y-12,x+side*3,y-9,x+side*5,y-3);
+    g.fillStyle(0x99828a);g.fillTriangle(x+side*12,y-5,x+side*8,y-2,x+side*10,y+1);
+    g.fillStyle(0x382c37);g.fillTriangle(x+side*6,y+8,x+side*4,y+15,x+side*2,y+10);
+  }
+  g.fillStyle(0x312631);g.fillEllipse(x-2,y+5,20,15);
+  g.fillStyle(0x71585c);g.fillEllipse(x-3,y+2,14,5);
+  g.fillStyle(0xe8bf84);for(const dx of [-7,-4,0,3])g.fillCircle(x+dx,y+6,1.35);
 }
 function install(){
   gameWindow=frame.contentWindow;
