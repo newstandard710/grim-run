@@ -37,13 +37,13 @@ with sync_playwright() as playwright:
 
             def play_pair(pair, lead):
                 for name in ("plant", "next"):
-                    page.evaluate("x=>travelTo(x)", pair[name]-lead)
+                    page.evaluate("x=>travelTo(x)", pair[name]-(lead if name=="plant" else 90))
                     page.locator("#attack-btn").tap()
                 return page.evaluate("x=>travelTo(x)", pair["next"]+115)
 
             if build == "before" and not muted:
                 winning_lead = None
-                for lead in (90, 112, 74, 135, 60, 150, 45):
+                for lead in (180, 160, 200, 220, 240, 190, 170, 210, 150, 130, 110, 90, 70, 50):
                     pair = page.evaluate(start)
                     result = play_pair(pair, lead)
                     print("natural Tundra baseline", lead, result, flush=True)

@@ -26,7 +26,8 @@
       s.update(0,dt);grimRun.step(performance.now(),0);
     }
     return {hp:p.hp,plant:!!plant.destroyed,nextCut:!!tree.destroyed,
-      nextHit:!!tree.dealtDamage,state:s.state};
+      plantHit:!!plant.dealtDamage,nextHit:!!tree.dealtDamage,state:s.state,
+      otherHits:s.obstacles.filter(o=>o!==plant&&o!==tree&&o.dealtDamage).map(o=>[o.type,o.x])};
   };
   return {plant:plant.x,next:tree.x};
 }
