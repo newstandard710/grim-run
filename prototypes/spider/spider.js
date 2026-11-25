@@ -9,15 +9,15 @@ const smooth=t=>{t=clamp(t);return t*t*(3-2*t)};
 function setup(){
   const s=scene,p=s.player;
   // Select a continuous Caves runway away from vendors and steep ledge seams.
-  let x=s.startX+5500*12;
+  let x=s.startX+5060*12;
   const floor=at=>s.terrain.groundAt(at);
   const safe=()=>{
-    if(s.vendorObstacleBlocked('bramble',x-650,1350))return false;
-    for(let d=-650;d<=700;d+=10)if(floor(x+d)===null)return false;
+    if(gameWindow.GRIM_CORE.intersectsVendorCorridor(x-610,1150,s.startX))return false;
+    for(let d=-605;d<=535;d+=10)if(floor(x+d)===null)return false;
     for(let d=-55;d<=55;d+=5)if(Math.abs(floor(x+d)-floor(x))>8)return false;
     return true;
   };
-  while(!safe() && x<s.startX+5770*12)x+=12;
+  while(!safe() && x<s.startX+5920*12)x+=6;
   if(!safe())throw Error('No clear Spider runway for this seed');
   p.x=x-600;p.y=floor(p.x);s.distance=(p.x-s.startX)/12;
   s.speed=gameWindow.GRIM_CORE.runSpeed(s.distance);s.hasTeleported=true;
