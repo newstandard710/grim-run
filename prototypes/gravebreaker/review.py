@@ -35,6 +35,11 @@ with sync_playwright() as runner:
           g.loop.sleep();clearInterval(s.loopWatchdogId);s.wakeGameLoop=()=>{};s.sys.sceneUpdate=()=>{};
           window.step=()=>{
             s.update(0,1000/60);g.step(performance.now(),0);
+            const badge=w.document.querySelector('.crawler-warning');
+            const rect=badge.getBoundingClientRect();
+            if(!visible.warning && rect.width && rect.height && rect.left>=0 && rect.right<=s.width &&
+                rect.top>=0 && rect.bottom<s.height && badge.checkVisibility() &&
+                badge.textContent.includes('Crawler'))visible.warning={x:s.player.x,seconds:s.elapsed};
             for(const key of ['wall','crawler']){
               const o=trial[key];
               const px=o.x+o.width*.5-s.cameraX,py=o.y+o.height*.33-s.renderCameraY;
@@ -146,6 +151,21 @@ with sync_playwright() as runner:
             assert result["done"] and result["hp"]==3, result
             assert (result["voices"]==0)==muted, result
             assert result["wall"]==result["stagger"]==(action=="heavy")
+            cue=result["visible"].get("warning")
+            if width<height:
+                assert cue and cue["x"]>result["wallX"]+100 and cue["seconds"]<result["visible"]["crawler"]["seconds"], result
+                if subject in (None,"crawler"):
+                    last=min(row["actualLead"] for row in rows if row["width"]==width and row["target"]=="crawler"
+                             and row["action"]=="heavy" and row["success"])
+                    speed=next(row["speed"] for row in rows if row["width"]==width and row["target"]=="crawler")
+                    def window_from(event):
+                        return round((result["crawlerX"]-event["x"]-last)/speed,3)
+                    warning,body=window_from(cue),window_from(result["visible"]["crawler"])
+                    assert warning>=.85 and warning-body>=.60,(warning,body)
+                    print("Portrait warning and body to last Heavy, seconds",warning,body,flush=True)
+            else:
+                assert cue is None,result
+            assert not frame.locator(".crawler-warning").is_visible()
             print("course", width, action, result, flush=True)
             if capture:
                 subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-loglevel","error","-y","-framerate","30",

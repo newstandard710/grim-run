@@ -2,8 +2,12 @@ name: Foothills Gravebreaker review
 on:
   pull_request:
     paths: ['prototypes/gravebreaker/**', '.github/workflows/gravebreaker.yml']
+  push:
+    branches: [main]
+    paths: ['prototypes/gravebreaker/**', '.github/workflows/gravebreaker.yml']
 jobs:
   touch:
+    if: github.event_name == 'pull_request'
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -40,3 +44,18 @@ jobs:
           path: |
             grave-review/
             grave-*.log
+
+  public-course:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.56.0 && python -m playwright install chromium
+      - name: Play the deployed course in portrait and landscape
+        env:
+          GAME_URL: https://newstandard710.github.io/grim-run/
+        run: python prototypes/gravebreaker/native.py

@@ -4,7 +4,7 @@ const panel = document.querySelector('aside');
 const start = panel.querySelector('button');
 const seed = new URLSearchParams(location.search).get('seed') === '7' ? 7 : 33;
 const windupMs = 210, recoveryEndMs = 665;
-let w, scene, trial, controls, crawlerSprite, stoneSprite, charge;
+let w, scene, trial, controls, crawlerSprite, stoneSprite, charge, crawlerWarning;
 const audio = name => w.GRIM_ACTION_AUDIO.play(name);
 
 function chooseRunway(s) {
@@ -132,6 +132,10 @@ function paint() {
     g.fillStyle(0x766c69); g.fillTriangle(x-8,base,x+6,base-9,x+13,base);
     g.fillTriangle(x+22,base,x+35,base-13,x+48,base);
   }
+  // Give a narrow viewport advance notice while the Crawler is still offscreen.
+  // The target's own armor takes over once the player is close enough to swing.
+  const lead = (b.x - s.player.x) / s.speed;
+  crawlerWarning.hidden = s.width >= s.height || lead > 1.25 || lead < .48 || b.hit || b.staggered;
   const fall = b.staggered ? Math.min(1,(s.elapsed-b.at)/.24) : 0;
   const pose = b.staggered ? 2 : Math.floor(s.elapsed*5)%4;
   crawlerSprite.setVisible(true).setFrame(pose).setPosition(b.x+b.width/2+fall*18,b.y+b.height)
@@ -186,6 +190,21 @@ async function install() {
   const label=doc.createElement('span');label.textContent='HEAVY';controls.append(label);
   controls.style.cssText='right:calc(var(--edge-right) + var(--action-size) + var(--control-gap));bottom:var(--right-bottom);width:calc(var(--action-size)*.84);height:calc(var(--action-size)*.84);border-color:#d7b888;background:linear-gradient(155deg,#64554a,#292534)';
   doc.querySelector('#controls').append(controls);
+  crawlerWarning = doc.createElement('div');
+  crawlerWarning.className = 'crawler-warning';
+  crawlerWarning.hidden = true;
+  crawlerWarning.setAttribute('role','status');
+  crawlerWarning.textContent = 'Armored Crawler ahead';
+  const warningStyle = doc.createElement('style');
+  warningStyle.textContent = `
+    .crawler-warning:not([hidden]) { position:absolute; right:max(12px,env(safe-area-inset-right));
+      top:clamp(76px,23%,178px); display:flex; align-items:center; gap:7px; padding:3px 10px 3px 5px;
+      pointer-events:none; background:#151820f0; border:1px solid #b29b76;
+      border-radius:5px; color:#f6e7cb; font:600 13px/1.25 system-ui,sans-serif }
+    .crawler-warning::before { content:""; width:40px; height:27px;
+      background:url("${armor.src}") left bottom / 160px 27px no-repeat }`;
+  doc.head.append(warningStyle);
+  doc.querySelector('#controls').append(crawlerWarning);
   s.ui.bindAction('heavy-btn','heavy',heavy);
   doc.addEventListener('keydown',e=>{if(e.code==='KeyG' && !e.repeat)heavy()});
   const releaseCut = s.attack.bind(s);
