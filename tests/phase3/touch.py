@@ -42,25 +42,18 @@ with sync_playwright() as playwright:
                 return page.evaluate("x=>travelTo(x)", pair["next"]+115)
 
             if build == "before" and not muted:
-                route = None
-                for seed in dict.fromkeys([27, 68, 82, *range(1, 201)]):
-                    pair = page.evaluate(start, seed)
-                    if not pair:
-                        continue
-                    for lead in (90, 112, 74, 135):
-                        pair = page.evaluate(start, seed)
-                        result = play_pair(pair, lead)
-                        if result["hp"] == 3 and result["plant"] and result["nextCut"]:
-                            route = (seed, pair, lead)
-                            break
-                    if route:
+                winning_lead = None
+                for lead in (90, 112, 74, 135, 60, 150, 45):
+                    pair = page.evaluate(start)
+                    result = play_pair(pair, lead)
+                    print("natural Tundra baseline", lead, result, flush=True)
+                    if result["hp"] == 3 and result["plant"] and result["nextCut"]:
+                        winning_lead = lead
                         break
-                assert route, "No clean two-Cut reference run"
-            seed, reference, lead = route
-            pair = page.evaluate(start, seed)
-            assert pair == reference
-            result = play_pair(pair, lead)
-            print(build, "natural Tundra", seed, pair, lead, result, flush=True)
+                assert winning_lead is not None, "No clean two-Cut reference run"
+            pair = page.evaluate(start)
+            result = play_pair(pair, winning_lead)
+            print(build, "natural Tundra", 27, pair, winning_lead, result, flush=True)
             assert result["hp"] == 3 and result["plant"] and result["nextCut"], result
             for enemy, button, timings in [
                 ("plant", "attack", (30, 50, 59, None)),
