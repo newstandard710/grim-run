@@ -1,0 +1,35 @@
+name: Caves Spider preview
+on:
+  pull_request:
+    paths: ['prototypes/spider/**', '.github/workflows/spider-preview.yml']
+jobs:
+  touch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [canvas, webgl]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright==1.56.0 imageio-ffmpeg && python -m playwright install chromium
+      - run: |
+          python -m http.server 8765 --bind 127.0.0.1 >/tmp/http.log 2>&1 &
+          python prototypes/spider/review.py ${{ matrix.renderer }}
+      - if: success() && matrix.renderer == 'canvas'
+        run: |
+          encoder=$(python -c 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())')
+          for action in attack slide; do
+            "$encoder" -loglevel error -framerate 30 -i "spider-results/canvas/$action/%04d.jpg" -pix_fmt yuv420p "spider-results/canvas/$action.mp4"
+            rm -r "spider-results/canvas/$action"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spider-${{ matrix.renderer }}
+          path: spider-results/
