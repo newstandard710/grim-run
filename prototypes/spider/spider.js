@@ -42,16 +42,20 @@ function update(ms){
   if(a.dead){a.alpha=Math.max(0,a.alpha-ms/170);return}
   const perch=Math.min(a.floor-110,Math.max(a.floor-218,s.cameraY+43));
   const low=a.floor-68;
-  if(a.phase==='perched' && lead<=Math.min(s.speed*.94,s.width*(1-gameWindow.GRIM_CONFIG.reaperXRatio)-56)){
+  const warningLead=Math.min(s.speed*.94,s.width*(1-gameWindow.GRIM_CONFIG.reaperXRatio)-46);
+  // Spend the same fraction of visible approach on the windup and descent in portrait.
+  const approachMs=1000*warningLead/s.speed;
+  const windup=Math.min(240,approachMs*.255), drop=Math.min(235,approachMs*.25);
+  if(a.phase==='perched' && lead<=warningLead){
     a.phase='warn';a.clock=0;gameWindow.GRIM_ACTION_AUDIO?.play('silk');
   }
   a.clock+=ms;
-  if(a.phase==='warn' && a.clock>=240){a.phase='drop';a.clock-=240}
-  if(a.phase==='drop' && a.clock>=235){a.phase='hang';a.clock=0}
+  if(a.phase==='warn' && a.clock>=windup){a.phase='drop';a.clock-=windup}
+  if(a.phase==='drop' && a.clock>=drop){a.phase='hang';a.clock=0}
   if(a.phase==='hang' && lead < -47){a.phase='climb';a.clock=0}
-  a.fold=a.phase==='warn'?smooth(a.clock/180):a.phase==='drop'?1-smooth(a.clock/235):0;
-  const lowered=a.phase==='warn'?5*smooth(a.clock/240):0;
-  a.y=a.phase==='drop'?perch+5+(low-perch-5)*smooth(a.clock/235):
+  a.fold=a.phase==='warn'?smooth(a.clock/(windup*.75)):a.phase==='drop'?1-smooth(a.clock/drop):0;
+  const lowered=a.phase==='warn'?5*smooth(a.clock/windup):0;
+  a.y=a.phase==='drop'?perch+5+(low-perch-5)*smooth(a.clock/drop):
     a.phase==='hang'?low:a.phase==='climb'?low+(perch-low)*smooth(a.clock/550):perch+lowered;
 }
 function paint(){
