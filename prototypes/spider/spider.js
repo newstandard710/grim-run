@@ -91,10 +91,41 @@ function paint(){
   g.fillStyle(0x71585c);g.fillEllipse(x-3,y+2,14,5);
   g.fillStyle(0xe8bf84);for(const dx of [-7,-4,0,3])g.fillCircle(x+dx,y+6,1.35);
 }
+// Keep the prototype voice in the preview, including the game's mute and pause rules.
+function installSilkAudio(w){
+  const bus=w.GRIM_ACTION_AUDIO,play=bus.play.bind(bus),setPlaying=bus.setPlaying.bind(bus);
+  const toggle=w.document.querySelector('#mute-actions');
+  let ctx,voice,playing=false;
+  const stop=()=>{if(voice){voice.stop();voice=null}};
+  const unlock=()=>{
+    const Audio=w.AudioContext||w.webkitAudioContext;
+    if(toggle.checked||!Audio)return;
+    try{ctx??=new Audio();if(ctx.state==='suspended')ctx.resume().catch(()=>{})}catch{}
+  };
+  w.document.addEventListener('pointerup',unlock,true);
+  w.document.addEventListener('keydown',unlock,true);
+  toggle.addEventListener('change',()=>{if(toggle.checked)stop();else unlock()});
+  w.document.addEventListener('visibilitychange',()=>{if(w.document.hidden)stop()});
+  bus.setPlaying=value=>{playing=value;if(!value)stop();setPlaying(value)};
+  bus.play=name=>{
+    if(name!=='silk'){play(name);return}
+    if(!playing||toggle.checked||w.document.hidden||ctx?.state!=='running')return;
+    stop();
+    const osc=ctx.createOscillator(),gain=ctx.createGain(),now=ctx.currentTime;
+    osc.type='triangle';osc.frequency.setValueAtTime(730,now);
+    osc.frequency.exponentialRampToValueAtTime(240,now+.105);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.065,now+.008);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+.12);
+    osc.connect(gain);gain.connect(ctx.destination);voice=osc;
+    osc.onended=()=>{osc.disconnect();gain.disconnect();if(voice===osc)voice=null};
+    osc.start(now);osc.stop(now+.125);
+  };
+}
 function install(){
   gameWindow=frame.contentWindow;
   scene=gameWindow.grimRun?.scene.scenes[0];
   if(!scene?.ui){setTimeout(install,25);return}
+  installSilkAudio(gameWindow);
   const s=scene, original=s.startRun.bind(s);
   s.startRun=()=>{original();setup();s.drawScene()};
   const plants=s.updatePlants.bind(s),combat=s.drawCombat.bind(s),cut=s.cutNearby.bind(s),hazards=s.checkHazards.bind(s);

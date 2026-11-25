@@ -5,7 +5,6 @@
     land:   ['triangle', 138, 62, .085, .18],
     swing:  ['triangle', 560, 126, .095, .085],
     cut:    ['sawtooth', 315, 82, .075, .11],
-    silk:   ['triangle', 935, 390, .095, .075],
     plant:  ['triangle', 410, 215, .11, .09],
     bat:    ['sine', 820, 1160, .12, .08],
     imp:    ['sawtooth', 140, 295, .15, .075],
