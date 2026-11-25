@@ -32,8 +32,12 @@ with sync_playwright() as runner:
             s.update(0,1000/60);g.step(performance.now(),0);
             for(const key of ['wall','crawler']){
               const o=trial[key];
-              if(!visible[key] && o.x+o.width<=s.cameraX+s.width && o.y>=s.renderCameraY &&
-                  o.y+o.height<=s.renderCameraY+s.height)visible[key]={x:s.player.x,seconds:s.elapsed};
+              const px=o.x+o.width*.5-s.cameraX,py=o.y+o.height*.33-s.renderCameraY;
+              const el=w.document.elementFromPoint(px,py);
+              if(!visible[key] && el && !el.closest('button') && o.x+o.width<=s.cameraX+s.width &&
+                  o.y>=s.renderCameraY && o.y+o.height<=s.renderCameraY+s.height){
+                visible[key]={x:s.player.x,seconds:s.elapsed};
+              }
             }
           };
           window.advance=(x,count=500)=>{while(!trial.done&&s.player.x<x&&count-->0)step()};
@@ -49,6 +53,9 @@ with sync_playwright() as runner:
           const proto=w.AudioContext.prototype, original=proto.createOscillator;
           proto.createOscillator=function(){voices++;return original.call(this)};
         }""")
+        cut_box = frame.locator("#attack-btn").bounding_box()
+        heavy_box = frame.locator("#heavy-btn").bounding_box()
+        assert heavy_box["x"]+heavy_box["width"] <= cut_box["x"] and heavy_box["width"]>=44
         cdp = context.new_cdp_session(page)
 
         def touch(action, down=True):
@@ -100,6 +107,7 @@ with sync_playwright() as runner:
             assert not scan(target, "miss", [0])
             assert not scan(target, "attack", [75])
         assert not scan("branch", "heavy", [150])
+        assert rows[-1]["hit"] and rows[-1]["hp"]==2
         assert scan("branch", "slide", [55])
         for action, muted in [("heavy", False), ("jump", True)]:
             reset(muted=muted)
@@ -140,6 +148,22 @@ with sync_playwright() as runner:
                 for f in frames.glob("*.jpg"):
                     f.unlink()
             page.get_by_role("button",name="Replay course").tap()
+        if renderer=="canvas":
+            # Let Phaser own the clock on a fresh entry; send touches through the same CDP device.
+            page.reload()
+            page.get_by_role("button",name="Start course").tap(timeout=90000)
+            frame=page.frames[1]
+            for target, move in [("wall","heavy"),("crawler","heavy"),("branch","slide")]:
+                lead=65 if move=="slide" else timing[target]["heavy"]
+                page.wait_for_function("([key,lead])=>trial[key].x-scene.player.x<=lead",
+                                       arg=[target,lead], polling="raf")
+                touch(move)
+                if move=="slide":
+                    page.wait_for_function("scene.player.x>trial.branch.x+trial.branch.width+25")
+                touch(move,False)
+            page.get_by_role("button",name="Replay course").wait_for()
+            assert page.evaluate("scene.player.hp===3 && trial.wall.broken && trial.crawler.staggered")
+            print("Native-loop touch course cleared",width,flush=True)
         assert not errors, errors
         context.close()
     check_controls(browser, "http://localhost:8765/")

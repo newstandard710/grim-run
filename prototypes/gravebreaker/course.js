@@ -4,7 +4,7 @@ const panel = document.querySelector('aside');
 const start = panel.querySelector('button');
 const seed = new URLSearchParams(location.search).get('seed') === '7' ? 7 : 33;
 const windupMs = 210, recoveryEndMs = 665;
-let w, scene, trial, controls, crawlerSprite, charge;
+let w, scene, trial, controls, crawlerSprite, stoneSprite, charge;
 const audio = name => w.GRIM_ACTION_AUDIO.play(name);
 
 function chooseRunway(s) {
@@ -38,9 +38,9 @@ function setup() {
   s.placeEncounter('branch',x+1170);
   const wall = {x,y:s.terrain.groundAt(x)-59,width:49,height:59};
   const crawler = {x:x+590,y:s.terrain.groundAt(x+633)-58,width:86,height:58};
-  trial = {wall,crawler,branch:s.obstacles[0],swing:null,done:false,hits:[],spark:0};
+  trial = {wall,crawler,branch:s.obstacles[0],swing:null,done:false,spark:0};
   if (!trial.branch) throw Error('Missing overhang');
-  panel.hidden = true; controls.classList.remove('pressed'); frame.focus();
+  panel.hidden = true; controls.classList.remove('pressed','recharging'); frame.focus();
   s.drawScene();
 }
 
@@ -50,6 +50,7 @@ function heavy() {
       p.attackCooldownMs > 0 || trial.swing || s.practiceScale()===0) return;
   trial.swing = {age:0,released:false};
   s.motionArt.rising?.acceptCut();
+  controls.classList.add('recharging');
 }
 
 function update(ms, releaseCut) {
@@ -70,14 +71,14 @@ function update(ms, releaseCut) {
     p.previousAttackMs = p.attackMs;
     p.attackCooldownMs = config.attackCooldownMs-poseAge;
   }
-  if (a.age >= recoveryEndMs) trial.swing = null;
+  if (a.age >= recoveryEndMs) { trial.swing = null; controls.classList.remove('recharging'); }
 }
 
 function finish() {
   if (trial.done) return;
   trial.done = true;
   scene.state = 'courseEnd'; scene.ui.setMode('courseEnd');
-  scene.ui.releaseAll(); crawlerSprite.setVisible(false); charge.clear();
+  scene.ui.releaseAll(); crawlerSprite.setVisible(false); stoneSprite.setVisible(false); charge.clear();
   const p = scene.player, {wall,crawler,branch} = trial;
   const results = [wall.broken ? 'Stone broken' : wall.hit ? 'Stone hit' : 'Stone cleared',
     crawler.staggered ? 'Crawler staggered' : crawler.hit ? 'Crawler hit' : 'Crawler cleared',
@@ -112,10 +113,13 @@ function check() {
   for (const target of [trial.wall,trial.crawler]) {
     if (target.broken || target.staggered || target.hit || p.invulMs>0 ||
         !w.GRIM_CORE.overlaps(box,target)) continue;
-    target.hit = true; trial.swing = null;
+    target.hit = true;
+    if (trial.swing) {
+      trial.swing = null; p.attackMs=0; p.risingCut=null;
+      controls.classList.remove('recharging');
+    }
     p.invulMs = w.GRIM_CONFIG.damageInvulnerabilityMs;
     s.takeDamage(1,target===trial.wall?'cracked stone':'armored crawler');
-    trial.hits.push(s.elapsed);
   }
   if (p.x>trial.branch.x+trial.branch.width+100 || !p.hp) finish();
 }
@@ -123,15 +127,8 @@ function check() {
 function paint() {
   const s = scene, g = s.world, a = trial.wall, b = trial.crawler;
   const x = a.x, y = a.y, base = y+a.height;
-  if (!a.broken) {
-    g.fillStyle(0x36343f); g.fillTriangle(x-2,base,x+7,y+9,x+27,y);
-    g.fillTriangle(x-2,base,x+27,y,x+47,base); g.fillTriangle(x+26,y,x+48,y+11,x+47,base);
-    g.fillStyle(0x766d70); g.fillTriangle(x+7,y+9,x+27,y,x+19,y+31);
-    g.fillStyle(0x59515b); g.fillTriangle(x+29,y+3,x+46,y+13,x+38,y+46);
-    g.lineStyle(3,0xf1c583); g.beginPath(); g.moveTo(x+27,y+1); g.lineTo(x+19,y+20);
-    g.lineTo(x+28,y+25); g.lineTo(x+15,y+40); g.lineTo(x+18,base-3); g.strokePath();
-    g.lineStyle(1.8,0xbe9a76); g.lineBetween(x+25,y+27,x+38,y+24);
-  } else {
+  stoneSprite.setPosition(x-5,base+2).setVisible(!a.broken);
+  if (a.broken) {
     g.fillStyle(0x766c69); g.fillTriangle(x-8,base,x+6,base-9,x+13,base);
     g.fillTriangle(x+22,base,x+35,base-13,x+48,base);
   }
@@ -165,23 +162,29 @@ async function install() {
   const s=scene, doc=w.document;
   // Preview purchases, settings and deaths use a disposable wallet for this frame.
   const memory = new Map();
-  if (w.localStorage.getItem('grimRun.actionSoundsMuted')==='1') memory.set('grimRun.actionSoundsMuted','1');
+  try {
+    if (w.localStorage.getItem('grimRun.actionSoundsMuted')==='1') memory.set('grimRun.actionSoundsMuted','1');
+  } catch { /* Storage can be disabled in a private tab. */ }
   Object.defineProperty(w,'localStorage',{value:{
     getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,String(v)),removeItem:k=>memory.delete(k)
   }});
   s.meta = w.GRIM_META.normalize({});
-  const texture = await new Promise((resolve,reject)=>{
+  const loadImage = path => new Promise((resolve,reject)=>{
     const img = new w.Image();
-    img.onload=()=>resolve(img); img.onerror=()=>reject(Error('Could not load armored crawler'));
-    img.src=new URL('armored-crawler.webp',location.href).href;
+    img.onload=()=>resolve(img); img.onerror=()=>reject(Error('Could not load course artwork'));
+    img.src=new URL(path,location.href).href;
   });
-  s.textures.addSpriteSheet('trial-armor',texture,{frameWidth:192,frameHeight:126});
+  const [armor,stone] = await Promise.all([loadImage('armored-crawler.webp'),loadImage('fault-stone.webp')]);
+  s.textures.addImage('trial-fault-stone',stone);
+  stoneSprite = s.add.image(0,0,'trial-fault-stone').setOrigin(0,1).setScale(.5).setDepth(3).setVisible(false);
+  s.textures.addSpriteSheet('trial-armor',armor,{frameWidth:192,frameHeight:126});
   crawlerSprite = s.add.sprite(0,0,'trial-armor').setOrigin(.5,1).setDepth(3).setVisible(false);
   charge = s.add.graphics().setDepth(19);
   controls = doc.createElement('button');
   controls.className='action'; controls.id='heavy-btn'; controls.setAttribute('aria-label','Gravebreaker heavy strike');
-  controls.innerHTML='<span class="symbol">◆</span><span>HEAVY</span>';
-  controls.style.cssText='left:calc(max(env(safe-area-inset-left),18px) + var(--action-size) + 9px);bottom:var(--right-bottom);border-color:#d7b888;background:linear-gradient(155deg,#64554a,#292534)';
+  controls.append(doc.querySelector('#attack-btn .symbol').cloneNode(true));
+  const label=doc.createElement('span');label.textContent='HEAVY';controls.append(label);
+  controls.style.cssText='right:calc(var(--edge-right) + var(--action-size) + var(--control-gap));bottom:var(--right-bottom);width:calc(var(--action-size)*.84);height:calc(var(--action-size)*.84);border-color:#d7b888;background:linear-gradient(155deg,#64554a,#292534)';
   doc.querySelector('#controls').append(controls);
   s.ui.bindAction('heavy-btn','heavy',heavy);
   doc.addEventListener('keydown',e=>{if(e.code==='KeyG' && !e.repeat)heavy()});
@@ -191,7 +194,7 @@ async function install() {
     s[name] = (...args) => { if (!trial?.swing) return action(...args); };
   }
   const run = s.startRun.bind(s);
-  s.startRun = () => { trial=null; crawlerSprite.setVisible(false);charge.clear(); if(run()!==false)setup(); };
+  s.startRun = () => { trial=null; crawlerSprite.setVisible(false);stoneSprite.setVisible(false);charge.clear(); if(run()!==false)setup(); };
   const plants = s.updatePlants.bind(s), cut = s.cutNearby.bind(s), hazards = s.checkHazards.bind(s), combat = s.drawCombat.bind(s);
   s.updatePlants = ms => {plants(ms); if(trial)update(ms,releaseCut)};
   s.cutNearby = root => {
