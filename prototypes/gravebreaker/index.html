@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Grim Runner · Gravebreaker</title>
+<style>
+* { box-sizing: border-box }
+body { margin:0; background:#11151b; color:#f1e8dc; font:16px system-ui }
+iframe { display:block; width:100vw; height:100dvh; border:0 }
+aside { position:fixed; inset:0; display:grid; place-content:center; text-align:center; padding:1.4rem;
+  background:radial-gradient(ellipse at center,#202530f5,#0c121afc) }
+aside[hidden] { display:none }
+h1 { font:600 clamp(28px,8vw,52px) Georgia,serif; margin:0 }
+p { max-width:33rem; margin:1rem auto; line-height:1.5 }
+button { margin:auto; padding:.7rem 1.5rem; background:#47404a; color:#fff3e1;
+  border:1px solid #ba9c70; border-radius:8px; font:600 16px system-ui; touch-action:manipulation }
+button:disabled { opacity:.55 }
+</style>
+<iframe title="Foothills Gravebreaker trial"></iframe>
+<aside>
+  <h1>Gravebreaker</h1>
+  <p>Press Heavy (G) before the cracked stone to wind up your scythe. The same strike staggers the armored Crawler. You can jump either one. Slide beneath the overhang.</p>
+  <button disabled>Loading course…</button>
+</aside>
+<script src="course.js"></script>
+</html>
