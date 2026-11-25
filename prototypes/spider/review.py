@@ -23,12 +23,19 @@ with sync_playwright() as runner:
           const s=scene,g=gameWindow.grimRun;g.loop.sleep();clearInterval(s.loopWatchdogId);
           s.wakeGameLoop=()=>{};s.sys.sceneUpdate=()=>{};
           window.resetTrial=()=>{
-            s.startRun();window.t=0;window.warn=null;window.hurt=null;window.cost=[];window.cues=[];
+            s.startRun();window.t=0;window.warn=null;window.visibleWarn=false;window.clearance=null;window.hurt=null;window.cost=[];window.cues=[];
             window.tick=(lead,max=500)=>{
               while(spider.x-s.player.x>lead && max-->0 && t<430){
                 const begin=performance.now();s.update(0,1000/60);g.step(performance.now(),0);
                 cost.push(performance.now()-begin);++t;
-                if(warn===null && spider.phase==='warn')warn=t;
+                if(warn===null && spider.phase==='warn'){
+                  warn=t;visibleWarn=spider.x+42<s.cameraX+s.width && spider.y-15>s.cameraY
+                    && spider.y+16<s.cameraY+s.height;
+                }
+                if(s.player.sliding && Math.abs(spider.x-s.player.x)<20){
+                  const gap=(s.feetY-29)-(spider.y+16);
+                  clearance=clearance===null?gap:Math.min(clearance,gap);
+                }
                 if(hurt===null && spider.hit)hurt=t;
               }
             };
@@ -65,7 +72,7 @@ with sync_playwright() as runner:
                 touch("jump",True)
                 advance(-500)
                 touch("jump",False)
-            result=page.evaluate("""()=>({hp:scene.player.hp,hit:spider.hit,dead:spider.dead,warn,hurt,
+            result=page.evaluate("""()=>({hp:scene.player.hp,hit:spider.hit,dead:spider.dead,warn,hurt,visibleWarn,clearance,
               rock:next?.dealtDamage||false,grade:scene.terrain.groundAt(spider.x+30)-scene.terrain.groundAt(spider.x-30),
               p95:cost.sort((a,b)=>a-b)[Math.floor(cost.length*.95)],voices,cues})""")
             rows.append(dict(seed=seed,width=width,control=control,action=action,lead=lead,muted=muted,**result))
@@ -76,6 +83,7 @@ with sync_playwright() as runner:
         run("miss",-65)
         assert miss["hit"] != bool(control)
         if not control:
+            assert miss["visibleWarn"] and miss["cues"].count("silk")==1
             assert miss["cues"].count("damage")==1 and miss["hurt"]>miss["warn"]
             for action in ("attack","slide"):
                 winner=None
@@ -86,6 +94,7 @@ with sync_playwright() as runner:
                 assert winner is not None,(seed,action)
                 row=run(action,winner,True,capture=renderer=="canvas" and width==844)
                 assert row["hp"]==3
+                if action=="slide": assert row["clearance"]>0
         page.close()
     browser.close()
 (out/"results.json").write_text(json.dumps(rows,indent=2))

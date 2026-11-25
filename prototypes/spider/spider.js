@@ -91,9 +91,10 @@ function install(){
     cut(root);
     if(!spider||spider.dead||params.get('control')==='1')return;
     const hit=s.motionArt?.rising?.contactTest(root);
-    const boxes=s.motionArt?.attackBoxes(s.player.previousAttackMs);
+    const core=gameWindow.GRIM_CORE;
+    const boxes=s.motionArt?.attackBoxes(s.player.previousAttackMs)??[core.attackBox(s.player.x,s.feetY,126*s.powerManager.attackBonus(),s.lowProfile)];
     const target=body();
-    if(hit?hit(target):boxes?.some(b=>gameWindow.GRIM_CORE.overlaps(b,target))){
+    if(hit?hit(target):boxes.some(b=>core.overlaps(b,target))){
       spider.dead=true;s.puff(spider.x,spider.y,0xe8b5ae,9);
       gameWindow.GRIM_ACTION_AUDIO.play('defeat');
     }
