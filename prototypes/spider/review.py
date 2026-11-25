@@ -23,7 +23,7 @@ with sync_playwright() as runner:
           const s=scene,g=gameWindow.grimRun;g.loop.sleep();clearInterval(s.loopWatchdogId);
           s.wakeGameLoop=()=>{};s.sys.sceneUpdate=()=>{};
           window.resetTrial=()=>{
-            s.startRun();window.t=0;window.warn=null;window.visibleWarn=false;window.clearance=null;window.hurt=null;window.cost=[];window.cues=[];
+            s.startRun();window.t=0;window.warn=null;window.visibleWarn=false;window.clearance=null;window.hurt=null;window.cost=[];window.cues=[];window.silkVoices=0;
             window.tick=(lead,max=500)=>{
               while(spider.x-s.player.x>lead && max-->0 && t<430){
                 const begin=performance.now();s.update(0,1000/60);g.step(performance.now(),0);
@@ -41,7 +41,7 @@ with sync_playwright() as runner:
             };
           };
           const original=gameWindow.GRIM_ACTION_AUDIO.play.bind(gameWindow.GRIM_ACTION_AUDIO);
-          gameWindow.GRIM_ACTION_AUDIO.play=n=>{window.cues?.push(n);original(n)};
+          gameWindow.GRIM_ACTION_AUDIO.play=n=>{window.cues?.push(n);const before=window.voices;original(n);if(n==='silk')silkVoices+=voices-before};
           window.voices=0;const proto=gameWindow.AudioContext.prototype,make=proto.createOscillator;
           proto.createOscillator=function(){voices++;return make.call(this)};
         }""")
@@ -74,10 +74,11 @@ with sync_playwright() as runner:
                 touch("jump",False)
             result=page.evaluate("""()=>({hp:scene.player.hp,hit:spider.hit,dead:spider.dead,warn,hurt,visibleWarn,clearance,
               rock:next?.dealtDamage||false,grade:scene.terrain.groundAt(spider.x+30)-scene.terrain.groundAt(spider.x-30),
-              p95:cost.sort((a,b)=>a-b)[Math.floor(cost.length*.95)],voices,cues})""")
+              p95:cost.sort((a,b)=>a-b)[Math.floor(cost.length*.95)],voices,silkVoices,cues})""")
             rows.append(dict(seed=seed,width=width,control=control,action=action,lead=lead,muted=muted,**result))
             print(json.dumps(rows[-1]),flush=True)
             if muted: assert result["voices"]==0
+            if not control: assert result["silkVoices"]==(0 if muted else 1),result
             return result
         miss=run("miss",-65)
         run("miss",-65)
