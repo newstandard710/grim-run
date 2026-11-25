@@ -55,6 +55,11 @@ with sync_playwright() as playwright:
             result = play_pair(pair, winning_lead)
             print(build, "natural Tundra", 27, pair, winning_lead, result, flush=True)
             assert result["hp"] == 3 and result["plant"] and result["nextCut"], result
+            page.evaluate("pressure('plant',33)")
+            hint = page.evaluate("""() => {const label=scene.tips.find(t=>t.atX===scene.obstacles[0].x).label;
+                return {text:label.text,width:label.getBounds().width};}""")
+            expected = "CUT AS THE JAWS OPEN" if build == "before" else "CUT OR JUMP AS JAWS OPEN"
+            assert hint["text"] == expected and hint["width"] < 390, hint
             for enemy, button, timings in [
                 ("plant", "attack", (30, 50, 59, None)),
                 ("crawler", "attack", (300, 128, 5, None)),

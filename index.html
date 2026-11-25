@@ -3331,7 +3331,7 @@ window.GRIM_CONFIG = Object.freeze({
       if (this.tipped.has(type)) return;
       this.tipped.add(type);
       const title={rock:'JUMP ↑',fire:'JUMP FIRE ↑',branch:'SLIDE ↓',bramble:'CUT ⚔',
-        tuckGate:'JUMP + SLIDE',airBramble:'JUMP + CUT',snappingBramble:'CUT AS THE JAWS OPEN'}[type];
+        tuckGate:'JUMP + SLIDE',airBramble:'JUMP + CUT',snappingBramble:'CUT OR JUMP AS JAWS OPEN'}[type];
       if(!title) return;
       const label=this.add.text(ob.x+ob.width/2,this.terrain.anchorAt(ob.x)-145,title,{
         fontFamily:'system-ui,Arial,sans-serif',fontSize:'20px',fontStyle:'900',
