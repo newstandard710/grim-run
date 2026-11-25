@@ -73,6 +73,7 @@ with sync_playwright() as runner:
             if muted: assert result["voices"]==0
             return result
         miss=run("miss",-65)
+        run("miss",-65)
         assert miss["hit"] != bool(control)
         if not control:
             assert miss["cues"].count("damage")==1 and miss["hurt"]>miss["warn"]
