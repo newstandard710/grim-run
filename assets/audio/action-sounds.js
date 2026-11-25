@@ -5,6 +5,11 @@
     land:   ['triangle', 138, 62, .085, .18],
     swing:  ['triangle', 560, 126, .095, .085],
     cut:    ['sawtooth', 315, 82, .075, .11],
+    plant:  ['triangle', 410, 215, .11, .09],
+    bat:    ['sine', 820, 1160, .12, .08],
+    imp:    ['sawtooth', 140, 295, .15, .075],
+    impact: ['triangle', 345, 175, .07, .11],
+    defeat: ['triangle', 245, 66, .14, .13],
     damage: ['triangle', 182, 46, .21, .20]
   };
   const key = 'grimRun.actionSoundsMuted';

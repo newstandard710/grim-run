@@ -464,7 +464,7 @@ button {cursor:pointer;}
     };
   })(window);
   </script>
-  <script src="assets/audio/action-sounds.js?v=1"></script>
+  <script src="assets/audio/action-sounds.js?v=2"></script>
   <script src="assets/ui/v0160/startup.js?v=1"></script>
   <div id="vendor-intro-screen" class="vendor-intro-scene hidden" role="dialog" aria-modal="true" aria-labelledby="vendor-intro-title">
     <div id="vendor-intro-title">THE HEAVENLY MERCHANT</div>
@@ -3318,7 +3318,6 @@ window.GRIM_CONFIG = Object.freeze({
         if(e.dead||e.lastScytheSwing===this.swingSequence)continue;
         if(!hits(Combat.rectFor(e)))continue;
         e.lastScytheSwing=this.swingSequence;
-        scope.GRIM_ACTION_AUDIO?.play('cut');
         this.hitEnemy(e,1,false);
       }
       for(const ball of this.fireballs){
@@ -3332,7 +3331,7 @@ window.GRIM_CONFIG = Object.freeze({
       if (this.tipped.has(type)) return;
       this.tipped.add(type);
       const title={rock:'JUMP ↑',fire:'JUMP FIRE ↑',branch:'SLIDE ↓',bramble:'CUT ⚔',
-        tuckGate:'JUMP + SLIDE',airBramble:'JUMP + CUT',snappingBramble:'CUT AS THE JAWS OPEN'}[type];
+        tuckGate:'JUMP + SLIDE',airBramble:'JUMP + CUT',snappingBramble:'CUT OR JUMP AS JAWS OPEN'}[type];
       if(!title) return;
       const label=this.add.text(ob.x+ob.width/2,this.terrain.anchorAt(ob.x)-145,title,{
         fontFamily:'system-ui,Arial,sans-serif',fontSize:'20px',fontStyle:'900',
@@ -3527,7 +3526,10 @@ window.GRIM_CONFIG = Object.freeze({
         const ahead=ob.x+ob.width/2-this.player.x;
         ob.plantState??='idle';ob.plantMs??=0;
         if(ob.plantState==='idle'){
-          if(ahead>0&&ahead<=180+this.speed*.48){ob.plantState='windup';ob.plantMs=0;}
+          if(ahead>0&&ahead<=180+this.speed*.48){
+            ob.plantState='windup';ob.plantMs=0;
+            scope.GRIM_ACTION_AUDIO?.play('plant');
+          }
           continue;
         }
         ob.plantMs+=frameMs;
@@ -3846,6 +3848,7 @@ window.GRIM_CONFIG = Object.freeze({
     hitEnemy(enemy,damage,fromGun=false){
       if(enemy.dead)return;
       enemy.hp-=damage;
+      scope.GRIM_ACTION_AUDIO?.play(enemy.hp<=0?'defeat':'impact');
       const painted=this.combatArt?.enemyHit(enemy,enemy.hp<=0);
       this.puff(enemy.x,enemy.y,enemy.kind==='skeletalBat'?0xe5d6cb:0x9edbf2,6,painted);
       if(enemy.hp<=0){
@@ -3943,7 +3946,10 @@ window.GRIM_CONFIG = Object.freeze({
           const high=this.cameraY+76,low=this.cameraY+this.height-94;
           e.homeY=Math.max(high,Math.min(low,
             ground-(e.kind==='skeletalBat'?170:155)));
-          if(e.mode==='glide'&&ahead<450&&ahead>85){e.mode='telegraph';e.timer=0;}
+          if(e.mode==='glide'&&ahead<450&&ahead>85){
+            e.mode='telegraph';e.timer=0;
+            if(e.kind==='skeletalBat')scope.GRIM_ACTION_AUDIO?.play('bat');
+          }
           if(e.mode==='telegraph'){
             e.timer+=dt;
             if(e.timer>=.85){e.mode='dive';e.timer=0;}
@@ -3984,8 +3990,14 @@ window.GRIM_CONFIG = Object.freeze({
               }
             }else{
               e.fireMs-=frameMs;
-              if(e.fireMs<=0)e.warningMs=470;
+              if(e.fireMs<=0){
+                e.warningMs=470;
+                scope.GRIM_ACTION_AUDIO?.play('imp');
+              }
             }
+          }else if(e.warningMs>0){
+            // A charge outside the firing lane cannot release a projectile.
+            e.warningMs=0;
           }
         }
       }
