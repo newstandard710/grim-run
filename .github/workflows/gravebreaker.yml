@@ -4,12 +4,19 @@ on:
     paths: ['prototypes/gravebreaker/**', '.github/workflows/gravebreaker.yml']
 jobs:
   touch:
+    name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
-        renderer: [canvas, webgl, native]
+        include:
+          - {name: canvas, args: canvas}
+          - {name: native, args: native}
+          - {name: webgl-landscape-wall, args: 'webgl 844 wall'}
+          - {name: webgl-landscape-crawler, args: 'webgl 844 crawler'}
+          - {name: webgl-portrait-wall, args: 'webgl 390 wall'}
+          - {name: webgl-portrait-crawler, args: 'webgl 390 crawler'}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,16 +27,16 @@ jobs:
       - run: pip install playwright==1.56.0 imageio-ffmpeg && python -m playwright install chromium
       - run: |
           python -m http.server 8765 --bind 127.0.0.1 >/tmp/serve.log 2>&1 &
-          if [[ "${{ matrix.renderer }}" == native ]]; then
+          if [[ "${{ matrix.name }}" == native ]]; then
             python prototypes/gravebreaker/native.py 2>&1 | tee grave-native.log
           else
-            python prototypes/gravebreaker/review.py ${{ matrix.renderer }} 2>&1 | tee grave-${{ matrix.renderer }}.log
+            python prototypes/gravebreaker/review.py ${{ matrix.args }} 2>&1 | tee grave-${{ matrix.name }}.log
           fi
         shell: bash
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: gravebreaker-${{ matrix.renderer }}
+          name: gravebreaker-${{ matrix.name }}
           path: |
             grave-review/
             grave-*.log

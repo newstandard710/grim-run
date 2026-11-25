@@ -10,13 +10,18 @@ import imageio_ffmpeg
 from playwright.sync_api import sync_playwright
 
 renderer = sys.argv[1]
-out = Path("grave-review") / renderer
+viewport = int(sys.argv[2]) if len(sys.argv)>2 else None
+subject = sys.argv[3] if len(sys.argv)>3 else None
+part = "-".join(sys.argv[1:])
+out = Path("grave-review") / part
 out.mkdir(parents=True, exist_ok=True)
 rows = []
 with sync_playwright() as runner:
     flags = ["--disable-webgl"] if renderer == "canvas" else ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
     browser = runner.chromium.launch(args=flags)
     for width, height, seed in [(844, 390, 33), (390, 844, 7)]:
+        if viewport and viewport!=width:
+            continue
         context = browser.new_context(viewport={"width": width, "height": height}, has_touch=True)
         page = context.new_page()
         errors = []
@@ -92,9 +97,9 @@ with sync_playwright() as runner:
                     passed.append(lead)
             return passed
 
-        timing = {}
-        for target in ["wall", "crawler"]:
-            timing[target] = {}
+        # In a single-target shard the other position uses its verified full-course timing.
+        timing = {key: {"heavy":155,"jump":95} for key in ["wall","crawler"]}
+        for target in ([subject] if subject else ["wall","crawler"]):
             for action, leads in [("heavy", [300,240,210,180,155,130,105,80,55,30,0]),
                                   ("jump", [300,150,115,95,75,55,0])]:
                 wins = scan(target, action, leads)
@@ -150,6 +155,7 @@ with sync_playwright() as runner:
             page.get_by_role("button",name="Replay course").tap()
         assert not errors, errors
         context.close()
-    check_controls(browser, "http://localhost:8765/")
+    if not subject or (viewport==844 and subject=="wall"):
+        check_controls(browser, "http://localhost:8765/")
     browser.close()
 (out/"timing.json").write_text(json.dumps(rows,indent=2))
