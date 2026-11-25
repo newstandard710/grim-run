@@ -27,7 +27,7 @@ jobs:
           git worktree add --detach "$RUNNER_TEMP/before" "$BASE"
           python -m http.server 8766 --bind 127.0.0.1 --directory "$RUNNER_TEMP/before" >/tmp/before.log 2>&1 &
           python -m http.server 8765 --bind 127.0.0.1 >/tmp/after.log 2>&1 &
-          python tests/phase3/touch.py "$RENDERER" http://127.0.0.1:8766/ http://127.0.0.1:8765/ | tee enemy-review.txt | grep -E "natural Tundra|Imp shot and Cut|two shots|SUMMARY"
+          python tests/phase3/touch.py "$RENDERER" http://127.0.0.1:8766/ http://127.0.0.1:8765/ | tee enemy-review.txt | grep -E "natural Tundra|steep plant|Imp shot and Cut|two shots|SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -32,6 +32,36 @@ with sync_playwright() as playwright:
         for muted in (False, True):
             page.evaluate("""muted => {const toggle=document.querySelector('#mute-actions');
               toggle.checked=muted;toggle.dispatchEvent(new Event('change'));}""", muted)
+            # Replay the same generated pair and ordinary inputs on both builds.
+            start = Path(__file__).with_name("tundra.js").read_text()
+
+            def play_pair(pair, lead):
+                for name in ("plant", "next"):
+                    page.evaluate("x=>travelTo(x)", pair[name]-lead)
+                    page.locator("#attack-btn").tap()
+                return page.evaluate("x=>travelTo(x)", pair["next"]+115)
+
+            if build == "before" and not muted:
+                route = None
+                for seed in dict.fromkeys([27, 68, 82, *range(1, 201)]):
+                    pair = page.evaluate(start, seed)
+                    if not pair:
+                        continue
+                    for lead in (90, 112, 74, 135):
+                        pair = page.evaluate(start, seed)
+                        result = play_pair(pair, lead)
+                        if result["hp"] == 3 and result["plant"] and result["nextCut"]:
+                            route = (seed, pair, lead)
+                            break
+                    if route:
+                        break
+                assert route, "No clean two-Cut reference run"
+            seed, reference, lead = route
+            pair = page.evaluate(start, seed)
+            assert pair == reference
+            result = play_pair(pair, lead)
+            print(build, "natural Tundra", seed, pair, lead, result, flush=True)
+            assert result["hp"] == 3 and result["plant"] and result["nextCut"], result
             for enemy, button, timings in [
                 ("plant", "attack", (30, 50, 59, None)),
                 ("crawler", "attack", (300, 128, 5, None)),
@@ -63,6 +93,29 @@ with sync_playwright() as playwright:
                                     assert row["events"].count({"plant":"plant","imp":"imp","skeletalBat":"bat"}[enemy]) >= 1
                             if not muted and row["events"]:
                                 assert row["oscillators"] > 0
+            # On the steeper approach, measure where a safe Cut or Jump is available.
+            if not muted:
+                steep = []
+                for button in ("attack", "jump"):
+                    for frame in range(32, 66, 3):
+                        page.evaluate("pressure('plant',3)")
+                        page.evaluate("n=>approach(n,null)", frame)
+                        control = page.locator("#" + button + "-btn")
+                        if button == "jump":
+                            box = control.bounding_box()
+                            touch = page.context.new_cdp_session(page)
+                            touch.send("Input.dispatchTouchEvent", {"type":"touchStart","touchPoints":[
+                                {"x":box["x"]+box["width"]/2,"y":box["y"]+box["height"]/2}]})
+                            outcome = page.evaluate("approach(125,null)")
+                            touch.send("Input.dispatchTouchEvent", {"type":"touchEnd","touchPoints":[]})
+                            touch.detach()
+                        else:
+                            control.tap()
+                            outcome = page.evaluate("approach(125,null)")
+                        if outcome["hp"] == 3:
+                            steep.append((button,frame))
+                print(build, "steep plant", steep, flush=True)
+                assert steep, "No clean response on the steep Tundra approach"
             # Two-hit enemies also get an ordinary winning sequence with a fresh bow.
             for enemy in ("skeletalBat", "imp"):
                 page.evaluate("kind=>pressure(kind,33)", enemy)
@@ -84,25 +137,6 @@ with sync_playwright() as playwright:
                     survived.append(frame)
             print(build, "Imp shot and Cut", survived, flush=True)
             assert survived
-            # Use the real Tundra generator, restoring normal health before scoring.
-            start = (Path(__file__).with_name("tundra.js")).read_text()
-            if build == "before" and not muted:
-                route = None
-                for seed in (33, 3, 73, 17, *range(1, 33)):
-                    pair = page.evaluate(start, seed)
-                    if pair:
-                        route = (seed, pair)
-                        break
-                assert route, "No generated plant and bramble pair found"
-            seed, expected = route
-            pair = page.evaluate(start, seed)
-            assert pair == expected, (pair, expected)
-            for name in ("plant", "next"):
-                page.evaluate("x=>travelTo(x)", pair[name]-90)
-                page.locator("#attack-btn").tap()
-            result = page.evaluate("x=>travelTo(x)", pair["next"]+115)
-            print(build, "natural Tundra", seed, pair, result, flush=True)
-            assert result["hp"] == 3 and result["plant"] and result["nextCut"], result
         page.close()
     browser.close()
 

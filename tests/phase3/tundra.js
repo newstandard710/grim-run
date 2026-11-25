@@ -1,47 +1,42 @@
-// Approach a naturally generated pair. Only the approach uses practice immunity.
+// Advance the production generator in distance order. Start normal physics on the
+// approach to a real generated pair, retaining the surrounding terrain and hazards.
 (seed) => {
-  const s=scene, p=() => s.player, dt=1000/60;
-  history.replaceState({}, '', '?seed='+seed);
+  const s=scene,dt=1000/60;
+  history.replaceState({},'', '?seed='+seed);
   s.startRun();
-  const paint=s.drawScene;
-  s.drawScene=()=>{};
-  s.godMode=true;
-  let gapDone, pair;
-  try {
-    for(let frame=0;frame<18000;frame++){
-      if(s.state==='vendorIntro')s.finishVendorIntro();
-      if(s.state==='upgrade')s.leaveVendor();
-      const x=p().x;
-      if(s.distance>3000){
-        const plant=s.obstacles.find(o=>o.type==='snappingBramble' && !o.destroyed &&
-          o.x-x>220 && o.x-x<290);
-        if(plant){
-          const next=s.obstacles.find(o=>o!==plant&&!o.destroyed &&
-            o.x>plant.x+220 && o.x<plant.x+790 &&
-            o.type==='bramble');
-          if(next && !s.terrain.segments.some(z=>z.kind==="gap" && z.start<next.x+150 && z.end>x) && p().grounded){
-            pair={plant,next};break;
-          }
-        }
-      }
-      if(s.distance>4650)break;
-      const gap=s.terrain.segments.find(z=>z.kind==='gap'&&z.start>=x&&z.start-x<s.speed*.20);
-      if(p().grounded && gap && gap!==gapDone){s.jump();gapDone=gap;}
-      s.update(0,dt);
-    }
-  } finally {
-    s.drawScene=paint;
-    s.godMode=false;
+  const p=s.player;
+  const place=x=>{
+    p.x=x;p.y=s.terrain.groundAt(x)??s.terrain.anchorAt(x);
+    s.distance=(x-s.startX)/GRIM_CONFIG.pxPerMeter;
+    s.speed=GRIM_CORE.runSpeed(s.distance);
+    s.cameraX=x-s.width*GRIM_CONFIG.reaperXRatio;
+    s.cameraY=p.y-s.groundY;
+    s.syncWorldScroll();
+  };
+  let plant,next,found=false;
+  for(let x=s.startX;x<s.startX+4630*GRIM_CONFIG.pxPerMeter;x+=64){
+    place(x);
+    s.spawnAhead();
+    if(s.distance<3000)continue;
+    plant=s.obstacles.find(o=>o.type==='snappingBramble' && o.x-x>=320 && o.x-x<410);
+    if(!plant)continue;
+    next=s.obstacles.find(o=>o.type==='bramble' && o.x>plant.x+245 && o.x<plant.x+710);
+    if(!next)continue;
+    if(s.obstacles.some(o=>o!==plant&&o!==next&&o.x+o.width>=x-15&&o.x<=next.x+110))continue;
+    if(s.terrain.segments.some(z=>z.kind==='gap'&&z.start<next.x+150&&z.end>x))continue;
+    if(s.vendorObstacleBlocked('bramble',x,next.x-x+150))continue;
+    found=true;
+    break;
   }
-  if(!pair)return null;
-  p().hp=3;p().invulMs=0;
+  if(!found)return null;
+  s.nextVendorNumber=Math.floor(s.distance/666)+1;
   s.drawScene();
   window.travelTo=x=>{
     let frames=0;
-    while(p().x<x && s.state==='playing' && frames++<300){
+    while(p.x<x && s.state==='playing' && frames++<300){
       s.update(0,dt);grimRun.step(performance.now(),0);
     }
-    return {hp:p().hp,plant:!!pair.plant.destroyed,nextCut:!!pair.next.destroyed,nextHit:!!pair.next.dealtDamage,state:s.state};
+    return {hp:p.hp,plant:!!plant.destroyed,nextCut:!!next.destroyed,nextHit:!!next.dealtDamage,state:s.state};
   };
-  return {plant:pair.plant.x,next:pair.next.x,type:pair.next.type};
+  return {plant:plant.x,next:next.x,type:next.type};
 }
