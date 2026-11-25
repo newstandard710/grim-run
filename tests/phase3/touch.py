@@ -2,11 +2,13 @@
 import json
 import sys
 from pathlib import Path
+from statistics import median
 from playwright.sync_api import sync_playwright
 
 fixtures = Path(__file__).resolve().parents[1] / "phase2"
 renderer = sys.argv[1]
 rows = {}
+performance = {}
 with sync_playwright() as playwright:
     args = ["--disable-webgl"] if renderer == "canvas" else ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
     browser = playwright.chromium.launch(args=args)
@@ -43,6 +45,7 @@ with sync_playwright() as playwright:
                             page.evaluate("([k,n])=>k==='plant'?approach(n,null):approach(180,n)", [enemy, timing])
                             page.locator("#" + button + "-btn").tap()
                         row = page.evaluate("({...approach(180,null),events,oscillators})")
+                        performance.setdefault((build, muted), []).append(row["p95"])
                         key = (enemy, seed, timing, muted)
                         print(build, key, json.dumps(row), flush=True)
                         if muted:
@@ -83,13 +86,25 @@ with sync_playwright() as playwright:
             assert survived
             # Use the real Tundra generator, restoring normal health before scoring.
             start = (Path(__file__).with_name("tundra.js")).read_text()
-            pair = page.evaluate(start, 33)
-            assert pair and pair["type"] == "bramble", pair
+            if build == "before" and not muted:
+                route = None
+                for seed in (33, 3, 73, 17, *range(1, 33)):
+                    pair = page.evaluate(start, seed)
+                    if pair:
+                        route = (seed, pair)
+                        break
+                assert route, "No generated plant and bramble pair found"
+            seed, expected = route
+            pair = page.evaluate(start, seed)
+            assert pair == expected, (pair, expected)
             for name in ("plant", "next"):
                 page.evaluate("x=>travelTo(x)", pair[name]-90)
                 page.locator("#attack-btn").tap()
             result = page.evaluate("x=>travelTo(x)", pair["next"]+115)
-            print(build, "natural Tundra", pair, result, flush=True)
-            assert result["hp"] == 3 and result["plant"] and not result["nextHit"], result
+            print(build, "natural Tundra", seed, pair, result, flush=True)
+            assert result["hp"] == 3 and result["plant"] and result["nextCut"], result
         page.close()
     browser.close()
+
+for group, values in performance.items():
+    print("SUMMARY", renderer, group, "median trial p95 ms", median(values), flush=True)

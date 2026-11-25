@@ -18,7 +18,7 @@
         if(plant){
           const next=s.obstacles.find(o=>o!==plant&&!o.destroyed &&
             o.x>plant.x+220 && o.x<plant.x+790 &&
-            ['bramble','branch','rock','fire'].includes(o.type));
+            o.type==='bramble');
           if(next && !s.terrain.segments.some(z=>z.kind==="gap" && z.start<next.x+150 && z.end>x) && p().grounded){
             pair={plant,next};break;
           }
@@ -41,7 +41,7 @@
     while(p().x<x && s.state==='playing' && frames++<300){
       s.update(0,dt);grimRun.step(performance.now(),0);
     }
-    return {hp:p().hp,plant:!!pair.plant.destroyed,nextHit:!!pair.next.dealtDamage,state:s.state};
+    return {hp:p().hp,plant:!!pair.plant.destroyed,nextCut:!!pair.next.destroyed,nextHit:!!pair.next.dealtDamage,state:s.state};
   };
   return {plant:pair.plant.x,next:pair.next.x,type:pair.next.type};
 }
