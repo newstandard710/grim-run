@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from controls import check_controls
+
 import imageio_ffmpeg
 from playwright.sync_api import sync_playwright
 
@@ -26,10 +28,17 @@ with sync_playwright() as runner:
         page.evaluate("""() => {
           const s=scene,g=w.grimRun;
           g.loop.sleep();clearInterval(s.loopWatchdogId);s.wakeGameLoop=()=>{};s.sys.sceneUpdate=()=>{};
-          window.step=()=>{s.update(0,1000/60);g.step(performance.now(),0)};
+          window.step=()=>{
+            s.update(0,1000/60);g.step(performance.now(),0);
+            for(const key of ['wall','crawler']){
+              const o=trial[key];
+              if(!visible[key] && o.x+o.width<=s.cameraX+s.width && o.y>=s.renderCameraY &&
+                  o.y+o.height<=s.renderCameraY+s.height)visible[key]={x:s.player.x,seconds:s.elapsed};
+            }
+          };
           window.advance=(x,count=500)=>{while(!trial.done&&s.player.x<x&&count-->0)step()};
           window.reset=(target,muted)=>{
-            s.startRun();window.voices=0;
+            s.startRun();window.voices=0;window.visible={};
             const m=w.document.querySelector('#mute-actions');m.checked=muted;m.dispatchEvent(new w.Event('change'));
             if(target){
               const x=trial[target].x-400;
@@ -84,6 +93,10 @@ with sync_playwright() as runner:
                 wins = scan(target, action, leads)
                 assert wins and len(wins)<len(leads), (target,action,wins)
                 timing[target][action] = wins[len(wins)//2]
+                # Refine the late edge to about one 60 Hz frame of travel.
+                latest = min(wins)
+                if action == "heavy":
+                    scan(target, action, range(latest-5, max(0,latest-25), -5))
             assert not scan(target, "miss", [0])
             assert not scan(target, "attack", [75])
         assert not scan("branch", "heavy", [150])
@@ -116,7 +129,7 @@ with sync_playwright() as runner:
                 touch(move, False)
             travel(x+450)
             result = page.evaluate("""()=>({done:trial.done,hp:scene.player.hp,voices,
-                wall:!!trial.wall.broken,stagger:!!trial.crawler.staggered})""")
+                visible,wallX:trial.wall.x,crawlerX:trial.crawler.x,wall:!!trial.wall.broken,stagger:!!trial.crawler.staggered})""")
             assert result["done"] and result["hp"]==3, result
             assert (result["voices"]==0)==muted, result
             assert result["wall"]==result["stagger"]==(action=="heavy")
@@ -129,5 +142,6 @@ with sync_playwright() as runner:
             page.get_by_role("button",name="Replay course").tap()
         assert not errors, errors
         context.close()
+    check_controls(browser, "http://localhost:8765/")
     browser.close()
 (out/"timing.json").write_text(json.dumps(rows,indent=2))

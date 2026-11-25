@@ -49,15 +49,26 @@ function heavy() {
   if (!trial || trial.done || s.state !== 'playing' || !p.grounded || s.lowProfile ||
       p.attackCooldownMs > 0 || trial.swing || s.practiceScale()===0) return;
   trial.swing = {age:0,released:false};
+  s.motionArt.rising?.acceptCut();
 }
 
 function update(ms, releaseCut) {
   const a = trial.swing;
   if (!a) return;
   a.age += ms;
-  if (!a.released && a.age >= windupMs) {
-    a.released = true;
-    releaseCut();
+  if (!a.released) {
+    const p = scene.player, config = w.GRIM_CONFIG;
+    // Draw back through the first 42 ms of the painted swing over 210 ms of play.
+    // Keep the blade's contact sweep closed until the forward stroke starts.
+    const poseAge = 42*Math.min(1,a.age/windupMs);
+    if (a.age >= windupMs) {
+      a.released = true;
+      p.attackCooldownMs = 0;
+      releaseCut();
+    }
+    p.attackMs = config.attackDurationMs-poseAge;
+    p.previousAttackMs = p.attackMs;
+    p.attackCooldownMs = config.attackCooldownMs-poseAge;
   }
   if (a.age >= recoveryEndMs) trial.swing = null;
 }
@@ -65,7 +76,7 @@ function update(ms, releaseCut) {
 function finish() {
   if (trial.done) return;
   trial.done = true;
-  scene.state = 'courseEnd'; scene.ui.setMode('paused');
+  scene.state = 'courseEnd'; scene.ui.setMode('courseEnd');
   scene.ui.releaseAll(); crawlerSprite.setVisible(false); charge.clear();
   const p = scene.player, {wall,crawler,branch} = trial;
   const results = [wall.broken ? 'Stone broken' : wall.hit ? 'Stone hit' : 'Stone cleared',
@@ -144,7 +155,13 @@ function paint() {
 async function install() {
   w = frame.contentWindow;
   scene = w.grimRun?.scene.scenes[0];
-  if (!scene?.ui || !scene.motionArt?.cutWeaponReady) { setTimeout(install,50); return; }
+  if (!scene?.ui || !scene.motionArt?.cutWeaponReady) {
+    if (w.document.querySelector('#error:not(.hidden), #reaction-load-error:not(.hidden), #portal-art-load-error:not(.hidden)')) {
+      throw Error('The game assets could not load. Reload the course to try again.');
+    }
+    setTimeout(()=>install().catch(showError),50);
+    return;
+  }
   const s=scene, doc=w.document;
   // Preview purchases, settings and deaths use a disposable wallet for this frame.
   const memory = new Map();
@@ -177,7 +194,11 @@ async function install() {
   s.startRun = () => { trial=null; crawlerSprite.setVisible(false);charge.clear(); if(run()!==false)setup(); };
   const plants = s.updatePlants.bind(s), cut = s.cutNearby.bind(s), hazards = s.checkHazards.bind(s), combat = s.drawCombat.bind(s);
   s.updatePlants = ms => {plants(ms); if(trial)update(ms,releaseCut)};
-  s.cutNearby = root => {cut(root); if(trial)strike(root)};
+  s.cutNearby = root => {
+    if (trial?.swing && !trial.swing.released) return;
+    cut(root);
+    if (trial && [trial.wall,trial.crawler].some(o=>Math.abs(o.x-s.player.x)<195)) strike(root);
+  };
   s.checkHazards = () => {hazards(); if(trial)check()};
   s.drawCombat = () => {combat(); if(trial&&!trial.done)paint()};
   start.onclick = () => {
@@ -186,5 +207,6 @@ async function install() {
   };
   start.disabled=false; start.textContent='Start course';
 }
-frame.addEventListener('load',()=>install().catch(error=>{panel.querySelector('p').textContent=error.message}));
+function showError(error) { panel.querySelector('p').textContent=error.message; }
+frame.addEventListener('load',()=>install().catch(showError));
 frame.src = '../../index.html?seed='+seed;
