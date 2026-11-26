@@ -112,7 +112,7 @@ async function inspect(browser, renderer, width, height, motion) {
     await launch.tap();
     assert(await dialog.isVisible());
     assert.deepEqual(await dialog.locator('h3').allTextContents(),['Angel','Devil']);
-    assert.equal(await dialog.locator('select').count(),10);
+    assert.equal(await dialog.locator('select').count(),11);
     assert.equal(await dialog.locator('#god-rank-ravenWings option').count(),6);
     assert.equal(await dialog.locator('#god-rank-rapidFire option').count(),5);
     assert.match(await dialog.locator('#god-rank-deathsReversal-details').textContent(),/Active Lv 4.*8s of history/);
