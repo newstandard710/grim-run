@@ -202,6 +202,80 @@ async function merchantAndInterruption(browser){
     console.log('Merchant, renderer crash, exclusive tab, Forest boundary and declined revival passed.');
   }finally{await ctx.close();}
 }
+async function saveRecovery(browser){
+  const ctx=await browser.newContext({viewport:{width:844,height:390},hasTouch:true});
+  try{
+    let page=await ctx.newPage();
+    await boot(page);await start(page);
+    // Acquire a held jump again after reload without spending a second jump.
+    await page.evaluate(()=>{grimRun.scene.scenes[0].powerManager.levels.ravenWings=1;
+      grimRun.scene.scenes[0].powerManager.levels.skeletalWings=1;});
+    const sessions=new WeakMap();
+    const touch=async(page,type)=>{
+      if(!sessions.has(page))sessions.set(page,await ctx.newCDPSession(page));
+      const box=await page.locator('#jump-btn').boundingBox();
+      await sessions.get(page).send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'?[]:
+        [{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]});
+    };
+    await touch(page,'touchStart');await advance(page,'frames',3);
+    const held=await saved(page);
+    page=await reopen(ctx,page);await resume(page);await touch(page,'touchStart');
+    const jump=await saved(page);
+    assert.equal(held.world.player.jumpHeld,true);
+    assert.equal(jump.world.player.jumpsUsed,held.world.player.jumpsUsed);
+    assert.equal(jump.world.player.velocityY,held.world.player.velocityY);
+    await touch(page,'touchEnd');
+    assert.equal((await saved(page)).world.player.jumpHeld,false);
+    await page.locator('#pause-btn').tap();
+    await page.locator('#quit-btn').tap();
+    await page.locator('#abandon-confirm-btn').tap();
+    await page.locator('#start-btn').tap();
+    await page.locator('#campaign-primary').tap();
+    await page.locator('#campaign-primary').tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    // Stop between the single authoritative wallet write and its transfer to the fast frame slot.
+    await advance(page,'meters',205);await page.locator('#attack-btn').tap();
+    await page.evaluate(()=>{
+      const set=Storage.prototype.setItem;
+      Storage.prototype.setItem=function(k,v){
+        if(k==='grim-run-forest-attempt-v1'&&JSON.parse(localStorage.getItem(GRIM_META.KEY)||'{}').forestRecovery)
+          throw new DOMException('Injected interruption','QuotaExceededError');
+        return set.call(this,k,v);
+      };
+      const s=grimRun.scene.scenes[0],draw=s.drawScene;s.drawScene=()=>{};
+      try{for(let i=0;i<200&&!s.campaign.frozen;i++)s.update(0,1000/60);}finally{s.drawScene=draw;}
+    });
+    const journal=await page.evaluate(()=>JSON.parse(localStorage.getItem(GRIM_META.KEY)));
+    assert.ok(journal.forestRecovery);assert.equal(journal.brambleSouls,1);
+    page=await reopen(ctx,page);
+    assert.equal((await wallet(page)).souls,journal.souls);
+    assert.equal((await saved(page)).run.brambleSoulClaimed,true);
+    await resume(page);await advance(page,'meters',255);
+    assert.equal((await wallet(page)).souls,journal.souls);
+    // Restore a ready Rewind, including history, after changing orientation.
+    await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];s.powerManager.levels.deathsReversal=1;
+      s.player.invulMs=20000;
+    });
+    await advance(page,'frames',355);
+    const w=await saved(page);assert.ok(w.history.length>49);
+    await page.close();
+    page=await ctx.newPage();await page.setViewportSize({width:390,height:844});await boot(page);
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.equal((await saved(page)).history.length,w.history.length);
+    await resume(page);await page.locator('#rewind-btn').tap();await advance(page,'frames',8);
+    assert.equal((await saved(page)).mode,'rewinding');
+    const rewind=await saved(page);
+    await page.close();page=await ctx.newPage();await page.setViewportSize({width:390,height:844});await boot(page);
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.equal((await saved(page)).playback.elapsedMs,rewind.playback.elapsedMs);
+    await resume(page);await advance(page,'frames',115);
+    assert.equal((await saved(page)).mode,'playing');
+    assert.ok((await saved(page)).run.rewindCooldownMs>0);
+    console.log('Atomic credit recovery, cross-orientation Rewind history and mid-playback reload passed.');
+
+  }finally{await ctx.close();}
+}
 (async()=>{
   if(!process.env.GRIM_BASE_URL){
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -217,5 +291,6 @@ async function merchantAndInterruption(browser){
     await transactions(browser);
     console.log('Forest pickup, revivals, retry, loadout and Endless passed.');
     await merchantAndInterruption(browser);
+    await saveRecovery(browser);
   }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});

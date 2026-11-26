@@ -79,6 +79,12 @@
         const perform=a[name];
         a[name]=(...args)=>{
           if(this.active&&this.frozen)return;
+          // Touch IDs do not survive a closed tab. Let the first matching
+          // press reconnect to a held jump/slide without spending another use.
+          if(this.active&&this.reconnect?.delete(name)){
+            if(name==='jump'&&scene.player.jumpHeld&&!scene.player.grounded)return;
+            if(name==='slideStart'&&scene.player.holdSlide)return;
+          }
           const value=perform(...args);
           if(this.active)this.save();
           return value;
@@ -161,6 +167,7 @@
             s.meta=meta().load();
             this.id=d?.id||crypto.randomUUID();
             this.active=true;this.frozen=false;this.walletDirty=false;this.retryForest=true;
+            s.frame=0;s.lastRevivePayment=null;s.lastResurrection=null;
             s.startRun(d?.seed);
             // Items and preplaced obstacles in later biomes never enter this chapter.
             const limit=s.startX+END*scope.GRIM_CONFIG.pxPerMeter+1500;
@@ -178,7 +185,7 @@
       finally{this.busy=false;}
     }
     release(){
-      this.active=false;this.frozen=false;this.walletDirty=false;
+      this.active=false;this.frozen=false;this.walletDirty=false;this.reconnect=null;
       this.requiredArt=null;cancelAnimationFrame(this.artWait);
       this.unlock?.();this.unlock=null;
     }
@@ -211,6 +218,9 @@
     continueAttempt(){
       if(!this.frozen||this.scene.state!=='paused'||this.requiredArt)return;
       const s=this.scene;
+      this.reconnect=new Set();
+      if(s.player.jumpHeld)this.reconnect.add('jump');
+      if(s.player.holdSlide)this.reconnect.add('slideStart');
       this.frozen=false;s.state=this.resumeMode;s.cutsceneLastAt=null;
       s.ui.setMode(s.state);
       if(s.state==='upgrade')s.showVendor();
