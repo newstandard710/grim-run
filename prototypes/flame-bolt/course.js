@@ -58,15 +58,27 @@ function finish(reason) {
   trial.done = true;
   scene.state = 'courseEnd'; scene.ui.releaseAll(); scene.ui.setMode('courseEnd');
   cue.hidden = true;
-  const webResult = web=>web.clear || (web.dealtDamage?'hit':'passed');
-  const {web,crawler,pair,bat,branch} = trial;
-  const outcomes = ['First web '+webResult(web)];
-  if (crawler) outcomes.push('Crawler '+(crawler.contactDone?'hit you':crawler.dead?'defeated':'passed'));
-  if (bat) outcomes.push('Bat '+(bat.contactDone?'hit you':bat.dead?'defeated':'passed'));
-  if (pair.destroyed || pair.dealtDamage || scene.player.x>pair.x) outcomes.push('Second web '+webResult(pair));
-  if (branch.dealtDamage || scene.player.x>branch.x+branch.width)
+  const {web,crawler,pair,bat,branch} = trial, x=scene.player.x;
+  const outcomes = [];
+  function reportWeb(label, ob) {
+    if (ob.dealtDamage) outcomes.push(label+' hit'+(ob.clear?' then '+ob.clear:''));
+    else if (ob.clear) outcomes.push(label+' '+ob.clear);
+    else if (x>ob.x+ob.width) outcomes.push(label+' cleared');
+  }
+  function reportEnemy(label, enemy) {
+    if (!enemy) return;
+    if (enemy.contactDone) outcomes.push(label+' hit you');
+    else if (enemy.dead) outcomes.push(label+' defeated');
+    else if (x>enemy.x+50) outcomes.push(label+' passed');
+  }
+  reportWeb('First web',web);
+  reportEnemy('Crawler',crawler);
+  reportEnemy('Bat',bat);
+  reportWeb('Second web',pair);
+  if (branch.dealtDamage || x>branch.x+branch.width)
     outcomes.push(branch.dealtDamage?'Overhang hit':'Overhang cleared');
-  result.textContent = reason+' · '+scene.player.hp+' / '+scene.player.maxHp+' HP. '+outcomes.join(' · ')+'.';
+  const health=scene.player.hp+' / '+scene.player.maxHp+' HP';
+  result.textContent = [reason,health,...outcomes].join(' · ')+'.';
   result.hidden = false; start.textContent = 'Replay course'; menu.hidden = false; start.focus();
 }
 

@@ -195,6 +195,7 @@ with sync_playwright() as runner:
         start("Standard")
         assert page.evaluate("scene.encounterTelemetry.kills===0 && trial.crawler===null")
         stop()
+        assert page.locator("#result").inner_text()=="Trial stopped · 3 / 3 HP."
         for ammo in ["Standard","Flame"]:
             start(ammo)
             shoot_at("web",630,"free")  # Beyond both phone viewports.
