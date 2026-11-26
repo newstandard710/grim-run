@@ -138,3 +138,36 @@ assert.equal(poor.state,'revive');assert.equal(get('revive-yes-btn').disabled,tr
 assert.equal(poor.revive(),false);poor.declineRevive();assert.equal(poor.state,'dead');
 assert.equal(game(25).reviveUsed,false,'New run resets revive quota');
 console.log('PASS v0.13.6: permanent slide tiers, legacy wallet, Soul revival, chest, manual crossbow and cooldowns.');
+
+// A pre-bramble save has already spent its opening rewards. New credits,
+// purchases, and a paid revive must never replenish either lifetime allowance.
+M.save(M.normalize({souls:2,openingSouls:5,levels:{boneheart:1}}));
+const forest=game(33);
+assert.equal(forest.meta.brambleSouls,0);
+assert.equal(forest.meta.levels.boneheart,1);
+assert.equal(forest.collectSoul('opening'),false);
+for(let count=1;count<=C.brambleSoulLimit;count++){
+  forest.startRun();
+  forest.collectSoul('bramble');
+  assert.equal(forest.collectSoul('bramble'),false,'one credit per run');
+  assert.equal(M.load().brambleSouls,count);
+  if(count===1){
+    forest.die('rock');defeat(forest);
+    assert(forest.revive());
+    assert.equal(M.load().souls,0);
+    assert.equal(forest.collectSoul('bramble'),false,'revival continues this run');
+  }
+}
+forest.startRun();
+assert.equal(forest.collectSoul('bramble'),false,'sixth bramble credit rejected');
+assert.equal(forest.meta.souls,4);
+assert.equal(forest.meta.openingSouls,5);
+assert.equal(M.refundAll(forest.meta).ok,true);
+assert.equal(M.load().brambleSouls,5,'refund keeps the lifetime count');
+M.save(M.normalize({}));
+forest.meta=M.load();forest.startRun();forest.setGodMode(true);forest.setGodMode(false);
+assert.equal(forest.collectSoul('bramble'),false);
+forest.startRun();forest.teleportUsed=true;
+assert.equal(forest.collectSoul('bramble'),false);
+assert.equal(M.load().souls,0);
+console.log('PASS Forest bramble Soul: migration, independent caps, paid revive, refund and practice.');

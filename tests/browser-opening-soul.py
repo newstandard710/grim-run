@@ -71,9 +71,37 @@ with sync_playwright() as runner:
       s.purchaseMeta('boneheart');s.closeReliquary();}""")
     sixth=play(1,"jump",147)
     assert sixth["bank"]==0 and sixth["count"]==5 and sixth["hp"]==4 and sixth["run"]==0,sixth
+    # The opening cap is exhausted. Take the opening hit, then try the authored
+    # Forest Cut at 212 m. Inspect the visible pickup before running through it.
+    def advance_to(meters):
+        page.evaluate("""meters=>{
+          const s=grimRun.scene.scenes[0];
+          while(s.distance<meters && s.state==='playing')advance(1);
+          if(s.distance<meters)throw Error('Run ended at '+s.distance);
+        }""", meters)
+
+    def bramble_trial(cut):
+        page.evaluate("begin(33)")
+        advance_to(205)
+        before = page.evaluate("grimRun.scene.scenes[0].player.hp")
+        assert before < 4
+        if cut:
+            page.locator("#attack-btn").tap()
+        advance_to(215)
+        visible = page.evaluate("grimRun.scene.scenes[0].souls.some(o=>o.kind==='bramble'&&!o.taken)")
+        assert visible == cut
+        advance_to(245)
+        return page.evaluate("""()=>{const s=grimRun.scene.scenes[0];
+          return {hp:s.player.hp,run:s.soulCount,meta:GRIM_META.load()};}""")
+
+    missed = bramble_trial(False)
+    assert missed["run"] == 0 and missed["meta"]["brambleSouls"] == 0, missed
+    recovery = bramble_trial(True)
+    assert recovery["hp"] == missed["hp"]+1 and recovery["run"] == 1, recovery
+    assert recovery["meta"]["souls"] == recovery["meta"]["brambleSouls"] == 1, recovery
     page.reload()
     page.wait_for_function("window.grimRun?.scene.scenes[0]?.meta")
     saved=page.evaluate("()=>GRIM_META.load()")
-    assert saved["openingSouls"]==5 and saved["levels"]["boneheart"]==1 and saved["souls"]==0,saved
-    print(json.dumps({"url":base,"sha256":digest,"trials":logs,"sixth":sixth,"reloaded":saved}))
+    assert saved["openingSouls"]==5 and saved["levels"]["boneheart"]==1 and saved["souls"]==saved["brambleSouls"]==1,saved
+    print(json.dumps({"url":base,"sha256":digest,"trials":logs,"sixth":sixth,"missedBramble":missed,"recovery":recovery,"reloaded":saved}))
     browser.close()
