@@ -127,7 +127,7 @@ assert.equal(editor.powerManager.slowEffect().durationMs,1550);
 assert.equal(editor.rewindLevel(),4);
 assert.equal(editor.rewindLengthMs(),8000);
 assert.equal(editor.gunUnlocked,false,'Toggling gun abilities cannot unlock the weapon');
-assert.equal(editor.powerManager.summary().length,9,'Two wings share one build entry');
+assert.equal(editor.powerManager.summary().length,powerIds.length-1,'Two wings share one build entry');
 assert.equal(JSON.stringify([editor.powerManager.eligible(),editor.powerManager.devilEligible()]),lootBefore);
 assert.equal(editor.rng.state,rngBefore,'Ability edits do not consume gameplay RNG');
 assert(powerIds.every(id=>editor.powerManager.levels[id]===0),'Overrides do not grant earned ranks');

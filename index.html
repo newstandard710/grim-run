@@ -236,6 +236,9 @@ button {cursor:pointer;}
 .rewind-cd{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;
  background:#17152bd9;color:#efdfff;font-size:clamp(12px,3vh,20px);font-weight:950;letter-spacing:0}
 .rewind.recharging{border-color:#7c7598c7}
+#rush-btn{left:auto;right:calc(var(--edge-right) + var(--action-size) + var(--control-gap));bottom:calc(var(--right-bottom) + var(--action-size)*.76 + 8px);
+ width:max(44px,calc(var(--action-size)*.72));height:max(44px,calc(var(--action-size)*.72));border-color:#99daca;font-size:clamp(9px,2vh,12px)}
+#rush-btn .symbol{font-size:25px}
 .practice-slow{left:50%;transform:translateX(-50%);bottom:var(--right-bottom);
  width:clamp(63px,18vh,82px);height:clamp(58px,17vh,75px);background:#21384bea;
  border-color:#9df3f39a;font-size:clamp(9px,1.8vh,12px)}
@@ -310,6 +313,7 @@ button {cursor:pointer;}
   <div id="controls" class="hidden" aria-label="Touch controls">
     <button id="attack-btn" class="action attack" aria-label="Cut with scythe"><span class="symbol">⚔</span><span>CUT</span></button>
     <button id="crossbow-btn" class="action crossbow hidden" aria-label="Shoot Bone Crossbow"><span class="symbol">⌁</span><span>SHOOT</span><span id="crossbow-cd" class="crossbow-cd hidden"></span></button>
+    <button id="rush-btn" class="action hidden" aria-label="Grave Rush" title="Grave Rush (D)"><span class="symbol" aria-hidden="true">➟</span><span>RUSH</span><span id="rush-status" class="rewind-cd hidden" aria-live="off"></span></button>
     <button id="rewind-btn" class="action rewind hidden" aria-label="Rewind Time"><span class="symbol">↶</span><span>REWIND</span><span id="rewind-cd" class="rewind-cd hidden"></span></button>
     <button id="practice-slow-btn" class="action practice-slow hidden" aria-label="Time controls: normal speed" aria-pressed="false"><span class="symbol">◷</span><span id="practice-time-label">1× SPEED</span></button>
     <div class="right-buttons">
@@ -511,6 +515,9 @@ window.GRIM_CONFIG = Object.freeze({
   abyssRespawnInvulnerabilityMs: 1650,
   firstEncounterX: 1000,
   vendorEveryMeters: 666,
+  rushMeters: 18,
+  rushTravelMs: 240,
+  rushCooldownMs: 45000,
   finishMeters: 9999,
   worldArtEndMeters: 20000,
   openingSoulLimit: 5,
@@ -866,13 +873,14 @@ window.GRIM_CONFIG = Object.freeze({
   'use strict';
   const MAX_LEVEL=4,HEALTH_CAP=9;
   const WING_EFFECT_IDS=Object.freeze({hover:'ravenWings',extraJump:'skeletalWings'});
-  const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones','deathsReversal'];
+  const POWER_ORDER=['soulCleave','ravenWings','deathsDelay','brittleBones','deathsReversal','graveRush'];
   const DEVIL_ORDER=['skeletalWings','infernalBoots','rapidFire','powerShot','chainShot'];
   const POWERS=Object.freeze({
     soulCleave:{id:'soulCleave',name:'SOUL CLEAVE',action:'CUT',icon:'⚔',color:'#a5fbef'},
     ravenWings:{id:'ravenWings',name:'RAVEN WINGS',action:'HOLD JUMP',icon:'✦',color:'#c5b5ff'},
     deathsDelay:{id:'deathsDelay',name:"DEATH'S DELAY",action:'SLIDE',icon:'◷',color:'#9bdcff'},
     brittleBones:{id:'brittleBones',name:'BRITTLE BONES',action:'WHEN HURT',icon:'☠',color:'#e7efff'},
+    graveRush:{id:'graveRush',name:'GRAVE RUSH',action:'ULTIMATE · RUSH / D',icon:'➟',color:'#a5f4d5',maxRank:1},
     deathsReversal:{id:'deathsReversal',name:"DEATH'S REVERSAL",action:'REWIND',icon:'↶',color:'#c7aaff'},
     skeletalWings:{id:'skeletalWings',name:'SKELETAL WINGS',action:'MIDAIR JUMP',icon:'☠',color:'#ffb08e'},
     infernalBoots:{id:'infernalBoots',name:'INFERNAL BOOTS',action:'FIRE / LAVA',icon:'♨',color:'#ffb65f'},
@@ -929,6 +937,11 @@ window.GRIM_CONFIG = Object.freeze({
       case 'brittleBones':
         stats.clearMeters=BRITTLE_METERS[rank];
         row('Clear & bridge',stats.clearMeters+' m');
+        break;
+      case 'graveRush':
+        row('Surge',rank?scope.GRIM_CONFIG.rushMeters+' m through hazards':'Locked');
+        row('Landing',rank?'First clear ground beyond danger':'—');
+        row('Recharge',rank?scope.GRIM_CONFIG.rushCooldownMs/1000+' s':'—');
         break;
       case 'deathsReversal':
         stats.rewindSeconds=rewindSeconds(rank);
@@ -1071,7 +1084,7 @@ window.GRIM_CONFIG = Object.freeze({
     return (completesCombo?'Unites Raven and Skeletal Wings. ':'')+detail;
   }
   function addRarity(offer,rng){
-    if(offer.type!=='power')return {...offer,rarity:'common',levelsGained:1};
+    if(offer.type!=='power'||offer.id==='graveRush')return {...offer,rarity:'common',levelsGained:1};
     const roll=rng.next();
     const rarity=roll<.03?'legendary':roll<.13?'rare':'common';
     const wanted=rarity==='legendary'?3:rarity==='rare'?2:1;
@@ -1438,6 +1451,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.selecting = false;
       this.bindAction('attack-btn', 'attack', () => actions.attack());
       this.bindAction('crossbow-btn', 'crossbow', () => actions.fireCrossbow());
+      this.bindAction('rush-btn','rush',()=>actions.rush());
       this.bindAction('rewind-btn','rewind',()=>actions.rewind());
       this.bindAction('practice-slow-btn','practiceSlow',()=>actions.togglePracticeSlow());
       this.bindAction('jump-btn', 'jump');
@@ -1500,7 +1514,7 @@ window.GRIM_CONFIG = Object.freeze({
           return;
         }
         if(activate&&(home||menu||gameOver||vendor||reliquary)&&event.target?.closest?.('button'))return;
-        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','Escape','KeyP'].includes(event.code)) event.preventDefault();
+        if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','KeyD','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
         if(home){
@@ -1515,6 +1529,7 @@ window.GRIM_CONFIG = Object.freeze({
         switch(event.code) {
           case 'KeyA': actions.attack(); break;
           case 'KeyF': actions.fireCrossbow(); break;
+          case 'KeyD': actions.rush(); break;
           case 'KeyR': actions.rewind(); break;
           case 'Escape': case 'KeyP': actions.pause(); break;
           case 'Enter': if(menu)this.requestMenuStart();else if(gameOver)actions.start();break;
@@ -1598,7 +1613,7 @@ window.GRIM_CONFIG = Object.freeze({
     releaseAll() {
       this.activePointers.clear(); this.heldKeys.clear();
       this.holdSources.jump.clear();this.holdSources.slide.clear();
-      for (const id of ['attack-btn','crossbow-btn','rewind-btn','practice-slow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
+      for (const id of ['attack-btn','crossbow-btn','rush-btn','rewind-btn','practice-slow-btn','jump-btn','slide-btn']) el(id).classList.remove('pressed');
     }
     setMode(mode) {
       scope.GRIM_ACTION_AUDIO?.setPlaying(mode==='playing'||mode==='dying');
@@ -1756,6 +1771,16 @@ window.GRIM_CONFIG = Object.freeze({
       show('crossbow-cd',ms>0);
       writeText('crossbow-cd',ms>0?(ms/1000).toFixed(1)+'s':'');
       el('crossbow-btn').classList.toggle('recharging',ms>0);
+    }
+    showRush(owned,cooldownMs,notice){
+      show('rush-btn',owned);
+      if(!owned)return;
+      const status=notice||(cooldownMs>0?Math.ceil(cooldownMs/1000)+'s':'');
+      show('rush-status',Boolean(status));writeText('rush-status',status);
+      const button=el('rush-btn');
+      button.classList.toggle('recharging',cooldownMs>0);
+      const label=notice?'Boss blocks Grave Rush. Charge ready.':cooldownMs>0?'Grave Rush recharging':'Grave Rush';
+      if(button.__grimLabel!==label){button.setAttribute('aria-label',label);button.__grimLabel=label;}
     }
     showRewind(level,cooldownMs,ready,historyMs,requiredMs){
       show('rewind-btn',level>0);
@@ -2314,6 +2339,7 @@ window.GRIM_CONFIG = Object.freeze({
         declineRevive: () => this.declineRevive(),
         fireCrossbow: () => this.fireCrossbow(),
         rewind: () => this.rewind(),
+        rush: () => this.startGraveRush(),
         finishChest: () => this.finishChest(),
         finishVendorIntro: () => this.finishVendorIntro()
       });
@@ -2526,6 +2552,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showGun(this.gunUnlocked,this.hasFlameBolts());this.ui.showGunCooldown(0);
       this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
       this.nextVendorNumber=this.lastVendorNumber+1;
+      this.graveRush=null;
       this.vendorType=null;this.pendingOffers=[];this.vendorPhase='deal';this.vendorIntroMs=0;
       this.nextEncounterX=x+Math.max(780,this.width);
       this.nextEnemySpawnX=Math.max(this.startX+5070*C.pxPerMeter,x+530);
@@ -2631,7 +2658,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     captureRewind(){
-      if(this.state!=='playing'||this.rewindLevel()===0)return;
+      if(this.state!=='playing'||this.graveRush||this.rewindLevel()===0)return;
       if(!this.rewindFrames)this.rewindFrames=[];
       const enemies=this.enemies.map(e=>({...e}));
       const obstacles=this.obstacles.map(o=>({...o}));
@@ -2806,7 +2833,7 @@ window.GRIM_CONFIG = Object.freeze({
       });
     }
     rewind(){
-      if(this.practiceScale()===0)return false;
+      if(this.graveRush||this.practiceScale()===0)return false;
       if(this.state!=='playing'||this.rewindLevel()<=0||
         (!this.godMode&&this.rewindCooldownMs>0))return false;
       const duration=this.rewindLengthMs();
@@ -2855,6 +2882,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.rewindFrames=[];this.rewindTerrainBase=new Map();
       this.rewindClockMs=0;this.rewindSampleMs=0;
       this.rewindCooldownMs=0;this.rewindFlashMs=0;
+      this.graveRush=null;this.rushCooldownMs=0;this.rushNoticeMs=0;
+      this.ui.showRush(false,0,'');
       this.encounterTelemetry={attempts:0,spawned:0,dropped:0,rejectedVendor:0,
         rejectedGeometry:0,rejectedOverlap:0,enteredView:0,visibleFor650ms:0,
         kills:0,byKind:{}};
@@ -3029,6 +3058,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     resume() { if(this.state==='paused') this.beginCountdown(); }
     jump() {
+      if(this.graveRush)return;
       if(this.state!=='playing'||this.practiceScale()===0)return;
       const p=this.player;
       const grounded=p.grounded||(p.coyoteMs>0&&!p.airJumpUsed&&p.jumpsUsed===0);
@@ -3092,6 +3122,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     startSlide() {
+      if(this.graveRush)return;
       const p=this.player;
       if(this.state!=='playing' || this.practiceScale()===0 || p.holdSlide) return;
       p.holdSlide=true;
@@ -3267,6 +3298,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     refreshHud(){
+      this.ui.showRush(this.powerManager.level('graveRush')>0,this.rushCooldownMs,'');
       this.ui.showGun(this.gunUnlocked,this.hasFlameBolts());
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
@@ -3682,7 +3714,14 @@ window.GRIM_CONFIG = Object.freeze({
         const previousFeet=this.feetY;
         const snowRun=this.snowTread&&scope.GRIM_SNOW_TREAD.isRunning(p);
         let snowLanding=false;
-        p.x += this.speed*dt*worldFactor;
+        const rushing=Boolean(this.graveRush);
+        if(rushing)this.advanceGraveRush(frameMs);
+        else p.x += this.speed*dt*worldFactor;
+        if(this.powerManager.level('graveRush')||this.rushCooldownMs>0){
+          this.rushCooldownMs=Math.max(0,this.rushCooldownMs-frameMs);
+          this.rushNoticeMs=Math.max(0,this.rushNoticeMs-frameMs);
+          this.ui.showRush(this.powerManager.level('graveRush')>0,this.rushCooldownMs,this.rushNoticeMs?'BOSS':'');
+        }
         p.slowMs=Math.max(0,p.slowMs-frameMs);
         p.slowCooldownMs=Math.max(0,p.slowCooldownMs-frameMs);
         p.slideReleaseBufferMs=Core.comboBufferAfterFrame(p.slideReleaseBufferMs,frameMs);
@@ -3702,7 +3741,7 @@ window.GRIM_CONFIG = Object.freeze({
         p.attackMs = Math.max(0,p.attackMs-frameMs);
         if(this.motionArt?.ready)p.visualLandingMs=Math.max(0,(p.visualLandingMs||0)-frameMs);
         p.attackCooldownMs = Math.max(0,p.attackCooldownMs-frameMs);
-        if(!p.grounded){
+        if(!rushing&&!p.grounded){
           p.jumpAgeMs+=frameMs;
           p.coyoteMs=Math.max(0,p.coyoteMs-frameMs);
           p.velocityY=Core.cutJumpVelocity(p.velocityY,p.jumpAgeMs,p.jumpHeld,C.jumpCutVelocity,C.jumpCutWindowMs);
@@ -3711,7 +3750,7 @@ window.GRIM_CONFIG = Object.freeze({
         const localGround=this.terrain.groundAt(p.x);
         const platforms=this.soulPlatform||[];
         const currentPlatform=platforms.find(plat=>plat.id===p.onSoulPlatform);
-        if(p.grounded){
+        if(!rushing&&p.grounded){
           if(p.onSoulPlatform!==false){
             if(currentPlatform&&feetOverlapPlatform(p.x,currentPlatform)){
               p.y=currentPlatform.y;p.velocityY=0;
@@ -3720,7 +3759,7 @@ window.GRIM_CONFIG = Object.freeze({
             p.grounded=false;p.coyoteMs=C.coyoteMs;p.velocityY=0;this.refillFlightHover();
           }else{p.y=localGround;p.velocityY=0;}
         }
-        if(!p.grounded){
+        if(!rushing&&!p.grounded){
           const priorY=p.y;
           if(p.hovering){
             const spent=Math.min(frameMs,p.hoverBudgetMs);
@@ -3767,7 +3806,7 @@ window.GRIM_CONFIG = Object.freeze({
           }
         }
         // Falling relative to the *local terrain* matters at altitude / in caves.
-        if(!p.grounded && p.y>this.terrain.anchorAt(p.x)+C.abyssFallDepthPx){
+        if(!rushing&&!p.grounded && p.y>this.terrain.anchorAt(p.x)+C.abyssFallDepthPx){
           this.rescueFromAbyss();
           if(this.state!=='playing'){this.drawScene();return;}
         }
@@ -3808,7 +3847,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(this.state!=='playing'){this.drawScene();return;}
         this.checkCollectibles();
         if(this.state==='upgrade'){this.drawScene();return;}
-        this.checkHazards();
+        if(!rushing)this.checkHazards();
         if(this.state!=='playing'){this.drawScene();return;}
         if(p.openingGateX>0)this.resolveOpeningTrial();
         this.obstacles = this.obstacles.filter(ob => !ob.destroyed && ob.x + ob.width > p.x - this.width);
@@ -3860,6 +3899,113 @@ window.GRIM_CONFIG = Object.freeze({
         enemy.dead=true;
         if(this.encounterTelemetry)this.encounterTelemetry.kills++;
         this.puff(enemy.x,enemy.y,enemy.kind==='imp'?0xff874e:0xc5f1fc,12,painted);
+      }
+    }
+    rushBoundary(){
+      // End the surge at a mandatory encounter so normal arrival code owns it.
+      let limit=this.terrain.worldEndX;
+      if(!this.hasTeleported)limit=this.startX+(this.shrineClaimed?5000:4900)*C.pxPerMeter;
+      else if(!this.godMode)limit=this.startX+C.finishMeters*C.pxPerMeter;
+      if(this.nextVendorNumber<=14){
+        const center=this.startX+this.nextVendorNumber*C.vendorEveryMeters*C.pxPerMeter;
+        if(center>=this.player.x)limit=Math.min(limit,center);
+      }
+      return limit;
+    }
+    rushBossInPath(from,to){
+      return this.enemies.some(e=>{
+        if(e.dead||!(e.isBoss||e.kind==='boss'))return false;
+        const box=Combat.rectFor(e),left=e.x-(e.width??box.width)/2;
+        return left<=to+22 && left+(e.width??box.width)>=from-20;
+      });
+    }
+    rushLanding(target,limit){
+      // Reserve a standing footprint plus a short reaction window on the far side.
+      const lead=Math.max(34,this.speed*.22),behind=24;
+      let x=Math.min(target,limit);
+      while(x<=limit){
+        let next=x;
+        const right=Math.min(x+lead,limit);
+        for(let edge=x-behind;edge<=right;){
+          const section=this.terrain.sectionAt(edge);
+          if(!section)return null;
+          if(section.kind==='gap')next=Math.max(next,section.end+behind+1);
+          edge=section.end+1;
+        }
+        const floor=this.terrain.groundAt(x);
+        if(next===x && floor!==null){
+          const space={x:x-behind,y:floor-79,width:behind+right-x,height:79};
+          const clear=box=>{if(Core.overlaps(space,box))next=Math.max(next,box.x+box.width+behind+1);};
+          for(const ob of this.obstacles){
+            if(ob.destroyed||ob.dealtDamage||ob.x>right+100||ob.x+ob.width<x-behind-100)continue;
+            if(ob.type==='branch'){
+              if(ob.x<=right && ob.x+ob.width>=x-behind)next=Math.max(next,ob.x+ob.width+behind+1);
+            }else clear(ob.type==='snappingBramble'?this.snappingBox(ob):ob);
+          }
+          for(const e of this.enemies)if(!e.dead&&!e.contactDone)clear(Combat.rectFor(e));
+          for(const b of this.fireballs)if(!b.dead&&!b.reflected)clear({x:b.x-9,y:b.y-9,width:18,height:18});
+          if(next===x)return x;
+        }
+        if(next<=x)return null;
+        x=next;
+      }
+      return null;
+    }
+    startGraveRush(){
+      if(this.state!=='playing'||this.practiceScale()===0||this.graveRush||
+        !this.powerManager.level('graveRush')||this.rushCooldownMs>0)return false;
+      const p=this.player,limit=this.rushBoundary(),target=p.x+C.rushMeters*C.pxPerMeter;
+      const to=this.rushLanding(target,limit);
+      if(this.rushBossInPath(p.x,to??Math.min(target,limit))){
+        this.rushNoticeMs=950;this.ui.showRush(true,0,'BOSS');return false;
+      }
+      if(to===null||to<=p.x)return false;
+      this.graveRush={fromX:p.x,fromY:p.y,toX:to,limit,elapsed:0,
+        departure:{x:p.x,y:p.y,velocityY:p.velocityY,grounded:p.grounded,onSoulPlatform:p.onSoulPlatform,
+          hovering:p.hovering,jumpHeld:p.jumpHeld,holdSlide:p.holdSlide,sliding:p.sliding,airTuck:p.airTuck,
+          slideReleaseBufferMs:p.slideReleaseBufferMs},hit:new Set()};
+      this.rushNoticeMs=0;this.rushCooldownMs=C.rushCooldownMs;
+      p.grounded=false;p.onSoulPlatform=false;p.velocityY=0;p.hovering=false;
+      p.jumpHeld=false;p.holdSlide=false;p.sliding=false;p.airTuck=false;p.slideReleaseBufferMs=0;
+      this.ui.showRush(true,this.rushCooldownMs,'');
+      scope.GRIM_ACTION_AUDIO?.play('swing');
+      return true;
+    }
+    advanceGraveRush(ms){
+      const r=this.graveRush,p=this.player,oldX=p.x,oldY=p.y;
+      r.elapsed=Math.min(C.rushTravelMs,r.elapsed+ms);
+      const t=r.elapsed/C.rushTravelMs;
+      if(t===1){
+        // Moving creatures and projectiles may have entered the landing site during travel.
+        const landing=this.rushLanding(r.toX,r.limit);
+        const blocked=this.rushBossInPath(p.x,landing??r.toX);
+        if(landing===null||blocked){
+          // A late blocker at a protected boundary can remove the last safe exit.
+          // Return to the launch pose and refund before applying landing contacts.
+          Object.assign(p,r.departure);
+          this.graveRush=null;this.rushCooldownMs=0;this.rushNoticeMs=blocked?950:0;
+          return;
+        }
+        r.toX=landing;
+      }
+      p.x=r.fromX+(r.toX-r.fromX)*t;
+      const y=this.terrain.anchorAt(p.x),height=r.fromY-this.terrain.anchorAt(r.fromX);
+      p.y=y+height*(1-t)-18*Math.sin(Math.PI*t);
+      const swept={x:oldX-20,y:Math.min(oldY,p.y)-79,width:p.x-oldX+42,height:Math.abs(oldY-p.y)+79};
+      for(const ob of this.obstacles){
+        if(!ob.destroyed&&(ob.type==='rock'||Combat.cuttable(ob))&&Core.overlaps(swept,ob))this.destroyObstacle(ob);
+      }
+      for(const e of this.enemies){
+        if(!e.dead&&!e.isBoss&&e.kind!=='boss'&&!r.hit.has(e)&&Core.overlaps(swept,Combat.rectFor(e))){
+          r.hit.add(e);this.hitEnemy(e,2);
+        }
+      }
+      if(t===1){
+        p.y=this.terrain.groundAt(p.x);p.grounded=true;p.coyoteMs=0;p.velocityY=0;
+        p.jumpsUsed=0;p.airJumpUsed=false;p.jumpAgeMs=0;p.hoverHoldMs=0;p.hoverPressKind='none';
+        this.refillFlightHover();
+        p.invulMs=Math.max(p.invulMs,250);
+        this.graveRush=null;this.puff(p.x,p.y-8,0x98ffdb,6);scope.GRIM_ACTION_AUDIO?.play('land');
       }
     }
     hasFlameBolts(){
@@ -4068,7 +4214,7 @@ window.GRIM_CONFIG = Object.freeze({
           if(Core.overlaps(Core.collisionBox(p.x,p.y,this.lowProfile),
             {x:ball.x-9,y:ball.y-9,width:18,height:18})){
             ball.dead=true;
-            if(p.invulMs<=0&&!this.blockFireHit()){
+            if(!this.graveRush&&p.invulMs<=0&&!this.blockFireHit()){
               p.invulMs=C.damageInvulnerabilityMs;this.takeDamage(1,'fireball');
             }
           }
@@ -4078,7 +4224,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       if(this.state!=='playing')return;
       if(this.powerManager.level('powerShot')>=Combat.BLAST_RANK&&this.blastCooldownMs<=0)this.blastSoulcaster();
-      if(p.invulMs<=0){
+      if(!this.graveRush&&p.invulMs<=0){
         const body=Core.collisionBox(p.x,p.y,this.lowProfile);
         for(const e of this.enemies){
           if(e.dead||e.contactDone||!Core.overlaps(body,Combat.rectFor(e)))continue;
@@ -6528,6 +6674,16 @@ window.GRIM_CONFIG = Object.freeze({
     }
     drawParticles() {
       const g=this.fx;g.clear();
+      if(this.graveRush){
+        const {x,y}=this.player,r=this.graveRush;
+        const trail=Math.min(88,x-r.fromX);
+        for(let i=0;i<3;i++){
+          const h=y-25-i*16;
+          g.lineStyle(5-i,0x98ffdb,.7-i*.13).lineBetween(x-trail+i*5,h+5,x+3,h);
+        }
+        const ground=this.terrain.groundAt(r.toX);
+        if(ground!==null)g.lineStyle(2,0xcaffeb,.85).strokeEllipse(r.toX,ground-2,43,9);
+      }
       for(const p of this.particles){
         const alpha=clamp(p.life/p.maxLife,0,1)*(this.reactionArt?.impactAlpha(p)??1);
         if(alpha>0){g.fillStyle(p.color,alpha);g.fillCircle(p.x,p.y,p.radius);}
