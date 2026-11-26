@@ -24,6 +24,41 @@ for(const d of M.DEFINITIONS){for(let i=1;i<d.amounts.length;i++){const bought=M
 assert.equal(account.souls,85);assert.equal(M.investedSouls(account),215);assert.equal(account.levels.deathDenied,1);
 assert.equal(M.load().levels.deathDenied,1);assert.equal(M.refundAll(account).ok,true);assert.equal(account.souls,299);assert.equal(M.investedSouls(account),0);
 const poor=M.normalize({souls:14});assert.equal(M.purchase(poor,'deathDenied').ok,false);assert.equal(poor.souls,14);
+// Owned levels and selected effects have distinct lifetimes.
+const legacy={version:1,souls:40,levels:{boneheart:2,deathsLeap:2,deathDenied:1},openingSouls:4,brambleSouls:3};
+store.set(M.KEY,JSON.stringify(legacy));
+const loadout=M.load();
+assert.equal(M.SLOT_LIMIT,6);
+assert.deepEqual([...loadout.equipped],['boneheart','deathsLeap','deathDenied']);
+assert.equal(M.setEquipped(loadout,'graveWealth',true),false);
+assert.equal(M.setEquipped(loadout,'missing',true),false);
+for(const id of [...loadout.equipped])assert(M.setEquipped(loadout,id,false));
+assert.deepEqual([...M.load().equipped],[]);
+assert.equal(M.load().souls,40);
+assert.equal(M.activeLoadout(loadout).levels.deathsLeap,0);
+assert(M.purchase(loadout,'deathsLeap').ok);
+assert.equal(loadout.levels.deathsLeap,3);
+assert.equal(loadout.equipped.includes('deathsLeap'),false);
+assert(M.purchase(loadout,'graveWealth').ok);
+assert.deepEqual([...M.load().equipped],['graveWealth']);
+const normalized=M.normalize({...loadout,equipped:['graveGlide','deathsLeap','deathsLeap','unknown']});
+assert.deepEqual([...normalized.equipped],['deathsLeap']);
+assert(M.refundAll(loadout).ok);
+assert.deepEqual([...M.load().equipped],[]);
+assert.equal(M.load().openingSouls,4);
+assert.equal(M.load().brambleSouls,3);
+const mixed=game({boneheart:2,graveWealth:2,deathsLeap:2,graveGlide:2,fatesBargain:2,deathDenied:1});
+assert.equal(mixed.meta.equipped.length,6);
+assert.equal(mixed.setMetaEquipped('deathDenied',false),false,'A run locks the loadout');
+mixed.goToMenu();mixed.openReliquary();
+for(const id of ['boneheart','deathDenied','fatesBargain'])assert(mixed.setMetaEquipped(id,false));
+mixed.closeReliquary();mixed.startRun();
+assert.equal(mixed.player.maxHp,3);assert.equal(mixed.coinCount,4);
+assert.equal(mixed.rerollsRemaining,0);assert.equal(mixed.freeLifeAvailable,false);
+mixed.takeDamage(3,'rock');defeat(mixed);assert.equal(mixed.state,'revive');
+assert(mixed.revive());assert.equal(mixed.meta.souls,97);
+assert.equal(mixed.rerollsRemaining,0);assert.equal(mixed.freeLifeAvailable,false);
+mixed.startRun();assert.equal(mixed.rerollsRemaining,0);assert.equal(mixed.freeLifeAvailable,false);
 // Both orderings of reward and healing, repeat healing, skip and insufficient funds.
 for(const healFirst of [true,false]){
  const s=game();s.coinCount=21;s.player.hp=1;vendor(s,1);const offer=s.pendingOffers.find(v=>v.type==='power');assert(offer);

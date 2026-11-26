@@ -199,6 +199,14 @@ button {cursor:pointer;}
 .meta-buy {border-radius:10px;background:#8cebe7;border:1px solid #c9fff6;color:#09212a;font-weight:1000;letter-spacing:.06em;font-size:clamp(10px,2vh,14px);padding:8px 10px;width:100%;min-height:34px;margin-top:auto;touch-action:manipulation;}
 .meta-buy:disabled {opacity:.44;cursor:not-allowed;}
 .meta-buy:focus-visible {outline:3px solid #fff;outline-offset:2px;}
+.meta-card .meta-equip {grid-column:1/-1;width:100%;min-height:44px;margin:0;padding:6px;font-size:12px;}
+.meta-buy small {display:block;margin-top:3px;font:inherit;font-size:.9em;}
+@media (max-width:450px) and (orientation:portrait) {
+ .meta-grid .meta-card {grid-template-columns:24px minmax(0,1fr);column-gap:5px;}
+ .meta-card .meta-icon {width:24px;height:24px;font-size:18px;}
+ .meta-card .meta-title {font-size:12px;letter-spacing:0;overflow-wrap:anywhere;}
+ .meta-card .meta-dots {display:none;}
+}
 .meta-notice {font-size:clamp(10px,2vh,13px);font-weight:800;min-height:1.6em;color:#b9ffe3;margin:5px 0 2px;}
 .meta-modal #reliquary-back-btn {margin-top:2px;}
 @media (max-height:345px) {
@@ -341,6 +349,7 @@ button {cursor:pointer;}
       <h2 id="reliquary-title" tabindex="-1">THE RELIQUARY</h2>
       <div class="meta-wallet"><span class="soul-icon">✦</span> <span id="reliquary-souls">0</span> SOULS AVAILABLE</div>
       <p id="opening-soul-progress" class="meta-intro"></p>
+      <p id="reliquary-equipped" class="meta-intro"></p>
       <div id="reliquary-cards" class="meta-grid"></div>
       <div id="reliquary-notice" class="meta-notice" aria-live="polite"></div>
       <button id="reliquary-reset-btn" class="secondary meta-reset">REFUND UPGRADES · 1 SOUL FEE</button>
@@ -767,6 +776,7 @@ window.GRIM_CONFIG = Object.freeze({
   'use strict';
   const KEY='grim-run-v07-meta',LEGACY='grim-run-v05-souls';
   const COSTS=Object.freeze([5,10,25]);
+  const SLOT_LIMIT=6;
   const DEFINITIONS=Object.freeze([
     {id:'boneheart',name:'BONEHEART',icon:'♥',color:'#ffc2c9',
       description:'Begin each run with +1 maximum HP per level, fully healed.',
@@ -797,7 +807,10 @@ window.GRIM_CONFIG = Object.freeze({
     const source=obj.levels&&typeof obj.levels==='object'?obj.levels:{};
     const levels={};
     for(const entry of DEFINITIONS)levels[entry.id]=boundedInt(source[entry.id],0,entry.amounts.length-1);
-    return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,
+    // Saves predating loadouts applied every owned rank. An empty selection is deliberate.
+    const owned=DEFINITIONS.map(entry=>entry.id).filter(id=>levels[id]>0);
+    const selected=Array.isArray(obj.equipped)?owned.filter(id=>obj.equipped.includes(id)):owned;
+    return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,equipped:selected.slice(0,SLOT_LIMIT),
       openingSouls:boundedInt(obj.openingSouls,0,scope.GRIM_CONFIG.openingSoulLimit),
       brambleSouls:boundedInt(obj.brambleSouls,0,scope.GRIM_CONFIG.brambleSoulLimit)};
   }
@@ -834,8 +847,22 @@ window.GRIM_CONFIG = Object.freeze({
     if(state.souls<cost)return {ok:false,reason:'Not enough Souls.'};
     state.souls-=cost;
     state.levels[id]=level+1;
+    if(level===0&&state.equipped.length<SLOT_LIMIT)state.equipped.push(id);
     save(state);
     return {ok:true,entry,level:level+1,cost};
+  }
+  function setEquipped(state,id,on){
+    if(!DEFINITIONS.some(item=>item.id===id)||!state.levels[id])return false;
+    if(on===state.equipped.includes(id))return true;
+    if(on&&state.equipped.length>=SLOT_LIMIT)return false;
+    state.equipped=on?[...state.equipped,id]:state.equipped.filter(selected=>selected!==id);
+    save(state);
+    return true;
+  }
+  function activeLoadout(state){
+    const levels={};
+    for(const item of DEFINITIONS)levels[item.id]=state.equipped.includes(item.id)?state.levels[item.id]:0;
+    return {levels};
   }
   function investedSouls(state){
     return DEFINITIONS.reduce((sum,item)=>{
@@ -849,6 +876,7 @@ window.GRIM_CONFIG = Object.freeze({
     if(state.souls<1)return {ok:false,reason:'Requires at least 1 unspent Soul.'};
     const newBalance=boundedInt(state.souls-1+invested,0,MAX_SOULS);
     for(const item of DEFINITIONS)state.levels[item.id]=0;
+    state.equipped=[];
     state.souls=newBalance;
     save(state);
     return {ok:true,invested,fee:1,newBalance};
@@ -868,7 +896,7 @@ window.GRIM_CONFIG = Object.freeze({
     const percent=DEFINITIONS[2].amounts[boundedInt(state.levels.deathsLeap,0,3)];
     return baseVelocity*Math.sqrt(1+percent/100);
   }
-  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,normalize,load,save,earn,spendSouls,purchase,investedSouls,refundAll,slideDuration,healthBonus,startingGold,jumpVelocity};
+  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,SLOT_LIMIT,normalize,load,save,earn,spendSouls,purchase,setEquipped,activeLoadout,investedSouls,refundAll,slideDuration,healthBonus,startingGold,jumpVelocity};
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <script>
@@ -1881,8 +1909,21 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.vendorUiModeKey!==key){this.vendorUiModeKey=key;this.setMode('upgrade');}
       else show('upgrade-screen',true);
     }
+    reliquaryEffect(item,level) {
+      const amount=item.amounts[level];
+      switch(item.id){
+        case 'fatesBargain': return amount===1?'1 vendor reroll':`${amount} vendor rerolls`;
+        case 'deathDenied': return amount?'1 free revival':'0 free revivals';
+        case 'boneheart': return `${window.GRIM_CONFIG.startingHP+amount} starting HP`;
+        case 'graveWealth': return `${amount} starting Gold`;
+        case 'deathsLeap': return `+${amount}% jump height`;
+        case 'graveGlide': return `${((window.GRIM_CONFIG.slideMaxMs+amount)/1000).toFixed(2)}s slide limit`;
+      }
+    }
     updateReliquary(meta,notice='') {
-      const {DEFINITIONS,COSTS}=window.GRIM_META;
+      const {DEFINITIONS,COSTS,SLOT_LIMIT,activeLoadout}=window.GRIM_META;
+      const active=activeLoadout(meta).levels;
+      el('reliquary-equipped').textContent=`Equipped for next run: ${meta.equipped.length} / ${SLOT_LIMIT} · Switch for free`;
       el('reliquary-souls').textContent=meta.souls.toLocaleString();
       const cap=window.GRIM_CONFIG.openingSoulLimit;
       const brambleCap=window.GRIM_CONFIG.brambleSoulLimit;
@@ -1902,16 +1943,28 @@ window.GRIM_CONFIG = Object.freeze({
         card.appendChild(dots);
         const desc=document.createElement('div');desc.className='meta-desc';desc.textContent=item.description;card.appendChild(desc);
         const effect=document.createElement('div');effect.className='meta-price';
-        if(item.id==='fatesBargain')effect.textContent=`REROLLS / RUN: ${level}${level<maxLevel?' → '+(level+1):''}`;
-        else if(item.id==='deathDenied')effect.textContent=level?'1 FREE RESURRECTION / RUN':'FREE RESURRECTIONS: 0 → 1';
-        else if(item.id==='boneheart')effect.textContent=`STARTING HP: ${3+level}${level<3?' → '+(4+level):''}`;
-        else if(item.id==='graveWealth')effect.textContent=`STARTING GOLD: ${item.amounts[level]}${level<3?' → '+item.amounts[level+1]:''}`;
-        else if(item.id==='deathsLeap')effect.textContent=`JUMP HEIGHT: +${item.amounts[level]}%${level<3?' → +'+item.amounts[level+1]+'%':''}`;
-        else effect.textContent=`SLIDE LIMIT: ${((850+item.amounts[level])/1000).toFixed(2)}s${level<3?' → '+((850+item.amounts[level+1])/1000).toFixed(2)+'s':''}`;
+        const equipped=active[item.id]>0;
+        const status=equipped?'Equipped':level?'Unequipped':'Next run';
+        effect.textContent=status+' · '+this.reliquaryEffect(item,active[item.id]);
         card.appendChild(effect);
+        if(level){
+          const toggle=document.createElement('button');
+          toggle.type='button';toggle.className='secondary meta-equip';toggle.id='equip-'+item.id;
+          toggle.textContent=equipped?'Unequip':'Equip';
+          toggle.disabled=!equipped&&meta.equipped.length>=SLOT_LIMIT;
+          toggle.setAttribute('aria-label',toggle.textContent+' '+item.name);
+          toggle.addEventListener('click',()=>this.actions.setMetaEquipped(item.id,!equipped));
+          card.appendChild(toggle);
+        }
         const buy=document.createElement('button');buy.type='button';buy.className='meta-buy';
         buy.disabled=level>=maxLevel||meta.souls<nextCost;
         buy.textContent=level>=maxLevel?'FULLY AWAKENED':`UPGRADE · ${nextCost} SOULS`;
+        if(level<maxLevel){
+          const preview=document.createElement('small');
+          preview.textContent=`Rank ${level+1} · ${this.reliquaryEffect(item,level+1)}`;
+          buy.appendChild(preview);
+          buy.setAttribute('aria-description',preview.textContent);
+        }
         buy.setAttribute('aria-label',level>=maxLevel?`${item.name} fully upgraded`:
           `Purchase ${item.name} level ${level+1} for ${nextCost} Souls`);
         buy.addEventListener('click',()=>this.actions.purchaseMeta(item.id));
@@ -2334,6 +2387,7 @@ window.GRIM_CONFIG = Object.freeze({
         openReliquary: () => this.openReliquary(),
         closeReliquary: () => this.closeReliquary(),
         purchaseMeta: id => this.purchaseMeta(id),
+        setMetaEquipped: (id,on) => this.setMetaEquipped(id,on),
         openRefund:()=>this.openRefund(),
         cancelRefund:()=>this.cancelRefund(),
         confirmRefund:()=>this.confirmRefund(),
@@ -2354,6 +2408,17 @@ window.GRIM_CONFIG = Object.freeze({
       });
       this.installLoopRecovery();
       this.meta=Meta.load();
+      // A second tab can edit the next loadout while this attempt keeps its own ranks.
+      const refreshMeta=event=>{
+        if(event.key!==Meta.KEY||event.storageArea!==scope.localStorage)return;
+        this.meta=Meta.load();
+        this.totalSouls=this.meta.souls;
+        document.getElementById('banked-souls').textContent=String(this.totalSouls);
+        if(this.state==='reliquary')this.ui.updateReliquary(this.meta);
+        if(this.state==='refundConfirm')this.cancelRefund();
+      };
+      scope.addEventListener('storage',refreshMeta);
+      this.events.once('shutdown',()=>scope.removeEventListener('storage',refreshMeta));
       this.totalSouls=this.meta.souls;
       this.state='home';this.ui.setMode('home');
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
@@ -2434,6 +2499,12 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.updateReliquary(this.meta,result.ok?
         `${result.entry.name} UPGRADED TO LEVEL ${result.level}!`:result.reason);
     }
+    setMetaEquipped(id,on){
+      if(this.state!=='reliquary'||!Meta.setEquipped(this.meta,id,on))return false;
+      this.ui.updateReliquary(this.meta);
+      document.getElementById('equip-'+id)?.focus({preventScroll:true});
+      return true;
+    }
     openRefund(){
       if(this.state!=='reliquary')return false;
       const invested=Meta.investedSouls(this.meta);
@@ -2444,7 +2515,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     cancelRefund(){
       if(this.state!=='refundConfirm')return;
-      this.state='reliquary';this.ui.setMode('reliquary');
+      this.state='reliquary';this.ui.updateReliquary(this.meta);this.ui.setMode('reliquary');
     }
     confirmRefund(){
       if(this.state!=='refundConfirm')return false;
@@ -2876,7 +2947,8 @@ window.GRIM_CONFIG = Object.freeze({
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
       this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
-      const startingHP=C.startingHP+Meta.healthBonus(this.meta);
+      this.runLoadout=Meta.activeLoadout(this.meta);
+      const startingHP=C.startingHP+Meta.healthBonus(this.runLoadout);
       this.rng = Core.makeRng(this.seed);
       this.slideRotation=null;
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter);
@@ -2925,10 +2997,10 @@ window.GRIM_CONFIG = Object.freeze({
       this.player.openingGateX=this.meta.openingSouls<C.openingSoulLimit?null:-1;
       this.openingSoulClaimed=false;this.brambleSoulClaimed=false;this.forestPracticeUsed=false;
       this.runSoulsAvailable=0;this.reviveUsed=false;
-      this.freeLifeAvailable=this.meta.levels.deathDenied>0;this.freeLifeUsed=false;
-      this.rerollsRemaining=this.meta.levels.fatesBargain||0;
+      this.freeLifeAvailable=this.runLoadout.levels.deathDenied>0;this.freeLifeUsed=false;
+      this.rerollsRemaining=this.runLoadout.levels.fatesBargain;
       this.vendorPurchased=false;this.respawnNextMode='playing';
-      this.coinCount = Meta.startingGold(this.meta); // Starting gold does not increase collected-gold score
+      this.coinCount = Meta.startingGold(this.runLoadout); // Starting gold does not increase collected-gold score
       this.goldCollected = 0; // Lifetime collected this run, for scoring
       this.distance = 0;
       this.points = 0;
@@ -3077,7 +3149,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(grounded){
         p.jumpsUsed=1;p.sliding=false;p.slideConsumed=false;
         p.y-=1;p.grounded=false;p.onSoulPlatform=false;p.coyoteMs=0;
-        p.velocityY=Meta.jumpVelocity(C.jumpVelocity,this.meta);
+        p.velocityY=Meta.jumpVelocity(C.jumpVelocity,this.runLoadout);
         this.refillFlightHover();
         this.puff(p.x,p.y-6,0x9bb7bf,5);
         p.hoverPressKind='ground';
@@ -3828,7 +3900,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         if (p.sliding) {
           p.slideMs += frameMs;
-          if (p.slideMs >= Meta.slideDuration(C.slideMaxMs,this.meta) || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
+          if (p.slideMs >= Meta.slideDuration(C.slideMaxMs,this.runLoadout) || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
         }
         // The summit shrine precedes the portal and is an irreversible reward boundary.
         if(!this.shrineClaimed&&this.distance>=4900&&!this.hasTeleported){
