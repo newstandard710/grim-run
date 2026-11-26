@@ -521,6 +521,7 @@ window.GRIM_CONFIG = Object.freeze({
   finishMeters: 9999,
   worldArtEndMeters: 20000,
   openingSoulLimit: 5,
+  brambleSoulLimit: 5,
   soulAtMeters: 4856,
   finalSoulMeters: 9500,
   goldPerInterval: 7,
@@ -797,7 +798,8 @@ window.GRIM_CONFIG = Object.freeze({
     const levels={};
     for(const entry of DEFINITIONS)levels[entry.id]=boundedInt(source[entry.id],0,entry.amounts.length-1);
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,
-      openingSouls:boundedInt(obj.openingSouls,0,scope.GRIM_CONFIG.openingSoulLimit)};
+      openingSouls:boundedInt(obj.openingSouls,0,scope.GRIM_CONFIG.openingSoulLimit),
+      brambleSouls:boundedInt(obj.brambleSouls,0,scope.GRIM_CONFIG.brambleSoulLimit)};
   }
   function load(){
     try{
@@ -815,8 +817,10 @@ window.GRIM_CONFIG = Object.freeze({
     try{localStorage.setItem(KEY,JSON.stringify(normalize(state)));}catch(_){}
     try{localStorage.setItem(LEGACY,String(state.souls));}catch(_){}
   }
-  function earn(state,amount=1,opening=false){
-    if(opening)state.openingSouls++; // Persist the credit and its lifetime count together.
+  function earn(state,amount=1,kind){
+    // Bank the pickup and its lifetime count in the same save.
+    if(kind==='opening'||kind===true)state.openingSouls++;
+    if(kind==='bramble')state.brambleSouls++;
     state.souls=boundedInt(state.souls+boundedInt(amount,0,MAX_SOULS),0,MAX_SOULS);
     save(state);
     return state.souls;
@@ -1881,9 +1885,10 @@ window.GRIM_CONFIG = Object.freeze({
       const {DEFINITIONS,COSTS}=window.GRIM_META;
       el('reliquary-souls').textContent=meta.souls.toLocaleString();
       const cap=window.GRIM_CONFIG.openingSoulLimit;
-      el('opening-soul-progress').textContent=meta.openingSouls<cap
-        ? `Clear the first Forest obstacle unhurt to reveal a Soul. Opening Souls: ${meta.openingSouls}/${cap}.`
-        : `All ${cap} opening Souls collected. Find more on the run.`;
+      const brambleCap=window.GRIM_CONFIG.brambleSoulLimit;
+      el('opening-soul-progress').textContent=
+        `Forest Souls · Clear the first obstacle unhurt: ${meta.openingSouls}/${cap}. `+
+        `Cut the bramble near 210 m: ${meta.brambleSouls}/${brambleCap}.`;
       const holder=el('reliquary-cards');holder.replaceChildren();
       for(const item of DEFINITIONS){
         const level=meta.levels[item.id],maxLevel=item.amounts.length-1,nextCost=level<maxLevel?(item.costs||COSTS)[level]:null;
@@ -2918,7 +2923,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.soulCount = 0;
       // null awaits the first Forest obstacle, a world X tracks it, and -1 closes the trial.
       this.player.openingGateX=this.meta.openingSouls<C.openingSoulLimit?null:-1;
-      this.openingSoulClaimed=false;this.openingPracticeUsed=false;
+      this.openingSoulClaimed=false;this.brambleSoulClaimed=false;this.forestPracticeUsed=false;
       this.runSoulsAvailable=0;this.reviveUsed=false;
       this.freeLifeAvailable=this.meta.levels.deathDenied>0;this.freeLifeUsed=false;
       this.rerollsRemaining=this.meta.levels.fatesBargain||0;
@@ -3040,8 +3045,8 @@ window.GRIM_CONFIG = Object.freeze({
       const previous=this.practicePowerLevels?this.practiceAbilityEffects():null;
       this.godMode=Boolean(on);
       if(this.godMode){
-        this.openingPracticeUsed=true;
-        this.souls=this.souls.filter(soul=>soul.kind!=='opening');
+        this.forestPracticeUsed=true;
+        this.souls=this.souls.filter(soul=>soul.kind!=='opening'&&soul.kind!=='bramble');
       }
       this.powerManager.setPracticeLevels(this.godMode?this.practicePowerLevels:null);
       this.ui.showGodMode(this.godMode);
@@ -3303,9 +3308,18 @@ window.GRIM_CONFIG = Object.freeze({
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
-    collectSoul(opening=false){
-      if(opening){
-        if(this.openingSoulClaimed||this.openingPracticeUsed||this.teleportUsed||
+    canEarnBrambleSoul(){
+      return !this.brambleSoulClaimed && !this.forestPracticeUsed && !this.teleportUsed &&
+        this.meta.brambleSouls<C.brambleSoulLimit;
+    }
+    collectSoul(kind){
+      if(kind===true)kind='opening'; // Older callers pass an opening-pickup flag.
+      if(kind==='bramble'){
+        if(!this.canEarnBrambleSoul())return false;
+        this.brambleSoulClaimed=true;
+      }
+      if(kind==='opening'){
+        if(this.openingSoulClaimed||this.forestPracticeUsed||this.teleportUsed||
            this.meta.openingSouls>=C.openingSoulLimit)return false;
         this.openingSoulClaimed=true;
       }
@@ -3315,7 +3329,7 @@ window.GRIM_CONFIG = Object.freeze({
       // generating permanent currency by repeatedly jumping to 9500m.
       if(!this.teleportUsed){
         this.runSoulsAvailable++;
-        this.totalSouls=Meta.earn(this.meta,1,opening);
+        this.totalSouls=Meta.earn(this.meta,1,kind);
         document.getElementById('banked-souls').textContent=String(this.totalSouls);
       }
     }
@@ -3345,6 +3359,8 @@ window.GRIM_CONFIG = Object.freeze({
         const target=ob.type==='snappingBramble'?this.snappingBox(ob):ob;
         if(!hits(target))continue;
         this.destroyObstacle(ob,target);
+        if(ob.x===this.cutLessons?.[0] && !ob.dealtDamage && this.player.invulMs<=0 &&
+           this.canEarnBrambleSoul())this.revealForestSoul(ob,'bramble');
         scope.GRIM_ACTION_AUDIO?.play('cut');
         // Cutting removes the obstruction; only placed gold pickups grant currency.
         this.puff(ob.x+ob.width/2,ob.y+ob.height*.67,GOLD,12,Boolean(this.worldPolish?.ready['polish-fragments']));
@@ -4246,13 +4262,16 @@ window.GRIM_CONFIG = Object.freeze({
     }
     resolveOpeningTrial(){
       const gate=this.obstacles.find(ob=>ob.x===this.player.openingGateX);
-      if(!gate||gate.dealtDamage||this.openingPracticeUsed||this.teleportUsed||this.player.invulMs>0){
+      if(!gate||gate.dealtDamage||this.forestPracticeUsed||this.teleportUsed||this.player.invulMs>0){
         this.player.openingGateX=-1;return;
       }
       if(!gate.destroyed && this.player.x-27<gate.x+gate.width)return;
       this.player.openingGateX=-1;
-      const x=gate.x+gate.width+185,baseY=this.terrain.groundAt(x);
-      if(baseY!==null)this.souls.push({x,baseY,offset:-38,kind:'opening',taken:false});
+      this.revealForestSoul(gate,'opening');
+    }
+    revealForestSoul(ob,kind){
+      const x=ob.x+ob.width+185,baseY=this.terrain.groundAt(x);
+      if(baseY!==null)this.souls.push({x,baseY,offset:-38,kind,taken:false});
     }
     checkCollectibles() {
       const p=this.player;
@@ -4270,7 +4289,7 @@ window.GRIM_CONFIG = Object.freeze({
         const y=soul.baseY+soul.offset;
         if(Math.abs(p.x-soul.x)<34 && Math.abs(centerY-y)<41) {
           soul.taken=true;
-          if(this.collectSoul(soul.kind==='opening')===false)continue;
+          if(this.collectSoul(soul.kind)===false)continue;
           this.puff(soul.x,y,CYAN,23);
           // Souls are no longer a reward trigger.
           break;
