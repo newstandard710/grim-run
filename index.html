@@ -531,6 +531,7 @@ window.GRIM_CONFIG = Object.freeze({
   worldArtEndMeters: 20000,
   openingSoulLimit: 5,
   brambleSoulLimit: 5,
+  soulReachBonusPx: 18,
   soulAtMeters: 4856,
   finalSoulMeters: 9500,
   goldPerInterval: 7,
@@ -795,7 +796,10 @@ window.GRIM_CONFIG = Object.freeze({
       amounts:[0,1,2,3]},
     {id:'deathDenied',name:'DEATH DENIED',icon:'☽',color:'#d2b8df',
       description:'Rise from your first death for free each run. Restore 3 HP.',
-      amounts:[0,1],costs:[15]}
+      amounts:[0,1],costs:[15]},
+    {id:'soulReach',name:'SOUL REACH',icon:'✧',color:'#9debe6',
+      description:'Catch Souls a little farther above or below you during a jump.',
+      amounts:[0,1],costs:[5]}
   ]);
   const MAX_SOULS=1000000000;
   function boundedInt(x,min,max){
@@ -1914,6 +1918,7 @@ window.GRIM_CONFIG = Object.freeze({
       switch(item.id){
         case 'fatesBargain': return amount===1?'1 vendor reroll':`${amount} vendor rerolls`;
         case 'deathDenied': return amount?'1 free revival':'0 free revivals';
+        case 'soulReach': return amount?'Wider reach in the air':'Normal Soul reach';
         case 'boneheart': return `${window.GRIM_CONFIG.startingHP+amount} starting HP`;
         case 'graveWealth': return `${amount} starting Gold`;
         case 'deathsLeap': return `+${amount}% jump height`;
@@ -1950,9 +1955,11 @@ window.GRIM_CONFIG = Object.freeze({
         if(level){
           const toggle=document.createElement('button');
           toggle.type='button';toggle.className='secondary meta-equip';toggle.id='equip-'+item.id;
-          toggle.textContent=equipped?'Unequip':'Equip';
           toggle.disabled=!equipped&&meta.equipped.length>=SLOT_LIMIT;
-          toggle.setAttribute('aria-label',toggle.textContent+' '+item.name);
+          const action=equipped?'Unequip':'Equip';
+          toggle.textContent=toggle.disabled?'Free a slot to equip':action;
+          toggle.setAttribute('aria-label',action+' '+item.name);
+          if(toggle.disabled)toggle.setAttribute('aria-description','Unequip another Reliquary to free a slot.');
           toggle.addEventListener('click',()=>this.actions.setMetaEquipped(item.id,!equipped));
           card.appendChild(toggle);
         }
@@ -4356,10 +4363,12 @@ window.GRIM_CONFIG = Object.freeze({
           this.puff(coin.x,y,GOLD,5);
         }
       }
+      const reachActive=this.runLoadout.levels.soulReach && !p.grounded && !this.graveRush;
+      const soulVerticalReach=41+(reachActive?C.soulReachBonusPx:0);
       for(const soul of this.souls){
         if(soul.taken) continue;
         const y=soul.baseY+soul.offset;
-        if(Math.abs(p.x-soul.x)<34 && Math.abs(centerY-y)<41) {
+        if(Math.abs(p.x-soul.x)<34 && Math.abs(centerY-y)<soulVerticalReach) {
           soul.taken=true;
           if(this.collectSoul(soul.kind)===false)continue;
           this.puff(soul.x,y,CYAN,23);

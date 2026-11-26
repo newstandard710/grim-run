@@ -2,6 +2,8 @@
 const assert = require('node:assert/strict');
 const {chromium} = require('playwright');
 
+const {verifySoulReach}=require('./browser-soul-reach.js');
+
 const levels = {boneheart:3,graveWealth:3,deathsLeap:2,graveGlide:3,fatesBargain:3,deathDenied:1};
 
 async function openShop(page) {
@@ -95,7 +97,7 @@ async function check(browser,viewport,url) {
     assert(Math.abs((on.launch/off.launch)**2-1.10)<0.00001);
     assert(Math.abs(on.height/off.height-1.10)<0.01);
     const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-v07-meta')));
-    assert.equal(saved.souls,38);assert.deepEqual(saved.levels,levels);
+    assert.equal(saved.souls,38);assert.deepEqual(saved.levels,{...levels,soulReach:0});
     assert.equal(saved.openingSouls,4);assert.equal(saved.brambleSouls,3);
     assert.equal(saved.equipped.length,6);assert.deepEqual(errors,[]);
     const other=await context.newPage();
@@ -108,6 +110,23 @@ async function check(browser,viewport,url) {
     const ranked=await other.evaluate(()=>GRIM_META.load());
     assert.equal(ranked.levels.deathsLeap,3);assert.equal(ranked.souls,13);
     assert.equal(ranked.equipped.includes('deathsLeap'),false);
+    await other.locator('#equip-deathsLeap').tap();
+    await other.getByRole('button',{name:'Purchase SOUL REACH level 1 for 5 Souls'}).tap();
+    const equipReach=other.getByRole('button',{name:'Equip SOUL REACH',exact:true});
+    assert(await equipReach.isDisabled());
+    assert.equal(await equipReach.innerText(),'Free a slot to equip');
+    const full=await other.evaluate(()=>GRIM_META.load());
+    assert.equal(full.souls,8);
+    assert.deepEqual(full.equipped,Object.keys(levels));
+    await other.locator('#equip-fatesBargain').tap();
+    await equipReach.tap();
+    await other.reload({waitUntil:'domcontentloaded'});
+    await openShop(other);
+    assert(await other.getByRole('button',{name:'Unequip SOUL REACH',exact:true}).isEnabled());
+    const swapped=await other.evaluate(()=>GRIM_META.load());
+    assert.equal(swapped.levels.fatesBargain,3);
+    assert.equal(swapped.equipped.length,6);
+    assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].runLoadout.levels.soulReach),0);
     await other.close();
     console.log(JSON.stringify({viewport,off,on}));
   } finally {await context.close();}
@@ -116,7 +135,10 @@ async function check(browser,viewport,url) {
 async function verifyLoadouts(browser,base) {
   const url=new URL(base);
   url.searchParams.set('seed','33');
-  for(const viewport of [{width:390,height:844},{width:844,height:390}])await check(browser,viewport,url);
+  for(const viewport of [{width:390,height:844},{width:844,height:390}]){
+    await check(browser,viewport,url);
+    await verifySoulReach(browser,base,viewport);
+  }
 }
 module.exports={verifyLoadouts};
 if(require.main===module)(async()=>{

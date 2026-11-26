@@ -18,10 +18,17 @@ function vendor(s,number){s.state='playing';s.triggerVendor(number);if(s.state==
 // Old saves retain their purchases. Each definition owns its rank and price limits.
 const old=M.normalize({souls:37,levels:{boneheart:2,graveWealth:3,deathsLeap:1,graveGlide:2}});
 assert.equal(old.levels.graveWealth,3);assert.equal(old.levels.fatesBargain,0);assert.equal(old.levels.deathDenied,0);assert.equal(M.startingGold(old),6);
-assert.equal(M.DEFINITIONS.filter(d=>d.id==='graveWealth').length,1);assert.equal(M.DEFINITIONS.length,6);
+assert.equal(M.DEFINITIONS.filter(d=>d.id==='graveWealth').length,1);assert.equal(M.DEFINITIONS.length,7);
 const account=M.normalize({souls:300,levels:{}});
 for(const d of M.DEFINITIONS){for(let i=1;i<d.amounts.length;i++){const bought=M.purchase(account,d.id);assert.equal(bought.ok,true);assert.equal(bought.cost,(d.costs||M.COSTS)[i-1]);}assert.equal(M.purchase(account,d.id).ok,false);}
-assert.equal(account.souls,85);assert.equal(M.investedSouls(account),215);assert.equal(account.levels.deathDenied,1);
+assert.equal(account.souls,80);assert.equal(M.investedSouls(account),220);assert.equal(account.levels.deathDenied,1);
+assert.equal(account.levels.soulReach,1);
+assert.equal(account.equipped.length,6);
+assert.equal(M.setEquipped(account,'soulReach',true),false);
+assert.equal(M.activeLoadout(account).levels.soulReach,0);
+assert(M.setEquipped(account,'graveWealth',false));
+assert(M.setEquipped(account,'soulReach',true));
+assert.equal(M.activeLoadout(M.load()).levels.soulReach,1);
 assert.equal(M.load().levels.deathDenied,1);assert.equal(M.refundAll(account).ok,true);assert.equal(account.souls,299);assert.equal(M.investedSouls(account),0);
 const poor=M.normalize({souls:14});assert.equal(M.purchase(poor,'deathDenied').ok,false);assert.equal(poor.souls,14);
 // Owned levels and selected effects have distinct lifetimes.
@@ -59,6 +66,24 @@ mixed.takeDamage(3,'rock');defeat(mixed);assert.equal(mixed.state,'revive');
 assert(mixed.revive());assert.equal(mixed.meta.souls,97);
 assert.equal(mixed.rerollsRemaining,0);assert.equal(mixed.freeLifeAvailable,false);
 mixed.startRun();assert.equal(mixed.rerollsRemaining,0);assert.equal(mixed.freeLifeAvailable,false);
+// Only a jumping Reaper gets extra vertical reach. Horizontal aim and Gold use their original bounds.
+for(const enabled of [false,true]){
+ const s=game({soulReach:Number(enabled)}),p=s.player;
+ for(const [dx,dy,grounded,expected] of [
+   [0,40,false,true],[0,41,false,enabled],[33,-58,false,enabled],
+   [0,59,false,false],[34,0,false,false],[0,45,true,false]
+ ]){
+   p.grounded=grounded;
+   const placed={x:p.x+dx,baseY:p.y-43+dy,offset:0,taken:false};
+   s.souls=[{...placed}];s.coins=[{...placed}];
+   s.checkCollectibles();
+   assert.equal(s.souls[0].taken,expected);
+   assert.equal(s.coins[0].taken,Math.abs(dx)<34&&Math.abs(dy)<41);
+ }
+ const persistent=s.meta.souls;
+ s.checkCollectibles();
+ assert.equal(s.meta.souls,persistent);
+}
 // Both orderings of reward and healing, repeat healing, skip and insufficient funds.
 for(const healFirst of [true,false]){
  const s=game();s.coinCount=21;s.player.hp=1;vendor(s,1);const offer=s.pendingOffers.find(v=>v.type==='power');assert(offer);
@@ -127,7 +152,7 @@ life.player.invulMs=0;life.takeDamage(3,'rock');defeat(life);assert.equal(life.s
 const fall=game({deathDenied:1});fall.player.hp=1;fall.player.x=fall.terrain.sequences[0].startX+40;fall.player.y=fall.terrain.anchorAt(fall.player.x)+500;fall.rescueFromAbyss();defeat(fall);assert.equal(fall.state,'respawning');assert.equal(fall.respawnNextMode,'countdown');assert.equal(fall.player.hp,3);assert.equal(fall.player.invulMs,2300);assert.equal(fall.meta.souls,100);
 // Distance curve is continuous at 5km and cannot accelerate again after teleport/resurrection.
 assert.equal(Core.runSpeed(-100),300);assert.equal(Core.runSpeed(0),300);assert.equal(Core.runSpeed(2500),362.5);assert.equal(Core.runSpeed(5000),425);for(const m of [5001,6666,9999,20000])assert.equal(Core.runSpeed(m),425);assert(Math.abs(Core.runSpeed(5000)-Core.runSpeed(4999))<.04);
-console.log('PASS Beyond Death: six upgrades, old-save migration, 15-Soul single rank, exact 215-Soul refund, Angel purchase/heal permutations, shared fresh rerolls and exhausted pool, 3→2→1→0 quotas, free/paid/third death, lethal chasm, frozen smoke + countdown, 5km acceleration plateau.');
+console.log('PASS Beyond Death: seven upgrades, old-save migration, 15-Soul single rank, exact 220 invested Souls, Angel purchase/heal permutations, shared fresh rerolls and exhausted pool, 3→2→1→0 quotas, free/paid/third death, lethal chasm, frozen smoke + countdown, 5km acceleration plateau.');
 
 // Exercise the real collision callers. Some assign invulnerability immediately before the HP debit.
 function checkDamage(scene,label,action,loss){
