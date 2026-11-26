@@ -201,6 +201,12 @@ button {cursor:pointer;}
 .meta-buy:focus-visible {outline:3px solid #fff;outline-offset:2px;}
 .meta-card .meta-equip {grid-column:1/-1;width:100%;min-height:44px;margin:0;padding:6px;font-size:12px;}
 .meta-buy small {display:block;margin-top:3px;font:inherit;font-size:.9em;}
+@media (max-width:450px) and (orientation:portrait) {
+ .meta-grid .meta-card {grid-template-columns:24px minmax(0,1fr);column-gap:5px;}
+ .meta-card .meta-icon {width:24px;height:24px;font-size:18px;}
+ .meta-card .meta-title {font-size:12px;letter-spacing:0;overflow-wrap:anywhere;}
+ .meta-card .meta-dots {display:none;}
+}
 .meta-notice {font-size:clamp(10px,2vh,13px);font-weight:800;min-height:1.6em;color:#b9ffe3;margin:5px 0 2px;}
 .meta-modal #reliquary-back-btn {margin-top:2px;}
 @media (max-height:345px) {

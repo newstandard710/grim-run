@@ -68,6 +68,14 @@ async function check(browser,viewport,url) {
     await page.goto(url.href,{waitUntil:'domcontentloaded'});
     await openShop(page);
     assert.match(await page.locator('#reliquary-equipped').innerText(),/6 \/ 6/);
+    const contained=await page.locator('.meta-card').evaluateAll(cards=>cards.every(card=>{
+      const bounds=card.getBoundingClientRect();
+      return [...card.querySelectorAll('.meta-title,button')].every(child=>{
+        const box=child.getBoundingClientRect();
+        return box.left>=bounds.left&&box.right<=bounds.right;
+      });
+    }));
+    assert(contained,'Reliquary titles and controls fit inside their cards');
     for(const id of Object.keys(levels))await page.locator('#equip-'+id).tap();
     assert.match(await page.locator('#reliquary-equipped').innerText(),/0 \/ 6/);
     await page.reload({waitUntil:'domcontentloaded'});
