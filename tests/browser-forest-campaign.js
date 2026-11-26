@@ -177,10 +177,24 @@ async function merchantAndInterruption(browser){
     await advance(page,'frames',30);
     // A renderer crash skips pagehide. Recover the most recently committed tick.
     const beforeCrash=await saved(page);
-    const cdp=await ctx.newCDPSession(page);
-    const crashed=page.waitForEvent('crash');
-    cdp.send('Page.crash').catch(()=>{});
-    await crashed;await page.close();
+    // Kill the renderer of this test-owned browser directly. Chromium's
+    // synthetic Page.crash command may be suppressed on a hosted runner.
+    assert.deepEqual(browser.contexts().flatMap(context=>context.pages()),[page]);
+    const host=await browser.newBrowserCDPSession();
+    const renderers=(await host.send('SystemInfo.getProcessInfo')).processInfo.filter(p=>p.type==='renderer');
+    assert.ok(renderers.length,'The isolated test browser has a renderer');
+    const killed=new Set();
+    for(const renderer of renderers){
+      try{process.kill(renderer.id,'SIGKILL');killed.add(renderer.id);}
+      catch(e){if(e.code!=='ESRCH')throw e;} // A spare renderer can exit independently.
+    }
+    assert.ok(killed.size>0);
+    const deadline=Date.now()+10000;
+    while((await host.send('SystemInfo.getProcessInfo')).processInfo.some(p=>killed.has(p.id))){
+      assert.ok(Date.now()<deadline,'The killed renderer must exit before restoring the attempt');
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    await host.detach();await page.close();
     page=await ctx.newPage();await boot(page);
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
     assert.deepEqual(comparable(await saved(page)),comparable(beforeCrash));
