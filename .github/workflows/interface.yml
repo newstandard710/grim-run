@@ -42,6 +42,8 @@ jobs:
       - name: Verify four screen sizes, two thumbs, finger swipes and resurrection scenes
         if: steps.scope.outputs.interface == 'true'
         run: node tests/browser-beyond-death.js
+      - name: Verify Forest Campaign interruption, revival and retry
+        run: node tests/browser-forest-campaign.js
       - name: Verify hosted startup retry, Home and Reliquary focus, and combined controls
         if: steps.scope.outputs.interface == 'true'
         run: |

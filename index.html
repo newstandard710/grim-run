@@ -343,6 +343,15 @@ button {cursor:pointer;}
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
     </div>
   </div>
+  <div id="campaign-screen" class="modal-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="campaign-title">
+    <div class="modal compact">
+      <h2 id="campaign-title" tabindex="-1">CHOOSE A MODE</h2>
+      <p id="campaign-detail" role="status"></p>
+      <button id="campaign-primary" class="primary"></button>
+      <button id="campaign-secondary" class="secondary"></button>
+      <button id="campaign-back" class="secondary">BACK</button>
+    </div>
+  </div>
   <div id="reliquary-screen" class="modal-wrap meta-wrap hidden" aria-label="The Underworld Reliquary">
     <div class="modal meta-modal" role="dialog" aria-modal="true" aria-labelledby="reliquary-title">
       <div class="eyebrow">POWERS THAT OUTLIVE DEATH</div>
@@ -400,6 +409,7 @@ button {cursor:pointer;}
           <button id="god-teleport-plus" class="secondary" aria-label="500 meters later">+500M</button>
         </div>
       </div>
+      <button id="campaign-save-menu" class="secondary hidden">SAVE &amp; RETURN TO MENU</button>
       <button id="resume-btn" class="primary">RESUME ▶</button><button id="quit-btn" class="secondary">QUIT RUN</button></div>
   </div>
   <dialog id="god-abilities-dialog" class="modal compact" aria-labelledby="god-abilities-title" aria-describedby="god-abilities-scope">
@@ -831,15 +841,21 @@ window.GRIM_CONFIG = Object.freeze({
   }
   function save(state){
     // One authoritative JSON save. Mirror old Soul key for downgrade compatibility.
-    try{localStorage.setItem(KEY,JSON.stringify(normalize(state)));}catch(_){}
+    try{
+      let recovery;
+      try{recovery=JSON.parse(localStorage.getItem(KEY)||'null')?.forestRecovery;}catch(_){}
+      const record=normalize(state);
+      if(recovery)record.forestRecovery=recovery;
+      localStorage.setItem(KEY,JSON.stringify(record));
+    }catch(_){}
     try{localStorage.setItem(LEGACY,String(state.souls));}catch(_){}
   }
-  function earn(state,amount=1,kind){
+  function earn(state,amount=1,kind,persist=true){
     // Bank the pickup and its lifetime count in the same save.
     if(kind==='opening'||kind===true)state.openingSouls++;
     if(kind==='bramble')state.brambleSouls++;
     state.souls=boundedInt(state.souls+boundedInt(amount,0,MAX_SOULS),0,MAX_SOULS);
-    save(state);
+    if(persist)save(state);
     return state.souls;
   }
   function purchase(state,id){
@@ -885,10 +901,10 @@ window.GRIM_CONFIG = Object.freeze({
     save(state);
     return {ok:true,invested,fee:1,newBalance};
   }
-  function spendSouls(state,amount){
+  function spendSouls(state,amount,persist=true){
     const cost=boundedInt(amount,1,MAX_SOULS);
     if(state.souls<cost)return false;
-    state.souls-=cost;save(state);return true;
+    state.souls-=cost;if(persist)save(state);return true;
   }
   function slideDuration(baseMs,state){
     return baseMs+DEFINITIONS[3].amounts[boundedInt(state.levels.graveGlide,0,3)];
@@ -1549,7 +1565,7 @@ window.GRIM_CONFIG = Object.freeze({
           }
           return;
         }
-        if(activate&&(home||menu||gameOver||vendor||reliquary)&&event.target?.closest?.('button'))return;
+        if(activate&&(home||menu||gameOver||vendor||reliquary||this.mode==='campaignMenu'||this.mode==='paused')&&event.target?.closest?.('button'))return;
         if (['Space','ArrowUp','ArrowDown','KeyA','KeyJ','KeyS','KeyF','KeyR','KeyD','Escape','KeyP'].includes(event.code)) event.preventDefault();
         if (event.repeat || this.heldKeys.has(event.code)) return;
         this.heldKeys.add(event.code);
@@ -1578,6 +1594,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(action)this.releaseHold(action,event.code);
       });
       window.addEventListener('blur', () => {
+        if(actions.suspendCampaign?.())return;
         this.releaseAll(); this.vendorSkipKeys.clear(); this.deathActivationKeys.clear(); actions.jumpEnd(); actions.slideEnd(); actions.autoPause();
       });
       document.addEventListener('contextmenu', event => event.preventDefault());
@@ -1667,6 +1684,7 @@ window.GRIM_CONFIG = Object.freeze({
       show('countdown-overlay', mode === 'countdown');
       if(mode!=='portal')show('portal-overlay',false);
       show('menu', mode === 'menu');
+      show('campaign-screen',mode==='campaignMenu');
       show('reliquary-screen',mode==='reliquary'||mode==='refundConfirm');
       show('reliquary-reset-confirm',mode==='refundConfirm');
       show('abandon-confirm',mode==='abandonConfirm');
@@ -2376,7 +2394,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastVendorNumber=0;
       this.pendingOffers=[];
       this.ui = new GrimUI({
-        start: () => this.startRun(), menu: () => this.goToMenu(), enter:()=>this.enterHome(),
+        start: () => this.campaignReady ? this.campaignReady.then(c=>c?.startAction()) : this.startRun(), menu: () => this.goToMenu(), enter:()=>this.enterHome(),
         attack: () => this.attack(), jump: () => this.jump(), jumpEnd: () => this.jumpEnd(),
         slideStart: () => this.startSlide(), slideEnd: () => this.endSlide(),
         pause: () => this.togglePause(), resume: () => this.resume(), autoPause: () => this.autoPause(),
@@ -2469,6 +2487,17 @@ window.GRIM_CONFIG = Object.freeze({
         document.getElementById('portal-art-load-error').classList.remove('hidden');
         document.getElementById('start-btn').disabled=true;
       }
+      if(new URLSearchParams(scope.location?.search).get('campaign')==='review'){
+        this.campaignReady=import('./assets/campaign/forest.js').then(()=>{
+          this.campaign=new scope.GrimForestCampaign(this);
+          this.campaign.openSavedOnLoad();
+          return this.campaign;
+        }).catch(()=>{
+          const notice=document.getElementById('reaction-load-error');
+          notice.textContent='Forest review failed to load. Refresh to retry.';
+          notice.classList.remove('hidden');
+        });
+      }
       const disconnectHome=scope.GRIM_HOME_ENTRY?.connect(()=>this.enterHome());
       if(disconnectHome)this.events.once('shutdown',disconnectHome);
       this.drawScene();
@@ -2543,6 +2572,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     confirmAbandon(){
       if(this.state!=='abandonConfirm')return;
+      if(this.campaign?.active)this.campaign.endAttempt();
       this.goToMenu();
     }
     practiceScale(){return this.godMode?C.practiceTimeScales[this.practiceTimeMode||0]:1;}
@@ -2660,7 +2690,7 @@ window.GRIM_CONFIG = Object.freeze({
       return true;
     }
     handleResize(size) {
-      const previousY=this.groundY;
+      const previousY=this.groundY,previousWidth=this.width;
       this.width=size.width;this.height=size.height;
       this.groundY=Math.round(this.height*C.groundRatio);
       this.resizeBiomeBackdrops();
@@ -2670,7 +2700,8 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.rewindTerrainBase)for(const item of this.rewindTerrainBase.values()){
         item.y0+=dy;item.y1+=dy;
       }
-      if(this.rewindFrames)this.resetRewindHistory();
+      if(this.campaign?.active)this.campaign.rotateHistory(dy,this.width-previousWidth);
+      else if(this.rewindFrames)this.resetRewindHistory();
       for(const enemy of this.enemies){enemy.y+=dy;enemy.homeY+=dy;}
       for(const bullet of this.bullets)bullet.y+=dy;
       for(const ball of this.fireballs)ball.y+=dy;
@@ -2684,15 +2715,18 @@ window.GRIM_CONFIG = Object.freeze({
         this.respawnCamera.fromY+=dy;this.respawnCamera.toY=this.player.y-this.groundY;
         this.respawnCamera.toX=this.player.x-this.width*C.reaperXRatio;
       }
-      for(const ob of this.obstacles){
-        if(ob.type==='tuckGate'||ob.type==='airBramble'||ob.type==='snappingBramble'){ob.y+=dy;continue;}
-        const next=Core.obstacle(ob.type,ob.x,this.terrain.anchorAt(ob.x),ob.variant,C.slideClearancePx,this.height);
-        ob.y=next.y;ob.height=next.height;
-      }
+      this.resizeObstacles(this.obstacles,dy);
       for(const obj of [...this.coins,...this.souls])obj.baseY+=dy;
       if(this.soulPlatform)for(const plat of this.soulPlatform)plat.y+=dy;
       for(const tip of this.tips){tip.baseY+=dy;tip.label.y+=dy;}
       this.drawScene();
+    }
+    resizeObstacles(obstacles,dy){
+      for(const ob of obstacles){
+        if(ob.type==='tuckGate'||ob.type==='airBramble'||ob.type==='snappingBramble'){ob.y+=dy;continue;}
+        const next=Core.obstacle(ob.type,ob.x,this.terrain.anchorAt(ob.x),ob.variant,C.slideClearancePx,this.height);
+        ob.y=next.y;ob.height=next.height;
+      }
     }
     get downhillOffset(){return this.downhillCamera?.visibleOffset(this)??0;}
     get renderCameraY(){return this.cameraY+this.downhillOffset;}
@@ -2743,6 +2777,14 @@ window.GRIM_CONFIG = Object.freeze({
     captureRewind(){
       if(this.state!=='playing'||this.graveRush||this.rewindLevel()===0)return;
       if(!this.rewindFrames)this.rewindFrames=[];
+      const snapshot=this.worldSnapshot();
+      this.rewindFrames.push(snapshot);
+      this.downhillCamera?.capture(snapshot);
+      // Eight seconds plus the sample immediately preceding the cutoff.
+      const cutoff=this.rewindClockMs-8400;
+      while(this.rewindFrames.length>2&&this.rewindFrames[1].at<cutoff)this.rewindFrames.shift();
+    }
+    worldSnapshot(){
       const enemies=this.enemies.map(e=>({...e}));
       const obstacles=this.obstacles.map(o=>({...o}));
       const bullets=this.bullets.map(b=>{
@@ -2758,7 +2800,7 @@ window.GRIM_CONFIG = Object.freeze({
         const s=this.terrain.segments[index];
         if(s&&s.kind!=='gap')rubble.push({index,kind:s.kind,y0:s.y0,y1:s.y1});
       }
-      this.rewindFrames.push({
+      return {
         at:this.rewindClockMs,
         player:{...this.player},
         speed:this.speed,distance:this.distance,elapsed:this.elapsed,frame:this.frame,
@@ -2776,12 +2818,7 @@ window.GRIM_CONFIG = Object.freeze({
         coins:this.coins.map(o=>({...o})),souls:this.souls.map(o=>({...o})),
         combatViews:this.combatArt?.snapshot()||[],
         slideRotation:this.slideRotation,rubble,rngState:this.rng.state
-      });
-      this.downhillCamera?.capture(this.rewindFrames.at(-1));
-      // 8 seconds max rewind plus one sample, at about 10 samples / second.
-      const cutoff=this.rewindClockMs-8400;
-      while(this.rewindFrames.length>2&&this.rewindFrames[1].at<cutoff)
-        this.rewindFrames.shift();
+      };
     }
     tickRewind(frameMs){
       this.rewindCooldownMs=Math.max(0,(this.rewindCooldownMs||0)-frameMs);
@@ -2942,7 +2979,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.rewindFlash(false);
       return true;
     }
-    startRun() {
+    startRun(savedSeed) {
       if(this.reactionLoadFailed||this.portalArtLoadFailed)return false;
       this.clearPracticePowers();
       this.downhillCamera?.reset();
@@ -2953,7 +2990,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastUpdateHeartbeatAt=Date.now();
       const params = new URLSearchParams(location.search);
       const rawSeed = params.get('seed');
-      this.seed = rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0);
+      this.seed = savedSeed ?? (rawSeed && /^\d+$/.test(rawSeed) ? Number(rawSeed) >>> 0 : (Date.now() >>> 0));
       this.runLoadout=Meta.activeLoadout(this.meta);
       const startingHP=C.startingHP+Meta.healthBonus(this.runLoadout);
       this.rng = Core.makeRng(this.seed);
@@ -3035,6 +3072,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     goToMenu() {
+      this.campaign?.resetMenu();
       this.clearPracticePowers();
       this.lavafallDetail?.release();
       this.reactionArt?.reset();this.deathPoseMs=0;
@@ -3053,6 +3091,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     togglePause() {
+      if(this.campaign?.active)return this.campaign.togglePause();
       this.wakeGameLoop();
       if(this.state==='playing' || this.state==='countdown'){
         this.state='paused';this.countdownMs=0;this.goFlashMs=0;
@@ -3120,6 +3159,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.powerManager.setPracticeLevels(null);
     }
     setGodMode(on){
+      if(this.campaign?.active)return false;
       const had=this.rewindLevel();
       const previous=this.practicePowerLevels?this.practiceAbilityEffects():null;
       this.godMode=Boolean(on);
@@ -3140,7 +3180,10 @@ window.GRIM_CONFIG = Object.freeze({
       this.player.jumpHeld=false; this.player.holdSlide=false; this.player.sliding=false;this.player.slideConsumed=false;this.player.airTuck=false;this.player.slideReleaseBufferMs=0;
       this.ui.setMode('countdown');this.ui.updateCountdown(this.countdownMs/1000);
     }
-    resume() { if(this.state==='paused') this.beginCountdown(); }
+    resume() {
+      if(this.campaign?.active)return this.campaign.continueAttempt();
+      if(this.state==='paused')this.beginCountdown();
+    }
     jump() {
       if(this.graveRush)return;
       if(this.state!=='playing'||this.practiceScale()===0)return;
@@ -3392,6 +3435,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.meta.brambleSouls<C.brambleSoulLimit;
     }
     collectSoul(kind){
+      if(this.campaign?.active&&!this.campaign.walletDirty)this.meta=Meta.load();
       if(kind===true)kind='opening'; // Older callers pass an opening-pickup flag.
       if(kind==='bramble'){
         if(!this.canEarnBrambleSoul())return false;
@@ -3408,7 +3452,8 @@ window.GRIM_CONFIG = Object.freeze({
       // generating permanent currency by repeatedly jumping to 9500m.
       if(!this.teleportUsed){
         this.runSoulsAvailable++;
-        this.totalSouls=Meta.earn(this.meta,1,kind);
+        this.totalSouls=Meta.earn(this.meta,1,kind,!this.campaign?.active);
+        if(this.campaign?.active)this.campaign.walletDirty=true;
         document.getElementById('banked-souls').textContent=String(this.totalSouls);
       }
     }
@@ -3742,7 +3787,13 @@ window.GRIM_CONFIG = Object.freeze({
       const previous=this.cutsceneLastAt;this.cutsceneLastAt=time;
       return previous==null?0:Math.max(0,time-previous);
     }
-    update(_,deltaMs) {
+    update(time,deltaMs) {
+      if(!this.campaign?.active)return this.stepWorld(time,deltaMs);
+      if(this.campaign.frozen)return;
+      this.stepWorld(time,deltaMs);
+      this.campaign.afterFrame();
+    }
+    stepWorld(_,deltaMs) {
       this.lastUpdateHeartbeatAt=Date.now();
       if(['playing','rewinding'].includes(this.state)&&this.practiceScale()===0){this.drawScene();return;}
       if(this.state==='rewinding')this.playRewindFrame(Math.min(250,Math.max(0,deltaMs))*this.practiceScale());
@@ -4623,11 +4674,13 @@ window.GRIM_CONFIG = Object.freeze({
       }else this.finishDeath();
     }
     revive(){
+      if(this.campaign?.active&&!this.campaign.walletDirty)this.meta=Meta.load();
       if(this.state!=='revive'||this.reviveUsed||this.meta.souls<3)return false;
       // The wallet is banked immediately on collection; keep the specific
       // current-run allocation for accounting while making just one durable debit.
       const spentFromRun=Math.min(3,this.runSoulsAvailable);
-      if(!Meta.spendSouls(this.meta,3))return false;
+      if(!Meta.spendSouls(this.meta,3,!this.campaign?.active))return false;
+      if(this.campaign?.active)this.campaign.walletDirty=true;
       this.runSoulsAvailable-=spentFromRun;
       this.lastRevivePayment={currentRun:spentFromRun,priorRuns:3-spentFromRun};
       this.reviveUsed=true;
@@ -4678,13 +4731,15 @@ window.GRIM_CONFIG = Object.freeze({
       this.finishDeath();
     }
     finishDeath(){
+      const forest=this.campaign?.active;
+      if(forest)this.campaign.endAttempt();
       this.state='dead';this.countdownMs=0;this.goFlashMs=0;
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       let best=false;
       try{
         const key='grim-run-v03-best',old=Number(localStorage.getItem(key)||0);
-        if(!this.teleportUsed&&!this.godModePastFinish&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}
+        if(!forest&&!this.teleportUsed&&!this.godModePastFinish&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}
       }catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,
         `${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),false);
