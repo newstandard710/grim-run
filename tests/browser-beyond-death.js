@@ -141,7 +141,22 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    console.log('PASS actual Chromium '+label+': home → menu → purchases, old save, Angel reroll/heal/reward/heal, text bounds, enlarged swapped controls, touch combination, pause and confirmation.');
    const video=page.video();await context.close();if(video)fs.renameSync(await video.path(),path.join(dir,'beyond-death-preview.webm'));
   }
-  await verifyLoadouts(browser,'http://127.0.0.1:'+server.address().port+'/');
+  let loadoutURL='http://127.0.0.1:'+server.address().port+'/';
+  if(process.env.GITHUB_EVENT_NAME==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    // Pages deploys independently of the push checks. Exercise the landed build.
+    const live=new URL('https://newstandard710.github.io/grim-run/');
+    live.searchParams.set('release',process.env.GITHUB_SHA);
+    const expected=fs.readFileSync(path.join(root,'index.html'));
+    let deployed=false;
+    for(let attempt=0;attempt<60&&!deployed;attempt++){
+      const response=await fetch(live,{signal:AbortSignal.timeout(10000)}).catch(()=>null);
+      deployed=response?.ok&&Buffer.from(await response.arrayBuffer()).equals(expected);
+      if(!deployed)await new Promise(resolve=>setTimeout(resolve,5000));
+    }
+    assert(deployed,'Public index.html matches the landed release');
+    loadoutURL=live.href;
+  }
+  await verifyLoadouts(browser,loadoutURL);
   assert.deepEqual(errors,[]);assert.deepEqual(failures,[]);console.log('PASS Beyond Death browser: both resurrection animations, paid offer, third-death results, Devil rules, four viewport layouts, no script or asset errors.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
