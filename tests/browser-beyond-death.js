@@ -28,7 +28,7 @@ const server=http.createServer((req,res)=>{try{const file=path.resolve(root,deco
    await page.waitForFunction(()=>window.grimRun?.scene?.scenes?.[0]?.visuals?.reaperPoseSprites?.jump&&window.GRIM_FRONTEND?.ready,null,{timeout:45000});await page.evaluate(()=>document.fonts.ready);
    assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'home');await shot('home');
    await page.locator('#home-enter-btn').click();assert.equal(await page.evaluate(()=>window.grimRun.scene.scenes[0].state),'menu');await shot('menu');
-   await page.locator('#reliquary-btn').click();assert.equal(await page.locator('.meta-card').count(),6);
+   await page.locator('#reliquary-btn').click();assert.equal(await page.locator('.meta-card').count(),7);
    await page.getByRole('button',{name:"Purchase FATE'S BARGAIN level 1 for 5 Souls",exact:true}).click();
    await page.getByRole('button',{name:'Purchase DEATH DENIED level 1 for 15 Souls',exact:true}).click();
    await page.getByRole('button',{name:'Purchase GRAVE WEALTH level 2 for 10 Souls',exact:true}).click();
