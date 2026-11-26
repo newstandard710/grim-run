@@ -58,8 +58,7 @@ with sync_playwright() as playwright:
             page.evaluate("pressure('plant',33)")
             hint = page.evaluate("""() => {const label=scene.tips.find(t=>t.atX===scene.obstacles[0].x).label;
                 return {text:label.text,width:label.getBounds().width};}""")
-            expected = "CUT AS THE JAWS OPEN" if build == "before" else "CUT OR JUMP AS JAWS OPEN"
-            assert hint["text"] == expected and hint["width"] < 390, hint
+            assert hint["text"] == "CUT OR JUMP AS JAWS OPEN" and hint["width"] < 390, hint
             for enemy, button, timings in [
                 ("plant", "attack", (30, 50, 59, None)),
                 ("crawler", "attack", (300, 128, 5, None)),
@@ -78,13 +77,13 @@ with sync_playwright() as playwright:
                         print(build, key, json.dumps(row), flush=True)
                         if muted:
                             assert row["oscillators"] == 0
+                        if enemy == "imp" and seed == 3 and timing is None:
+                            assert row["stale"] <= 1, (build, key, row)
                         if build == "before":
                             rows[key] = row
                         else:
                             for field in ("hp","dead","enemyHp","windup","warning","release","damage"):
                                 assert row.get(field) == rows[key].get(field), (key,field,row,rows[key])
-                            if enemy == "imp" and seed == 3 and timing is None:
-                                assert rows[key]["stale"] > 0 and row["stale"] <= 1
                             if timing is None:
                                 assert row["events"].count("damage") == 3-row["hp"]
                                 if enemy != "crawler":
