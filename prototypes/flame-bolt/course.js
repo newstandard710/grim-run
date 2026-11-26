@@ -152,6 +152,8 @@ function install() {
     getItem:key=>memory.get(key)??null, setItem:(key,value)=>memory.set(key,String(value)),
     removeItem:key=>memory.delete(key)
   }});
+  // The original comparison course owns its two ammunition profiles.
+  s.hasFlameBolts=()=>false;
   s.meta=w.GRIM_META.normalize({});
   cue=doc.createElement('div'); cue.hidden=true;
   cue.style.cssText='position:absolute;left:50%;top:clamp(82px,22%,160px);transform:translateX(-50%);padding:3px 8px;border-radius:4px;background:#171c24e8;color:#fff0d2;white-space:nowrap;font:600 13px system-ui;pointer-events:none';

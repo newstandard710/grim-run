@@ -952,7 +952,8 @@ window.GRIM_CONFIG = Object.freeze({
         stats.targetsCuttableObstaclesIfNoEnemy=rank>=shot.OBSTACLE_BOLT_RANK;
         stats.blastCooldownMs=rank>=shot.BLAST_RANK?shot.BLAST_COOLDOWN_MS:null;
         row('Bolt damage',stats.boltDamage+' HP');
-        row('Target obstacles',stats.targetsCuttableObstaclesIfNoEnemy?'If no enemy':'Locked',!stats.targetsCuttableObstaclesIfNoEnemy);
+        row('Flame Bolts',rank?'Burn ground brambles and surviving Crawlers':'Locked',!rank);
+        row('Target airborne brambles',stats.targetsCuttableObstaclesIfNoEnemy?'If no enemy':'Locked',!stats.targetsCuttableObstaclesIfNoEnemy);
         row('Automatic area blast',stats.blastCooldownMs?stats.blastCooldownMs/1000+' s recharge':'Locked',!stats.blastCooldownMs);
         break;
       }
@@ -1745,7 +1746,8 @@ window.GRIM_CONFIG = Object.freeze({
       el('teleport-confirm-distance').textContent=value.toLocaleString();
       this.setMode('teleportConfirm');
     }
-    showGun(on){
+    showGun(on,flame=false){
+      writeText('gun-status',flame?'⌁ FLAME BOLTS':'⌁ BONE CROSSBOW');
       show('gun-status',on);
       show('crossbow-btn',on);
       if(!on)show('crossbow-cd',false);
@@ -1960,7 +1962,7 @@ window.GRIM_CONFIG = Object.freeze({
   function nearest(items,originX){
     return items.slice().sort((a,b)=>Math.abs(a.x-originX)-Math.abs(b.x-originX))[0]||null;
   }
-  function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel,minVisibleMs=650){
+  function pickTarget(enemies,obstacles,playerX,screenLeft,screenRight,powerLevel,minVisibleMs=650,flame=false){
     const visible=e=>!e.dead&&e.x>Math.max(playerX+38,screenLeft)&&e.x<screenRight-25;
     // Let creatures be perceptible on-screen for at least 0.65s before auto-fire.
     // Without this, one-HP bats can die before their first swoop is noticed.
@@ -1969,8 +1971,9 @@ window.GRIM_CONFIG = Object.freeze({
     if(flyers.length)return {kind:'enemy',ref:nearest(flyers,playerX)};
     const grounded=enemies.filter(e=>eligible(e)&&!enemyIsFlying(e));
     if(grounded.length)return {kind:'enemy',ref:nearest(grounded,playerX)};
-    if(powerLevel>=OBSTACLE_BOLT_RANK){
-      const cut=obstacles.filter(o=>!o.destroyed&&cuttable(o)&&visible({x:o.x,dead:false}));
+    if(flame||powerLevel>=OBSTACLE_BOLT_RANK){
+      const cut=obstacles.filter(o=>!o.destroyed&&cuttable(o)&&
+        (powerLevel>=OBSTACLE_BOLT_RANK||o.type!=='airBramble')&&visible({x:o.x,dead:false}));
       if(cut.length)return {kind:'obstacle',ref:nearest(cut,playerX)};
     }
     return null;
@@ -2520,7 +2523,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.shrineClaimed=this.gunUnlocked;
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.gunCooldownMs=0;this.blastCooldownMs=0;
-      this.ui.showGun(this.gunUnlocked);this.ui.showGunCooldown(0);
+      this.ui.showGun(this.gunUnlocked,this.hasFlameBolts());this.ui.showGunCooldown(0);
       this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
       this.nextVendorNumber=this.lastVendorNumber+1;
       this.vendorType=null;this.pendingOffers=[];this.vendorPhase='deal';this.vendorIntroMs=0;
@@ -2983,6 +2986,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.resetRewindHistory();
       this.ui.updatePowerSummary(this.powerManager.summary());
+      this.ui.showGun(this.gunUnlocked,this.hasFlameBolts());
       return true;
     }
     setPracticePowerLevel(id,rank){
@@ -3263,6 +3267,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();
     }
     refreshHud(){
+      this.ui.showGun(this.gunUnlocked,this.hasFlameBolts());
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
@@ -3857,11 +3862,14 @@ window.GRIM_CONFIG = Object.freeze({
         this.puff(enemy.x,enemy.y,enemy.kind==='imp'?0xff874e:0xc5f1fc,12,painted);
       }
     }
+    hasFlameBolts(){
+      return this.gunUnlocked && this.powerManager.level('powerShot')>=1;
+    }
     fireCrossbow(){
       if(this.state!=='playing'||this.practiceScale()===0||!this.gunUnlocked||this.gunCooldownMs>0)return false;
       const p=this.player,left=p.x-this.width*C.reaperXRatio,right=left+this.width;
       const target=Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,
-        this.powerManager.level('powerShot'),0);
+        this.powerManager.level('powerShot'),0,this.hasFlameBolts());
       this.fireSoulcaster(target);
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
       p.visualFireMs=p.attackMs>0?0:(scope.GRIM_COMBAT_ART?.FIRE_MS||180);
@@ -3876,9 +3884,14 @@ window.GRIM_CONFIG = Object.freeze({
       const p=this.player,origin=scope.GRIM_COMBAT_ART?.muzzle(this)||{x:p.x+29,y:p.y-58},originX=origin.x,originY=origin.y;
       this.bullets.push({x:originX,y:originY,
         ref:target?target.ref:null,kind:target?target.kind:'free',
-        damage:Combat.powerShotDamage(this.powerManager.level('powerShot')),ageMs:0,dead:false});
+        flame:this.hasFlameBolts(),damage:Combat.powerShotDamage(this.powerManager.level('powerShot')),ageMs:0,dead:false});
       this.powerArt?.flashCrossbow?.(originX,originY);
       this.puff(originX,originY,0xd8ffe9,6);
+    }
+    hitWithBolt(enemy,bolt){
+      this.hitEnemy(enemy,bolt.damage,true);
+      if(bolt.flame && !enemy.dead && enemy.kind==='crawler' && !enemy.burnMs)enemy.burnMs=700;
+      this.chainOnHit(enemy,bolt.damage);
     }
     blastSoulcaster(){
       const left=this.player.x-this.width*C.reaperXRatio,right=left+this.width;
@@ -3924,6 +3937,11 @@ window.GRIM_CONFIG = Object.freeze({
       for(const e of this.enemies){
         if(e.dead)continue;
         if(Core.intersectsVendorCorridor(e.x-25,50,this.startX)){e.dead=true;continue;}
+        if(e.burnMs>0){
+          e.burnMs=Math.max(0,e.burnMs-frameMs);
+          if(!e.burnMs)this.hitEnemy(e,1);
+          if(e.dead)continue;
+        }
         const ahead=e.x-p.x;
         const visibleNow=e.x>p.x+30&&e.x<right-25;
         if(visibleNow){
@@ -4013,7 +4031,7 @@ window.GRIM_CONFIG = Object.freeze({
           const enemy=this.enemies.find(e=>!e.dead&&
             Core.overlaps(Combat.rectFor(e),{x:b.x-25,y:b.y-7,width:50,height:14}));
           if(enemy){
-            this.hitEnemy(enemy,b.damage,true);this.chainOnHit(enemy,b.damage);b.dead=true;
+            this.hitWithBolt(enemy,b);b.dead=true;
           }else if(b.x>right+70)b.dead=true;
           continue;
         }
@@ -4024,8 +4042,12 @@ window.GRIM_CONFIG = Object.freeze({
         const step=1550*dt;
         if(distance<=Math.max(21,step)){
           b.x=tx;b.y=ty;b.dead=true;
-          if(b.kind==='enemy'){this.hitEnemy(b.ref,b.damage,true);this.chainOnHit(b.ref,b.damage);}
-          else {this.destroyObstacle(b.ref);this.puff(tx,ty,0xffd79e,12,Combat.cuttable(b.ref)&&Boolean(this.worldPolish?.ready['polish-fragments']));}
+          if(b.kind==='enemy')this.hitWithBolt(b.ref,b);
+          else {
+            this.destroyObstacle(b.ref);
+            if(b.flame)scope.GRIM_ACTION_AUDIO?.play('cut');
+            this.puff(tx,ty,b.flame?0xff873f:0xffd79e,12,!b.flame&&Combat.cuttable(b.ref)&&Boolean(this.worldPolish?.ready['polish-fragments']));
+          }
         }else {b.x+=dx/distance*step;b.y+=dy/distance*step;}
       }
       for(const ball of this.fireballs){
@@ -4274,7 +4296,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.gunUnlocked=true;this.gunCooldownMs=0;this.shrineClaimed=true;
       this.player.jumpHeld=false;this.player.holdSlide=false;this.player.slideReleaseBufferMs=0;
       this.player.invulMs=Math.max(this.player.invulMs,1600);
-      this.ui.setMode('playing');this.ui.showGun(true);this.ui.showGunCooldown(0);
+      this.ui.setMode('playing');this.ui.showGun(true,this.hasFlameBolts());this.ui.showGunCooldown(0);
       this.resetRewindHistory();this.captureRewind();
       this.puff(this.player.x,this.player.y-70,0x9effe0,22);
     }
@@ -4282,7 +4304,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='portal')return;
       // Direct God Mode/test entry also remains playable if the shrine was skipped.
       this.gunUnlocked=true;this.shrineClaimed=true;this.gunCooldownMs=0;
-      this.state='playing';this.portalMs=0;this.ui.setMode('playing');this.ui.showGun(true);
+      this.state='playing';this.portalMs=0;this.ui.setMode('playing');this.ui.showGun(true,this.hasFlameBolts());
       this.ui.showGunCooldown(0);this.resetRewindHistory();this.captureRewind();
     }
     enterUnderworld(){
@@ -6420,6 +6442,9 @@ window.GRIM_CONFIG = Object.freeze({
       for(const e of this.enemies){
         if(e.dead)continue;
         const x=e.x,y=e.y,t=this.elapsed*13+e.phase;
+        if(e.burnMs>0){
+          g.fillStyle(0xff8138,.93);g.fillTriangle(x-10,y-30,x-4,y-49-4*Math.sin(t),x+7,y-31);
+        }
         if(e.kind==='bat'&&this.visuals?.batReady)continue;
         if(e.kind==='skeletalBat'&&this.visuals&&this.visuals.skeletalBatReady){
           if(e.hp===1){g.fillStyle(0xffcf76,.68);g.fillCircle(x,y+13,3);}
@@ -6479,7 +6504,10 @@ window.GRIM_CONFIG = Object.freeze({
         const origin=scope.GRIM_COMBAT_ART?.muzzle(this)||{x:this.player.x+29,y:this.player.y-58};
         const dx=b.x-origin.x,dy=b.y-origin.y,len=Math.max(1,Math.hypot(dx,dy));
         const ux=dx/len||1,uy=dy/len,k=C.projectileVisualScale;
-        g.lineStyle(3*k,0xbefaff,.9);g.lineBetween(b.x,b.y,b.x-ux*17*k,b.y-uy*17*k);
+        if(b.flame){
+          g.lineStyle(7*k,0xff722c,.8);g.lineBetween(b.x,b.y,b.x-ux*20*k,b.y-uy*20*k);
+        }
+        g.lineStyle(3*k,b.flame?0xffdb87:0xbefaff,.9);g.lineBetween(b.x,b.y,b.x-ux*17*k,b.y-uy*17*k);
         g.fillStyle(b.damage===2?0xffe6b5:0xd3f8e7,.96);g.fillCircle(b.x,b.y,3.8*k);
         g.lineStyle(2*k,0xe6e3d7,.94);
         g.lineBetween(b.x-ux*11*k-uy*4*k,b.y-uy*11*k+ux*4*k,
