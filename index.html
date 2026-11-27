@@ -338,7 +338,8 @@ button {cursor:pointer;}
       <p>Reclaim the lost Souls.<br>Cross the Underworld. Reach the final gate.</p>
       <p id="reaction-load-error" role="alert" class="hidden">Reaper animation failed to load. Refresh to retry.</p>
       <p id="portal-art-load-error" role="alert" class="hidden">Portal and mist artwork failed to load. Refresh to retry.</p>
-      <button id="start-btn" class="primary">START RUN <span>▶</span></button>
+      <button id="campaign-btn" class="primary">CAMPAIGN</button>
+      <button id="start-btn" class="secondary">ENDLESS</button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
       <div class="mini">v0.19.23</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
@@ -347,7 +348,7 @@ button {cursor:pointer;}
   </div>
   <div id="campaign-screen" class="modal-wrap hidden" role="dialog" aria-modal="true" aria-labelledby="campaign-title">
     <div class="modal compact">
-      <h2 id="campaign-title" tabindex="-1">CHOOSE A MODE</h2>
+      <h2 id="campaign-title" tabindex="-1">CAMPAIGN</h2>
       <p id="campaign-detail" role="status"></p>
       <button id="campaign-primary" class="primary"></button>
       <button id="campaign-secondary" class="secondary"></button>
@@ -1530,10 +1531,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.bindAction('practice-slow-btn','practiceSlow',()=>actions.togglePracticeSlow());
       this.bindAction('jump-btn', 'jump');
       this.bindAction('slide-btn', 'slide');
-      el('start-btn').addEventListener('pointerdown',event=>{
-        if(scope.GRIM_HOME_ENTRY?.blocksStart(event))event.preventDefault();
-      });
-      el('start-btn').addEventListener('click', event => this.requestMenuStart(event));
+      for(const id of ['campaign-btn','start-btn']){
+        const button=el(id);
+        button.addEventListener('pointerdown',event=>{
+          if(scope.GRIM_HOME_ENTRY?.blocksStart(event))event.preventDefault();
+        });
+        button.addEventListener('click',event=>this.requestMenuStart(event,id));
+      }
+      el('campaign-back').addEventListener('click',()=>actions.campaignBack());
       el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
       el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
       el('reliquary-reset-btn').addEventListener('click', () => actions.openRefund());
@@ -1652,10 +1657,11 @@ window.GRIM_CONFIG = Object.freeze({
       });
     }
     focusVendorMenu(){el('reward-title').focus({preventScroll:true});}
-    requestMenuStart(event){
-      if(el('menu').classList.contains('hidden')||el('start-btn').disabled||
+    requestMenuStart(event,id='campaign-btn'){
+      if(el('menu').classList.contains('hidden')||el(id).disabled||
         scope.GRIM_HOME_ENTRY?.blocksStart(event))return;
-      this.actions.start();
+      if(id==='campaign-btn')this.actions.openCampaign();
+      else this.actions.start();
     }
     pressHold(action,source) {
       const sources=this.holdSources[action],start=sources.size===0;
@@ -2152,7 +2158,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/combat/v0201/animation-data.js?v=1"></script>
   <script src="assets/visuals/reaper-reaction.js?v=rear-carry1"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=home1"></script>
-  <script src="assets/visuals/visual-system.js?v=90e0396a68c5"></script>
+  <script src="assets/visuals/visual-system.js?v=da703a4f290e"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=landforms-2"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=landforms-1"></script>
   <script src="assets/visuals/obstacle-mounts.js?v=d2928f84a547"></script>
@@ -2417,7 +2423,10 @@ window.GRIM_CONFIG = Object.freeze({
       this.lastVendorNumber=0;
       this.pendingOffers=[];
       this.ui = new GrimUI({
-        start: () => this.campaignReady ? this.campaignReady.then(c=>c?.startAction()) : this.startRun(), menu: () => this.goToMenu(), enter:()=>this.enterHome(),
+        start: () => this.state==='dead'&&this.campaign?.retryForest ? this.campaign.enter() : this.startRun(),
+        openCampaign: () => this.openCampaign(),
+        campaignBack: () => this.campaign ? this.campaign.back?.() : this.closeCampaignMenu(),
+        menu: () => this.goToMenu(), enter:()=>this.enterHome(),
         attack: () => this.attack(), jump: () => this.jump(), jumpEnd: () => this.jumpEnd(),
         slideStart: () => this.startSlide(), slideEnd: () => this.endSlide(),
         pause: () => this.togglePause(), resume: () => this.resume(), autoPause: () => this.autoPause(),
@@ -2501,6 +2510,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.reactionLoadFailed){
         document.getElementById('reaction-load-error').classList.remove('hidden');
         document.getElementById('start-btn').disabled=true;
+        document.getElementById('campaign-btn').disabled=true;
         if(!this.reactionArt)console.error('Grim Run: Reaper reaction script failed to load');
       }
       this.reaperFormation=scope.GRIM_REAPER_FORMATION?new scope.GRIM_REAPER_FORMATION.ReaperFormation(this):null;
@@ -2509,17 +2519,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.portalArtLoadFailed){
         document.getElementById('portal-art-load-error').classList.remove('hidden');
         document.getElementById('start-btn').disabled=true;
-      }
-      if(new URLSearchParams(scope.location?.search).get('campaign')==='review'){
-        this.campaignReady=import('./assets/campaign/forest.js?v=1ac3c0c0c6c6').then(()=>{
-          this.campaign=new scope.GrimForestCampaign(this);
-          this.campaign.openSavedOnLoad();
-          return this.campaign;
-        }).catch(()=>{
-          const notice=document.getElementById('reaction-load-error');
-          notice.textContent='Forest review failed to load. Refresh to retry.';
-          notice.classList.remove('hidden');
-        });
+        document.getElementById('campaign-btn').disabled=true;
       }
       const disconnectHome=scope.GRIM_HOME_ENTRY?.connect(()=>this.enterHome());
       if(disconnectHome)this.events.once('shutdown',disconnectHome);
@@ -2536,6 +2536,29 @@ window.GRIM_CONFIG = Object.freeze({
       this.wakeGameLoop();this.state='menu';this.ui.setMode('menu');
       document.getElementById('menu-title')?.focus?.({preventScroll:true});
       return true;
+    }
+    async openCampaign(){
+      if(this.state!=='menu')return;
+      if(this.campaign){this.campaign.chapters();return;}
+      this.state='campaignMenu';this.ui.setMode('campaignMenu');
+      const detail=document.getElementById('campaign-detail');
+      detail.textContent='Loading chapters…';
+      for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
+      document.getElementById('campaign-title').focus({preventScroll:true});
+      try{
+        await import('./assets/campaign/forest.js?v=090fc28be6d3');
+        if(this.state!=='campaignMenu'||this.campaign)return;
+        this.campaign=new scope.GrimForestCampaign(this);
+        document.getElementById('campaign-primary').classList.remove('hidden');
+        this.campaign.chapters();
+      }catch(error){
+        detail.textContent='Campaign could not load. Refresh to try again.';
+        console.error('Campaign load failed',error);
+      }
+    }
+    closeCampaignMenu(){
+      this.goToMenu();
+      document.getElementById('campaign-btn').focus({preventScroll:true});
     }
     openReliquary(){
       if(this.state!=='menu')return;
