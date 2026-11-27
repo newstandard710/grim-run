@@ -101,3 +101,5 @@ jobs:
         run: node tests/browser-forest-campaign.js --public-god-mode
       - name: Verify Crystals touch clears, beam timing and interrupted rewards
         run: node tests/browser-forest-campaign.js --crystals
+      - name: Verify Ashlands touch clears, both counters and reward recovery
+        run: node tests/browser-forest-campaign.js --ashlands
