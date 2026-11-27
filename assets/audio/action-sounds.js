@@ -10,6 +10,7 @@
     imp:    ['sawtooth', 140, 295, .15, .075],
     impact: ['triangle', 345, 175, .07, .11],
     defeat: ['triangle', 245, 66, .14, .13],
+    silk:   ['triangle', 730, 240, .125, .065],
     knot:   ['sine', 660, 990, .115, .19],
     damage: ['triangle', 182, 46, .21, .20]
   };

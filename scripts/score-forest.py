@@ -155,3 +155,22 @@ for crown in (False, True):
                 ice.note(at + pos, root - 12, .55, "drum", .17)
             ice.note(at + 1.5, color, 1.6, "reed", .08)
     ice.write("tundra-crown" if crown else "tundra-crossing", True)
+
+# Widely spaced plucked echoes in the galleries. The same four-note call
+# contracts into a low, uneven three-beat pulse as the Broodmother descends.
+for fight in (False, True):
+    cave = Score(102 if fight else 69, 48)
+    for bar in range(16):
+        at = bar * 3
+        root, fifth, color = chords[bar % 8]
+        cave.note(at, root - 12, 2.4, "bow", .105)
+        for pos, pitch, length in phrases[bar % 8]:
+            cave.note(at + pos, pitch - 12, length * .7, "harp", .16)
+            cave.note(at + pos + .28, pitch, .24, "bell", .046)
+        if fight:
+            for pos in (0, 1.75, 2.5):
+                cave.note(at + pos, root - 5, .32, "drum", .17)
+            cave.note(at + .5, fifth, 1.4, "reed", .08)
+        elif bar % 2 == 1:
+            cave.note(at + 1.5, color, 1.3, "bow", .066)
+    cave.write("caves-brood" if fight else "caves-descent", True)

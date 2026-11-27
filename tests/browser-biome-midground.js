@@ -122,11 +122,24 @@ async function setup(browser, viewport, options = {}) {
 
 async function settled(page, distance, ids) {
   await page.evaluate(distance => window.biomeReview.place(distance), distance);
-  await page.waitForFunction(ids => {
-    const b = window.biomeReview;
-    b.scene.drawScene();
-    return ids.every(id => b.art().loaded.includes(id) && b.scene.biomeBackdrops[id]);
-  }, ids, {timeout: 20000});
+  try {
+    await page.waitForFunction(ids => {
+      const b = window.biomeReview;
+      // Practice teleport sleeps the game loop. Service Phaser's loader and
+      // renderer while the harness-owned sceneUpdate keeps simulation frozen.
+      b.game.step(performance.now(), 1000 / 60);
+      b.scene.drawScene();
+      return ids.every(id => b.art().loaded.includes(id) && b.scene.biomeBackdrops[id]);
+    }, ids, {timeout: 20000});
+  } catch (error) {
+    const state = await page.evaluate(() => {
+      const s = biomeReview.scene;
+      return {atlases: biomeReview.art().loaded, backdrops: Object.keys(s.biomeBackdrops),
+        group: s.biomeBackdropGroup, pending: s.biomeBackdropPendingGroup, loader: s.load.state,
+        failed: [...s.biomeMidground.stream.failed], distance: s.distance, mode: s.state};
+    });
+    throw new Error('Scenery at ' + distance + ' m: ' + JSON.stringify(state), {cause: error});
+  }
 }
 
 const writeFrame = (file, data) => fs.writeFileSync(file, Buffer.from(data.split(',')[1], 'base64'));
