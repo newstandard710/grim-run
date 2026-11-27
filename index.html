@@ -2108,11 +2108,11 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/lavafall-detail.js?v=1"></script>
   <script src="assets/visuals/snow-tread.js?v=planted1"></script>
   <script src="assets/visuals/downhill-camera.js?v=1"></script>
-  <script src="assets/visuals/surface-dressing.js?v=ccb837e0635b"></script>
+  <script src="assets/visuals/surface-dressing.js?v=ed351d97e79d"></script>
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
-  <script src="assets/visuals/forest-midground.js?v=1fe30a746370"></script>
-  <script src="assets/visuals/biome-midground.js?v=3e2bb2fef32f"></script>
+  <script src="assets/visuals/forest-midground.js?v=8178f98d89c3"></script>
+  <script src="assets/visuals/biome-midground.js?v=ff60e4940e02"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
@@ -2133,15 +2133,15 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=90e0396a68c5"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=landforms-2"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=landforms-1"></script>
-  <script src="assets/visuals/obstacle-mounts.js?v=9ddaddf2c880"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=d2928f84a547"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=vendor-greetings1"></script>
   <script src="assets/visuals/cutscene-motion.js?v=vendor-greetings1"></script>
-  <script src="assets/visuals/power-animations.js?v=0db3a5b4ba7f"></script>
+  <script src="assets/visuals/power-animations.js?v=d3c457c34362"></script>
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=744e38d58317"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=a6d1859f739b"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/reaper-formation.js?v=portal-summit1"></script>
   <script src="assets/visuals/portal-summit.js?v=portal-summit1"></script>
@@ -2489,7 +2489,7 @@ window.GRIM_CONFIG = Object.freeze({
         document.getElementById('start-btn').disabled=true;
       }
       if(new URLSearchParams(scope.location?.search).get('campaign')==='review'){
-        this.campaignReady=import('./assets/campaign/forest.js?v=9384c7dbb840').then(()=>{
+        this.campaignReady=import('./assets/campaign/forest.js?v=c57aca1da9f5').then(()=>{
           this.campaign=new scope.GrimForestCampaign(this);
           this.campaign.openSavedOnLoad();
           return this.campaign;
@@ -2655,7 +2655,7 @@ window.GRIM_CONFIG = Object.freeze({
       p.slideMs=0;p.slideReleaseBufferMs=0;p.attackMs=0;p.attackCooldownMs=0;
       p.invulMs=Math.max(p.invulMs,1400);p.visualLandingMs=0;p.previousAttackMs=0;
       this.distance=(x-this.startX)/C.pxPerMeter;
-      this.speed=Core.runSpeed(this.campaign?.route?Math.min(800,this.distance):this.distance);
+      this.speed=Core.runSpeed(this.distance);
       this.cameraX=x-this.width*C.reaperXRatio;
       this.cameraY=y-this.groundY;
       this.hasTeleported=d>=5000;
@@ -3002,6 +3002,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.rng = Core.makeRng(this.seed);
       this.slideRotation=null;
       const route=this.campaign?.active?this.campaign.prepareRoute(this.seed,200,C.pxPerMeter):null;
+      this.forestRoute=route;
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter,route);
       this.cameraY=0;this.fallFeedbackMs=0;this.respawnMs=0;this.respawnCamera=null;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
       this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;this.shrineClaimed=false;
@@ -3301,7 +3302,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Seven, and only seven, pickups per 666m vendor interval.
       // Special portal interval keeps pickups after portal clear of the midway Soul.
       const interval=C.vendorEveryMeters;
-      for(let k=0;k<=(this.campaign?.route?0:14);k++){
+      for(let k=0;k<=(this.forestRoute?0:14);k++){
         const lower=k*interval,upper=Math.min(C.finishMeters,(k+1)*interval);
         for(let i=0;i<C.goldPerInterval;i++){
           let m=lower+(upper-lower)*(i+1)/8;
@@ -3321,6 +3322,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
     }
+    get vendorCount(){return this.forestRoute?1:14;}
     touchingVendorFloor(number){
       const p=this.player,center=this.startX+number*C.vendorEveryMeters*C.pxPerMeter;
       const half=C.vendorSanctuaryHalfMeters*C.pxPerMeter,floor=this.terrain.groundAt(p.x);
@@ -3549,7 +3551,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     vendorObstacleBlocked(type,x,width){
       const b=this.vendorObstacleBounds(type,x,width);
-      return Core.intersectsVendorCorridor(b.x,b.width,this.startX,C.vendorEveryMeters,C.pxPerMeter,this.campaign?.route?1:14);
+      return Core.intersectsVendorCorridor(b.x,b.width,this.startX,C.vendorEveryMeters,C.pxPerMeter,this.vendorCount);
     }
     populateComboObstacles(){
       // Explicit encounter allocation. Old alternating gap logic sometimes
@@ -3754,7 +3756,7 @@ window.GRIM_CONFIG = Object.freeze({
     spawnAhead(){
       const ahead=this.player.x+Math.max(950,this.width*1.26);
       this.terrain.advance(ahead+700);
-      const route=this.campaign?.route;
+      const route=this.forestRoute;
       while(this.nextEncounterX<ahead){
         if(route){
           const beat=route.encounters.get(this.nextEncounterX);
@@ -3898,7 +3900,7 @@ window.GRIM_CONFIG = Object.freeze({
         }
         this.distance = (p.x-this.startX)/C.pxPerMeter;
         if(this.godMode&&this.distance>=C.finishMeters)this.godModePastFinish=true;
-        this.speed = Core.runSpeed(this.campaign?.route?Math.min(800,this.distance):this.distance);
+        this.speed = Core.runSpeed(this.forestRoute?Math.min(800,this.distance):this.distance);
         p.invulMs = Math.max(0,p.invulMs-frameMs);
         p.fireproofCooldownMs=Math.max(0,p.fireproofCooldownMs-frameMs);
         this.damageFlashMs=Math.max(0,this.damageFlashMs-frameMs);
@@ -3981,11 +3983,11 @@ window.GRIM_CONFIG = Object.freeze({
           if (p.slideMs >= Meta.slideDuration(C.slideMaxMs,this.runLoadout) || (!p.holdSlide && p.slideMs >= C.slideMinMs)) p.sliding=false;
         }
         // The summit shrine precedes the portal and is an irreversible reward boundary.
-        if(!this.campaign?.route&&!this.shrineClaimed&&this.distance>=4900&&!this.hasTeleported){
+        if(!this.forestRoute&&!this.shrineClaimed&&this.distance>=4900&&!this.hasTeleported){
           this.startChest();this.drawScene();return;
         }
         // Portal traversal happens BEFORE hazards and rewards at the 5,000m threshold.
-        if(!this.campaign?.route&&!this.hasTeleported && this.distance>=5000){
+        if(!this.forestRoute&&!this.hasTeleported && this.distance>=5000){
           this.enterUnderworld();this.drawScene();return;
         }
         // Run completion is a separate victory condition, never ordinary death.
@@ -3995,9 +3997,9 @@ window.GRIM_CONFIG = Object.freeze({
         this.snowTread?.step(dt,previousX,snowRun,snowLanding);
         this.surfaceDressing?.step(previousX,snowRun);
         // A real foot contact on the decorated floor owns encounter timing.
-        while(this.nextVendorNumber<=(this.campaign?.route?1:14)&&p.x-14>this.startX+(this.nextVendorNumber*C.vendorEveryMeters+C.vendorSanctuaryHalfMeters)*C.pxPerMeter)
+        while(this.nextVendorNumber<=this.vendorCount&&p.x-14>this.startX+(this.nextVendorNumber*C.vendorEveryMeters+C.vendorSanctuaryHalfMeters)*C.pxPerMeter)
           this.nextVendorNumber++;
-        if(this.nextVendorNumber<=(this.campaign?.route?1:14)&&this.readyForVendor(this.nextVendorNumber)){
+        if(this.nextVendorNumber<=this.vendorCount&&this.readyForVendor(this.nextVendorNumber)){
           this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,
             this.points,this.powerManager.summary());
           const target=this.nextVendorNumber++;
@@ -4072,10 +4074,10 @@ window.GRIM_CONFIG = Object.freeze({
     rushBoundary(){
       // End the surge at a mandatory encounter so normal arrival code owns it.
       let limit=this.terrain.worldEndX;
-      if(this.campaign?.route)limit=this.campaign.entranceX;
+      if(this.forestRoute)limit=this.campaign.entranceX;
       else if(!this.hasTeleported)limit=this.startX+(this.shrineClaimed?5000:4900)*C.pxPerMeter;
       else if(!this.godMode)limit=this.startX+C.finishMeters*C.pxPerMeter;
-      if(this.nextVendorNumber<=(this.campaign?.route?1:14)){
+      if(this.nextVendorNumber<=this.vendorCount){
         const center=this.startX+this.nextVendorNumber*C.vendorEveryMeters*C.pxPerMeter;
         if(center>=this.player.x)limit=Math.min(limit,center);
       }
@@ -4740,7 +4742,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       this.tips=this.tips.filter(t=>t.atX<left-80||t.atX>right);
       this.distance=(p.x-this.startX)/C.pxPerMeter;
-      this.speed=Core.runSpeed(this.campaign?.route?Math.min(800,this.distance):this.distance);
+      this.speed=Core.runSpeed(this.forestRoute?Math.min(800,this.distance):this.distance);
       this.cameraX=p.x-this.width*C.reaperXRatio;
       this.cameraY=p.y-this.groundY;
       this.refreshHud();
@@ -4814,7 +4816,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     prepareCavesBackdrop(){
       const [id,file]=CAVES_BACKDROP,key='biome-'+id;
-      const keep=!this.campaign?.route&&(this.hasTeleported||this.distance>=CAVES_PREFETCH_METERS);
+      const keep=!this.forestRoute&&(this.hasTeleported||this.distance>=CAVES_PREFETCH_METERS);
       if(!keep){
         this.cancelCavesBackdropLoad();
         if(!this.biomeBackdrops[id]&&this.textures.exists(key))this.textures.remove(key);
@@ -4927,7 +4929,7 @@ window.GRIM_CONFIG = Object.freeze({
     updateBiomeBackdrops(){
       if(!this.biomeBackdrops)return;
       const worldArt=scope.GRIM_WORLD_ART;
-      const weights=this.campaign?.route?{forest:1}:worldArt?.biomeWeights?worldArt.biomeWeights(this.distance):{};
+      const weights=this.forestRoute?{forest:1}:worldArt?.biomeWeights?worldArt.biomeWeights(this.distance):{};
       const biomes=worldArt?.WORLD_BIOMES||[];
       const active=biomes.filter(biome=>this.biomeBackdrops[biome.id]&&
         (weights[biome.id]||0)>.003);
@@ -5032,7 +5034,7 @@ window.GRIM_CONFIG = Object.freeze({
       return {tint,opacity:opacity/total};
     }
     snowCoverAt(x){
-      if(this.campaign?.route)return 0;
+      if(this.forestRoute)return 0;
       const meters=(x-(this.startX??200))/C.pxPerMeter;
       if(meters<=SNOW_FADE_START||(this.hasTeleported&&meters>=SNOW_PORTAL))return 0;
       if(meters>=SNOW_PURE_START)return 1;
@@ -5367,7 +5369,7 @@ window.GRIM_CONFIG = Object.freeze({
         return;
       }
       const active=new Set();
-      for(let k=1;k<=(this.campaign?.route?1:14);k++){
+      for(let k=1;k<=this.vendorCount;k++){
         const x=this.startX+k*C.vendorEveryMeters*C.pxPerMeter;
         if(Math.abs(x-this.player.x)>this.width*1.4)continue;
         const devil=k>=8,y=this.terrain.groundAt(x)??this.terrain.anchorAt(x);
@@ -5452,7 +5454,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     terrainBiomeWeights(meters){
-      if(this.campaign?.route)return {forest:1};
+      if(this.forestRoute)return {forest:1};
       const art=scope.GRIM_WORLD_ART;
       if(!art?.biomeWeights)return {forest:1};
       if(!this.hasTeleported&&meters>=5000)return {tundra:1};
@@ -6229,7 +6231,7 @@ window.GRIM_CONFIG = Object.freeze({
       const activeTerrainViews=new Set(),activeSurfaceViews=new Set();
       const activeAbyssViews=new Set(),activeAbyssFogViews=new Set();
       const keepTerrainMaterials=new Set(Object.keys(this.terrainBiomeWeights(this.distance||0)));
-      if(!this.campaign?.route&&!this.hasTeleported&&this.distance>=CAVES_PREFETCH_METERS)keepTerrainMaterials.add('caves');
+      if(!this.forestRoute&&!this.hasTeleported&&this.distance>=CAVES_PREFETCH_METERS)keepTerrainMaterials.add('caves');
       const left=this.cameraX-140,right=this.cameraX+this.width+170;
       // Keep both neighbors available when a wall projects into the view
       // before the underlying bank does.
@@ -6293,7 +6295,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(section.kind==='gap')continue;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
-        const m=this.campaign?.route?0:(section.start+section.end-2*startX)/(2*C.pxPerMeter);
+        const m=this.forestRoute?0:(section.start+section.end-2*startX)/(2*C.pxPerMeter);
         const weights=this.terrainBiomeWeights(m);
         // The snow composite spans the entire section. Interpolating two equal
         // endpoints at the viewport edges can shift its cache key by one ulp.
@@ -6425,7 +6427,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Rare souls glow visibly more than ordinary coins.
     }
     obstacleBiomeFor(o){
-      if(this.campaign?.route)return 'forest';
+      if(this.forestRoute)return 'forest';
       const meters=(o.x-(this.startX??200))/C.pxPerMeter;
       if(meters<900)return 'forest';
       if(meters<2300)return 'foothills';

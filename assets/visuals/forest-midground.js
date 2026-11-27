@@ -82,7 +82,7 @@
     render(sections, project) {
       if (!this.pools[0].length) return;
       const scene = this.scene;
-      const weight = scene.campaign?.route ? 1 : scope.GRIM_WORLD_ART?.biomeWeights?.(scene.distance)?.forest || 0;
+      const weight = scene.forestRoute ? 1 : scope.GRIM_WORLD_ART?.biomeWeights?.(scene.distance)?.forest || 0;
       if (!weight || scene.hasTeleported || !scene.biomeBackdrops?.forest ||
           CONCEALED.has(scene.state) || !Number.isFinite(scene.startX)) {
         this.hide();

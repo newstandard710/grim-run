@@ -195,7 +195,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
     }
     release(){
       this.active=false;this.frozen=false;this.walletDirty=false;this.reconnect=null;
-      this.route=null;this.guardian=null;this.encounter.hide();
+      this.guardian=null;this.encounter.hide();
       this.requiredArt=null;cancelAnimationFrame(this.artWait);
       this.unlock?.();this.unlock=null;
     }
@@ -205,10 +205,9 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       this.release();
     }
     prepareRoute(seed,origin,unit){
-      this.route=this.routeVersion===2?forestRoute(seed,origin,unit):null;
-      return this.route;
+      return this.routeVersion===2?forestRoute(seed,origin,unit):null;
     }
-    get entranceX(){return this.scene.startX+(this.route?.end??LEGACY_END)*scope.GRIM_CONFIG.pxPerMeter;}
+    get entranceX(){return this.scene.startX+(this.scene.forestRoute?.end??LEGACY_END)*scope.GRIM_CONFIG.pxPerMeter;}
     afterFrame(){
       if(!this.active)return;
       const s=this.scene;

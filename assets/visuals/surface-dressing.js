@@ -41,8 +41,8 @@
         if(x<section.start+40||x>section.end-40)continue;
         const m=(x-s.startX)/c.pxPerMeter;
         const vendor=Math.round(m/c.vendorEveryMeters);
-        if(vendor>=1&&vendor<=(s.campaign?.route?1:14)&&Math.abs(m-vendor*c.vendorEveryMeters)<c.vendorSanctuaryHalfMeters+4)continue;
-        if(!s.campaign?.route&&m>=4880&&m<=5030)continue;
+        if(vendor>=1&&vendor<=(s.vendorCount??14)&&Math.abs(m-vendor*c.vendorEveryMeters)<c.vendorSanctuaryHalfMeters+4)continue;
+        if(!s.forestRoute&&m>=4880&&m<=5030)continue;
         const weights=s.terrainBiomeWeights(m);
         let choice=sample(cell,887),id;
         for(const name of BIOMES){

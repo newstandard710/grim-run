@@ -130,6 +130,7 @@ async function transactions(browser){
     await page.locator('#pause-btn').tap();await page.locator('#campaign-save-menu').tap();
     await page.locator('#start-btn').tap();await page.locator('#campaign-secondary').tap();
     assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].campaign.active),false);
+    assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].forestRoute),null);
     assert.equal((await saved(page)).id,retry.id);
   }finally{await ctx.close();}
 }
@@ -466,6 +467,9 @@ async function merchantAndInterruption(browser){
     await defeatGuardian(page);
     page=await reopen(ctx,page);await resume(page);await advance(page,'frames',70);
     assert.equal(await page.locator('#campaign-title').innerText(),'FOREST CLEARED');
+    assert.equal(await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];s.drawScene();return s.biomeBackdrops.forest.visible;
+    }),true,'The clearing stays in Forest after the save is closed');
     assert.equal(await saved(page),null);
     const progress=await page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-campaign-progress-v1')));
     assert.equal(progress.foothillsUnlocked,true);assert.equal(progress.forest.attempt,bought.id);
