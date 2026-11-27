@@ -174,3 +174,19 @@ for fight in (False, True):
         elif bar % 2 == 1:
             cave.note(at + 1.5, color, 1.3, "bow", .066)
     cave.write("caves-brood" if fight else "caves-descent", True)
+
+# Echo the Reaper's descending call between two glass registers. The Sentinel
+# brings the upper voice down against a five-beat ostinato.
+for battle in (False, True):
+    glass = Score(112 if battle else 86, 40)
+    for bar, (root, fifth, color) in enumerate(chords):
+        at = 5 * bar
+        glass.note(at, root - 12, 4.1, "bow", .104)
+        for pos, pitch in [(0, fifth), (1.5, color), (2.5, fifth+12), (4, color)]:
+            glass.note(at+pos, pitch+12, .36, "bell", .092)
+        for pos, pitch, length in phrases[bar]:
+            glass.note(at+pos*1.3, pitch-(12 if battle else 0), length, "reed" if battle else "harp", .14)
+        if battle:
+            for pos in (0, 1, 2.75, 4):
+                glass.note(at+pos, root-5, .3, "drum", .16)
+    glass.write("crystals-sentinel" if battle else "crystals-gallery", True)

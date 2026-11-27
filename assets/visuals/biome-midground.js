@@ -447,7 +447,7 @@
       }
       const arrival = Math.abs(scene.distance - this.practiceArrival) <= PREFETCH_METERS;
       if (!arrival) this.practiceArrival = undefined;
-      const {active, wanted} = planAtlases(scene.forestRoute?.artMeters ?? scene.distance, scene.hasTeleported || scene.forestRoute?.biome === 'caves', arrival);
+      const {active, wanted} = planAtlases(scene.forestRoute?.artMeters ?? scene.distance, scene.hasTeleported || scene.forestRoute?.biome === 'caves' || scene.forestRoute?.biome === 'crystals', arrival);
       // The same call follows a confirmed teleport, before the next simulation
       // step. Replacing the whole priority list cancels obsolete prefetches.
       this.stream.request(wanted);

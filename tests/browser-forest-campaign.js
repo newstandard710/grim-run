@@ -219,7 +219,7 @@ async function touchApproach(page,stopMeters=Infinity){
   }
   let held=null,actedX=null;
   try{
-    for(let count=0;count<550;count++){
+    for(let count=0;count<750;count++){
       const event=await page.evaluate(({held,actedX,stopMeters})=>{
         const s=grimRun.scene.scenes[0],draw=s.drawScene;
         s.drawScene=()=>{};
@@ -227,6 +227,11 @@ async function touchApproach(page,stopMeters=Infinity){
           for(let frame=0;frame<1000;frame++){
             if(s.state!=='playing'||s.campaign.guardian||s.distance>=stopMeters)return {done:true};
             const p=s.player,x=p.x;
+            if(p.prismPhase==='warning'&&p.prismMs>=1010&&!held&&actedX!==p.nextPrism){
+              return {press:p.prismHigh?'slide':'jump',x:p.nextPrism};
+            }
+            if(held==='slide'&&p.prismPhase==='warning'&&actedX===p.nextPrism){s.update(0,1000/60);continue;}
+            if(!held&&p.prismPhase==='open'&&s.gunCooldownMs<=0)return {shoot:true};
             if(!held&&p.wispMs!=null&&s.gunCooldownMs<=0)return {shoot:true};
             if(p.spiderX!=null&&!held&&p.spiderX!==actedX&&p.spiderX-x<100){
               return {press:p.nextSpider%2?'attack':'slide',x:p.spiderX};
@@ -1048,7 +1053,7 @@ async function cavesClear(browser,viewport,seed){
     await advance(page,'frames',76);await page.getByText('CAVES CLEARED',{exact:true}).waitFor();
     assert.equal((await wallet(page)).souls,balance+3);
     await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
-    assert.match(await page.locator('#campaign-detail').innerText(),/Crystals is in development/);
+    assert.match(await page.locator('#campaign-detail').innerText(),/Crystals is unlocked/);
     await page.getByRole('button',{name:'REPLAY CAVES'}).tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
     console.log('Caves touch clear',seed,viewport,'seconds',win.world.elapsed.toFixed(2),
@@ -1094,6 +1099,120 @@ async function cavesClear(browser,viewport,seed){
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 
+async function crystalsClear(browser,viewport,seed){
+  const ctx=await browser.newContext({viewport,hasTouch:true}),portrait=viewport.width<viewport.height;
+  let page=await ctx.newPage();
+  const attempt=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-crystals-attempt-v1')));
+  async function restore(){
+    const before=await attempt();await page.close();page=await ctx.newPage();
+    await boot(page);await openChapters(page);await page.getByRole('button',{name:'RESUME CRYSTALS'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.deepEqual(comparable(await attempt()),comparable(before));await resume(page);
+  }
+  async function route(){
+    await touchApproach(page);await page.locator('#vendor-intro-skip').tap();
+    await page.getByRole('button',{name:'CONTINUE RUN'}).tap();await touchApproach(page);
+  }
+  async function fight(checkResume){
+    for(let i=0;i<3;i++){
+      for(let sweep=0;sweep<(i===2?2:1);sweep++){
+        const b=await untilBossPhase(page,'warning',1020);
+        await holdControl(page,b.high?'slide':'jump',31);
+      }
+      await untilBossPhase(page,'open',140);
+      if(i===0&&checkResume){
+        await restore();
+        await page.locator('#attack-btn').tap();assert.equal((await attempt()).world.guardian.hp,3);
+      }
+      await page.locator('#crossbow-btn').tap();
+      if(i===0&&checkResume){
+        assert.equal((await attempt()).world.bullets.at(-1).kind,'prism');await restore();
+      }
+      await untilBossPhase(page,'broken',440);await page.locator('#attack-btn').tap();
+      await untilBossPhase(page,i===2?'fall':'struck');
+    }
+  }
+  try{
+    url.searchParams.set('seed',String(seed));await boot(page);
+    await page.evaluate(()=>localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify({
+      forest:{cleared:true},foothills:{cleared:true},tundra:{cleared:true},foothillsUnlocked:true,tundraUnlocked:true,cavesUnlocked:true})));
+    await openChapters(page);assert.ok(await page.getByRole('button',{name:'CRYSTALS · LOCKED'}).isDisabled());
+    if(portrait){
+      await page.getByRole('button',{name:'START CAVES'}).tap();await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+      await route();
+      for(let i=0;i<3;i++){
+        const b=await untilBossPhase(page,'silk',990);await holdControl(page,'slide',45);
+        if(b.cycle){await untilBossPhase(page,'rockWarning',880);await holdControl(page,'jump',39);}
+        await untilBossPhase(page,'grounded',190);await page.locator('#attack-btn').tap();
+        await untilBossPhase(page,i===2?'fall':'struck');
+      }
+      await advance(page,'frames',76);await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
+    }else{
+      await page.evaluate(()=>{
+        const r=JSON.parse(localStorage.getItem(GRIM_META.CAMPAIGN_PROGRESS));
+        r.caves={cleared:true,bonusTotal:3};r.crystalsUnlocked=true;
+        localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify(r));
+      });
+      await boot(page);await openChapters(page);
+    }
+    await page.getByRole('button',{name:'START CRYSTALS'}).tap();
+    await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+    await expectScore(page,'gallery');assert.ok(await audibleMusic(page));
+    await touchApproach(page,58);
+    assert.equal((await attempt()).world.player.prismPhase,'warning');await restore();
+    await route();
+    const arrival=await attempt();
+    assert.ok(Object.values(arrival.run.runLoadout.levels).every(n=>!n));assert.equal(arrival.world.player.hp,3);
+    assert.deepEqual(await page.evaluate(()=>{const s=grimRun.scene.scenes[0];
+      return [s.gunUnlocked,s.biomeBackdrops.crystals.visible,s.hasTeleported];}),[true,true,false]);
+    await expectScore(page,'sentinel');assert.ok(await audibleMusic(page));
+    await fight(true);const win=await attempt(),balance=(await wallet(page)).souls;
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=420&&win.world.elapsed<=480,String(win.world.elapsed));
+    await advance(page,'frames',100);await playingStory(page,'ashlands-passage.webm');
+    await page.locator('#forest-story-skip').tap();await page.getByText('CRYSTALS CLEARED',{exact:true}).waitFor();
+    assert.equal((await wallet(page)).souls,balance+3);
+    await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
+    assert.match(await page.locator('#campaign-detail').innerText(),/Ashlands is in development/);
+    await page.getByRole('button',{name:'REPLAY CRYSTALS'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    console.log('Crystals touch clear',viewport,seed,'seconds',win.world.elapsed.toFixed(2),'HP',win.world.player.hp);
+    // Jump too early, withhold the shot, then press Slide after the next beam hits.
+    await advance(page,'meters',53);await holdControl(page,'jump',45);await advance(page,'meters',100);
+    assert.equal((await attempt()).world.player.hp,2);
+    await advance(page,'meters',170);await holdControl(page,'slide',8);assert.equal((await attempt()).world.player.hp,1);
+    await advance(page,'meters',235);await advance(page,'frames',228);
+    assert.equal((await attempt()).mode,'revive');
+    if(portrait){
+      const before=(await wallet(page)).souls,id=(await attempt()).id;
+      await page.locator('#revive-yes-btn').tap();await restore();
+      assert.equal((await wallet(page)).souls,before-3);assert.equal((await attempt()).id,id);
+      await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];
+        for(let frame=0;frame<360&&s.state!=='playing';frame++)s.update(0,1000/60);
+        if(s.state!=='playing')throw Error('Revival stopped in '+s.state);
+      });
+      await route();await fight(false);
+      const beforeReward=(await wallet(page)).souls;
+      await page.evaluate(()=>{
+        const remove=Storage.prototype.removeItem;
+        Storage.prototype.removeItem=function(k){if(k==='grim-run-crystals-attempt-v1')throw Error('interrupted cleanup');return remove.call(this,k);};
+      });
+      await advance(page,'frames',100);await page.getByText('CRYSTALS CLEAR PENDING',{exact:true}).waitFor();
+      await boot(page);await openChapters(page);await page.getByRole('button',{name:'REPLAY CRYSTALS'}).waitFor();
+      assert.equal((await wallet(page)).souls,beforeReward+1);await boot(page);assert.equal((await wallet(page)).souls,beforeReward+1);
+    }else{
+      await page.evaluate(()=>{const m=GRIM_META.load();m.levels.deathDenied=1;m.equipped=['deathDenied'];GRIM_META.save(m);});
+      await page.locator('#revive-no-btn').tap();assert.equal(await attempt(),null);
+      await page.getByRole('button',{name:'RETRY CRYSTALS'}).tap();
+      await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+      const fresh=await attempt();assert.equal(fresh.world.distance,0);
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'prism beam');});
+      await advance(page,'frames',175);assert.ok((await attempt()).run.freeLifeUsed);
+      await restore();assert.equal((await attempt()).id,fresh.id);
+    }
+  }finally{url.searchParams.set('seed','33');await ctx.close();}
+}
+
 (async()=>{
   if(!process.env.GRIM_BASE_URL){
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -1102,6 +1221,11 @@ async function cavesClear(browser,viewport,seed){
   const browser=await chromium.launch({executablePath:process.env.GRIM_CHROME||undefined,
     args:[...(renderer==='canvas'?['--disable-webgl']:[]),'--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
   try{
+    if(process.argv.includes('--crystals')){
+      await crystalsClear(browser,{width:390,height:844},17);
+      await crystalsClear(browser,{width:844,height:390},91);
+      return;
+    }
     if(process.argv.includes('--caves')){
       await cavesClear(browser,{width:390,height:844},17);
       await cavesClear(browser,{width:844,height:390},91);
