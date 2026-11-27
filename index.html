@@ -306,12 +306,21 @@ button {cursor:pointer;}
 }
 </style>
   <link rel="stylesheet" href="assets/ui/v0160/interface.css?v=f6193372dcea">
+  <style>
+    .test-save,.test-rank {font:600 14px var(--body,system-ui);color:#e4dac7;background:#131b22;border:1px solid #907b5a;border-radius:3px;min-height:44px;padding:6px 14px}
+    .test-save {cursor:pointer}
+    .test-save[aria-pressed="true"] {color:#c5f5eb;border-color:#87bdb3;background:#162d31}
+    #home-test-save {position:absolute;right:max(12px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top))}
+    #menu-test-save {margin-top:4px}
+    .test-rank {grid-column:1/-1;width:100%;min-width:0;margin-top:auto}
+  </style>
   <link rel="preload" as="script" href="assets/vendor/phaser-3.90.0/phaser.min.js">
 </head>
 <body>
   <div id="frontispiece" class="frontispiece" aria-hidden="true"><canvas id="canopy-art"></canvas><canvas id="title-art"></canvas><div class="title-mist"></div></div>
   <div id="home-screen" class="home-screen">
     <div class="home-copy"><div class="eyebrow">THE SOULS HAVE ESCAPED</div><div class="game-wordmark" aria-label="Grim Run"><span>GRIM</span><em>RUN</em></div><div class="home-rule" aria-hidden="true">✦</div><p class="home-tagline">Through shadow. Beyond death.</p><button id="home-enter-btn" class="veil-enter">TAP TO CROSS THE VEIL<span>ENTER THE UNDERWORLD</span></button></div>
+    <button id="home-test-save" class="test-save" type="button" aria-pressed="false" disabled>God Mode · Off</button>
     <div class="home-edition">GRIM RUN · v0.19.23</div>
   </div>
   <div id="game" aria-label="Grim Run playable game"></div>
@@ -355,6 +364,7 @@ button {cursor:pointer;}
       <button id="campaign-btn" class="primary">CAMPAIGN</button>
       <button id="start-btn" class="secondary">ENDLESS</button>
       <button id="reliquary-btn" class="secondary">RELIQUARY ✦</button>
+      <div><button id="menu-test-save" class="test-save" type="button" aria-pressed="false" disabled>God Mode · Off</button></div>
       <div class="mini">v0.19.23</div>
       <div class="mini">SOULS BANKED: <span id="banked-souls">0</span></div>
       <div class="instructions">LEFT · Jump &amp; Slide &nbsp; / &nbsp; RIGHT · Cut &amp; Shoot<br>Hold Jump to rise higher. Jump within 0.5s of releasing Slide to tuck.</div>
@@ -816,6 +826,16 @@ window.GRIM_CONFIG = Object.freeze({
   'use strict';
   const KEY='grim-run-v07-meta',LEGACY='grim-run-v05-souls';
   const CAMPAIGN_PROGRESS='grim-run-campaign-progress-v1';
+  // The selected profile belongs to this tab. Reloads keep it and concurrent
+  // tabs can play different profiles without redirecting one another's writes.
+  const profileSetting='grim-run-test-profile';
+  let testSave=false;
+  try{testSave=scope.sessionStorage?.getItem(profileSetting)==='1';}catch{}
+  const saveKey=key=>testSave?'test:'+key:key;
+  function setTestSave(on){
+    testSave=Boolean(on);
+    try{scope.sessionStorage.setItem(profileSetting,testSave?'1':'0');}catch{}
+  }
   const COSTS=Object.freeze([5,10,25]);
   const SLOT_LIMIT=6;
   const DEFINITIONS=Object.freeze([
@@ -867,7 +887,7 @@ window.GRIM_CONFIG = Object.freeze({
   // A wallet written before victory can always catch up, even after a crash.
   function applyChapterBonuses(state){
     let record;
-    try{record=JSON.parse(localStorage.getItem(CAMPAIGN_PROGRESS)||'null');}catch(_){return state;}
+    try{record=JSON.parse(localStorage.getItem(saveKey(CAMPAIGN_PROGRESS))||'null');}catch(_){return state;}
     for(const chapter of ['forest','foothills','tundra','caves','crystals']){
       const earned=record?.[chapter]?.bonusTotal,field=chapter+'BonusBanked';
       if(Number.isSafeInteger(earned)&&earned>state[field]){
@@ -879,14 +899,14 @@ window.GRIM_CONFIG = Object.freeze({
   }
   function load(){
     try{
-      const raw=localStorage.getItem(KEY);
+      const raw=localStorage.getItem(saveKey(KEY));
       if(raw){
         const parsed=JSON.parse(raw);
         if(parsed&&parsed.version===1&&Number.isFinite(Number(parsed.souls)))return applyChapterBonuses(normalize(parsed));
       }
     }catch(_){}
     let legacy=0;
-    try{legacy=localStorage.getItem(LEGACY);}catch(_){}
+    try{legacy=localStorage.getItem(saveKey(LEGACY));}catch(_){}
     return applyChapterBonuses(normalize({souls:legacy}));
   }
   function save(state){
@@ -894,12 +914,12 @@ window.GRIM_CONFIG = Object.freeze({
     // One authoritative JSON save. Mirror old Soul key only after the save succeeds.
     try{
       let recovery;
-      try{recovery=JSON.parse(localStorage.getItem(KEY)||'null')?.forestRecovery;}catch(_){}
+      try{recovery=JSON.parse(localStorage.getItem(saveKey(KEY))||'null')?.forestRecovery;}catch(_){}
       const record=normalize(state);
       if(recovery)record.forestRecovery=recovery;
-      localStorage.setItem(KEY,JSON.stringify(record));
+      localStorage.setItem(saveKey(KEY),JSON.stringify(record));
     }catch(_){return;}
-    try{localStorage.setItem(LEGACY,String(state.souls));}catch(_){}
+    try{localStorage.setItem(saveKey(LEGACY),String(state.souls));}catch(_){}
   }
   function earn(state,amount=1,kind,persist=true){
     // Bank the pickup and its lifetime count in the same save.
@@ -921,6 +941,15 @@ window.GRIM_CONFIG = Object.freeze({
     if(level===0&&state.equipped.length<SLOT_LIMIT)state.equipped.push(id);
     save(state);
     return {ok:true,entry,level:level+1,cost};
+  }
+  function setTestRank(state,id,rank){
+    const entry=DEFINITIONS.find(item=>item.id===id);
+    if(!testSave||!entry||!Number.isInteger(rank)||rank<0||rank>=entry.amounts.length)return false;
+    if(rank===0)state.equipped=state.equipped.filter(selected=>selected!==id);
+    else if(!state.levels[id]&&state.equipped.length<SLOT_LIMIT)state.equipped.push(id);
+    state.levels[id]=rank;
+    save(state);
+    return true;
   }
   function setEquipped(state,id,on){
     if(!DEFINITIONS.some(item=>item.id===id)||!state.levels[id])return false;
@@ -967,7 +996,9 @@ window.GRIM_CONFIG = Object.freeze({
     const percent=DEFINITIONS[2].amounts[boundedInt(state.levels.deathsLeap,0,3)];
     return baseVelocity*Math.sqrt(1+percent/100);
   }
-  scope.GRIM_META={KEY,LEGACY,CAMPAIGN_PROGRESS,COSTS,DEFINITIONS,SLOT_LIMIT,normalize,load,save,earn,spendSouls,purchase,setEquipped,activeLoadout,investedSouls,refundAll,slideDuration,healthBonus,startingGold,jumpVelocity};
+  scope.GRIM_META={get KEY(){return saveKey(KEY);},get LEGACY(){return saveKey(LEGACY);},
+    get CAMPAIGN_PROGRESS(){return saveKey(CAMPAIGN_PROGRESS);},get testSave(){return testSave;},
+    saveKey,setTestSave,setTestRank,COSTS,DEFINITIONS,SLOT_LIMIT,normalize,load,save,earn,spendSouls,purchase,setEquipped,activeLoadout,investedSouls,refundAll,slideDuration,healthBonus,startingGold,jumpVelocity};
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <script>
@@ -1570,6 +1601,15 @@ window.GRIM_CONFIG = Object.freeze({
         });
         button.addEventListener('click',event=>this.requestMenuStart(event,id));
       }
+      for(const id of ['home-test-save','menu-test-save']){
+        const button=el(id);
+        button.disabled=false;
+        button.addEventListener('click',event=>{
+          event.stopPropagation();
+          actions.toggleTestSave();
+        });
+      }
+      this.showTestSave();
       el('campaign-back').addEventListener('click',()=>actions.campaignBack());
       el('reliquary-btn').addEventListener('click', () => actions.openReliquary());
       el('reliquary-back-btn').addEventListener('click', () => actions.closeReliquary());
@@ -1596,7 +1636,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('teleport-confirm-cancel').addEventListener('click',()=>actions.cancelTeleport());
       el('teleport-confirm-yes').addEventListener('click',()=>actions.confirmTeleport());
       document.addEventListener('keydown', event => {
-        if(this.abilitiesLauncher||this.mode==='forestStory')return;
+        if(this.abilitiesLauncher||this.mode==='forestStory'||event.target?.tagName==='SELECT')return;
         const home=!el('home-screen').classList.contains('hidden');
         const menu=!el('menu').classList.contains('hidden');
         const gameOver=!el('game-over').classList.contains('hidden');
@@ -1776,6 +1816,14 @@ window.GRIM_CONFIG = Object.freeze({
     showTimeSlow(on) { show('time-status', on); }
     showFallNotice(on) { show('fall-notice', on); }
     showPortal(on) { show('portal-overlay',on); }
+    showTestSave(){
+      const on=scope.GRIM_META.testSave;
+      for(const id of ['home-test-save','menu-test-save']){
+        const button=el(id);
+        button.setAttribute('aria-pressed',String(on));
+        button.textContent=on?'God Mode · On · Test save':'God Mode · Off';
+      }
+    }
     showGodMode(on) {
       el('god-mode-checkbox').checked=on;
       show('god-mode-status',on);show('god-teleport-panel',on);
@@ -2043,6 +2091,20 @@ window.GRIM_CONFIG = Object.freeze({
           toggle.addEventListener('click',()=>this.actions.setMetaEquipped(item.id,!equipped));
           card.appendChild(toggle);
         }
+        if(window.GRIM_META.testSave){
+          const select=document.createElement('select');
+          select.className='test-rank';select.id='test-rank-'+item.id;
+          select.setAttribute('aria-label',item.name+' test rank');
+          for(let value=0;value<=maxLevel;value++){
+            const option=document.createElement('option');
+            option.value=String(value);option.textContent='Rank '+value+' of '+maxLevel;
+            select.appendChild(option);
+          }
+          select.value=String(level);
+          select.addEventListener('change',()=>this.actions.setTestRank(item.id,Number(select.value)));
+          card.appendChild(select);holder.appendChild(card);
+          continue;
+        }
         const buy=document.createElement('button');buy.type='button';buy.className='meta-buy';
         buy.disabled=level>=maxLevel||meta.souls<nextCost;
         buy.textContent=level>=maxLevel?'FULLY AWAKENED':`UPGRADE · ${nextCost} SOULS`;
@@ -2058,6 +2120,7 @@ window.GRIM_CONFIG = Object.freeze({
         card.appendChild(buy);holder.appendChild(card);
       }
       const invested=window.GRIM_META.investedSouls(meta);
+      show('reliquary-reset-btn',!window.GRIM_META.testSave);
       el('reliquary-reset-btn').disabled=!(invested>0&&meta.souls>=1);
       el('reliquary-reset-btn').title=invested===0?'No upgrades to refund':
         meta.souls<1?'Requires 1 unspent Soul':'Refund '+invested+' Souls; fee 1 Soul';
@@ -2476,6 +2539,8 @@ window.GRIM_CONFIG = Object.freeze({
         askTeleport:value=>this.askTeleport(value),
         cancelTeleport:()=>this.cancelTeleport(),
         confirmTeleport:()=>this.confirmTeleport(),
+        toggleTestSave: () => this.toggleTestSave(),
+        setTestRank: (id,rank) => this.setTestRank(id,rank),
         openReliquary: () => this.openReliquary(),
         closeReliquary: () => this.closeReliquary(),
         purchaseMeta: id => this.purchaseMeta(id),
@@ -2581,7 +2646,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=4b522b455de5');
+        await import('./assets/campaign/forest.js?v=6d7b730d3eb4');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -2594,6 +2659,20 @@ window.GRIM_CONFIG = Object.freeze({
     closeCampaignMenu(){
       this.goToMenu();
       document.getElementById('campaign-btn').focus({preventScroll:true});
+    }
+    toggleTestSave(){
+      if(this.state!=='home'&&this.state!=='menu')return;
+      Meta.setTestSave(!Meta.testSave);
+      this.meta=Meta.load();
+      this.totalSouls=this.meta.souls;
+      if(this.campaign)this.campaign.openingSeen=false;
+      document.getElementById('banked-souls').textContent=String(this.totalSouls);
+      this.ui.showTestSave();
+    }
+    setTestRank(id,rank){
+      if(this.state!=='reliquary'||!Meta.setTestRank(this.meta,id,rank))return;
+      this.ui.updateReliquary(this.meta);
+      document.getElementById('test-rank-'+id).focus({preventScroll:true});
     }
     openReliquary(){
       if(this.state!=='menu')return;
@@ -4775,7 +4854,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.hideCountdown();this.ui.showTimeSlow(false);this.ui.showFallNotice(false);
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       let best=false;
-      try{const key='grim-run-v03-best';const old=Number(localStorage.getItem(key)||0);
+      try{const key=Meta.saveKey('grim-run-v03-best');const old=Number(localStorage.getItem(key)||0);
         if(!this.teleportUsed&&!this.godModePastFinish&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}}
       catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,`${this.coinCount} / ${this.goldCollected}`,this.points,best,this.powerManager.summary(),true);
@@ -4867,7 +4946,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.points=Core.score(this.distance,this.soulCount,C.soulScore,this.goldCollected,C.coinScore);
       let best=false;
       try{
-        const key='grim-run-v03-best',old=Number(localStorage.getItem(key)||0);
+        const key=Meta.saveKey('grim-run-v03-best'),old=Number(localStorage.getItem(key)||0);
         if(!forest&&!this.teleportUsed&&!this.godModePastFinish&&this.points>old){localStorage.setItem(key,String(this.points));best=true;}
       }catch(_){}
       this.ui.gameOver(this.distance,this.soulCount,

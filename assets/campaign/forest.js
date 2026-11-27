@@ -9,14 +9,16 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
 
 (function(scope){
   'use strict';
-  const KEY='grim-run-forest-attempt-v1', LEGACY_END=900;
-  const slot=chapter=>'grim-run-'+chapter+'-attempt-v1';
+  const LEGACY_END=900;
+  const meta=()=>scope.GRIM_META;
+  const slot=chapter=>meta().saveKey('grim-run-'+chapter+'-attempt-v1');
   const title=chapter=>chapter[0].toUpperCase()+chapter.slice(1);
   const nextChapter={forest:'foothills',foothills:'tundra',tundra:'caves',caves:'crystals',crystals:'ashlands'};
   const tracks={forest:['walk','guardian'],foothills:['climb','pursuit'],tundra:['crossing','crown'],caves:['descent','brood'],crystals:['gallery','sentinel']};
-  const PROGRESS=scope.GRIM_META.CAMPAIGN_PROGRESS;
-  const OPENING_SEEN='grim-run-forest-opening-seen-v1';
-  const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
+  const openingKey=chapter=>meta().saveKey(chapter==='forest'?'grim-run-forest-opening-seen-v1':'grim-run-'+chapter+'-intro-seen');
+  const canEnter=(chapter,record)=>Object.hasOwn(nextChapter,chapter)&&(meta().testSave||chapter==='forest'||
+    record[chapter+'Unlocked']||Object.keys(nextChapter).some(previous=>nextChapter[previous]===chapter&&record[previous]?.cleared));
+  const progress=()=>JSON.parse(localStorage.getItem(meta().CAMPAIGN_PROGRESS)||'{}');
   const MODES=new Set(['playing','countdown','dying','revive','respawning','vendorIntro','upgrade','rewinding']);
   const fields=[
     'runLoadout','soulCount','runSoulsAvailable','freeLifeAvailable','freeLifeUsed','reviveUsed',
@@ -30,7 +32,6 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
   const artAssets=['forwardReady','airReady','airCutReady','cutHandoffReady','cutWeaponReady'];
   const el=id=>document.getElementById(id);
   const visible=(id,on)=>el(id).classList.toggle('hidden',!on);
-  const meta=()=>scope.GRIM_META;
 
   // The wallet and the exact frame containing its pickup/debit are committed in
   // one atomic write. Fold the frame into its ordinary slot before clearing the
@@ -179,19 +180,19 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
     }
     chapters(){
       try{
-        const record=progress(),cleared=Boolean(record.forest?.cleared||record.foothillsUnlocked);
+        const record=progress(),foothills=canEnter('foothills',record);
         const savedLabel=(chapter,fresh,replay)=>{
           try{return readAttempt(chapter)?'RESUME '+title(chapter).toUpperCase():record[chapter]?.cleared?replay:fresh;}
           catch{return 'OPEN '+title(chapter).toUpperCase()+' SAVE';}
         };
         const forest=savedLabel('forest','START FOREST','REPLAY FOREST');
-        const tundra=Boolean(record.tundraUnlocked||record.foothills?.cleared);
-        const caves=Boolean(record.cavesUnlocked||record.tundra?.cleared);
-        const crystals=Boolean(record.crystalsUnlocked||record.caves?.cleared);
-        const detail=record.ashlandsUnlocked?'Crystals cleared. Ashlands is in development.':crystals?'Caves cleared. Crystals is unlocked. Follow the light.':caves?'Tundra cleared. Caves is unlocked. Follow the silk underground.':tundra?'Foothills cleared. Tundra is unlocked. Cross the ice field.':
-          cleared?'Forest cleared. Foothills is unlocked. Follow the Souls up the ridge.':'A guardian keeps watch at the edge of the woods.';
+        const tundra=canEnter('tundra',record);
+        const caves=canEnter('caves',record);
+        const crystals=canEnter('crystals',record);
+        const detail=meta().testSave?'Test save · Choose any playable chapter.':record.ashlandsUnlocked?'Crystals cleared. Ashlands is in development.':crystals?'Caves cleared. Crystals is unlocked. Follow the light.':caves?'Tundra cleared. Caves is unlocked. Follow the silk underground.':tundra?'Foothills cleared. Tundra is unlocked. Cross the ice field.':
+          foothills?'Forest cleared. Foothills is unlocked. Follow the Souls up the ridge.':'A guardian keeps watch at the edge of the woods.';
         this.screen('CAMPAIGN',detail,[forest,()=>this.enter('forest')],
-          cleared?[savedLabel('foothills','START FOOTHILLS','REPLAY FOOTHILLS'),()=>this.enter('foothills')]:
+          foothills?[savedLabel('foothills','START FOOTHILLS','REPLAY FOOTHILLS'),()=>this.enter('foothills')]:
             ['FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
         visible('campaign-crystals',caves||crystals);
         el('campaign-crystals').disabled=!crystals;
@@ -199,10 +200,10 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
         visible('campaign-caves',tundra||caves);
         el('campaign-caves').disabled=!caves;
         el('campaign-caves').textContent=caves?savedLabel('caves','START CAVES','REPLAY CAVES'):'CAVES · LOCKED';
-        visible('campaign-tundra',cleared);
+        visible('campaign-tundra',foothills);
         el('campaign-tundra').disabled=!tundra;
         el('campaign-tundra').textContent=tundra?savedLabel('tundra','START TUNDRA','REPLAY TUNDRA'):'TUNDRA · LOCKED';
-        visible('campaign-story-replay',Boolean(forest==='RESUME FOREST'||cleared||this.openingSeen||localStorage.getItem(OPENING_SEEN)==='1'));
+        visible('campaign-story-replay',Boolean(forest==='RESUME FOREST'||record.forest?.cleared||record.foothillsUnlocked||this.openingSeen||localStorage.getItem(openingKey('forest'))==='1'));
       }catch(e){this.unreadable(e);}
     }
     unreadable(error){
@@ -214,7 +215,7 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
       this.screen('DISCARD THIS ATTEMPT?','Your next '+title(this.chapter)+' attempt will start at the beginning.',
         ['KEEP SAVE',()=>this.chapters()],['DISCARD ATTEMPT',async()=>{
           try{
-            await navigator.locks.request(KEY,{ifAvailable:true},lock=>{
+            await navigator.locks.request(slot('forest'),{ifAvailable:true},lock=>{
               if(!lock)throw Error('Another tab has this attempt open.');
               recoverWallet();this.endAttempt();this.chapters();
             });
@@ -231,16 +232,13 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
     }
     async enter(chapter=this.chapter){
       if(this.busy||this.active)return;
-      if(chapter==='foothills'&&!progress().foothillsUnlocked&&!progress().forest?.cleared)return;
-      if(chapter==='crystals'&&!progress().crystalsUnlocked&&!progress().caves?.cleared)return;
-      if(chapter==='caves'&&!progress().cavesUnlocked&&!progress().tundra?.cleared)return;
-      if(chapter==='tundra'&&!progress().tundraUnlocked&&!progress().foothills?.cleared)return;
+      if(!canEnter(chapter,progress()))return;
       this.chapter=chapter;this.encounter=this.encounters[chapter];
       const name=title(chapter),label=name.toUpperCase();
       this.busy=true;
       try{
         if(!navigator.locks)throw Error('Exclusive save access is unavailable.');
-        await navigator.locks.request(KEY,{ifAvailable:true},async lock=>{
+        await navigator.locks.request(slot('forest'),{ifAvailable:true},async lock=>{
           if(!lock){
             this.screen(label+' IS OPEN','Return to the tab with the active Campaign attempt.',
               ['TRY AGAIN',()=>this.enter()],['MAIN MENU',()=>this.scene.goToMenu()]);
@@ -266,11 +264,11 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
             document.querySelector('.god-mode-desc').classList.add('hidden');
             if(d){this.openingSeen=true;this.restore(d);this.pause();}
             else if(this.save()){
-              if(['tundra','caves','crystals'].includes(chapter)&&!localStorage.getItem('grim-run-'+chapter+'-intro-seen'))this.chapterOpening();
-              if(chapter==='forest'&&!this.openingSeen&&!progress().forest&&localStorage.getItem(OPENING_SEEN)!=='1'){
+              if(['tundra','caves','crystals'].includes(chapter)&&!localStorage.getItem(openingKey(chapter)))this.chapterOpening();
+              if(chapter==='forest'&&!this.openingSeen&&!progress().forest&&localStorage.getItem(openingKey('forest'))!=='1'){
                 this.openingSeen=true;
                 // The attempt is durable at the starting frame before the first image.
-                try{localStorage.setItem(OPENING_SEEN,'1');}catch{}
+                try{localStorage.setItem(openingKey('forest'),'1');}catch{}
                 this.frozen=true;this.resumeMode=s.state;
                 this.playStory(false,()=>{
                   this.frozen=false;s.state=this.resumeMode;s.ui.setMode(s.state);
@@ -287,7 +285,7 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
     chapterOpening(){
       const s=this.scene;
       const crystals=this.chapter==='crystals',caves=this.chapter==='caves',sceneArt=crystals?'prism':caves?'silk':'crossbow';
-      localStorage.setItem('grim-run-'+this.chapter+'-intro-seen','1');
+      localStorage.setItem(openingKey(this.chapter),'1');
       this.resumeMode=s.state;this.frozen=true;
       const finish=()=>{
         if(this.finishStory!==finish)return;
@@ -340,7 +338,7 @@ import {forestRoute} from './route.js?v=c1f0f615f18d';
           bonus=prior?1:3;
           record[chapter]={...record[chapter],cleared:true,attempt:this.id,bonus,bonusTotal:prior+bonus};
           record[nextChapter[chapter]+'Unlocked']=true;
-          localStorage.setItem(PROGRESS,JSON.stringify(record));
+          localStorage.setItem(meta().CAMPAIGN_PROGRESS,JSON.stringify(record));
         }else bonus=record[chapter].bonus;
         // The wallet can derive its balance from the committed chapter record
         // even if the tab closes before the wallet mirror or cleanup finishes.

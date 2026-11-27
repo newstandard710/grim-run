@@ -1213,6 +1213,118 @@ async function crystalsClear(browser,viewport,seed){
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 
+async function publicGodMode(browser,viewport){
+  const context=await browser.newContext({viewport,hasTouch:true,ignoreHTTPSErrors:Boolean(process.env.GRIM_BASE_URL)});
+  try{
+    const page=await context.newPage();
+    const errors=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    const tap=id=>page.locator('#'+id).tap();
+    const normalRecords=()=>page.evaluate(()=>Object.fromEntries(Object.entries(localStorage)
+      .filter(([name])=>name.startsWith('grim-run-'))));
+    const playing=()=>page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    async function leaveChapter(){
+      await tap('pause-btn');
+      await tap('campaign-save-menu');
+    }
+    await boot(page);
+    await page.evaluate(()=>{
+      GRIM_META.save(GRIM_META.normalize({souls:11,levels:{boneheart:1}}));
+      localStorage.setItem('grim-run-v03-best','320');
+    });
+    const home=page.locator('#home-test-save');
+    assert.equal(await home.getAttribute('aria-pressed'),'false');
+    await tap('home-enter-btn');
+    await tap('campaign-btn');
+    await page.getByRole('button',{name:'START FOREST'}).tap();
+    await playing();
+    await advance(page,'frames',15);
+    await leaveChapter();
+    const before=await normalRecords();
+    const original=JSON.parse(before[key]);
+
+    await page.reload();
+    await home.tap();
+    assert.equal(await home.getAttribute('aria-pressed'),'true');
+    assert.equal(await page.locator('#home-screen').isVisible(),true);
+    await tap('home-enter-btn');
+    await tap('reliquary-btn');
+    const ranks=page.locator('.test-rank');
+    assert.equal(await ranks.count(),7);
+    assert(await ranks.evaluateAll(nodes=>nodes.every(node=>{
+      const control=node.getBoundingClientRect(),card=node.parentElement.getBoundingClientRect();
+      return control.width>=card.width*0.75&&control.left>=card.left&&control.right<=card.right;
+    })),'The rank picker spans its card at phone size');
+    const ids=await ranks.evaluateAll(nodes=>nodes.map(node=>node.id));
+    for(const id of ids){
+      const select=page.locator('#'+id);
+      await select.selectOption({index:(await select.locator('option').count())-1});
+    }
+    assert.equal(await page.getByRole('button',{name:'Equip SOUL REACH',exact:true}).isDisabled(),true);
+    await page.locator('#test-rank-deathsLeap').selectOption('0');
+    await tap('equip-soulReach');
+    await page.locator('#test-rank-boneheart').selectOption('2');
+    await page.locator('#test-rank-graveWealth').selectOption('1');
+    assert.equal((await wallet(page)).souls,0);
+    await tap('reliquary-back-btn');
+
+    for(const chapter of ['forest','foothills','tundra','caves','crystals']){
+      await tap('campaign-btn');
+      await page.getByRole('button',{name:'START '+chapter.toUpperCase(),exact:true}).tap();
+      await playing();
+      await page.evaluate(()=>{grimRun.scene.scenes[0].sys.sceneUpdate=()=>{};});
+      const result=await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];
+        const stats=[s.player.maxHp,s.coinCount,s.freeLifeAvailable,s.runLoadout.levels.soulReach,s.godMode];
+        s.takeDamage(1,'rock');
+        return [s.campaign.chapter,stats,s.player.hp];
+      });
+      assert.deepEqual(result,[chapter,[5,2,true,1,false],4]);
+      await tap('jump-btn');
+      if(chapter==='crystals'){
+        // Exercise the ordinary clear transaction in the test profile.
+        await page.evaluate(()=>{
+          const s=grimRun.scene.scenes[0];
+          s.campaign.encounter.enter();
+          s.campaign.guardian.phase='cleared';
+          s.campaign.afterFrame();
+        });
+        await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
+        assert.equal((await wallet(page)).souls,3);
+        await tap('campaign-back');
+      }else await leaveChapter();
+    }
+    assert.deepEqual(await normalRecords(),before);
+    await page.reload();
+    await home.waitFor();
+    await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.state==='home');
+    assert.equal(await home.getAttribute('aria-pressed'),'true');
+    await tap('home-enter-btn');
+    await tap('campaign-btn');
+    await page.getByRole('button',{name:'RESUME CAVES'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].player.hp),4);
+    await tap('campaign-save-menu');
+    await tap('menu-test-save');
+    assert.deepEqual(await normalRecords(),before);
+    await tap('reliquary-btn');
+    assert.equal(await ranks.count(),0);
+    const restored=await wallet(page);
+    assert.equal(restored.levels.boneheart,1);
+    assert.equal(restored.souls,11);
+    await tap('reliquary-back-btn');
+    await tap('campaign-btn');
+    assert.equal(await page.locator('#campaign-secondary').isDisabled(),true);
+    await page.getByRole('button',{name:'RESUME FOREST'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.deepEqual(await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];return [s.campaign.id,s.distance,s.player.hp,s.player.maxHp];
+    }),[original.id,original.world.distance,original.world.player.hp,4]);
+    assert.deepEqual(errors,[]);
+    console.log('Public God Mode: five chapter starts, seven free ranks, loadout, damage, first clear, reload and normal resume passed.',viewport);
+  }finally{await context.close();}
+}
+
 (async()=>{
   if(!process.env.GRIM_BASE_URL){
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -1221,6 +1333,11 @@ async function crystalsClear(browser,viewport,seed){
   const browser=await chromium.launch({executablePath:process.env.GRIM_CHROME||undefined,
     args:[...(renderer==='canvas'?['--disable-webgl']:[]),'--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
   try{
+    if(process.argv.includes('--public-god-mode')){
+      url.search='';
+      for(const viewport of [{width:390,height:844},{width:844,height:390}])await publicGodMode(browser,viewport);
+      return;
+    }
     if(process.argv.includes('--crystals')){
       await crystalsClear(browser,{width:390,height:844},17);
       await crystalsClear(browser,{width:844,height:390},91);
