@@ -1251,6 +1251,10 @@ async function publicGodMode(browser,viewport){
     await tap('reliquary-btn');
     const ranks=page.locator('.test-rank');
     assert.equal(await ranks.count(),7);
+    assert(await ranks.evaluateAll(nodes=>nodes.every(node=>{
+      const control=node.getBoundingClientRect(),card=node.parentElement.getBoundingClientRect();
+      return control.width>=card.width*0.75&&control.left>=card.left&&control.right<=card.right;
+    })),'The rank picker spans its card at phone size');
     const ids=await ranks.evaluateAll(nodes=>nodes.map(node=>node.id));
     for(const id of ids){
       const select=page.locator('#'+id);

@@ -312,7 +312,7 @@ button {cursor:pointer;}
     .test-save[aria-pressed="true"] {color:#c5f5eb;border-color:#87bdb3;background:#162d31}
     #home-test-save {position:absolute;right:max(12px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top))}
     #menu-test-save {margin-top:4px}
-    .test-rank {width:100%;margin-top:auto}
+    .test-rank {grid-column:1/-1;width:100%;min-width:0;margin-top:auto}
   </style>
   <link rel="preload" as="script" href="assets/vendor/phaser-3.90.0/phaser.min.js">
 </head>
@@ -2097,7 +2097,7 @@ window.GRIM_CONFIG = Object.freeze({
           select.setAttribute('aria-label',item.name+' test rank');
           for(let value=0;value<=maxLevel;value++){
             const option=document.createElement('option');
-            option.value=String(value);option.textContent='Rank '+value+' · '+this.reliquaryEffect(item,value);
+            option.value=String(value);option.textContent='Rank '+value+' of '+maxLevel;
             select.appendChild(option);
           }
           select.value=String(level);
