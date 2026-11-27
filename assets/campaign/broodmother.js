@@ -7,7 +7,7 @@ const silk=0xefe4da, amber=0xffc582;
 function body(x,y,w,h){return {x:x-w/2,y:y-h/2,width:w,height:h};}
 
 // Jointed legs and the split dorsal stripe from the Caves Spider study.
-function paintSpider(g,x,y,size,fold,time,queen,exposed){
+function paintSpider(g,x,y,size,fold,time,queen,exposed,painted){
   g.save().translateCanvas(x,y).scaleCanvas(size,size);
   for(const side of [-1,1])for(let leg=0;leg<4;leg++){
     const stride=Math.sin(time*.012+leg*1.7+side)*1.8*(1-fold);
@@ -18,6 +18,7 @@ function paintSpider(g,x,y,size,fold,time,queen,exposed){
     g.lineStyle(1.5,0xba9c90,1).lineBetween(side*8,leg-3,knee,kneeY-1);
     g.lineStyle(1.1,0x94818b,1).lineBetween(knee,kneeY-1,ankle,ankleY);
   }
+  if(painted){g.restore();return;}
   g.fillStyle(0x221b29).fillEllipse(1,-4,35,27);
   g.fillStyle(queen?0x79576b:0x675764).fillEllipse(0,-6,30,20);
   g.fillStyle(0x473440).fillEllipse(1,-4,25,16);
@@ -38,6 +39,19 @@ function paintSpider(g,x,y,size,fold,time,queen,exposed){
 
 export class Broodmother {
   constructor(campaign){this.campaign=campaign;this.scene=campaign.scene;}
+  prepare(){
+    const s=this.scene,key='caves-broodmother';
+    if(this.loading||s.textures.exists(key))return;
+    const image=new Image();this.loading=true;
+    image.onload=()=>{
+      this.loading=false;
+      if(!s.sys.isActive()||s.textures.exists(key))return;
+      const atlas=s.textures.addImage(key,image);
+      atlas.add('closed',0,0,0,256,256);atlas.add('open',0,256,0,256,256);
+    };
+    image.onerror=()=>{this.loading=false;};
+    image.src=new URL('./broodmother.webp',import.meta.url).href;
+  }
   crossing(dt){
     const s=this.scene,p=s.player,markers=s.forestRoute.spiders;
     const index=p.nextSpider??0,x=markers[index];
@@ -140,7 +154,7 @@ export class Broodmother {
     }
     if(b.phase==='grounded')window.GRIM_ACTION_AUDIO?.play('knot');
   }
-  hide(){this.ink?.setVisible(false);this.label?.setVisible(false);}
+  hide(){this.shell?.setVisible(false);this.ink?.setVisible(false);this.label?.setVisible(false);}
   render(){
     const s=this.scene,p=s.player,b=this.campaign.guardian;
     if(!this.campaign.active||(!b&&p.spiderX==null)){this.hide();return;}
@@ -163,7 +177,13 @@ export class Broodmother {
       g.lineStyle(1.5,silk,.78).lineBetween(visibleX-12,floor-4,visibleX+12,floor-4);
     }
     g.setAlpha(b?.phase==='fall'?1-clamp(b.ms/phaseMs.fall):1);
-    paintSpider(g,pos.x,pos.y,b?2.15:1,b?.phase==='silk'?.8:!b?1-smooth(t/620):0,t,Boolean(b),b?.phase==='grounded');
+    const exposed=b?.phase==='grounded',painted=Boolean(b&&s.textures.exists('caves-broodmother'));
+    if(painted){
+      if(!this.shell)this.shell=s.add.image(0,0,'caves-broodmother','closed').setDepth(7.85);
+      this.shell.setFrame(exposed?'open':'closed').setPosition(pos.x,pos.y)
+        .setDisplaySize(147,147).setVisible(true).setAlpha(g.alpha);
+    }else this.shell?.setVisible(false);
+    paintSpider(g,pos.x,pos.y,b?2.15:1,b?.phase==='silk'?.8:!b?1-smooth(t/620):0,t,Boolean(b),exposed,painted);
     if(b?.phase==='rockWarning'||b?.phase==='rock'){
       const a=b.phase==='rock'?this.rock():{x:b.standX+Math.min(182,s.width*.40),y:floor-14};
       g.fillStyle(0x574a63).fillTriangle(a.x-20,a.y+12,a.x-5,a.y-19,a.x+18,a.y+7);
@@ -172,7 +192,9 @@ export class Broodmother {
     }
     const cue=b?({arrival:'THE BROODMOTHER',silk:'SILK ABOVE · SLIDE',rockWarning:'FALLING STONE · JUMP',
       grounded:'EXPOSED · CUT OR SHOOT'}[b.phase]||''):'SILK · CUT OR SLIDE';
-    const lx=Math.min(right-88,Math.max(s.cameraX+90,visibleX)),ly=Math.max(top+92,Math.min(pos.y-35,floor-145));
+    const lx=Math.min(right-88,Math.max(s.cameraX+90,visibleX));
+    let ly=Math.max(top+92,Math.min(pos.y-(b?53:35),floor-145));
+    if(s.height>s.width&&Math.abs(ly-(top+s.height*.5))<32)ly=top+s.height*.5-35;
     this.label.setText(cue).setPosition(lx,ly).setVisible(Boolean(cue));
     if(b)for(let i=0;i<3;i++)g.fillStyle(i<b.hp?amber:0x4c3c51).fillRoundedRect(lx-23+i*16,ly+2,12,4,2);
   }

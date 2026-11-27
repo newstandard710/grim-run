@@ -1,4 +1,4 @@
-import {Broodmother} from './broodmother.js?v=aaf12e930a1c';
+import {Broodmother} from './broodmother.js?v=e635a13845b5';
 import {FrostCrown} from './frost-crown.js?v=ae5176d81a91';
 import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
 import {ForestScore} from '../audio/forest-score.js?v=72f72eafc2a8';

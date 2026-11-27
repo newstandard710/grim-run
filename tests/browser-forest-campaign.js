@@ -984,12 +984,12 @@ async function cavesClear(browser,viewport,seed){
   }
   async function fight(reload){
     for(let round=0;round<3;round++){
-      await untilBossPhase(page,'silk',990);await holdControl(page,'slide',45);
-      if(round){
+      const attack=await untilBossPhase(page,'silk',990);await holdControl(page,'slide',45);
+      if(attack.cycle){
         await untilBossPhase(page,'rockWarning',880);await holdControl(page,'jump',39);
       }
       await untilBossPhase(page,'grounded',190);
-      if(round===1){
+      if(round===1&&portrait){
         await page.locator('#crossbow-btn').tap();
         if(reload){
           assert.equal((await attempt()).world.bullets.at(-1).kind,'brood');await restore();
@@ -1039,6 +1039,7 @@ async function cavesClear(browser,viewport,seed){
     assert.deepEqual(await page.evaluate(()=>{
       const s=grimRun.scene.scenes[0];return [s.gunUnlocked,s.biomeBackdrops.caves.visible,s.hasTeleported];
     }),[true,true,false]);
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].campaign.encounter.shell?.visible);
     await expectScore(page,'brood');assert.ok(await audibleMusic(page));
     await untilBossPhase(page,'silk',100);await restore();
     await fight(true);
@@ -1062,14 +1063,24 @@ async function cavesClear(browser,viewport,seed){
       const before=(await wallet(page)).souls,id=(await attempt()).id;
       await page.locator('#revive-yes-btn').tap();await restore();
       assert.equal((await wallet(page)).souls,before-3);assert.equal((await attempt()).id,id);
-      await advance(page,'frames',300);await approach();await fight(false);
+      await advance(page,'frames',300);await approach();
+      const bossHP=(await attempt()).world.player.hp;
+      await untilBossPhase(page,'silk',140);await page.locator('#crossbow-btn').tap();
+      await untilBossPhase(page,'grounded',110); // Miss the warning and let the drop land.
+      const missed=await attempt();assert.equal(missed.world.player.hp,bossHP-1);
+      assert.equal(missed.world.guardian.hp,3);
+      await untilBossPhase(page,'recover',180);await page.locator('#attack-btn').tap();
+      assert.equal((await attempt()).world.guardian.hp,3);
+      await fight(false);
+      const beforeReward=(await wallet(page)).souls;
       await page.evaluate(()=>{
         const remove=Storage.prototype.removeItem;
         Storage.prototype.removeItem=function(k){if(k==='grim-run-caves-attempt-v1')throw Error('interrupted cleanup');return remove.call(this,k);};
       });
       await advance(page,'frames',76);await page.getByText('CAVES CLEAR PENDING',{exact:true}).waitFor();
       await boot(page);await openChapters(page);await page.getByRole('button',{name:'REPLAY CAVES'}).waitFor();
-      assert.equal((await wallet(page)).souls,before-3+1);
+      assert.equal((await wallet(page)).souls,beforeReward+1);
+      await boot(page);assert.equal((await wallet(page)).souls,beforeReward+1);
     }else{
       await page.evaluate(()=>{const m=GRIM_META.load();m.levels.deathDenied=1;m.equipped=['deathDenied'];GRIM_META.save(m);});
       await page.locator('#revive-no-btn').tap();assert.equal(await attempt(),null);
