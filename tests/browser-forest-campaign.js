@@ -492,7 +492,13 @@ async function originalAttempt(browser){
         forest:{cleared:true,attempt:'earlier-unrewarded-clear'},foothillsUnlocked:true
       }));
     },{old,key});
-    await boot(page);await restoreForest(page);
+    await boot(page);await openChapters(page);
+    await page.getByRole('button',{name:'WATCH FOREST OPENING'}).tap();
+    await playingStory(page,'passage-sealed.webm');
+    await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+    assert.deepEqual(await saved(page),old);
+    await page.getByRole('button',{name:'RESUME FOREST'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
     assert.equal((await saved(page)).world.distance,old.world.distance);
     await resume(page);await runForest(page);
     const arrival=await saved(page);

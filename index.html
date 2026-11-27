@@ -362,6 +362,7 @@ button {cursor:pointer;}
       <p id="campaign-detail" role="status"></p>
       <button id="campaign-primary" class="primary"></button>
       <button id="campaign-secondary" class="secondary"></button>
+      <button id="campaign-story-replay" class="secondary hidden">WATCH FOREST OPENING</button>
       <button id="campaign-back" class="secondary">BACK</button>
     </div>
   </div>
@@ -2557,7 +2558,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=a8fe60ed1d51');
+        await import('./assets/campaign/forest.js?v=99f5593cc33b');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');

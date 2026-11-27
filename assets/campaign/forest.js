@@ -75,6 +75,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         this.release();
         scene.goToMenu();
       });
+      listen(el('campaign-story-replay'),'click',()=>this.playStory(false,()=>this.chapters()));
       listen(el('forest-story-skip'),'click',()=>this.finishStory?.());
       const suspend=()=>{
         this.finishStory?.();
@@ -152,6 +153,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       const s=this.scene;
       s.state='campaignMenu';s.ui.setMode('campaignMenu');
       el('campaign-title').textContent=title;el('campaign-detail').textContent=detail;
+      visible('campaign-story-replay',false);
       this.actions=[primary[1],secondary?.[1]];
       this.back=back;
       el('campaign-primary').textContent=primary[0];
@@ -167,6 +169,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         this.screen('CAMPAIGN',cleared?'Forest cleared. Foothills is unlocked and in development.':'A guardian keeps watch at the edge of the woods.',
           [d?'RESUME FOREST':cleared?'REPLAY FOREST':'START FOREST',()=>this.enter()],
           [cleared?'FOOTHILLS · COMING SOON':'FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
+        visible('campaign-story-replay',Boolean(d||cleared||this.openingSeen||localStorage.getItem(OPENING_SEEN)==='1'));
       }catch(e){this.unreadable(e);}
     }
     unreadable(error){
