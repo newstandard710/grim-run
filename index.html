@@ -786,6 +786,7 @@ window.GRIM_CONFIG = Object.freeze({
 (function(scope){
   'use strict';
   const KEY='grim-run-v07-meta',LEGACY='grim-run-v05-souls';
+  const CAMPAIGN_PROGRESS='grim-run-campaign-progress-v1';
   const COSTS=Object.freeze([5,10,25]);
   const SLOT_LIMIT=6;
   const DEFINITIONS=Object.freeze([
@@ -825,29 +826,43 @@ window.GRIM_CONFIG = Object.freeze({
     const owned=DEFINITIONS.map(entry=>entry.id).filter(id=>levels[id]>0);
     const selected=Array.isArray(obj.equipped)?owned.filter(id=>obj.equipped.includes(id)):owned;
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,equipped:selected.slice(0,SLOT_LIMIT),
+      forestBonusBanked:boundedInt(obj.forestBonusBanked,0,Number.MAX_SAFE_INTEGER),
       openingSouls:boundedInt(obj.openingSouls,0,scope.GRIM_CONFIG.openingSoulLimit),
       brambleSouls:boundedInt(obj.brambleSouls,0,scope.GRIM_CONFIG.brambleSoulLimit)};
+  }
+  // The chapter records its lifetime bonus and winning attempt together.
+  // A wallet written before victory can always catch up, even after a crash.
+  function applyForestBonus(state){
+    let earned;
+    try{earned=JSON.parse(localStorage.getItem(CAMPAIGN_PROGRESS)||'null')?.forest?.bonusTotal;}catch(_){}
+    if(Number.isSafeInteger(earned)&&earned>state.forestBonusBanked){
+      state.souls=boundedInt(state.souls+(earned-state.forestBonusBanked),0,MAX_SOULS);
+      state.forestBonusBanked=earned;
+    }
+    return state;
   }
   function load(){
     try{
       const raw=localStorage.getItem(KEY);
       if(raw){
         const parsed=JSON.parse(raw);
-        if(parsed&&parsed.version===1&&Number.isFinite(Number(parsed.souls)))return normalize(parsed);
+        if(parsed&&parsed.version===1&&Number.isFinite(Number(parsed.souls)))return applyForestBonus(normalize(parsed));
       }
     }catch(_){}
-    try{return normalize({souls:localStorage.getItem(LEGACY),levels:{}});}catch(_){}
-    return normalize({});
+    let legacy=0;
+    try{legacy=localStorage.getItem(LEGACY);}catch(_){}
+    return applyForestBonus(normalize({souls:legacy}));
   }
   function save(state){
-    // One authoritative JSON save. Mirror old Soul key for downgrade compatibility.
+    applyForestBonus(state);
+    // One authoritative JSON save. Mirror old Soul key only after the save succeeds.
     try{
       let recovery;
       try{recovery=JSON.parse(localStorage.getItem(KEY)||'null')?.forestRecovery;}catch(_){}
       const record=normalize(state);
       if(recovery)record.forestRecovery=recovery;
       localStorage.setItem(KEY,JSON.stringify(record));
-    }catch(_){}
+    }catch(_){return;}
     try{localStorage.setItem(LEGACY,String(state.souls));}catch(_){}
   }
   function earn(state,amount=1,kind,persist=true){
@@ -916,7 +931,7 @@ window.GRIM_CONFIG = Object.freeze({
     const percent=DEFINITIONS[2].amounts[boundedInt(state.levels.deathsLeap,0,3)];
     return baseVelocity*Math.sqrt(1+percent/100);
   }
-  scope.GRIM_META={KEY,LEGACY,COSTS,DEFINITIONS,SLOT_LIMIT,normalize,load,save,earn,spendSouls,purchase,setEquipped,activeLoadout,investedSouls,refundAll,slideDuration,healthBonus,startingGold,jumpVelocity};
+  scope.GRIM_META={KEY,LEGACY,CAMPAIGN_PROGRESS,COSTS,DEFINITIONS,SLOT_LIMIT,normalize,load,save,earn,spendSouls,purchase,setEquipped,activeLoadout,investedSouls,refundAll,slideDuration,healthBonus,startingGold,jumpVelocity};
 })(typeof window!=='undefined'?window:globalThis);
   </script>
   <script>
@@ -2436,7 +2451,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.meta=Meta.load();
       // A second tab can edit the next loadout while this attempt keeps its own ranks.
       const refreshMeta=event=>{
-        if(event.key!==Meta.KEY||event.storageArea!==scope.localStorage)return;
+        if((event.key!==Meta.KEY&&event.key!==Meta.CAMPAIGN_PROGRESS)||event.storageArea!==scope.localStorage)return;
         this.meta=Meta.load();
         this.totalSouls=this.meta.souls;
         document.getElementById('banked-souls').textContent=String(this.totalSouls);
@@ -2489,7 +2504,7 @@ window.GRIM_CONFIG = Object.freeze({
         document.getElementById('start-btn').disabled=true;
       }
       if(new URLSearchParams(scope.location?.search).get('campaign')==='review'){
-        this.campaignReady=import('./assets/campaign/forest.js?v=c57aca1da9f5').then(()=>{
+        this.campaignReady=import('./assets/campaign/forest.js?v=91d6941a650d').then(()=>{
           this.campaign=new scope.GrimForestCampaign(this);
           this.campaign.openSavedOnLoad();
           return this.campaign;
