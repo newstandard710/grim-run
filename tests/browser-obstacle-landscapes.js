@@ -119,17 +119,25 @@ async function playTransitions(page,revision,results,onlySeed){
           }
           const encounter=await view.evaluate(r=>obstacleReview.loadRoute(r),record);
           await waitForArt(view);
-          const art=await view.evaluate(()=>obstacleReview.inspect());
+          let art=await view.evaluate(()=>obstacleReview.inspectRoute());
+          let inspectedAt=0;
           const dir=path.join(out,name,revision);
           await fs.mkdir(dir,{recursive:true});
           const trace=[];
           for(let frame=0;frame<18;frame++){
             const sample=await view.evaluate(()=>obstacleReview.routeFrame());
             trace.push(...sample.states);
+            if(!art){
+              art=await view.evaluate(()=>obstacleReview.inspectRoute());
+              inspectedAt=trace.length;
+            }
             await fs.writeFile(path.join(dir,String(frame).padStart(3,'0')+'.jpg'),Buffer.from(sample.frame,'base64'));
           }
           await fs.writeFile(path.join(dir,'states.json'),JSON.stringify(trace));
-          results[name]={encounter,art,trace:hash(trace)};
+          assert.ok(art,name+' has a verified visible foreground before contact');
+          if(revision==='after' && name===key)assert.equal(inspectedAt,record.inspectedAt);
+          if(revision==='before')record.inspectedAt=inspectedAt;
+          results[name]={encounter,art,inspectedAt,trace:hash(trace)};
           console.log(revision,name,JSON.stringify(results[name]));
           assert.deepEqual(renderErrors,[]);
         }finally{if(isolated)await view.close();}
