@@ -2244,7 +2244,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
   <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
-  <script src="assets/visuals/rising-cut.js?v=ground-drag1"></script>
+  <script src="assets/visuals/rising-cut.js?v=7cfa518c963f"></script>
   <script src="assets/visuals/motion-animations.js?v=c1a918ce0f7e"></script>
   <script src="assets/motion/landing/poses.js?v=1"></script>
   <script src="assets/visuals/landing-motion.js?v=1"></script>
@@ -2650,7 +2650,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=733e4dc999bd');
+        await import('./assets/campaign/forest.js?v=ab0c62934974');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');

@@ -1,4 +1,4 @@
-import {CinderKeeper} from './cinder-keeper.js?v=151118e40817';
+import {CinderKeeper} from './cinder-keeper.js?v=0be7381193e1';
 import {PrismSentinel} from './prism-sentinel.js?v=8d6ca4290ea8';
 import {Broodmother} from './broodmother.js?v=e635a13845b5';
 import {FrostCrown} from './frost-crown.js?v=ae5176d81a91';

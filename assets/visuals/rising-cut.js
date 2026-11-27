@@ -237,7 +237,11 @@
   }
   function acceptBow(){
     const p=s.player,owner=auth();
-    if(owner?.mode==='rise'&&p.visualFireMs>0&&riseAge()<=END) switchOwner(p,owner,'yield','bow');
+    if(owner?.mode!=='rise'||p.visualFireMs<=0)return;
+    if(riseAge()<=END)switchOwner(p,owner,'yield','bow');
+    // Commit an expired swing's handoff before the input-triggered save.
+    // Drawing the next frame (including a paused resume) resolves the same pose.
+    else resolve();
   }
   function wantsContactTest(){
     const p=s.player,[start,end]=spec.active;

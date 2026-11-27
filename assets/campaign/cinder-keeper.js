@@ -1,6 +1,7 @@
 // Timers use simulation time. The approach stores its marker and phase on the
 // player, and the arena stores its source and destination in the guardian frame.
 const TRAVEL=1380, ERUPT=340, SHORT_OPEN=1050, LONG_OPEN=2150;
+const lengths={arrival:1450,travel:TRAVEL,erupt:ERUPT,open:SHORT_OPEN,stunned:LONG_OPEN,recover:600,struck:700,fall:1400};
 const clamp=n=>Math.max(0,Math.min(1,n));
 const mix=(a,b,t)=>a+(b-a)*clamp(t);
 const coal=0x302633,iron=0x66515a,copper=0xba7750,amber=0xffb05c,white=0xffedd0;
@@ -69,7 +70,6 @@ export class CinderKeeper {
     const b=this.campaign.guardian;
     if(b.phase==='cleared')return;
     b.ms+=dt;
-    const lengths={arrival:1450,travel:TRAVEL,erupt:ERUPT,open:SHORT_OPEN,stunned:LONG_OPEN,recover:600,struck:700,fall:1400};
     if(b.ms<lengths[b.phase])return;
     b.ms-=lengths[b.phase];
     switch(b.phase){
