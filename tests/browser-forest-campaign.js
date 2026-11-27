@@ -1180,14 +1180,18 @@ async function crystalsClear(browser,viewport,seed){
     await advance(page,'meters',53);await holdControl(page,'jump',45);await advance(page,'meters',100);
     assert.equal((await attempt()).world.player.hp,2);
     await advance(page,'meters',170);await holdControl(page,'slide',8);assert.equal((await attempt()).world.player.hp,1);
-    await advance(page,'meters',235);await advance(page,'frames',48);
-    await advance(page,'frames',180);
+    await advance(page,'meters',235);await advance(page,'frames',228);
     assert.equal((await attempt()).mode,'revive');
     if(portrait){
       const before=(await wallet(page)).souls,id=(await attempt()).id;
       await page.locator('#revive-yes-btn').tap();await restore();
       assert.equal((await wallet(page)).souls,before-3);assert.equal((await attempt()).id,id);
-      await advance(page,'frames',250);await route();await fight(false);
+      await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];
+        for(let frame=0;frame<360&&s.state!=='playing';frame++)s.update(0,1000/60);
+        if(s.state!=='playing')throw Error('Revival stopped in '+s.state);
+      });
+      await route();await fight(false);
       const beforeReward=(await wallet(page)).souls;
       await page.evaluate(()=>{
         const remove=Storage.prototype.removeItem;
