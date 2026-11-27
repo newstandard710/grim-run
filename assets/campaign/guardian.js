@@ -4,8 +4,8 @@ const duration={arrival:1300,roots:900,eruption:230,breath:950,bough:900,sweep:2
   exposed:1550,recover:700,struck:700,fall:950};
 const next={arrival:'roots',roots:'eruption',eruption:'breath',breath:'bough',bough:'sweep',
   sweep:'exposed',exposed:'recover',recover:'roots',struck:'roots',fall:'cleared'};
-const cues={arrival:'FOREST GUARDIAN',roots:'ROOTS · JUMP',eruption:'',breath:'',
-  bough:'BOUGH · SLIDE',sweep:'',exposed:'EXPOSED · CUT',recover:'',struck:'',fall:'',cleared:''};
+const cues={arrival:'FOREST GUARDIAN',roots:'ROOTS STIR',eruption:'',breath:'',
+  bough:'BOUGH RISES',sweep:'',exposed:'EXPOSED · CUT',recover:'',struck:'',fall:'',cleared:''};
 const clamp=t=>Math.max(0,Math.min(1,t));
 const smooth=t=>clamp(t)**2*(3-2*clamp(t));
 const artKey='forest-guardian-trunk';
@@ -23,10 +23,18 @@ export class ForestGuardian {
   }
   enter(){
     const s=this.scene,p=s.player;
-    let standX=p.x;
-    // The camera decelerates with the runner across solid ground. A seed with
-    // a nearby drop holds the clearing at the last safe point.
-    while(standX+8<=p.x+88&&s.terrain.groundAt(standX+8)!==null)standX+=8;
+    // Reserve continuous ground beneath both actors, including the guardian's
+    // widest root spread. An airborne arrival finishes its jump in the clearing.
+    const rootMargin=270;
+    let edge=p.x-32;
+    const limit=p.x+88+rootMargin;
+    while(edge<limit){
+      const section=s.terrain.sectionAt(edge);
+      if(!section||section.kind==='gap')break;
+      edge=section.end;
+    }
+    if(edge<p.x+rootMargin)return;
+    const standX=Math.min(p.x+88,edge-rootMargin);
     this.campaign.guardian={standX,phase:'arrival',ms:0,hp:3,hit:false,round:0};
     s.enemies=[];s.obstacles=[];s.fireballs=[];s.bullets=[];
     s.coins=[];s.souls=[];
@@ -152,7 +160,9 @@ export class ForestGuardian {
     }
     const labelX=Math.max(s.cameraX+86,Math.min(x-7,s.cameraX+s.width-80));
     const labelY=Math.max(s.renderCameraY+76,y-h-2);
-    const cue=cues[phase];
+    let cue=cues[phase];
+    if(phase==='roots'&&b.ms>=600)cue='HOLD JUMP';
+    if(phase==='bough'&&b.ms>=600)cue='HOLD SLIDE';
     if(this.label.text!==cue)this.label.setText(cue);
     this.label.setPosition(labelX,labelY).setVisible(Boolean(cue));
     for(let i=0;i<3;i++){

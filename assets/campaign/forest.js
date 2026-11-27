@@ -1,4 +1,4 @@
-import {ForestGuardian} from './guardian.js?v=d865e9aa3930';
+import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
 
 (function(scope){
   'use strict';
@@ -206,7 +206,7 @@ import {ForestGuardian} from './guardian.js?v=d865e9aa3930';
       if(!this.active)return;
       const s=this.scene;
       if(this.guardian?.phase==='cleared'){this.finishChapter();return;}
-      if(!this.guardian&&s.player.x>=this.entranceX&&s.state==='playing'&&s.player.grounded&&!s.graveRush)
+      if(!this.guardian&&s.player.x>=this.entranceX&&s.state==='playing'&&!s.graveRush)
         this.encounter.enter();
       this.save();
     }

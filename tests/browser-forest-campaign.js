@@ -209,6 +209,10 @@ async function reachGuardian(page){
   await runForest(page);
   const arrival=await saved(page);
   assert.equal(arrival.world.guardian.phase,'arrival');
+  assert.ok(await page.evaluate(()=>{
+    const s=grimRun.scene.scenes[0],x=s.campaign.guardian.standX;
+    return Array.from({length:34},(_,i)=>s.terrain.groundAt(x+i*8)).every(y=>y!==null);
+  }),'The guardian is rooted on solid terrain in either orientation');
   assert.equal(arrival.world.player.hp,arrival.world.player.maxHp);
   return arrival;
 }
