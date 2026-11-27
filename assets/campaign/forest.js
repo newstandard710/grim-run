@@ -67,7 +67,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         node.addEventListener(event,fn,options);
         scene.events.once('shutdown',()=>node.removeEventListener(event,fn,options));
       };
-      for(const [index,id] of ['campaign-primary','campaign-secondary','campaign-back'].entries())
+      for(const [index,id] of ['campaign-primary','campaign-secondary'].entries())
         listen(el(id),'click',()=>this.actions[index]?.());
       listen(el('campaign-save-menu'),'click',()=>{
         if(!this.active||!this.save())return;
@@ -120,17 +120,13 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       const s=this.scene;
       s.state='campaignMenu';s.ui.setMode('campaignMenu');
       el('campaign-title').textContent=title;el('campaign-detail').textContent=detail;
-      this.actions=[primary[1],secondary?.[1],back];
+      this.actions=[primary[1],secondary?.[1]];
+      this.back=back;
       el('campaign-primary').textContent=primary[0];
       el('campaign-secondary').textContent=secondary?.[0]||'';
       el('campaign-secondary').disabled=!secondary?.[1];
       visible('campaign-secondary',Boolean(secondary));visible('campaign-back',Boolean(back));
       el('campaign-title').focus({preventScroll:true});
-    }
-    modes(){
-      this.screen('CHOOSE A MODE','',
-        ['CAMPAIGN',()=>this.chapters()],['ENDLESS',()=>{this.resetMenu();this.scene.startRun();}],
-        ()=>this.scene.goToMenu());
     }
     chapters(){
       try{
@@ -138,7 +134,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         const cleared=Boolean(progress().forest);
         this.screen('CAMPAIGN',cleared?'Forest cleared. Foothills is unlocked and in development.':'A guardian keeps watch at the edge of the woods.',
           [d?'RESUME FOREST':cleared?'REPLAY FOREST':'START FOREST',()=>this.enter()],
-          [cleared?'FOOTHILLS · COMING SOON':'FOOTHILLS · LOCKED',null],()=>this.modes());
+          [cleared?'FOOTHILLS · COMING SOON':'FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
       }catch(e){this.unreadable(e);}
     }
     unreadable(error){
@@ -164,15 +160,6 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       visible('campaign-save-menu',false);el('resume-btn').disabled=false;
       el('god-mode-checkbox').closest('label').classList.remove('hidden');
       document.querySelector('.god-mode-desc').classList.remove('hidden');
-    }
-    startAction(){
-      if(this.retryForest&&this.scene.state==='dead')return this.enter();
-      if(this.scene.state==='menu')return this.modes();
-      return this.scene.startRun();
-    }
-    openSavedOnLoad(){
-      try{if(readAttempt())this.enter();}
-      catch(e){this.unreadable(e);}
     }
     async enter(){
       if(this.busy||this.active)return;

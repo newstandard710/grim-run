@@ -14,24 +14,35 @@ const server=http.createServer((req,res)=>{
 const key='grim-run-forest-attempt-v1';
 const renderer=process.env.GRIM_RENDERER||'canvas';
 const url=new URL(process.env.GRIM_BASE_URL||'http://127.0.0.1/');
-url.searchParams.set('campaign','review');url.searchParams.set('seed','33');url.searchParams.set('renderer',renderer);
+url.searchParams.set('seed','33');url.searchParams.set('renderer',renderer);
 const clock=1000/60;
 async function boot(page){
   page.on('pageerror',error=>console.error('Browser error:',error));
   await page.goto(url.href,{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.campaign);
+  await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.state==='home');
   await page.evaluate(()=>{grimRun.scene.scenes[0].sys.sceneUpdate=()=>{};});
   await page.waitForFunction(()=>{
     const m=grimRun.scene.scenes[0].motionArt;
     return m.forwardReady&&m.cutHandoffReady&&m.cutWeaponReady&&m.airReady&&m.airCutReady;
   });
 }
-async function start(page){
+async function openChapters(page){
   await page.locator('#home-screen').tap({position:{x:18,y:30}});
-  await page.locator('#start-btn').tap();
-  await page.locator('#campaign-primary').tap();
+  await page.getByRole('button',{name:'CAMPAIGN',exact:true}).tap();
+}
+async function selectSavedForest(page){
+  await openChapters(page);
+  await page.getByRole('button',{name:'RESUME FOREST'}).tap();
+}
+async function restoreForest(page){
+  await selectSavedForest(page);
+  await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+}
+async function start(page){
+  await openChapters(page);
+  await page.getByRole('button',{name:'START FOREST'}).waitFor();
   assert.equal(await page.locator('#campaign-secondary').isDisabled(),true);
-  await page.locator('#campaign-primary').tap();
+  await page.getByRole('button',{name:'START FOREST'}).tap();
   await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
 }
 async function advance(page,condition,n){
@@ -53,7 +64,7 @@ async function reopen(ctx,page){
   await page.close();
   const next=await ctx.newPage();
   await boot(next);
-  await next.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+  await restoreForest(next);
   return next;
 }
 async function resume(page){await page.locator('#resume-btn').tap();}
@@ -128,7 +139,7 @@ async function transactions(browser){
     assert.equal(retry.run.freeLifeUsed,false);assert.equal(retry.run.soulCount,0);
     assert.equal(retry.world.coinCount,2);assert.deepEqual((await wallet(page)).equipped,initial.equipped);
     await page.locator('#pause-btn').tap();await page.locator('#campaign-save-menu').tap();
-    await page.locator('#start-btn').tap();await page.locator('#campaign-secondary').tap();
+    await page.getByRole('button',{name:'ENDLESS',exact:true}).tap();
     assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].campaign.active),false);
     assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].forestRoute),null);
     assert.equal((await saved(page)).id,retry.id);
@@ -349,7 +360,7 @@ async function freshClear(browser,viewport,seed){
     console.log('Fresh Forest touch clear',seed,viewport,'approach',arrival.world.elapsed.toFixed(2),
       'fight',(total-arrival.world.elapsed).toFixed(2),'total',total.toFixed(2),'seconds');
     // A competing Campaign tab must see one credit from the winning tab.
-    const spectator=await ctx.newPage();await boot(spectator);
+    const spectator=await ctx.newPage();await boot(spectator);await selectSavedForest(spectator);
     await spectator.getByText('FOREST IS OPEN',{exact:true}).waitFor();
     await page.bringToFront();
     if(await page.evaluate(()=>grimRun.scene.scenes[0].campaign.frozen))await resume(page);
@@ -370,8 +381,8 @@ async function freshClear(browser,viewport,seed){
     assert.equal(await page.locator('#campaign-title').innerText(),'FOREST CLEAR PENDING');
     assert.equal((await wallet(spectator)).souls,bank.souls+3);
     await spectator.close();await page.close();page=await ctx.newPage();await boot(page);
-    await page.locator('#home-screen').tap({position:{x:18,y:30}});
-    await page.locator('#start-btn').tap();await page.locator('#campaign-primary').tap();
+    await openChapters(page);
+    await page.getByRole('button',{name:'REPLAY FOREST'}).waitFor();
     assert.match(await page.locator('#campaign-detail').innerText(),/Foothills is unlocked/);
     await page.getByRole('button',{name:'REPLAY FOREST'}).tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
@@ -418,7 +429,7 @@ async function mistimedRehearsal(browser,viewport,frame){
     try{
       const page=await ctx.newPage();await boot(page);
       await page.evaluate(({key,frame})=>localStorage.setItem(key,JSON.stringify(frame)),{key,frame});
-      await boot(page);await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+      await boot(page);await restoreForest(page);
       await resume(page);
       if(timing==='early')await page.locator('#jump-btn').tap();
       await advance(page,'meters',timing==='late'?6359:6370);
@@ -442,7 +453,7 @@ async function originalAttempt(browser){
         forest:{cleared:true,attempt:'earlier-unrewarded-clear'},foothillsUnlocked:true
       }));
     },{old,key});
-    await boot(page);await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    await boot(page);await restoreForest(page);
     assert.equal((await saved(page)).world.distance,old.world.distance);
     await resume(page);await runForest(page);
     const arrival=await saved(page);
@@ -552,10 +563,10 @@ async function merchantAndInterruption(browser){
     }
     await host.detach();await page.close();
     page=await ctx.newPage();await boot(page);
-    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    await restoreForest(page);
     assert.deepEqual(comparable(await saved(page)),comparable(beforeCrash));
     // A second tab cannot take over or rewrite the attempt.
-    const other=await ctx.newPage();await boot(other);
+    const other=await ctx.newPage();await boot(other);await selectSavedForest(other);
     await other.getByText('FOREST IS OPEN',{exact:true}).waitFor();
     assert.equal((await saved(other)).id,beforeCrash.id);await other.close();
     await resume(page);
@@ -616,9 +627,8 @@ async function saveRecovery(browser){
     await page.locator('#pause-btn').tap();
     await page.locator('#quit-btn').tap();
     await page.locator('#abandon-confirm-btn').tap();
-    await page.locator('#start-btn').tap();
-    await page.locator('#campaign-primary').tap();
-    await page.locator('#campaign-primary').tap();
+    await page.getByRole('button',{name:'CAMPAIGN',exact:true}).tap();
+    await page.getByRole('button',{name:'START FOREST'}).tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
     // Stop between the single authoritative wallet write and its transfer to the fast frame slot.
     await advance(page,'meters',205);await page.locator('#attack-btn').tap();
@@ -648,13 +658,13 @@ async function saveRecovery(browser){
     const w=await saved(page);assert.ok(w.history.length>49);
     await page.close();
     page=await ctx.newPage();await page.setViewportSize({width:390,height:844});await boot(page);
-    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    await restoreForest(page);
     assert.equal((await saved(page)).history.length,w.history.length);
     await resume(page);await page.locator('#rewind-btn').tap();await advance(page,'frames',8);
     assert.equal((await saved(page)).mode,'rewinding');
     const rewind=await saved(page);
     await page.close();page=await ctx.newPage();await page.setViewportSize({width:390,height:844});await boot(page);
-    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    await restoreForest(page);
     assert.equal((await saved(page)).playback.elapsedMs,rewind.playback.elapsedMs);
     await resume(page);await advance(page,'frames',115);
     assert.equal((await saved(page)).mode,'playing');

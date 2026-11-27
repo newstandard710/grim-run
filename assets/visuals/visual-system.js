@@ -478,10 +478,12 @@
       this.loadRequested=true;this.reviewV2=true;
       const errors=new Set(),urls=[];
       const startButton=typeof document!=='undefined'?document.getElementById('start-btn'):null;
+      const campaignButton=typeof document!=='undefined'?document.getElementById('campaign-btn'):null;
       const originalStartHTML=startButton?.innerHTML;
       const setStartReady=ready=>{
         if(!startButton)return;
         startButton.disabled=!ready||s.reactionLoadFailed===true||s.portalArtLoadFailed===true;
+        if(campaignButton)campaignButton.disabled=startButton.disabled;
         if(ready){if(originalStartHTML!==undefined)startButton.innerHTML=originalStartHTML;}
         else startButton.textContent='PREPARING REAPER…';
       };

@@ -8,7 +8,8 @@ const { chromium } = require('playwright');
 const root = path.resolve(__dirname, '..');
 const types = {'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.ttf':'font/ttf'};
 const server = http.createServer((req,res)=>{
-  const file=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);
+  const pathname=new URL(req.url,'http://localhost').pathname;
+  const file=path.resolve(root,'.'+(pathname==='/'?'/index.html':pathname));
   if(!file.startsWith(root+path.sep)||!fs.existsSync(file)){res.writeHead(404).end();return;}
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});
   fs.createReadStream(file).pipe(res);
@@ -52,6 +53,13 @@ async function test(browser,url) {
   const current=()=>page.evaluate(()=>[window.grimRun.scene.scenes[0].state,document.activeElement.id]);
   assert.deepEqual(await current(),['menu','menu-title']);
   assert.equal(await page.locator('#menu-title').evaluate(e=>getComputedStyle(e).outlineStyle),'none');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.locator('#campaign-btn').evaluate(e=>e.matches(':focus-visible')),true);
+  await page.keyboard.press('Enter');
+  await page.getByRole('button',{name:'START FOREST'}).waitFor();
+  assert.deepEqual(await current(),['campaignMenu','campaign-title']);
+  await page.getByRole('button',{name:'BACK',exact:true}).press('Enter');
+  assert.deepEqual(await current(),['menu','campaign-btn']);
   await page.keyboard.press('Tab');
   assert.equal(await page.locator('#start-btn').evaluate(e=>e.matches(':focus-visible')) ,true);
   await page.keyboard.press('Tab');
@@ -129,7 +137,7 @@ async function queuedTap(browser,url) {
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const browser=await chromium.launch({headless:true,args:['--no-sandbox',
     process.env.GRIM_HOME_CANVAS==='1'?'--disable-webgl':'--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  const url='http://127.0.0.1:'+server.address().port+'/index.html?seed=33';
+  const url='http://127.0.0.1:'+server.address().port+'/';
   try{
     await test(browser,url);
     await queuedTap(browser,url);
