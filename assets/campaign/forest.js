@@ -5,7 +5,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
 (function(scope){
   'use strict';
   const KEY='grim-run-forest-attempt-v1', HISTORY=KEY+'-rewind-', LEGACY_END=900;
-  const PROGRESS='grim-run-campaign-progress-v1';
+  const PROGRESS=scope.GRIM_META.CAMPAIGN_PROGRESS;
   const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
   const MODES=new Set(['playing','countdown','dying','revive','respawning','vendorIntro','upgrade','rewinding']);
   const fields=[
@@ -217,13 +217,23 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       this.save();
     }
     finishChapter(){
-      // Commit the entitlement before removing the active attempt. Re-reading
-      // the same victory after interruption has no further effect on the bank.
+      if(!this.active||this.guardian?.phase!=='cleared')return;
+      let bonus,balance;
       try{
         const record=progress();
-        record.forest={cleared:true,attempt:this.id};
-        record.foothillsUnlocked=true;
-        localStorage.setItem(PROGRESS,JSON.stringify(record));
+        if(record.forest?.attempt!==this.id){
+          const prior=record.forest?.bonusTotal||0;
+          bonus=prior?1:3;
+          record.forest={...record.forest,cleared:true,attempt:this.id,bonus,bonusTotal:prior+bonus};
+          record.foothillsUnlocked=true;
+          localStorage.setItem(PROGRESS,JSON.stringify(record));
+        }else bonus=record.forest.bonus;
+        // The wallet can derive its balance from the committed chapter record
+        // even if the tab closes before the wallet mirror or cleanup finishes.
+        this.scene.meta=meta().load();
+        meta().save(this.scene.meta);
+        balance=this.scene.totalSouls=this.scene.meta.souls;
+        el('banked-souls').textContent=String(balance);
         this.endAttempt();
       }catch(e){
         this.frozen=true;
@@ -231,7 +241,8 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
           ['RETRY SAVE',()=>this.finishChapter()]);
         return;
       }
-      this.screen('FOREST CLEARED','The guardian falls. Foothills unlocked · chapter in development.',
+      const reward=bonus===3?'First Forest clear · +3 Souls':'Forest cleared · +1 Soul';
+      this.screen('FOREST CLEARED',reward+' · Wallet: '+balance+' Souls. Foothills unlocked · chapter in development.',
         ['REPLAY FOREST',()=>this.enter()],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
     }
     togglePause(){

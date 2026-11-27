@@ -308,9 +308,19 @@ async function freshClear(browser,viewport,seed){
     assert.ok(total>=240&&total<=300,'Active clear took '+total+' seconds');
     console.log('Fresh Forest touch clear',seed,viewport,'approach',arrival.world.elapsed.toFixed(2),
       'fight',(total-arrival.world.elapsed).toFixed(2),'total',total.toFixed(2),'seconds');
+    // A competing Campaign tab must see one credit from the winning tab.
+    const spectator=await ctx.newPage();await boot(spectator);
+    await spectator.getByText('FOREST IS OPEN',{exact:true}).waitFor();
+    await page.bringToFront();
+    if(await page.evaluate(()=>grimRun.scene.scenes[0].campaign.frozen))await resume(page);
     // Interrupt specifically between the chapter record and attempt cleanup.
     await page.evaluate(()=>{
-      const remove=Storage.prototype.removeItem;
+      // Stop both the balance mirror and cleanup after the atomic chapter write.
+      const set=Storage.prototype.setItem,remove=Storage.prototype.removeItem;
+      Storage.prototype.setItem=function(k,v){
+        if(k===GRIM_META.KEY)throw Error('injected wallet interruption');
+        return set.call(this,k,v);
+      };
       Storage.prototype.removeItem=function(k){
         if(k==='grim-run-forest-attempt-v1')throw Error('injected cleanup interruption');
         return remove.call(this,k);
@@ -318,7 +328,8 @@ async function freshClear(browser,viewport,seed){
     });
     await advance(page,'frames',70);
     assert.equal(await page.locator('#campaign-title').innerText(),'FOREST CLEAR PENDING');
-    await page.close();page=await ctx.newPage();await boot(page);
+    assert.equal((await wallet(spectator)).souls,bank.souls+3);
+    await spectator.close();await page.close();page=await ctx.newPage();await boot(page);
     await page.locator('#home-screen').tap({position:{x:18,y:30}});
     await page.locator('#start-btn').tap();await page.locator('#campaign-primary').tap();
     assert.match(await page.locator('#campaign-detail').innerText(),/Foothills is unlocked/);
@@ -326,7 +337,33 @@ async function freshClear(browser,viewport,seed){
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
     const replay=await saved(page);
     assert.notEqual(replay.id,arrival.id);assert.equal(replay.world.distance,0);
-    assert.equal(replay.world.guardian,undefined);assert.deepEqual(await wallet(page),bank);
+    assert.equal(replay.world.guardian,undefined);
+    assert.deepEqual(await wallet(page),{...bank,souls:bank.souls+3,forestBonusBanked:3});
+    if(seed===91){
+      // Pay for a revival during the replay and finish with the same attempt.
+      const replayStart=await wallet(page);
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'rock');});
+      await advance(page,'frames',180);await page.locator('#revive-yes-btn').tap();
+      assert.equal((await wallet(page)).souls,replayStart.souls-3);
+      await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];
+        for(let i=0;i<400&&s.state!=='playing';i++)s.update(0,1000/60);
+      });
+      await touchApproach(page);
+      await page.locator('#vendor-intro-skip').tap();
+      await page.getByRole('button',{name:'CONTINUE RUN'}).tap();
+      await touchApproach(page);await defeatGuardian(page);
+      const pickups=(await saved(page)).run.soulCount;
+      const before=await wallet(page);
+      assert.equal(before.souls,replayStart.souls-3+pickups);
+      await advance(page,'frames',70);
+      assert.equal((await wallet(page)).souls,before.souls+1);
+      assert.match(await page.locator('#campaign-detail').innerText(),
+        new RegExp('Forest cleared · \\+1 Soul · Wallet: '+(before.souls+1)+' Souls'));
+      await boot(page);
+      assert.equal((await wallet(page)).souls,before.souls+1);
+      console.log('Replay earned',pickups,'pickups + 1 clear bonus after a paid revival.');
+    }
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 // Replay the last lower obstacle from the same frame with deliberately bad
@@ -355,14 +392,34 @@ async function originalAttempt(browser){
   const ctx=await browser.newContext({viewport:{width:844,height:390},hasTouch:true});
   try{
     const page=await ctx.newPage();await boot(page);
-    await page.evaluate(({old,key})=>localStorage.setItem(key,JSON.stringify(old)),{old,key});
+    await page.evaluate(({old,key})=>{
+      localStorage.setItem(key,JSON.stringify(old));
+      localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify({
+        forest:{cleared:true,attempt:'earlier-unrewarded-clear'},foothillsUnlocked:true
+      }));
+    },{old,key});
     await boot(page);await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
     assert.equal((await saved(page)).world.distance,old.world.distance);
     await resume(page);await runForest(page);
     const arrival=await saved(page);
     assert.equal(arrival.id,old.id);assert.equal(arrival.world.guardian.phase,'arrival');
     assert.ok(arrival.world.distance>=900&&arrival.world.distance<901);
-    await defeatGuardian(page);await advance(page,'frames',70);
+    const bank=await wallet(page);await defeatGuardian(page);
+    // Fail before the reward commit, then retry through the visible recovery button.
+    await page.evaluate(()=>{
+      const set=Storage.prototype.setItem;
+      Storage.prototype.setItem=function(k,v){
+        if(k===GRIM_META.CAMPAIGN_PROGRESS){
+          Storage.prototype.setItem=set;throw Error('Interrupted victory write');
+        }
+        return set.call(this,k,v);
+      };
+    });
+    await advance(page,'frames',70);
+    assert.deepEqual(await wallet(page),bank);
+    await page.getByRole('button',{name:'RETRY SAVE'}).tap();
+    assert.equal((await wallet(page)).souls,bank.souls+3);
+    assert.match(await page.locator('#campaign-detail').innerText(),/First Forest clear · \+3 Souls/);
     await page.getByRole('button',{name:'REPLAY FOREST'}).tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
     const replay=await saved(page);assert.equal(replay.routeVersion,2);
@@ -481,7 +538,7 @@ async function merchantAndInterruption(browser){
     await advance(page,'frames',180);
     await page.locator('#revive-no-btn').tap();
     assert.equal(await saved(page),null);
-    assert.equal((await wallet(page)).souls,4+Number(bought.run.soulCount));
+    assert.equal((await wallet(page)).souls,4+Number(bought.run.soulCount)+3);
     console.log('Merchant, renderer crash, exclusive tab, guardian victory, unlock and declined revival passed.');
   }finally{await ctx.close();}
 }
