@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{
   const name=new URL(req.url,'http://localhost').pathname;
   const file=path.resolve(root,'.'+(name==='/'?'/index.html':name));
   if(!file.startsWith(root+path.sep)||!fs.existsSync(file))return res.writeHead(404).end();
-  const types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.webp':'image/webp','.svg':'image/svg+xml'};
+  const types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.webp':'image/webp','.svg':'image/svg+xml','.webm':'video/webm'};
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});
   fs.createReadStream(file).pipe(res);
 });
@@ -44,6 +44,43 @@ async function start(page){
   assert.equal(await page.locator('#campaign-secondary').isDisabled(),true);
   await page.getByRole('button',{name:'START FOREST'}).tap();
   await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+}
+async function playingStory(page,name){
+  await page.waitForFunction(name=>{
+    const film=document.querySelector('#forest-story-film');
+    return grimRun.scene.scenes[0].state==='forestStory'&&film.currentSrc.endsWith(name)
+      &&film.videoWidth>0&&film.currentTime>0;
+  },name);
+  assert.equal(await page.locator('#controls').isVisible(),false);
+  assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].cameras.main.visible),false);
+}
+async function openingStory(browser){
+  let firstWorld;
+  for(const action of ['watch','skip','reload']){
+    const ctx=await browser.newContext({viewport:{width:390,height:844},hasTouch:true});
+    try{
+      let page=await ctx.newPage();await boot(page);await openChapters(page);
+      await page.getByRole('button',{name:'START FOREST'}).tap();
+      await playingStory(page,'passage-sealed.webm');
+      const before=await saved(page);
+      assert.equal(before.world.distance,0);
+      assert.equal(await page.evaluate(()=>localStorage.getItem(GRIM_META.CAMPAIGN_PROGRESS)),null);
+      await advance(page,'frames',90);
+      assert.deepEqual(comparable(await saved(page)),comparable(before));
+      if(action==='skip')await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+      if(action==='reload'){
+        page=await reopen(ctx,page);assert.equal((await saved(page)).id,before.id);
+        await resume(page);
+      }
+      await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+      await advance(page,'meters',25);
+      const current=comparable(await saved(page));
+      if(firstWorld)assert.deepEqual(current,firstWorld);
+      else firstWorld=current;
+      assert.equal((await wallet(page)).souls,0);
+    }finally{await ctx.close();}
+  }
+  console.log('Watching, skipping and interrupting the opening gave identical first approaches.');
 }
 async function advance(page,condition,n){
   return page.evaluate(({condition,n,clock})=>{
@@ -412,7 +449,9 @@ async function freshClear(browser,viewport,seed){
       const before=await wallet(page);
       assert.equal(before.souls,replayStart.souls-3+pickups);
       await advance(page,'frames',70);
+      await playingStory(page,'passage-open.webm');
       assert.equal((await wallet(page)).souls,before.souls+1);
+      await page.getByRole('button',{name:'SKIP',exact:true}).tap();
       assert.match(await page.locator('#campaign-detail').innerText(),
         new RegExp('Forest cleared · \\+1 Soul · Wallet: '+(before.souls+1)+' Souls'));
       await boot(page);
@@ -453,7 +492,13 @@ async function originalAttempt(browser){
         forest:{cleared:true,attempt:'earlier-unrewarded-clear'},foothillsUnlocked:true
       }));
     },{old,key});
-    await boot(page);await restoreForest(page);
+    await boot(page);await openChapters(page);
+    await page.getByRole('button',{name:'WATCH FOREST OPENING'}).tap();
+    await playingStory(page,'passage-sealed.webm');
+    await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+    assert.deepEqual(await saved(page),old);
+    await page.getByRole('button',{name:'RESUME FOREST'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
     assert.equal((await saved(page)).world.distance,old.world.distance);
     await resume(page);await runForest(page);
     const arrival=await saved(page);
@@ -474,6 +519,7 @@ async function originalAttempt(browser){
     assert.deepEqual(await wallet(page),bank);
     await page.getByRole('button',{name:'RETRY SAVE'}).tap();
     assert.equal((await wallet(page)).souls,bank.souls+3);
+    await page.getByRole('heading',{name:'FOREST CLEARED'}).waitFor();
     assert.match(await page.locator('#campaign-detail').innerText(),/First Forest clear · \+3 Souls/);
     await page.getByRole('button',{name:'REPLAY FOREST'}).tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
@@ -581,14 +627,18 @@ async function merchantAndInterruption(browser){
     await expectScore(page,'guardian');
     await defeatGuardian(page);
     page=await reopen(ctx,page);await resume(page);await advance(page,'frames',70);
-    assert.equal(await page.locator('#campaign-title').innerText(),'FOREST CLEARED');
+    await playingStory(page,'passage-open.webm');
     assert.equal(await page.evaluate(()=>{
       const s=grimRun.scene.scenes[0];s.drawScene();return s.biomeBackdrops.forest.visible;
     }),true,'The clearing stays in Forest after the save is closed');
+    const winBalance=await wallet(page);
+    // Reload during the actual ending. The chapter and wallet were settled together.
+    await boot(page);await openChapters(page);
+    await page.getByRole('button',{name:'REPLAY FOREST'}).waitFor();
+    assert.deepEqual(await wallet(page),winBalance);
     assert.equal(await saved(page),null);
     const progress=await page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-campaign-progress-v1')));
     assert.equal(progress.foothillsUnlocked,true);assert.equal(progress.forest.attempt,bought.id);
-    await page.locator('#campaign-secondary').tap();
     assert.match(await page.locator('#campaign-secondary').innerText(),/COMING SOON/);
     await page.locator('#campaign-primary').tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
@@ -685,6 +735,7 @@ async function saveRecovery(browser){
       const a=await matched(browser,viewport,false),b=await matched(browser,viewport,true);
       assert.deepEqual(a,b);console.log('Matched jump, Cut and landing:',viewport,a.outcome.world.distance);
     }
+    await openingStory(browser);
     await transactions(browser);
     console.log('Forest pickup, revivals, retry, loadout and Endless passed.');
     await merchantAndInterruption(browser);
