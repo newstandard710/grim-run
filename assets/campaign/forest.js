@@ -2,7 +2,7 @@ import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
 import {ForestScore} from '../audio/forest-score.js?v=3d10dd3e0f2d';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
-import {forestRoute} from './route.js?v=c206bc3f05f2';
+import {forestRoute} from './route.js?v=9592a02df38a';
 
 (function(scope){
   'use strict';

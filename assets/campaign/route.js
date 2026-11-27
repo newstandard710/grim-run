@@ -26,7 +26,7 @@ const approach = [
 // At the first ravine the shelf is visible across the gap. Subsequent pairs
 // gradually shorten the landing while keeping time to release Jump and slide.
 const foothillsOpening=[
-  [58,'rock'],[130,'branch'],[218,'gap'],[243,'branch'],[332,'bramble'],
+  [58,'rock'],[130,'branch'],[218,'gap'],[236,'branch'],[332,'bramble'],
   [405,'gap'],[431,'branch'],[531,'rock'],[577,'branch'],[780,'gap'],[806,'branch']
 ];
 const terraces=[

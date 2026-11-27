@@ -2565,7 +2565,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=1ca17e660921');
+        await import('./assets/campaign/forest.js?v=461985eef11b');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -3860,7 +3860,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.tipped.add('abyss');
         const x=this.terrain.firstGapX-360;
         const y=this.terrain.anchorAt(x)-150;
-        const label=this.add.text(x,y,'JUMP THE ABYSS ↑',{fontFamily:'system-ui,Arial,sans-serif',
+        const hint=route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
+        const label=this.add.text(x,y,hint,{fontFamily:'system-ui,Arial,sans-serif',
           fontSize:'20px',fontStyle:'900',color:'#b9fff1',stroke:'#061521',strokeThickness:6,align:'center'})
           .setOrigin(.5).setDepth(35);
         label.setShadow(0,2,'#061521',5,true,true);
