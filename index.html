@@ -290,6 +290,10 @@ button {cursor:pointer;}
 #vendor-stats.healing{animation:vendorHealing .6s ease;}
 @keyframes vendorHealing{35%{color:#fff1f1;text-shadow:0 0 16px #e0a2ff;transform:scale(1.06)}}
 @media(max-height:330px){.chest-illustration{height:104px}.chest-eyebrow{font-size:9px}.chest-title{font-size:16px}.chest-caption{font-size:9px}}
+#campaign-screen[data-crossbow] .modal::before {
+  content:""; display:block; height:min(16vh,110px); margin:0 auto 6px;
+  background:url('assets/powers/bone-crossbow.png') center/contain no-repeat;
+}
 #forest-story { position:fixed; inset:0; z-index:50; display:grid; place-items:center; background:#070c11; }
 #forest-story-film { width:100%; height:100%; max-height:100dvh; object-fit:contain; pointer-events:none; }
 #forest-story-skip { position:absolute; right:max(16px,env(safe-area-inset-right)); bottom:max(14px,env(safe-area-inset-bottom)); width:auto; min-width:72px; min-height:44px; }
@@ -362,6 +366,7 @@ button {cursor:pointer;}
       <p id="campaign-detail" role="status"></p>
       <button id="campaign-primary" class="primary"></button>
       <button id="campaign-secondary" class="secondary"></button>
+      <button id="campaign-tundra" class="secondary hidden">TUNDRA</button>
       <button id="campaign-story-replay" class="secondary hidden">WATCH FOREST OPENING</button>
       <button id="campaign-back" class="secondary">BACK</button>
     </div>
@@ -844,6 +849,7 @@ window.GRIM_CONFIG = Object.freeze({
     const owned=DEFINITIONS.map(entry=>entry.id).filter(id=>levels[id]>0);
     const selected=Array.isArray(obj.equipped)?owned.filter(id=>obj.equipped.includes(id)):owned;
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,equipped:selected.slice(0,SLOT_LIMIT),
+      tundraBonusBanked:boundedInt(obj.tundraBonusBanked,0,Number.MAX_SAFE_INTEGER),
       foothillsBonusBanked:boundedInt(obj.foothillsBonusBanked,0,Number.MAX_SAFE_INTEGER),
       forestBonusBanked:boundedInt(obj.forestBonusBanked,0,Number.MAX_SAFE_INTEGER),
       openingSouls:boundedInt(obj.openingSouls,0,scope.GRIM_CONFIG.openingSoulLimit),
@@ -854,7 +860,7 @@ window.GRIM_CONFIG = Object.freeze({
   function applyChapterBonuses(state){
     let record;
     try{record=JSON.parse(localStorage.getItem(CAMPAIGN_PROGRESS)||'null');}catch(_){return state;}
-    for(const chapter of ['forest','foothills']){
+    for(const chapter of ['forest','foothills','tundra']){
       const earned=record?.[chapter]?.bonusTotal,field=chapter+'BonusBanked';
       if(Number.isSafeInteger(earned)&&earned>state[field]){
         state.souls=boundedInt(state.souls+earned-state[field],0,MAX_SOULS);
@@ -2565,7 +2571,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=461985eef11b');
+        await import('./assets/campaign/forest.js?v=5e228197c50d');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -3069,7 +3075,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.forestRoute=route;
       this.terrain=Terrain.makeTerrain(this.seed,this.groundY,200,C.pxPerMeter,route);
       this.cameraY=0;this.fallFeedbackMs=0;this.respawnMs=0;this.respawnCamera=null;this.fallCount=0;this.damageFlashMs=0;this.bonesBlastMs=0;this.brittleClearUntilX=0;this.hasTeleported=false;this.portalMs=0;this.chestMs=0;
-      this.gunUnlocked=false;this.gunCooldownMs=350;this.blastCooldownMs=0;this.shrineClaimed=false;
+      this.gunUnlocked=route?.biome==='tundra';this.gunCooldownMs=this.gunUnlocked?0:350;this.blastCooldownMs=0;this.shrineClaimed=false;
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.enemies=[];this.bullets=[];this.fireballs=[];this.chainArcs=[];this.swingSequence=0;
       this.rewindFrames=[];this.rewindTerrainBase=new Map();
@@ -3143,7 +3149,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.totalSouls=this.meta.souls;
       document.getElementById('banked-souls').textContent=String(this.totalSouls);
       this.ui.setMode('playing');
-      this.ui.showGodMode(false);this.ui.showGun(false);
+      this.ui.showGodMode(false);this.ui.showGun(this.gunUnlocked);
       this.ui.rewindFlash(false);this.ui.showRewindPlayback(false);this.captureRewind();this.updateRewindButton();
       this.ui.update(this.player.hp, this.player.maxHp,0, 0, this.coinCount, 0, []);
       this.drawScene();
@@ -3860,7 +3866,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.tipped.add('abyss');
         const x=this.terrain.firstGapX-360;
         const y=this.terrain.anchorAt(x)-150;
-        const hint=route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
+        const hint=route?.biome==='tundra'?'JUMP · LAND · SHOOT':route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
         const label=this.add.text(x,y,hint,{fontFamily:'system-ui,Arial,sans-serif',
           fontSize:'20px',fontStyle:'900',color:'#b9fff1',stroke:'#061521',strokeThickness:6,align:'center'})
           .setOrigin(.5).setDepth(35);
@@ -3955,7 +3961,7 @@ window.GRIM_CONFIG = Object.freeze({
         else if(this.campaign?.guardian&&!this.campaign.guardian.pursuit){
           const remaining=this.campaign.guardian.standX-p.x;
           p.x+=Math.min(Math.max(0,remaining),this.speed*dt*worldFactor,Math.max(0,remaining)*dt*5+dt*10);
-        }else p.x += this.speed*dt*worldFactor;
+        }else p.x += this.speed*dt*worldFactor*(this.campaign?.guardian?.scrollRate??1);
         if(this.powerManager.level('graveRush')||this.rushCooldownMs>0){
           this.rushCooldownMs=Math.max(0,this.rushCooldownMs-frameMs);
           this.rushNoticeMs=Math.max(0,this.rushNoticeMs-frameMs);
@@ -4077,7 +4083,10 @@ window.GRIM_CONFIG = Object.freeze({
           this.triggerVendor(target);this.drawScene();return;
         }
         if(this.campaign?.guardian)this.campaign.encounter.step(frameMs*worldFactor);
-        else this.spawnAhead();
+        else {
+          this.spawnAhead();
+          if(this.forestRoute?.biome==='tundra')this.campaign.encounter.crossing(frameMs*worldFactor);
+        }
         if(this.state!=='playing'){this.drawScene();return;}
         this.updatePlants(frameMs*worldFactor);
         if (this.motionArt?.rising?.wantsContactTest()||
@@ -4257,9 +4266,11 @@ window.GRIM_CONFIG = Object.freeze({
     fireCrossbow(){
       if(this.state!=='playing'||this.practiceScale()===0||!this.gunUnlocked||this.gunCooldownMs>0)return false;
       const p=this.player,left=p.x-this.width*C.reaperXRatio,right=left+this.width;
-      const target=Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,
+      const frost=this.campaign?.active&&this.campaign.encounter.target?.();
+      const target=frost?{kind:'frost',ref:null}:Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,
         this.powerManager.level('powerShot'),0,this.hasFlameBolts());
       this.fireSoulcaster(target);
+      if(frost)this.bullets.at(-1).frostId=frost.id;
       this.gunCooldownMs=Combat.SHOT_MS[this.powerManager.level('rapidFire')];
       p.visualFireMs=p.attackMs>0?0:(scope.GRIM_COMBAT_ART?.FIRE_MS||180);
       p.visualShotMotion=this.combatArt?.shotReady===true;
@@ -4422,6 +4433,14 @@ window.GRIM_CONFIG = Object.freeze({
           if(enemy){
             this.hitWithBolt(enemy,b);b.dead=true;
           }else if(b.x>right+70)b.dead=true;
+          continue;
+        }
+        if(b.kind==='frost'){
+          const encounter=this.campaign?.encounter,aim=encounter?.target?.();
+          if(!aim||aim.id!==b.frostId){b.kind='free';continue;}
+          const dx=aim.x-b.x,dy=aim.y-b.y,dist=Math.hypot(dx,dy),step=1550*dt;
+          if(dist<=Math.max(21,step)){b.dead=true;encounter.strike(aim);}
+          else {b.x+=step*dx/dist;b.y+=step*dy/dist;}
           continue;
         }
         if(b.ref.dead||b.ref.destroyed){b.dead=true;continue;}
@@ -5106,7 +5125,7 @@ window.GRIM_CONFIG = Object.freeze({
       return {tint,opacity:opacity/total};
     }
     snowCoverAt(x){
-      if(this.forestRoute)return 0;
+      if(this.forestRoute)return this.forestRoute.biome==='tundra'?1:0;
       const meters=(x-(this.startX??200))/C.pxPerMeter;
       if(meters<=SNOW_FADE_START||(this.hasTeleported&&meters>=SNOW_PORTAL))return 0;
       if(meters>=SNOW_PURE_START)return 1;
