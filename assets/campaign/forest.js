@@ -1,11 +1,14 @@
-import {ForestScore} from '../audio/forest-score.js?v=48e148e8cef9';
+import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
+import {ForestScore} from '../audio/forest-score.js?v=3d10dd3e0f2d';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
-import {forestRoute} from './route.js?v=e6a55d65cebd';
+import {forestRoute} from './route.js?v=9592a02df38a';
 
 (function(scope){
   'use strict';
-  const KEY='grim-run-forest-attempt-v1', HISTORY=KEY+'-rewind-', LEGACY_END=900;
+  const KEY='grim-run-forest-attempt-v1', LEGACY_END=900;
+  const slot=chapter=>'grim-run-'+chapter+'-attempt-v1';
+  const title=chapter=>chapter==='foothills'?'Foothills':'Forest';
   const PROGRESS=scope.GRIM_META.CAMPAIGN_PROGRESS;
   const OPENING_SEEN='grim-run-forest-opening-seen-v1';
   const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
@@ -34,21 +37,23 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       throw error;
     }
     if(!record?.forestRecovery)return;
-    localStorage.setItem(KEY,record.forestRecovery);
+    const chapter=JSON.parse(record.forestRecovery).chapter;
+    if(!['forest','foothills'].includes(chapter))throw Error('Invalid Campaign recovery record.');
+    localStorage.setItem(slot(chapter),record.forestRecovery);
     delete record.forestRecovery;
     localStorage.setItem(meta().KEY,JSON.stringify(record));
     try{localStorage.setItem(meta().LEGACY,String(record.souls));}catch(_){}
   }
-  function readAttempt(){
+  function readAttempt(chapter){
     recoverWallet();
-    const raw=localStorage.getItem(KEY);
+    const raw=localStorage.getItem(slot(chapter));
     if(!raw)return null;
     const d=JSON.parse(raw);
     // Completion is authoritative even if cleanup was interrupted during a menu transition.
-    if(typeof d?.id==='string'&&progress().forest?.attempt===d.id)return null;
-    if((d.routeVersion!==undefined&&![1,2].includes(d.routeVersion))||d.version!==1||d.chapter!=='forest'||typeof d.id!=='string'||!Number.isInteger(d.seed)||
+    if(typeof d?.id==='string'&&progress()[chapter]?.attempt===d.id)return null;
+    if((d.routeVersion!==undefined&&![1,2].includes(d.routeVersion))||d.version!==1||d.chapter!==chapter||typeof d.id!=='string'||!Number.isInteger(d.seed)||
       !MODES.has(d.mode)||!Number.isFinite(d.world?.player?.x)||!Array.isArray(d.history))
-      throw Error('This Forest save could not be read.');
+      throw Error('This '+title(chapter)+' save could not be read.');
     return d;
   }
 
@@ -58,7 +63,9 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       this.score=new ForestScore();
       scene.ui.actions.syncCampaignScore=mode=>this.syncScore(mode);
       el('music-settings').dataset.available='1';
-      this.encounter=new ForestGuardian(this);
+      this.chapter='forest';
+      this.encounters={forest:new ForestGuardian(this),foothills:new StoneGuardian(this)};
+      this.encounter=this.encounters.forest;
       this.active=false;
       this.frozen=false;
       this.historyIds=new WeakMap();
@@ -118,8 +125,8 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       if(!this.active||this.frozen||mode!=='playing'){this.score.select(null);return;}
       const b=this.guardian;
       if(b?.phase==='fall'||b?.phase==='cleared')this.score.select('victory',b.ms/1000);
-      else if(b)this.score.select('guardian',this.scene.elapsed-(b.musicStart??this.scene.elapsed));
-      else this.score.select('walk',this.scene.elapsed);
+      else if(b)this.score.select(this.chapter==='foothills'?'pursuit':'guardian',this.scene.elapsed-(b.musicStart??this.scene.elapsed));
+      else this.score.select(this.chapter==='foothills'?'climb':'walk',this.scene.elapsed);
     }
     playStory(ending,done){
       const s=this.scene,film=el('forest-story-film');
@@ -164,21 +171,27 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
     }
     chapters(){
       try{
-        const d=readAttempt();
-        const cleared=Boolean(progress().forest);
-        this.screen('CAMPAIGN',cleared?'Forest cleared. Foothills is unlocked and in development.':'A guardian keeps watch at the edge of the woods.',
-          [d?'RESUME FOREST':cleared?'REPLAY FOREST':'START FOREST',()=>this.enter()],
-          [cleared?'FOOTHILLS · COMING SOON':'FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
-        visible('campaign-story-replay',Boolean(d||cleared||this.openingSeen||localStorage.getItem(OPENING_SEEN)==='1'));
+        const record=progress(),cleared=Boolean(record.forest?.cleared||record.foothillsUnlocked);
+        const savedLabel=(chapter,fresh,replay)=>{
+          try{return readAttempt(chapter)?'RESUME '+title(chapter).toUpperCase():record[chapter]?.cleared?replay:fresh;}
+          catch{return 'OPEN '+title(chapter).toUpperCase()+' SAVE';}
+        };
+        const forest=savedLabel('forest','START FOREST','REPLAY FOREST');
+        const detail=record.tundraUnlocked?'Foothills cleared. Tundra is unlocked and in development.':
+          cleared?'Forest cleared. Foothills is unlocked. Follow the Souls up the ridge.':'A guardian keeps watch at the edge of the woods.';
+        this.screen('CAMPAIGN',detail,[forest,()=>this.enter('forest')],
+          cleared?[savedLabel('foothills','START FOOTHILLS','REPLAY FOOTHILLS'),()=>this.enter('foothills')]:
+            ['FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
+        visible('campaign-story-replay',Boolean(forest==='RESUME FOREST'||cleared||this.openingSeen||localStorage.getItem(OPENING_SEEN)==='1'));
       }catch(e){this.unreadable(e);}
     }
     unreadable(error){
-      console.warn('Forest save:',error.message);
-      this.screen('FOREST SAVE UNAVAILABLE','You can retry loading, or discard this attempt and keep your bank and Reliquaries.',
+      console.warn(title(this.chapter)+' save:',error.message);
+      this.screen(title(this.chapter).toUpperCase()+' SAVE UNAVAILABLE','You can retry loading, or discard this attempt and keep your bank and Reliquaries.',
         ['TRY AGAIN',()=>this.chapters()],['DISCARD ATTEMPT…',()=>this.confirmDiscard()],()=>this.scene.goToMenu());
     }
     confirmDiscard(){
-      this.screen('DISCARD THIS ATTEMPT?','Your next Forest attempt will start at the beginning.',
+      this.screen('DISCARD THIS ATTEMPT?','Your next '+title(this.chapter)+' attempt will start at the beginning.',
         ['KEEP SAVE',()=>this.chapters()],['DISCARD ATTEMPT',async()=>{
           try{
             await navigator.locks.request(KEY,{ifAvailable:true},lock=>{
@@ -196,37 +209,41 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       el('god-mode-checkbox').closest('label').classList.remove('hidden');
       document.querySelector('.god-mode-desc').classList.remove('hidden');
     }
-    async enter(){
+    async enter(chapter=this.chapter){
       if(this.busy||this.active)return;
+      if(chapter==='foothills'&&!progress().foothillsUnlocked&&!progress().forest?.cleared)return;
+      this.chapter=chapter;this.encounter=this.encounters[chapter];
+      const name=title(chapter),label=name.toUpperCase();
       this.busy=true;
       try{
         if(!navigator.locks)throw Error('Exclusive save access is unavailable.');
         await navigator.locks.request(KEY,{ifAvailable:true},async lock=>{
           if(!lock){
-            this.screen('FOREST IS OPEN','Return to the tab with your Forest attempt.',
+            this.screen(label+' IS OPEN','Return to the tab with the active Campaign attempt.',
               ['TRY AGAIN',()=>this.enter()],['MAIN MENU',()=>this.scene.goToMenu()]);
             return;
           }
-          const d=readAttempt(),s=this.scene;
+          const d=readAttempt(chapter),s=this.scene;
           if(s.reactionLoadFailed||s.portalArtLoadFailed){s.goToMenu();return;}
           const held=new Promise(resolve=>{this.unlock=resolve;});
           try{
             s.meta=meta().load();
             this.id=d?.id||crypto.randomUUID();
             this.active=true;this.frozen=false;this.walletDirty=false;this.retryForest=true;
+            this.encounter.prepare?.();
             s.frame=0;s.lastRevivePayment=null;s.lastResurrection=null;
             this.routeVersion=d?(d.routeVersion??1):2;
             s.startRun(d?.seed);
             // Items and preplaced obstacles in later biomes never enter this chapter.
             const limit=this.entranceX+1500;
             for(const key of ['coins','souls','obstacles'])s[key]=s[key].filter(o=>o.x<limit);
-            el('retry-btn').textContent='RETRY FOREST';
+            el('retry-btn').textContent='RETRY '+label;
             visible('campaign-save-menu',true);visible('music-settings',true);
             el('god-mode-checkbox').closest('label').classList.add('hidden');
             document.querySelector('.god-mode-desc').classList.add('hidden');
             if(d){this.openingSeen=true;this.restore(d);this.pause();}
             else if(this.save()){
-              if(!this.openingSeen&&!progress().forest&&localStorage.getItem(OPENING_SEEN)!=='1'){
+              if(chapter==='forest'&&!this.openingSeen&&!progress().forest&&localStorage.getItem(OPENING_SEEN)!=='1'){
                 this.openingSeen=true;
                 // The attempt is durable at the starting frame before the first image.
                 try{localStorage.setItem(OPENING_SEEN,'1');}catch{}
@@ -252,12 +269,12 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       this.unlock?.();this.unlock=null;
     }
     endAttempt(keepVictory=false){
-      localStorage.removeItem(KEY);
-      for(let i=0;i<256;i++)localStorage.removeItem(HISTORY+i);
+      localStorage.removeItem(slot(this.chapter));
+      for(let i=0;i<256;i++)localStorage.removeItem(slot(this.chapter)+'-rewind-'+i);
       this.release(keepVictory);
     }
     prepareRoute(seed,origin,unit){
-      return this.routeVersion===2?forestRoute(seed,origin,unit):null;
+      return this.routeVersion===2?forestRoute(seed,origin,unit,this.chapter):null;
     }
     get entranceX(){return this.scene.startX+(this.scene.forestRoute?.end??LEGACY_END)*scope.GRIM_CONFIG.pxPerMeter;}
     afterFrame(){
@@ -267,23 +284,24 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       if(!this.guardian&&s.player.x>=this.entranceX&&s.state==='playing'&&!s.graveRush)
         this.encounter.enter();
       if(!this.finalePrepared&&s.player.x>=this.entranceX-200*scope.GRIM_CONFIG.pxPerMeter&&this.score.enabled){
-        this.score.prepareFinale();this.finalePrepared=true;
+        this.score.prepareFinale(this.chapter==='foothills'?'pursuit':'guardian');this.finalePrepared=true;
       }
       this.syncScore(s.state);
       this.save();
     }
     finishChapter(){
       if(!this.active||this.guardian?.phase!=='cleared')return;
+      const chapter=this.chapter,name=title(chapter),label=name.toUpperCase();
       let bonus,balance;
       try{
         const record=progress();
-        if(record.forest?.attempt!==this.id){
-          const prior=record.forest?.bonusTotal||0;
+        if(record[chapter]?.attempt!==this.id){
+          const prior=record[chapter]?.bonusTotal||0;
           bonus=prior?1:3;
-          record.forest={...record.forest,cleared:true,attempt:this.id,bonus,bonusTotal:prior+bonus};
-          record.foothillsUnlocked=true;
+          record[chapter]={...record[chapter],cleared:true,attempt:this.id,bonus,bonusTotal:prior+bonus};
+          record[chapter==='forest'?'foothillsUnlocked':'tundraUnlocked']=true;
           localStorage.setItem(PROGRESS,JSON.stringify(record));
-        }else bonus=record.forest.bonus;
+        }else bonus=record[chapter].bonus;
         // The wallet can derive its balance from the committed chapter record
         // even if the tab closes before the wallet mirror or cleanup finishes.
         this.scene.meta=meta().load();
@@ -293,17 +311,20 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         this.endAttempt(true);
       }catch(e){
         this.frozen=true;
-        this.screen('FOREST CLEAR PENDING','Free some browser storage to record your victory.',
+        this.screen(label+' CLEAR PENDING','Free some browser storage to record your victory.',
           ['RETRY SAVE',()=>this.finishChapter()]);
         return;
       }
-      const reward=bonus===3?'First Forest clear · +3 Souls':'Forest cleared · +1 Soul';
-      this.showingVictory=true;
-      this.playStory(true,()=>{
-        this.screen('FOREST CLEARED',reward+' · Wallet: '+balance+' Souls. Foothills unlocked · chapter in development.',
-          ['REPLAY FOREST',()=>this.enter()],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
+      const reward=bonus===3?'First '+name+' clear · +3 Souls':name+' cleared · +1 Soul';
+      const destination=chapter==='forest'?'Foothills unlocked.':'Tundra unlocked · chapter in development.';
+      const victory=()=>{
+        this.screen(label+' CLEARED',reward+' · Wallet: '+balance+' Souls. '+destination,
+          ['REPLAY '+label,()=>this.enter(chapter)],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
         this.showingVictory=false;
-      });
+      };
+      this.showingVictory=true;
+      if(chapter==='forest')this.playStory(true,victory);
+      else victory();
     }
     togglePause(){
       if(this.frozen)this.continueAttempt();
@@ -351,13 +372,13 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       if(this.historyIds.has(frame))return this.historyIds.get(frame);
       // At 10Hz the active Rewind window retains at most 86 frames.
       const id=this.historySerial%256;
-      localStorage.setItem(HISTORY+id,JSON.stringify([frame,this.scene.downhillCamera?.rewindOffsets.get(frame)||0]));
+      localStorage.setItem(slot(this.chapter)+'-rewind-'+id,JSON.stringify([frame,this.scene.downhillCamera?.rewindOffsets.get(frame)||0]));
       this.historySerial++;this.historyIds.set(frame,id);
       return id;
     }
     snapshot(){
       const s=this.scene,r=s.graveRush,clip=s.rewindPlayback;
-      return {version:1,chapter:'forest',routeVersion:this.routeVersion,id:this.id,seed:s.seed,mode:this.frozen?this.resumeMode:s.state,
+      return {version:1,chapter:this.chapter,routeVersion:this.routeVersion,id:this.id,seed:s.seed,mode:this.frozen?this.resumeMode:s.state,
         width:s.width,height:s.height,world:s.worldSnapshot(),
         run:Object.fromEntries(fields.map(k=>[k,s[k]])),powers:s.powerManager.levels,
         terrain:[...s.rewindTerrainBase],downhill:s.downhillCamera?.offset||0,
@@ -381,12 +402,12 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
           localStorage.setItem(meta().KEY,JSON.stringify(record));
           recoverWallet();
           this.walletDirty=false;
-        }else localStorage.setItem(KEY,raw);
+        }else localStorage.setItem(slot(this.chapter),raw);
         return true;
       }catch(e){
         if(!this.frozen)this.resumeMode=this.scene.state;
         this.frozen=true;
-        this.screen('FOREST SAVE PAUSED','Free some browser storage, then retry saving this attempt.',
+        this.screen(title(this.chapter).toUpperCase()+' SAVE PAUSED','Free some browser storage, then retry saving this attempt.',
           ['RETRY SAVE',()=>this.pause()]);
         return false;
       }
@@ -417,7 +438,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       const frames=new Map();
       const frame=id=>{
         if(!frames.has(id)){
-          const [value,offset]=JSON.parse(localStorage.getItem(HISTORY+id));
+          const [value,offset]=JSON.parse(localStorage.getItem(slot(this.chapter)+'-rewind-'+id));
           frames.set(id,value);this.historyIds.set(value,id);s.downhillCamera?.rewindOffsets.set(value,offset);
         }
         return frames.get(id);

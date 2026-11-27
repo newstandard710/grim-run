@@ -639,7 +639,8 @@ async function merchantAndInterruption(browser){
     assert.equal(await saved(page),null);
     const progress=await page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-campaign-progress-v1')));
     assert.equal(progress.foothillsUnlocked,true);assert.equal(progress.forest.attempt,bought.id);
-    assert.match(await page.locator('#campaign-secondary').innerText(),/COMING SOON/);
+    assert.equal(await page.locator('#campaign-secondary').innerText(),'START FOOTHILLS');
+    assert.equal(await page.locator('#campaign-secondary').isEnabled(),true);
     await page.locator('#campaign-primary').tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
     await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'rock');});
@@ -723,6 +724,122 @@ async function saveRecovery(browser){
 
   }finally{await ctx.close();}
 }
+async function defeatStoneGuardian(page){
+  for(let round=0;round<3;round++){
+    await untilBossPhase(page,'ridge',820);await holdControl(page,'jump',33);
+    await untilBossPhase(page,'draw',810);await holdControl(page,'slide','drag');
+    await untilBossPhase(page,'drag',280);await page.locator('#attack-btn').tap();
+    await untilBossPhase(page,round===2?'fall':'struck');
+  }
+}
+
+async function foothillsClear(browser,viewport,seed,earnUnlock){
+  const ctx=await browser.newContext({viewport,hasTouch:true});
+  const attempt=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-foothills-attempt-v1')));
+  const restore=async page=>{
+    const expected=await attempt(page);
+    await page.close();
+    const next=await ctx.newPage();await boot(next);await openChapters(next);
+    await next.getByRole('button',{name:'RESUME FOOTHILLS'}).tap();
+    await next.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.deepEqual(comparable(await attempt(next)),comparable(expected));
+    await resume(next);return next;
+  };
+  try{
+    url.searchParams.set('seed',String(seed));
+    let page=await ctx.newPage();await boot(page);
+    if(earnUnlock){
+      await reachGuardian(page);await defeatGuardian(page);await advance(page,'frames',70);
+      await playingStory(page,'passage-open.webm');await page.locator('#forest-story-skip').tap();
+      await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
+    }else{
+      // Model the unlocked record written by the previous live release.
+      await page.evaluate(()=>localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,
+        JSON.stringify({forest:{cleared:true,attempt:'prior-forest',bonus:3,bonusTotal:3},foothillsUnlocked:true})));
+      await openChapters(page);
+    }
+    await page.getByRole('button',{name:'START FOOTHILLS'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    assert.equal((await attempt(page)).chapter,'foothills');
+    await expectScore(page,'climb');
+    assert.ok(await audibleMusic(page));
+    await advance(page,'frames',8);
+    await holdControl(page,'jump',5);
+    const airborne=await attempt(page);assert.equal(airborne.world.player.grounded,false);
+    page=await restore(page);
+    await touchApproach(page);
+    assert.equal((await attempt(page)).mode,'vendorIntro');
+    await page.locator('#vendor-intro-skip').tap();await page.getByRole('button',{name:'CONTINUE RUN'}).tap();
+    await touchApproach(page);
+    const arrival=await attempt(page);
+    assert.equal(arrival.world.guardian.phase,'arrival');assert.equal(arrival.world.player.hp,3);
+    assert.ok(Object.values(arrival.run.runLoadout.levels).every(n=>n===0));
+    assert.deepEqual(await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];
+      return [s.biomeBackdrops.foothills.visible,s.obstacleBiomeFor(s.player),s.gunUnlocked,s.hasTeleported];
+    }),[true,'foothills',false,false]);
+    await expectScore(page,'pursuit');assert.ok(await audibleMusic(page));
+    await untilBossPhase(page,'ridge',150);
+    page=await restore(page);
+    const start=await attempt(page);
+    await defeatStoneGuardian(page);
+    const end=await attempt(page),total=end.world.elapsed+1.1;
+    assert.equal(end.world.player.hp,3);assert.ok(end.world.distance-start.world.distance>300);
+    assert.ok(total>=300&&total<=360);
+    const balance=(await wallet(page)).souls;
+    await advance(page,'frames',75);
+    await page.getByText('FOOTHILLS CLEARED',{exact:true}).waitFor();
+    assert.equal((await wallet(page)).souls,balance+3);
+    await boot(page);await openChapters(page);
+    await page.getByRole('button',{name:'REPLAY FOOTHILLS'}).waitFor();
+    assert.match(await page.locator('#campaign-detail').innerText(),/Tundra is unlocked/);
+    assert.equal(await attempt(page),null);
+    assert.equal((await wallet(page)).souls,balance+3);
+    await page.getByRole('button',{name:'REPLAY FOOTHILLS'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    const retry=await attempt(page);
+    assert.notEqual(retry.id,start.id);assert.equal(retry.world.distance,0);
+    console.log('Foothills touch clear',seed,viewport,'approach',arrival.world.elapsed.toFixed(2),
+      'total',total.toFixed(2),'HP',end.world.player.hp,'ordinary Souls',end.run.soulCount);
+    if(earnUnlock){
+      // Fail the approach, decline the offer, then retry this chapter at zero metres.
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'rock');});
+      await advance(page,'frames',180);await page.locator('#revive-no-btn').tap();
+      assert.equal(await attempt(page),null);
+      await page.getByRole('button',{name:'RETRY FOOTHILLS'}).tap();
+      await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+      const fresh=await attempt(page);assert.equal(fresh.world.distance,0);assert.notEqual(fresh.id,retry.id);
+      await page.locator('#pause-btn').tap();await page.locator('#campaign-save-menu').tap();
+      await page.getByRole('button',{name:'ENDLESS',exact:true}).tap();
+      await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+      assert.deepEqual(await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];return [s.campaign.active,s.forestRoute,s.gunUnlocked,s.obstacleBiomeFor(s.player)];
+      }),[false,null,false,'forest']);
+      assert.equal((await attempt(page)).id,fresh.id);
+    }else{
+      // Revisit the fight, try wrong inputs, buy a same-attempt revival and finish.
+      await runForest(page);
+      await page.locator('#vendor-intro-skip').tap();await page.getByRole('button',{name:'CONTINUE RUN'}).tap();
+      await runForest(page);
+      await untilBossPhase(page,'ridge',40);await holdControl(page,'jump',3);
+      await untilBossPhase(page,'pace');assert.equal((await attempt(page)).world.player.hp,2);
+      await untilBossPhase(page,'drag',300);await holdControl(page,'slide',3);
+      assert.equal((await attempt(page)).world.player.hp,1);
+      await untilBossPhase(page,'recover',250);await page.locator('#attack-btn').tap();
+      assert.equal((await attempt(page)).world.guardian.hp,3);
+      const before=(await wallet(page)).souls;
+      await advance(page,'frames',275);await page.locator('#revive-yes-btn').tap();
+      const paid=await attempt(page);assert.equal(paid.run.reviveUsed,true);assert.equal(paid.id,retry.id);
+      assert.equal((await wallet(page)).souls,before-3);
+      page=await restore(page);
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];for(let i=0;i<400&&s.state!=='playing';i++)s.update(0,1000/60);});
+      await defeatStoneGuardian(page);await advance(page,'frames',75);
+      await page.getByText('FOOTHILLS CLEARED',{exact:true}).waitFor();
+      assert.equal((await wallet(page)).souls,before-3+1);
+    }
+  }finally{url.searchParams.set('seed','33');await ctx.close();}
+}
+
 (async()=>{
   if(!process.env.GRIM_BASE_URL){
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -731,6 +848,11 @@ async function saveRecovery(browser){
   const browser=await chromium.launch({executablePath:process.env.GRIM_CHROME||undefined,
     args:[...(renderer==='canvas'?['--disable-webgl']:[]),'--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
   try{
+    if(process.argv.includes('--foothills')){
+      await foothillsClear(browser,{width:390,height:844},91,false);
+      await foothillsClear(browser,{width:844,height:390},33,true);
+      return;
+    }
     for(const viewport of [{width:844,height:390},{width:390,height:844}]){
       const a=await matched(browser,viewport,false),b=await matched(browser,viewport,true);
       assert.deepEqual(a,b);console.log('Matched jump, Cut and landing:',viewport,a.outcome.world.distance);

@@ -844,18 +844,22 @@ window.GRIM_CONFIG = Object.freeze({
     const owned=DEFINITIONS.map(entry=>entry.id).filter(id=>levels[id]>0);
     const selected=Array.isArray(obj.equipped)?owned.filter(id=>obj.equipped.includes(id)):owned;
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,equipped:selected.slice(0,SLOT_LIMIT),
+      foothillsBonusBanked:boundedInt(obj.foothillsBonusBanked,0,Number.MAX_SAFE_INTEGER),
       forestBonusBanked:boundedInt(obj.forestBonusBanked,0,Number.MAX_SAFE_INTEGER),
       openingSouls:boundedInt(obj.openingSouls,0,scope.GRIM_CONFIG.openingSoulLimit),
       brambleSouls:boundedInt(obj.brambleSouls,0,scope.GRIM_CONFIG.brambleSoulLimit)};
   }
   // The chapter records its lifetime bonus and winning attempt together.
   // A wallet written before victory can always catch up, even after a crash.
-  function applyForestBonus(state){
-    let earned;
-    try{earned=JSON.parse(localStorage.getItem(CAMPAIGN_PROGRESS)||'null')?.forest?.bonusTotal;}catch(_){}
-    if(Number.isSafeInteger(earned)&&earned>state.forestBonusBanked){
-      state.souls=boundedInt(state.souls+(earned-state.forestBonusBanked),0,MAX_SOULS);
-      state.forestBonusBanked=earned;
+  function applyChapterBonuses(state){
+    let record;
+    try{record=JSON.parse(localStorage.getItem(CAMPAIGN_PROGRESS)||'null');}catch(_){return state;}
+    for(const chapter of ['forest','foothills']){
+      const earned=record?.[chapter]?.bonusTotal,field=chapter+'BonusBanked';
+      if(Number.isSafeInteger(earned)&&earned>state[field]){
+        state.souls=boundedInt(state.souls+earned-state[field],0,MAX_SOULS);
+        state[field]=earned;
+      }
     }
     return state;
   }
@@ -864,15 +868,15 @@ window.GRIM_CONFIG = Object.freeze({
       const raw=localStorage.getItem(KEY);
       if(raw){
         const parsed=JSON.parse(raw);
-        if(parsed&&parsed.version===1&&Number.isFinite(Number(parsed.souls)))return applyForestBonus(normalize(parsed));
+        if(parsed&&parsed.version===1&&Number.isFinite(Number(parsed.souls)))return applyChapterBonuses(normalize(parsed));
       }
     }catch(_){}
     let legacy=0;
     try{legacy=localStorage.getItem(LEGACY);}catch(_){}
-    return applyForestBonus(normalize({souls:legacy}));
+    return applyChapterBonuses(normalize({souls:legacy}));
   }
   function save(state){
-    applyForestBonus(state);
+    applyChapterBonuses(state);
     // One authoritative JSON save. Mirror old Soul key only after the save succeeds.
     try{
       let recovery;
@@ -1404,6 +1408,9 @@ window.GRIM_CONFIG = Object.freeze({
       // Only extend when the caller is getting close to the generated edge.
       // spawnAhead and visibleSections ask every frame; without this guard each
       // call generated another chunk even when the requested range was covered.
+      if(route?.pursuit&&Number.isFinite(minX)){
+        while(cursor<minX+300)add(cursor+900,elevation);
+      }
       if(route||!Number.isFinite(minX)||minX<=cursor+850)return;
       const bound=Math.max(minX,cursor+1750);
       let watchdog=0;
@@ -2151,8 +2158,8 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/surface-dressing.js?v=ed351d97e79d"></script>
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
-  <script src="assets/visuals/forest-midground.js?v=8178f98d89c3"></script>
-  <script src="assets/visuals/biome-midground.js?v=ff60e4940e02"></script>
+  <script src="assets/visuals/forest-midground.js?v=b2667f2d1990"></script>
+  <script src="assets/visuals/biome-midground.js?v=4a821f6dcecc"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
@@ -2558,7 +2565,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=99f5593cc33b');
+        await import('./assets/campaign/forest.js?v=461985eef11b');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -2793,7 +2800,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameras.main.setScroll(this.cameraX,this.cameraY+this.appliedDownhillOffset);
     }
     get guardianStance(){
-      return Boolean(this.campaign?.guardian&&this.player.x>=this.campaign.guardian.standX-.5);
+      return Boolean(this.campaign?.guardian&&!this.campaign.guardian.pursuit&&this.player.x>=this.campaign.guardian.standX-.5);
     }
     get feetY(){return this.player.y;}
     get onGround(){return this.player.grounded;}
@@ -3103,7 +3110,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.particles = [];
       this.soulCount = 0;
       // null awaits the first Forest obstacle, a world X tracks it, and -1 closes the trial.
-      this.player.openingGateX=this.meta.openingSouls<C.openingSoulLimit?null:-1;
+      this.player.openingGateX=!route?.pursuit&&this.meta.openingSouls<C.openingSoulLimit?null:-1;
       this.openingSoulClaimed=false;this.brambleSoulClaimed=false;this.forestPracticeUsed=false;
       this.runSoulsAvailable=0;this.reviveUsed=false;
       this.freeLifeAvailable=this.runLoadout.levels.deathDenied>0;this.freeLifeUsed=false;
@@ -3121,6 +3128,11 @@ window.GRIM_CONFIG = Object.freeze({
       this.soulPlatform=route?[]:this.makeSoulPlatform();
       if(!route)this.souls.push({x:this.startX+C.soulAtMeters*C.pxPerMeter,baseY:this.soulPlatform[1].y,offset:-113,kind:'optional',taken:false});
       if(!route)this.souls.push({x:this.startX+C.finalSoulMeters*C.pxPerMeter,baseY:this.soulPlatform[8].y,offset:-100,kind:'optional',taken:false});
+      if(route?.pursuit){
+        for(const gap of [route.gaps[2],route.gaps.at(-2)]){
+          this.souls.push({x:gap.x+40,baseY:this.terrain.anchorAt(gap.x),offset:-112,kind:'optional',taken:false});
+        }
+      }
       this.populateGold();
       // Reserve ordinary spawn slots for two grounded rehearsals and two landing counters.
       // Geometry and collectible exclusions still have final say.
@@ -3498,7 +3510,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.update(this.player.hp,this.player.maxHp,this.distance,this.soulCount,this.coinCount,this.points,this.powerManager.summary());
     }
     canEarnBrambleSoul(){
-      return !this.brambleSoulClaimed && !this.forestPracticeUsed && !this.teleportUsed &&
+      return !this.forestRoute?.pursuit && !this.brambleSoulClaimed && !this.forestPracticeUsed && !this.teleportUsed &&
         this.meta.brambleSouls<C.brambleSoulLimit;
     }
     collectSoul(kind){
@@ -3848,7 +3860,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.tipped.add('abyss');
         const x=this.terrain.firstGapX-360;
         const y=this.terrain.anchorAt(x)-150;
-        const label=this.add.text(x,y,'JUMP THE ABYSS ↑',{fontFamily:'system-ui,Arial,sans-serif',
+        const hint=route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
+        const label=this.add.text(x,y,hint,{fontFamily:'system-ui,Arial,sans-serif',
           fontSize:'20px',fontStyle:'900',color:'#b9fff1',stroke:'#061521',strokeThickness:6,align:'center'})
           .setOrigin(.5).setDepth(35);
         label.setShadow(0,2,'#061521',5,true,true);
@@ -3939,7 +3952,7 @@ window.GRIM_CONFIG = Object.freeze({
         let snowLanding=false;
         const rushing=Boolean(this.graveRush);
         if(rushing)this.advanceGraveRush(frameMs);
-        else if(this.campaign?.guardian){
+        else if(this.campaign?.guardian&&!this.campaign.guardian.pursuit){
           const remaining=this.campaign.guardian.standX-p.x;
           p.x+=Math.min(Math.max(0,remaining),this.speed*dt*worldFactor,Math.max(0,remaining)*dt*5+dt*10);
         }else p.x += this.speed*dt*worldFactor;
@@ -4602,7 +4615,7 @@ window.GRIM_CONFIG = Object.freeze({
       const fromCamera={x:this.cameraX,y:this.cameraY};
       const group=this.terrain.groupNear(p.x) || [...this.terrain.sequences].reverse().find(s=>s.startX<p.x);
       if(!group){p.y=this.terrain.anchorAt(p.x);p.grounded=true;return;}
-      const hell=this.distance>=8000;
+      const hell=!this.forestRoute&&this.distance>=8000;
       const damage=hell?this.powerManager.lavaDamage():1;
       this.fallCount++;
       document.getElementById('fall-notice').textContent=this.godMode?'GOD MODE · FALL RECOVERED':
@@ -4987,7 +5000,7 @@ window.GRIM_CONFIG = Object.freeze({
     updateBiomeBackdrops(){
       if(!this.biomeBackdrops)return;
       const worldArt=scope.GRIM_WORLD_ART;
-      const weights=this.forestRoute?{forest:1}:worldArt?.biomeWeights?worldArt.biomeWeights(this.distance):{};
+      const weights=this.forestRoute?{[this.forestRoute.biome]:1}:worldArt?.biomeWeights?worldArt.biomeWeights(this.distance):{};
       const biomes=worldArt?.WORLD_BIOMES||[];
       const active=biomes.filter(biome=>this.biomeBackdrops[biome.id]&&
         (weights[biome.id]||0)>.003);
@@ -5513,7 +5526,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
     }
     terrainBiomeWeights(meters){
-      if(this.forestRoute)return {forest:1};
+      if(this.forestRoute)return {[this.forestRoute.biome]:1};
       const art=scope.GRIM_WORLD_ART;
       if(!art?.biomeWeights)return {forest:1};
       if(!this.hasTeleported&&meters>=5000)return {tundra:1};
@@ -6208,7 +6221,7 @@ window.GRIM_CONFIG = Object.freeze({
       const leftY=y0+ABYSS_FOG_INSET,rightY=y1+ABYSS_FOG_INSET;
       const origin=this.startX??200;
       const first=biome==='caves'&&this.hasTeleported?Math.max(start,origin+SNOW_PORTAL*C.pxPerMeter):start;
-      const last=biome==='foothills'?Math.min(end,origin+SNOW_PURE_START*C.pxPerMeter):end;
+      const last=biome==='foothills'&&!this.forestRoute?.pursuit?Math.min(end,origin+SNOW_PURE_START*C.pxPerMeter):end;
       const signature=[start,end,y0,y1,first,last].join(':');
       if(view.geometrySignature!==signature){
         // The foreground at .62 and above occludes the textured rock, so
@@ -6354,7 +6367,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(section.kind==='gap')continue;
         const from=Math.max(left,section.start),to=Math.min(right,section.end);
         if(to<=from)continue;
-        const m=this.forestRoute?0:(section.start+section.end-2*startX)/(2*C.pxPerMeter);
+        const m=this.forestRoute?this.forestRoute.artMeters:(section.start+section.end-2*startX)/(2*C.pxPerMeter);
         const weights=this.terrainBiomeWeights(m);
         // The snow composite spans the entire section. Interpolating two equal
         // endpoints at the viewport edges can shift its cache key by one ulp.
@@ -6486,7 +6499,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Rare souls glow visibly more than ordinary coins.
     }
     obstacleBiomeFor(o){
-      if(this.forestRoute)return 'forest';
+      if(this.forestRoute)return this.forestRoute.biome;
       const meters=(o.x-(this.startX??200))/C.pxPerMeter;
       if(meters<900)return 'forest';
       if(meters<2300)return 'foothills';

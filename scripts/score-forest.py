@@ -120,3 +120,22 @@ for pos, pitch, length in [(0, 62, .65), (.65, 69, .65), (1.3, 67, .5), (2, 66, 
 for pos, pitch in [(0, 50), (.5, 57), (1, 62), (2, 54), (2.5, 57), (3, 62)]:
     victory.note(pos, pitch, 1.4, "harp", .135)
 victory.write("forest-victory", False)
+
+# The Foothills carry the same call across a four-beat climbing pulse.
+# Plucked octaves trade the melody with bells. Low strings take it up in pursuit.
+for pursuit in (False, True):
+    score = Score(116 if pursuit else 92, 64)
+    for bar in range(16):
+        phrase = bar % 8
+        root, fifth, color = chords[phrase]
+        at = bar * 4
+        score.note(at, root - (12 if pursuit else 0), 3.5, "bow", .13)
+        for pos, pitch in [(0, root), (.75, fifth), (1.5, color), (2.5, fifth+12), (3.5, color)]:
+            score.note(at+pos, pitch, .44, "harp", .095)
+        for pos in ((0, 1, 1.5, 2.75, 3.5) if pursuit else (0, 2.75)):
+            score.note(at+pos, root-5, .28, "drum", .18 if pursuit else .065)
+        for pos, pitch, length in phrases[phrase]:
+            score.note(at+pos*1.25, pitch-(12 if pursuit else 0), length, "bow" if pursuit else "bell", .16)
+        if bar >= 8:
+            score.note(at+3, fifth+12, .8, "reed", .075)
+    score.write("foothills-pursuit" if pursuit else "foothills-climb", True)

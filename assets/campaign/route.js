@@ -23,9 +23,29 @@ const approach = [
   [[0,'bramble'],[62,'rock'],[98,'branch'],[141,'bramble']]
 ];
 
-export function forestRoute(seed,origin,unit){
+// At the first ravine the shelf is visible across the gap. Subsequent pairs
+// gradually shorten the landing while keeping time to release Jump and slide.
+const foothillsOpening=[
+  [58,'rock'],[130,'branch'],[218,'gap'],[236,'branch'],[332,'bramble'],
+  [405,'gap'],[431,'branch'],[531,'rock'],[577,'branch'],[780,'gap'],[806,'branch']
+];
+const terraces=[
+  [[0,'gap'],[26,'branch'],[102,'bramble']],
+  [[0,'rock'],[34,'branch'],[119,'gap']],
+  [[0,'branch'],[78,'gap'],[105,'branch']],
+  [[0,'bramble'],[63,'rock'],[118,'branch']]
+];
+const ridges=[
+  [[0,'gap'],[23,'branch'],[94,'rock'],[141,'bramble']],
+  [[0,'bramble'],[62,'gap'],[86,'branch'],[150,'rock']],
+  [[0,'rock'],[35,'branch'],[108,'gap'],[134,'branch']],
+  [[0,'branch'],[58,'rock'],[117,'gap'],[142,'bramble']]
+];
+
+export function forestRoute(seed,origin,unit,chapter='forest'){
+  const hills=chapter==='foothills',end=hills?8100:END;
   const rng=window.GRIM_CORE.makeRng(seed ^ 0x476c6164);
-  const beats=opening.map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
+  const beats=(hills?foothillsOpening:opening).map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
   function section(start,count,stride,phrases){
     let bag=[],last;
     for(let i=0;i<count;i++){
@@ -42,18 +62,25 @@ export function forestRoute(seed,origin,unit){
       for(const [offset,type] of last)beats.push([at+offset,type]);
     }
   }
-  section(940,6,251,practice);
-  section(2460,10,244,combinations);
-  section(4925,5,255,approach);
-  beats.push([6205,'gap'],[6242,'branch'],[6285,'bramble'],
-    [6358,'rock'],[6394,'branch'],[6438,'bramble']);
+  if(hills){
+    section(930,10,248,terraces);
+    section(3440,17,240,ridges);
+    beats.push([7580,'gap'],[7603,'branch'],[7680,'bramble'],[7772,'rock'],
+      [7806,'branch'],[7890,'gap'],[7915,'branch'],[7990,'bramble']);
+  }else{
+    section(940,6,251,practice);
+    section(2460,10,244,combinations);
+    section(4925,5,255,approach);
+    beats.push([6205,'gap'],[6242,'branch'],[6285,'bramble'],
+      [6358,'rock'],[6394,'branch'],[6438,'bramble']);
+  }
   const entries=beats.map(([m,type])=>({x:origin+m*unit,type}));
   const obstacles=entries.filter(e=>e.type!=='gap');
   const gaps=entries.filter(e=>e.type==='gap');
   const encounters=new Map(obstacles.map((ob,i)=>[ob.x,{type:ob.type,
-    nextX:obstacles[i+1]?.x??origin+(END+500)*unit}]));
+    nextX:obstacles[i+1]?.x??origin+(end+500)*unit}]));
   return {
-    end:END, first:obstacles[0].x, gaps,
+    end, biome:chapter, artMeters:hills?1530:0, pursuit:hills, first:obstacles[0].x, gaps,
     encounters,
     // Generate fixed world geometry once so reload, rotation and Rewind all use
     // the terrain engine's existing segment identities and interpolation.
@@ -61,17 +88,18 @@ export function forestRoute(seed,origin,unit){
       const phase=rng.next()*2*Math.PI;
       const elevation=x=>{
         const m=(x-origin)/unit;
-        if(m<110 || (m>=625&&m<=713) || m>=6460)return baseY;
+        if(m<110 || (m>=625&&m<=713) || m>=end-40)return baseY;
+        if(hills)return baseY-55*Math.min(1,m/250)+35*Math.sin(x/640+phase)+13*Math.sin(x/275+phase);
         return baseY+23*Math.sin(x/470+phase)+10*Math.sin(x/233+phase);
       };
-      function hills(to){
+      function slopes(to){
         while(cursor()<to){
           const end=Math.min(to,cursor()+310);
           add(end,elevation(end));
         }
       }
       for(const [id,gap] of gaps.entries()){
-        hills(gap.x-200);
+        slopes(gap.x-200);
         const y=elevation(gap.x-200);
         add(gap.x,y);
         const end=gap.x+(id===0?88:92+rng.integer(0,22));
@@ -79,7 +107,7 @@ export function forestRoute(seed,origin,unit){
         sequences.push({id,startX:gap.x,endX:end,respawnX:end+155,initialY:y});
         add(end+190,y);
       }
-      hills(origin+(END+240)*unit);
+      slopes(origin+(end+240)*unit);
     }
   };
 }
