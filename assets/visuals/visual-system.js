@@ -670,7 +670,7 @@
       if(p.visualFireMs>0)return 'crossbow_fire';
       if(s.damageFlashMs>0&&p.invulMs>0)return 'hurt';
       if(!p.grounded&&!p.onSoulPlatform){if(p.hovering)return 'hover';return p.velocityY<0?'jump':'fall';}
-      if(['playing','rewinding','countdown'].includes(s.state))return 'run';
+      if(!s.guardianStance&&['playing','rewinding','countdown'].includes(s.state))return 'run';
       return 'idle';
     }
     renderIllustrated(){

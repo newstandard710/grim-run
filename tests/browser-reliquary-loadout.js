@@ -7,6 +7,8 @@ const {verifySoulReach}=require('./browser-soul-reach.js');
 const levels = {boneheart:3,graveWealth:3,deathsLeap:2,graveGlide:3,fatesBargain:3,deathDenied:1};
 
 async function openShop(page) {
+  // A freshly opened tab may still be initializing its software renderer.
+  await page.waitForFunction(()=>window.grimRun?.scene?.scenes[0]?.state==='home',null,{timeout:60000});
   await page.locator('#home-enter-btn').tap();
   await page.locator('#reliquary-btn').tap();
   await page.waitForFunction(()=>window.grimRun?.scene.scenes[0]?.state==='reliquary');
@@ -100,8 +102,17 @@ async function check(browser,viewport,url) {
     assert.equal(saved.souls,38);assert.deepEqual(saved.levels,{...levels,soulReach:0});
     assert.equal(saved.openingSouls,4);assert.equal(saved.brambleSouls,3);
     assert.equal(saved.equipped.length,6);assert.deepEqual(errors,[]);
+    // The run is already stepped by the test clock. Park its renderer while
+    // the second tab is foregrounded; the first tab still receives storage
+    // events and its live loadout is asserted below.
+    await page.evaluate(()=>{
+      const scene=grimRun.scene.scenes[0];
+      clearInterval(scene.loopWatchdogId);
+      grimRun.loop.sleep();
+    });
     const other=await context.newPage();
     await other.goto(url.href,{waitUntil:'domcontentloaded'});
+    await other.bringToFront();
     await openShop(other);
     await other.locator('#equip-deathsLeap').tap();
     await page.waitForFunction(()=>!grimRun.scene.scenes[0].meta.equipped.includes('deathsLeap'));

@@ -2117,7 +2117,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
   <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
   <script src="assets/visuals/rising-cut.js?v=ground-drag1"></script>
-  <script src="assets/visuals/motion-animations.js?v=36d3839169fa"></script>
+  <script src="assets/visuals/motion-animations.js?v=c1a918ce0f7e"></script>
   <script src="assets/motion/landing/poses.js?v=1"></script>
   <script src="assets/visuals/landing-motion.js?v=1"></script>
   <script src="assets/visuals/actor-transition-textures.js?v=eadfe1fa192f"></script>
@@ -2129,7 +2129,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/combat/v0201/animation-data.js?v=1"></script>
   <script src="assets/visuals/reaper-reaction.js?v=rear-carry1"></script>
   <script src="assets/ui/v0160/frontispiece.js?v=home1"></script>
-  <script src="assets/visuals/visual-system.js?v=b04ba4700885"></script>
+  <script src="assets/visuals/visual-system.js?v=90e0396a68c5"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=landforms-2"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=landforms-1"></script>
   <script src="assets/visuals/obstacle-mounts.js?v=landforms-3"></script>
@@ -2488,7 +2488,7 @@ window.GRIM_CONFIG = Object.freeze({
         document.getElementById('start-btn').disabled=true;
       }
       if(new URLSearchParams(scope.location?.search).get('campaign')==='review'){
-        this.campaignReady=import('./assets/campaign/forest.js').then(()=>{
+        this.campaignReady=import('./assets/campaign/forest.js?v=84301e6cea9f').then(()=>{
           this.campaign=new scope.GrimForestCampaign(this);
           this.campaign.openSavedOnLoad();
           return this.campaign;
@@ -2734,6 +2734,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.appliedDownhillOffset=this.downhillOffset;
       this.cameras.main.setScroll(this.cameraX,this.cameraY+this.appliedDownhillOffset);
     }
+    get guardianStance(){
+      return Boolean(this.campaign?.guardian&&this.player.x>=this.campaign.guardian.standX-.5);
+    }
     get feetY(){return this.player.y;}
     get onGround(){return this.player.grounded;}
     get lowProfile(){return this.player.sliding || (!this.onGround&&(this.player.holdSlide||this.player.airTuck));}
@@ -2801,6 +2804,7 @@ window.GRIM_CONFIG = Object.freeze({
         if(s&&s.kind!=='gap')rubble.push({index,kind:s.kind,y0:s.y0,y1:s.y1});
       }
       return {
+        ...(this.campaign?.guardian ? {guardian:{...this.campaign.guardian}} : {}),
         at:this.rewindClockMs,
         player:{...this.player},
         speed:this.speed,distance:this.distance,elapsed:this.elapsed,frame:this.frame,
@@ -2838,6 +2842,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     applyRewindSnapshot(saved){
       const copy=a=>a.map(o=>({...o}));
+      if(this.campaign?.active)this.campaign.guardian=saved.guardian?{...saved.guardian}:null;
       this.player={...saved.player};
       this.slideRotation=saved.slideRotation??null;
       // Don't leave touch controls held after teleporting the player back.
@@ -3478,6 +3483,7 @@ window.GRIM_CONFIG = Object.freeze({
       const rising=this.motionArt?.rising?.contactTest(previousRoot);
       const sweep=rising?null:this.motionArt?.attackBoxes(this.player.previousAttackMs);
       const hits=rising||(target=>sweep?sweep.some(edge=>Core.overlaps(edge,target)):Core.overlaps(box,target));
+      if(this.campaign?.guardian)this.campaign.encounter.cut(hits);
       for (const ob of this.obstacles) {
         if (!Combat.cuttable(ob) || ob.destroyed) continue;
         const target=ob.type==='snappingBramble'?this.snappingBox(ob):ob;
@@ -3862,7 +3868,10 @@ window.GRIM_CONFIG = Object.freeze({
         let snowLanding=false;
         const rushing=Boolean(this.graveRush);
         if(rushing)this.advanceGraveRush(frameMs);
-        else p.x += this.speed*dt*worldFactor;
+        else if(this.campaign?.guardian){
+          const remaining=this.campaign.guardian.standX-p.x;
+          p.x+=Math.min(Math.max(0,remaining),this.speed*dt*worldFactor,Math.max(0,remaining)*dt*5+dt*10);
+        }else p.x += this.speed*dt*worldFactor;
         if(this.powerManager.level('graveRush')||this.rushCooldownMs>0){
           this.rushCooldownMs=Math.max(0,this.rushCooldownMs-frameMs);
           this.rushNoticeMs=Math.max(0,this.rushNoticeMs-frameMs);
@@ -3983,7 +3992,9 @@ window.GRIM_CONFIG = Object.freeze({
           const target=this.nextVendorNumber++;
           this.triggerVendor(target);this.drawScene();return;
         }
-        this.spawnAhead();
+        if(this.campaign?.guardian)this.campaign.encounter.step(frameMs*worldFactor);
+        else this.spawnAhead();
+        if(this.state!=='playing'){this.drawScene();return;}
         this.updatePlants(frameMs*worldFactor);
         if (this.motionArt?.rising?.wantsContactTest()||
           Core.attackActive(p.attackMs,C.attackDurationMs,C.attackActiveStart,C.attackActiveEnd)||
@@ -4059,6 +4070,7 @@ window.GRIM_CONFIG = Object.freeze({
       return limit;
     }
     rushBossInPath(from,to){
+      if(this.campaign?.active&&(this.campaign.guardian||to>=this.campaign.entranceX))return true;
       return this.enemies.some(e=>{
         if(e.dead||!(e.isBoss||e.kind==='boss'))return false;
         const box=Combat.rectFor(e),left=e.x-(e.width??box.width)/2;
@@ -4968,6 +4980,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.obstacleFront?.clear();
       for(const ob of this.obstacles) if (!ob.destroyed) this.drawObstacle(ob);
       this.drawCombat();
+      this.campaign?.encounter.render();
       this.drawParticles();
       this.snowTread?.draw();
       this.drawReaper();

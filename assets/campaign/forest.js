@@ -1,8 +1,10 @@
-/* The review route uses the ordinary game scene. No progression flag is awarded
-   at the edge of the existing Forest. */
+import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
+
 (function(scope){
   'use strict';
   const KEY='grim-run-forest-attempt-v1', HISTORY=KEY+'-rewind-', END=900;
+  const PROGRESS='grim-run-campaign-progress-v1';
+  const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
   const MODES=new Set(['playing','countdown','dying','revive','respawning','vendorIntro','upgrade','rewinding']);
   const fields=[
     'runLoadout','soulCount','runSoulsAvailable','freeLifeAvailable','freeLifeUsed','reviveUsed',
@@ -38,6 +40,8 @@
     const raw=localStorage.getItem(KEY);
     if(!raw)return null;
     const d=JSON.parse(raw);
+    // Completion is authoritative even if cleanup was interrupted during a menu transition.
+    if(typeof d?.id==='string'&&progress().forest?.attempt===d.id)return null;
     if(d.version!==1||d.chapter!=='forest'||typeof d.id!=='string'||!Number.isInteger(d.seed)||
       !MODES.has(d.mode)||!Number.isFinite(d.world?.player?.x)||!Array.isArray(d.history))
       throw Error('This Forest save could not be read.');
@@ -47,6 +51,7 @@
   class ForestCampaign {
     constructor(scene){
       this.scene=scene;
+      this.encounter=new ForestGuardian(this);
       this.active=false;
       this.frozen=false;
       this.historyIds=new WeakMap();
@@ -65,7 +70,7 @@
       });
       const suspend=()=>{
         if(!this.active)return false;
-        this.pause();
+        if(this.guardian?.phase!=='cleared')this.pause();
         return true;
       };
       scene.ui.actions.suspendCampaign=suspend;
@@ -112,9 +117,10 @@
     chapters(){
       try{
         const d=readAttempt();
-        this.screen('CAMPAIGN','Forest review ends at the edge of the woods.',
-          [d?'RESUME FOREST':'START FOREST',()=>this.enter()],
-          ['FOOTHILLS · LOCKED',null],()=>this.modes());
+        const cleared=Boolean(progress().forest);
+        this.screen('CAMPAIGN',cleared?'Forest cleared. Foothills is unlocked and in development.':'A guardian keeps watch at the edge of the woods.',
+          [d?'RESUME FOREST':cleared?'REPLAY FOREST':'START FOREST',()=>this.enter()],
+          [cleared?'FOOTHILLS · COMING SOON':'FOOTHILLS · LOCKED',null],()=>this.modes());
       }catch(e){this.unreadable(e);}
     }
     unreadable(error){
@@ -186,6 +192,7 @@
     }
     release(){
       this.active=false;this.frozen=false;this.walletDirty=false;this.reconnect=null;
+      this.guardian=null;this.encounter.hide();
       this.requiredArt=null;cancelAnimationFrame(this.artWait);
       this.unlock?.();this.unlock=null;
     }
@@ -194,13 +201,32 @@
       for(let i=0;i<256;i++)localStorage.removeItem(HISTORY+i);
       this.release();
     }
+    get entranceX(){return this.scene.startX+END*scope.GRIM_CONFIG.pxPerMeter;}
     afterFrame(){
       if(!this.active)return;
-      if(this.scene.distance>=END&&this.scene.state==='playing'){
+      const s=this.scene;
+      if(this.guardian?.phase==='cleared'){this.finishChapter();return;}
+      if(!this.guardian&&s.player.x>=this.entranceX&&s.state==='playing'&&!s.graveRush)
+        this.encounter.enter();
+      this.save();
+    }
+    finishChapter(){
+      // Commit the entitlement before removing the active attempt. Re-reading
+      // the same victory after interruption has no further effect on the bank.
+      try{
+        const record=progress();
+        record.forest={cleared:true,attempt:this.id};
+        record.foothillsUnlocked=true;
+        localStorage.setItem(PROGRESS,JSON.stringify(record));
         this.endAttempt();
-        this.screen('FOREST REVIEW COMPLETE','The Forest boss will guard the path to Foothills.',
-          ['RETRY FOREST',()=>this.enter()],['MAIN MENU',()=>this.scene.goToMenu()]);
-      }else this.save();
+      }catch(e){
+        this.frozen=true;
+        this.screen('FOREST CLEAR PENDING','Free some browser storage to record your victory.',
+          ['RETRY SAVE',()=>this.finishChapter()]);
+        return;
+      }
+      this.screen('FOREST CLEARED','The guardian falls. Foothills unlocked · chapter in development.',
+        ['REPLAY FOREST',()=>this.enter()],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
     }
     togglePause(){
       if(this.frozen)this.continueAttempt();
@@ -269,7 +295,7 @@
         nextHistory:this.historySerial};
     }
     save(){
-      if(!this.active)return false;
+      if(!this.active||this.guardian?.phase==='cleared')return false;
       try{
         const raw=JSON.stringify(this.snapshot());
         if(this.walletDirty){
