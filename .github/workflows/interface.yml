@@ -78,3 +78,5 @@ jobs:
           npx playwright install chromium
       - name: Verify Forest Campaign, guardian, revival and exact resume
         run: node tests/browser-forest-campaign.js
+      - name: Verify Foothills unlock, touch pursuit, rewards and interrupted attempts
+        run: node tests/browser-forest-campaign.js --foothills

@@ -1,6 +1,6 @@
 // Forest Campaign music streams in once per track. A single shared AudioContext
 // owns both the independent music bus and the existing action-sound bus.
-const files = {walk:'forest-walk.ogg', guardian:'forest-guardian.ogg', victory:'forest-victory.ogg'};
+const files = {climb:'foothills-climb.ogg',pursuit:'foothills-pursuit.ogg',walk:'forest-walk.ogg', guardian:'forest-guardian.ogg', victory:'forest-victory.ogg'};
 const mute = document.getElementById('mute-music');
 const volume = document.getElementById('music-volume');
 try {
@@ -42,10 +42,10 @@ export class ForestScore {
     return this.buffers.get(section);
   }
 
-  prepareFinale() {
+  prepareFinale(boss='guardian') {
     const context = window.GRIM_ACTION_AUDIO?.context;
     if (!context || !this.enabled) return;
-    this.load('guardian', context);
+    this.load(boss, context);
     this.load('victory', context);
   }
 
