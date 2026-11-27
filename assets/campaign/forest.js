@@ -1,17 +1,18 @@
+import {Broodmother} from './broodmother.js?v=aaf12e930a1c';
 import {FrostCrown} from './frost-crown.js?v=ae5176d81a91';
 import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
-import {ForestScore} from '../audio/forest-score.js?v=d3741c338284';
+import {ForestScore} from '../audio/forest-score.js?v=72f72eafc2a8';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
-import {forestRoute} from './route.js?v=5db8b9835ee6';
+import {forestRoute} from './route.js?v=692f93ddcf33';
 
 (function(scope){
   'use strict';
   const KEY='grim-run-forest-attempt-v1', LEGACY_END=900;
   const slot=chapter=>'grim-run-'+chapter+'-attempt-v1';
   const title=chapter=>chapter[0].toUpperCase()+chapter.slice(1);
-  const nextChapter={forest:'foothills',foothills:'tundra',tundra:'caves'};
-  const tracks={forest:['walk','guardian'],foothills:['climb','pursuit'],tundra:['crossing','crown']};
+  const nextChapter={forest:'foothills',foothills:'tundra',tundra:'caves',caves:'crystals'};
+  const tracks={forest:['walk','guardian'],foothills:['climb','pursuit'],tundra:['crossing','crown'],caves:['descent','brood']};
   const PROGRESS=scope.GRIM_META.CAMPAIGN_PROGRESS;
   const OPENING_SEEN='grim-run-forest-opening-seen-v1';
   const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
@@ -41,7 +42,7 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
     }
     if(!record?.forestRecovery)return;
     const chapter=JSON.parse(record.forestRecovery).chapter;
-    if(!['forest','foothills','tundra'].includes(chapter))throw Error('Invalid Campaign recovery record.');
+    if(!['forest','foothills','tundra','caves'].includes(chapter))throw Error('Invalid Campaign recovery record.');
     localStorage.setItem(slot(chapter),record.forestRecovery);
     delete record.forestRecovery;
     localStorage.setItem(meta().KEY,JSON.stringify(record));
@@ -67,7 +68,7 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
       scene.ui.actions.syncCampaignScore=mode=>this.syncScore(mode);
       el('music-settings').dataset.available='1';
       this.chapter='forest';
-      this.encounters={forest:new ForestGuardian(this),foothills:new StoneGuardian(this),tundra:new FrostCrown(this)};
+      this.encounters={forest:new ForestGuardian(this),foothills:new StoneGuardian(this),tundra:new FrostCrown(this),caves:new Broodmother(this)};
       this.encounter=this.encounters.forest;
       this.active=false;
       this.frozen=false;
@@ -80,6 +81,7 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
       };
       for(const [index,id] of ['campaign-primary','campaign-secondary'].entries())
         listen(el(id),'click',()=>this.actions[index]?.());
+      listen(el('campaign-caves'),'click',()=>this.enter('caves'));
       listen(el('campaign-tundra'),'click',()=>this.enter('tundra'));
       listen(el('campaign-save-menu'),'click',()=>{
         if(!this.active||!this.save())return;
@@ -164,7 +166,7 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
       const s=this.scene;
       s.state='campaignMenu';s.ui.setMode('campaignMenu');
       el('campaign-title').textContent=title;el('campaign-detail').textContent=detail;
-      visible('campaign-story-replay',false);visible('campaign-tundra',false);
+      visible('campaign-story-replay',false);visible('campaign-tundra',false);visible('campaign-caves',false);
       this.actions=[primary[1],secondary?.[1]];
       this.back=back;
       el('campaign-primary').textContent=primary[0];
@@ -182,11 +184,15 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
         };
         const forest=savedLabel('forest','START FOREST','REPLAY FOREST');
         const tundra=Boolean(record.tundraUnlocked||record.foothills?.cleared);
-        const detail=record.cavesUnlocked?'Tundra cleared. Caves is in development.':tundra?'Foothills cleared. Tundra is unlocked. Cross the ice field.':
+        const caves=Boolean(record.cavesUnlocked||record.tundra?.cleared);
+        const detail=record.crystalsUnlocked?'Caves cleared. Crystals is in development.':caves?'Tundra cleared. Caves is unlocked. Follow the silk underground.':tundra?'Foothills cleared. Tundra is unlocked. Cross the ice field.':
           cleared?'Forest cleared. Foothills is unlocked. Follow the Souls up the ridge.':'A guardian keeps watch at the edge of the woods.';
         this.screen('CAMPAIGN',detail,[forest,()=>this.enter('forest')],
           cleared?[savedLabel('foothills','START FOOTHILLS','REPLAY FOOTHILLS'),()=>this.enter('foothills')]:
             ['FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
+        visible('campaign-caves',tundra||caves);
+        el('campaign-caves').disabled=!caves;
+        el('campaign-caves').textContent=caves?savedLabel('caves','START CAVES','REPLAY CAVES'):'CAVES · LOCKED';
         visible('campaign-tundra',cleared);
         el('campaign-tundra').disabled=!tundra;
         el('campaign-tundra').textContent=tundra?savedLabel('tundra','START TUNDRA','REPLAY TUNDRA'):'TUNDRA · LOCKED';
@@ -220,6 +226,7 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
     async enter(chapter=this.chapter){
       if(this.busy||this.active)return;
       if(chapter==='foothills'&&!progress().foothillsUnlocked&&!progress().forest?.cleared)return;
+      if(chapter==='caves'&&!progress().cavesUnlocked&&!progress().tundra?.cleared)return;
       if(chapter==='tundra'&&!progress().tundraUnlocked&&!progress().foothills?.cleared)return;
       this.chapter=chapter;this.encounter=this.encounters[chapter];
       const name=title(chapter),label=name.toUpperCase();
@@ -252,7 +259,7 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
             document.querySelector('.god-mode-desc').classList.add('hidden');
             if(d){this.openingSeen=true;this.restore(d);this.pause();}
             else if(this.save()){
-              if(chapter==='tundra'&&!localStorage.getItem('grim-run-tundra-intro-seen'))this.crossbowOpening();
+              if(['tundra','caves'].includes(chapter)&&!localStorage.getItem('grim-run-'+chapter+'-intro-seen'))this.chapterOpening();
               if(chapter==='forest'&&!this.openingSeen&&!progress().forest&&localStorage.getItem(OPENING_SEEN)!=='1'){
                 this.openingSeen=true;
                 // The attempt is durable at the starting frame before the first image.
@@ -270,18 +277,19 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
       }catch(e){this.unreadable(e);}
       finally{this.busy=false;}
     }
-    crossbowOpening(){
+    chapterOpening(){
       const s=this.scene;
-      localStorage.setItem('grim-run-tundra-intro-seen','1');
+      const caves=this.chapter==='caves',sceneArt=caves?'silk':'crossbow';
+      localStorage.setItem('grim-run-'+this.chapter+'-intro-seen','1');
       this.resumeMode=s.state;this.frozen=true;
       const finish=()=>{
         if(this.finishStory!==finish)return;
-        clearTimeout(timer);this.finishStory=null;delete el('campaign-screen').dataset.crossbow;
+        clearTimeout(timer);this.finishStory=null;delete el('campaign-screen').dataset[sceneArt];
         this.frozen=false;s.state=this.resumeMode;s.ui.setMode(s.state);s.wakeGameLoop();
       };
       this.finishStory=finish;
-      el('campaign-screen').dataset.crossbow='1';
-      this.screen('THE BONE CROSSBOW','At the ice line, a frost wisp stirs. Press Shoot when its light gathers. The crossbow aims for you.',
+      el('campaign-screen').dataset[sceneArt]='1';
+      this.screen(caves?'BENEATH THE SILK':'THE BONE CROSSBOW',caves?'A thread trembles in the still air. Something above you lets go.':'At the ice line, a frost wisp stirs. Press Shoot when its light gathers. The crossbow aims for you.',
         ['SKIP',finish]);
       const timer=setTimeout(finish,4200);
     }
@@ -341,7 +349,7 @@ import {forestRoute} from './route.js?v=5db8b9835ee6';
         return;
       }
       const reward=bonus===3?'First '+name+' clear · +3 Souls':name+' cleared · +1 Soul';
-      const destination=title(nextChapter[chapter])+' unlocked'+(chapter==='tundra'?' · chapter in development.':'.');
+      const destination=title(nextChapter[chapter])+' unlocked'+(chapter==='caves'?' · chapter in development.':'.');
       const victory=()=>{
         this.screen(label+' CLEARED',reward+' · Wallet: '+balance+' Souls. '+destination,
           ['REPLAY '+label,()=>this.enter(chapter)],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());

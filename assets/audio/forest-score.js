@@ -1,11 +1,14 @@
 // Forest Campaign music streams in once per track. A single shared AudioContext
 // owns both the independent music bus and the existing action-sound bus.
-const files = {crossing:'tundra-crossing.ogg',crown:'tundra-crown.ogg',climb:'foothills-climb.ogg',pursuit:'foothills-pursuit.ogg',walk:'forest-walk.ogg', guardian:'forest-guardian.ogg', victory:'forest-victory.ogg'};
+const files = {descent:'caves-descent.ogg',brood:'caves-brood.ogg',crossing:'tundra-crossing.ogg',crown:'tundra-crown.ogg',climb:'foothills-climb.ogg',pursuit:'foothills-pursuit.ogg',walk:'forest-walk.ogg', guardian:'forest-guardian.ogg', victory:'forest-victory.ogg'};
 const mute = document.getElementById('mute-music');
 const volume = document.getElementById('music-volume');
 try {
   const oldMute = localStorage.getItem('grimRun.actionSoundsMuted');
-  mute.checked = (localStorage.getItem('grimRun.musicMuted') ?? oldMute) === '1';
+  const musicMute = localStorage.getItem('grimRun.musicMuted');
+  mute.checked = (musicMute ?? oldMute) === '1';
+  // Import the legacy shared mute once. Later action-only changes are independent.
+  if (musicMute === null) localStorage.setItem('grimRun.musicMuted', mute.checked ? '1' : '0');
   const saved = localStorage.getItem('grimRun.musicVolume');
   if (saved !== null && Number.isFinite(Number(saved))) volume.value = saved;
 } catch {}

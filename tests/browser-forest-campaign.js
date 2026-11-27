@@ -228,6 +228,10 @@ async function touchApproach(page,stopMeters=Infinity){
             if(s.state!=='playing'||s.campaign.guardian||s.distance>=stopMeters)return {done:true};
             const p=s.player,x=p.x;
             if(!held&&p.wispMs!=null&&s.gunCooldownMs<=0)return {shoot:true};
+            if(p.spiderX!=null&&!held&&p.spiderX!==actedX&&p.spiderX-x<100){
+              return {press:p.nextSpider%2?'attack':'slide',x:p.spiderX};
+            }
+            if(held==='slide'&&p.spiderX!=null&&p.spiderX===actedX){s.update(0,1000/60);continue;}
             if(held==='jump'&&(p.grounded||p.jumpAgeMs>=540))return {release:true};
             const ob=s.obstacles.find(o=>!o.destroyed&&!o.dealtDamage&&o.x+o.width>x-32);
             if(held==='slide'&&(!ob||ob.x!==actedX))return {release:true};
@@ -962,6 +966,123 @@ async function tundraClear(browser,viewport,seed){
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 
+async function cavesClear(browser,viewport,seed){
+  const ctx=await browser.newContext({viewport,hasTouch:true});
+  const portrait=viewport.width<viewport.height;
+  let page=await ctx.newPage();
+  const attempt=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-caves-attempt-v1')));
+  async function restore(){
+    const before=await attempt();
+    await page.close();page=await ctx.newPage();await boot(page);await openChapters(page);
+    await page.getByRole('button',{name:'RESUME CAVES'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.deepEqual(comparable(await attempt()),comparable(before));await resume(page);
+  }
+  async function approach(){
+    await touchApproach(page);await page.locator('#vendor-intro-skip').tap();
+    await page.getByRole('button',{name:'CONTINUE RUN'}).tap();await touchApproach(page);
+  }
+  async function fight(reload){
+    for(let round=0;round<3;round++){
+      await untilBossPhase(page,'silk',990);await holdControl(page,'slide',45);
+      if(round){
+        await untilBossPhase(page,'rockWarning',880);await holdControl(page,'jump',39);
+      }
+      await untilBossPhase(page,'grounded',190);
+      if(round===1){
+        await page.locator('#crossbow-btn').tap();
+        if(reload){
+          assert.equal((await attempt()).world.bullets.at(-1).kind,'brood');await restore();
+        }
+      }else await page.locator('#attack-btn').tap();
+      await untilBossPhase(page,round===2?'fall':'struck');
+    }
+  }
+  try{
+    url.searchParams.set('seed',String(seed));await boot(page);
+    await page.evaluate(()=>localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify({
+      forest:{cleared:true},foothills:{cleared:true},foothillsUnlocked:true,tundraUnlocked:true})));
+    await openChapters(page);assert.ok(await page.getByRole('button',{name:'CAVES · LOCKED'}).isDisabled());
+    if(portrait){
+      // Earn entry by playing the previous chapter and using its real victory screen.
+      await page.getByRole('button',{name:'START TUNDRA'}).tap();
+      await page.getByRole('button',{name:'SKIP',exact:true}).tap();await approach();
+      for(let i=0;i<3;i++){
+        const b=await untilBossPhase(page,'warning',965);
+        await holdControl(page,b.cycle%2?'slide':'jump',30);
+        await untilBossPhase(page,'open',150);await page.locator('#crossbow-btn').tap();
+        await untilBossPhase(page,i===2?'fall':'struck');
+      }
+      await advance(page,'frames',75);await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
+    }else{
+      await page.evaluate(()=>{
+        const r=JSON.parse(localStorage.getItem(GRIM_META.CAMPAIGN_PROGRESS));
+        Object.assign(r,{tundra:{cleared:true,bonusTotal:3},cavesUnlocked:true});
+        localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify(r));
+      });
+      await boot(page);await openChapters(page);
+    }
+    await page.getByRole('button',{name:'START CAVES'}).tap();
+    await page.getByText('BENEATH THE SILK',{exact:true}).waitFor();
+    if(portrait)await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    await expectScore(page,'descent');assert.ok(await audibleMusic(page));
+    if(portrait)await page.evaluate(()=>{document.getElementById('mute-actions').click();});
+    await touchApproach(page,46);assert.ok((await attempt()).world.player.spiderX>0);await restore();
+    const warning=await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0],p=s.player;
+      return p.silkMs+(p.spiderX-p.x-38)/s.speed*1000;
+    });
+    assert.ok(warning>=950);await approach();
+    const arrival=await attempt();assert.equal(arrival.world.guardian.phase,'arrival');
+    assert.equal(arrival.world.player.hp,3);assert.ok(Object.values(arrival.run.runLoadout.levels).every(n=>!n));
+    assert.deepEqual(await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];return [s.gunUnlocked,s.biomeBackdrops.caves.visible,s.hasTeleported];
+    }),[true,true,false]);
+    await expectScore(page,'brood');assert.ok(await audibleMusic(page));
+    await untilBossPhase(page,'silk',100);await restore();
+    await fight(true);
+    const win=await attempt(),balance=(await wallet(page)).souls;
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=360&&win.world.elapsed<=420);
+    await advance(page,'frames',76);await page.getByText('CAVES CLEARED',{exact:true}).waitFor();
+    assert.equal((await wallet(page)).souls,balance+3);
+    await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
+    assert.match(await page.locator('#campaign-detail').innerText(),/Crystals is in development/);
+    await page.getByRole('button',{name:'REPLAY CAVES'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    console.log('Caves touch clear',seed,viewport,'seconds',win.world.elapsed.toFixed(2),
+      'HP',win.world.player.hp,'silk warning to contact ms',Math.round(warning));
+    // Try an early Cut on the first descent and a late one on the second.
+    await advance(page,'meters',42);await page.locator('#attack-btn').tap();await advance(page,'meters',73);
+    assert.equal((await attempt()).world.player.hp,2);
+    await advance(page,'meters',161);await page.locator('#attack-btn').tap();
+    assert.equal((await attempt()).world.player.hp,1);
+    await advance(page,'meters',222);await advance(page,'frames',200);
+    if(portrait){
+      const before=(await wallet(page)).souls,id=(await attempt()).id;
+      await page.locator('#revive-yes-btn').tap();await restore();
+      assert.equal((await wallet(page)).souls,before-3);assert.equal((await attempt()).id,id);
+      await advance(page,'frames',300);await approach();await fight(false);
+      await page.evaluate(()=>{
+        const remove=Storage.prototype.removeItem;
+        Storage.prototype.removeItem=function(k){if(k==='grim-run-caves-attempt-v1')throw Error('interrupted cleanup');return remove.call(this,k);};
+      });
+      await advance(page,'frames',76);await page.getByText('CAVES CLEAR PENDING',{exact:true}).waitFor();
+      await boot(page);await openChapters(page);await page.getByRole('button',{name:'REPLAY CAVES'}).waitFor();
+      assert.equal((await wallet(page)).souls,before-3+1);
+    }else{
+      await page.evaluate(()=>{const m=GRIM_META.load();m.levels.deathDenied=1;m.equipped=['deathDenied'];GRIM_META.save(m);});
+      await page.locator('#revive-no-btn').tap();assert.equal(await attempt(),null);
+      await page.getByRole('button',{name:'RETRY CAVES'}).tap();
+      await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+      const fresh=await attempt();assert.equal(fresh.world.distance,0);
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'cave spider');});
+      await advance(page,'frames',175);assert.ok((await attempt()).run.freeLifeUsed);
+      await restore();assert.equal((await attempt()).id,fresh.id);
+    }
+  }finally{url.searchParams.set('seed','33');await ctx.close();}
+}
+
 (async()=>{
   if(!process.env.GRIM_BASE_URL){
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -970,6 +1091,11 @@ async function tundraClear(browser,viewport,seed){
   const browser=await chromium.launch({executablePath:process.env.GRIM_CHROME||undefined,
     args:[...(renderer==='canvas'?['--disable-webgl']:[]),'--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
   try{
+    if(process.argv.includes('--caves')){
+      await cavesClear(browser,{width:390,height:844},17);
+      await cavesClear(browser,{width:844,height:390},91);
+      return;
+    }
     if(process.argv.includes('--tundra')){
       await tundraClear(browser,{width:390,height:844},17);
       await tundraClear(browser,{width:844,height:390},91);
