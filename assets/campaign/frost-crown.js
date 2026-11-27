@@ -6,6 +6,19 @@ const fraction=t=>Math.max(0,Math.min(1,t));
 
 export class FrostCrown {
   constructor(campaign){this.campaign=campaign;this.scene=campaign.scene;}
+  prepare(){
+    const s=this.scene,key='tundra-frost-crown';
+    if(this.loading||s.textures.exists(key))return;
+    this.loading=true;
+    const art=new Image();
+    art.onload=()=>{
+      if(!s.sys.isActive()||s.textures.exists(key))return;
+      const texture=s.textures.addImage(key,art);
+      texture.add('crown',0,0,0,256,256);texture.add('wisp',0,256,0,256,256);
+    };
+    art.onerror=()=>{this.loading=false;};
+    art.src=new URL('./frost-crown.webp',import.meta.url).href;
+  }
   crossing(dt){
     const s=this.scene,p=s.player,markers=s.forestRoute.wisps;
     const next=p.nextWisp??0;
@@ -86,7 +99,7 @@ export class FrostCrown {
     const x=start+(p.x-54-start)*travel;
     return {x,y:s.terrain.anchorAt(p.x)-(b.cycle%2?57:16)};
   }
-  hide(){this.ink?.setVisible(false);this.label?.setVisible(false);}
+  hide(){this.carving?.setVisible(false);this.ink?.setVisible(false);this.label?.setVisible(false);}
   render(){
     const s=this.scene,b=this.campaign.guardian,p=s.player;
     if(!this.campaign.active||(!b&&p.wispMs==null)){this.hide();return;}
@@ -98,14 +111,21 @@ export class FrostCrown {
     const g=this.ink.setVisible(true).clear();
     const pos=this.center(),x=pos.x,y=pos.y+(b?.phase==='fall'?b.ms*.055:0);
     const open=b?b.phase==='open':p.wispMs<1440,fade=b?.phase==='fall'?1-fraction(b.ms/1150):1;
-    const radius=b?21:9,pulse=.5+.5*Math.sin(s.elapsed*(open?8:3));
+    const radius=b?15:6,pulse=.5+.5*Math.sin(s.elapsed*(open?8:3));
     // Split facets and dark edges keep the white crystal readable against snow.
     function shard(cx,cy,w,h,lean,tint){
       g.fillStyle(shadow,fade).fillTriangle(cx-w,cy+4,cx+lean,cy-h,cx+w,cy);
       g.fillStyle(tint,fade).fillTriangle(cx-w+2,cy+1,cx+lean,cy-h+3,cx,cy-2);
       g.lineStyle(1.5,white,.8*fade).lineBetween(cx+lean,cy-h+2,cx+w-1,cy);
     }
-    if(b){
+    const painted=s.textures.exists('tundra-frost-crown');
+    if(painted){
+      const frame=b?'crown':'wisp',size=b?124:42;
+      if(!this.carving)this.carving=s.add.image(x,y,'tundra-frost-crown',frame).setDepth(7.7);
+      this.carving.setFrame(frame).setPosition(x,y).setDisplaySize(size,size)
+        .setAngle(3*Math.sin(s.elapsed*2)).setAlpha(fade).setVisible(true);
+    }
+    if(b&&!painted){
       const spread=open?16:0;
       for(const side of [-1,1]){
         shard(x+side*(28+spread),y+10,14,43,side*27,ice);
@@ -113,7 +133,7 @@ export class FrostCrown {
         shard(x+side*19,y+25,10,24,side*19,0x6089af);
       }
       shard(x,y-12,11,48,0,white);
-    }else{
+    }else if(!b){
       for(let i=1;i<5;i++)g.fillStyle(ice,(1-i/5)*.54).fillCircle(x+7*i,y-4*Math.sin(s.elapsed*5-i),5-i*.6);
     }
     g.fillStyle(shadow,fade).fillCircle(x,y,radius+3);

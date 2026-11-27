@@ -878,6 +878,10 @@ async function tundraClear(browser,viewport,seed){
     assert.equal(arrival.world.guardian.phase,'arrival');assert.equal(arrival.world.player.hp,3);
     assert.ok(Object.values(arrival.run.runLoadout.levels).every(n=>n===0));
     await expectScore(page,'crown');assert.ok(await audibleMusic(page));
+    assert.deepEqual(await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];
+      return [s.biomeBackdrops.tundra.visible,s.campaign.encounter.carving?.visible,s.portalSummitArt.sky.visible];
+    }),[true,true,false]);
     await untilBossPhase(page,'warning',210);await restore();
     // Shoot before exposure and let the first low wave pass without jumping.
     await page.locator('#crossbow-btn').tap();await untilBossPhase(page,'open',70);

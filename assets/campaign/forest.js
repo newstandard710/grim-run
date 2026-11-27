@@ -1,4 +1,4 @@
-import {FrostCrown} from './frost-crown.js?v=148cf029d1f8';
+import {FrostCrown} from './frost-crown.js?v=ae5176d81a91';
 import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
 import {ForestScore} from '../audio/forest-score.js?v=d3741c338284';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
