@@ -140,7 +140,7 @@ async function runForest(page){
     s.drawScene=()=>{};
     try{
       let acted,gapUsed;
-      for(let tick=0;tick<4500&&s.state==='playing'&&!s.campaign.guardian;tick++){
+      for(let tick=0;tick<18000&&s.state==='playing'&&!s.campaign.guardian;tick++){
         const p=s.player,x=p.x;
         const ob=s.obstacles.filter(o=>!o.destroyed&&!o.dealtDamage&&o.x+o.width>x-32)
           .sort((a,b)=>a.x-b.x)[0];
@@ -159,6 +159,58 @@ async function runForest(page){
     s.drawScene();
   });
 }
+// Advance the normal game clock between decisions, then press the visible
+// controls through Chromium's touch input. Draw each approach at game scale.
+async function touchApproach(page,stopMeters=Infinity){
+  const ctx=page.context(),touch=await ctx.newCDPSession(page);
+  const buttons={};
+  for(const key of ['jump','slide','attack']){
+    const box=await page.locator('#'+key+'-btn').boundingBox();
+    buttons[key]=[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}];
+  }
+  let held=null,actedX=null;
+  try{
+    for(let count=0;count<550;count++){
+      const event=await page.evaluate(({held,actedX,stopMeters})=>{
+        const s=grimRun.scene.scenes[0],draw=s.drawScene;
+        s.drawScene=()=>{};
+        try{
+          for(let frame=0;frame<1000;frame++){
+            if(s.state!=='playing'||s.campaign.guardian||s.distance>=stopMeters)return {done:true};
+            const p=s.player,x=p.x;
+            if(held==='jump'&&(p.grounded||p.jumpAgeMs>=540))return {release:true};
+            const ob=s.obstacles.find(o=>!o.destroyed&&!o.dealtDamage&&o.x+o.width>x-32);
+            if(held==='slide'&&(!ob||ob.x!==actedX))return {release:true};
+            const gap=s.terrain.sequences.find(g=>g.startX>=x&&g.startX-x<s.speed*.17);
+            if(!held&&p.grounded&&gap&&gap.startX!==actedX)return {press:'jump',x:gap.startX};
+            if(!held&&ob&&ob.x!==actedX){
+              const dx=ob.x-x;
+              if(ob.type==='rock'&&dx<s.speed*.29&&p.grounded)return {press:'jump',x:ob.x};
+              if(ob.type==='branch'&&dx<s.speed*.18)return {press:'slide',x:ob.x};
+              if(ob.type==='bramble'&&dx<112&&dx>20)return {press:'attack',x:ob.x};
+            }
+            s.update(0,1000/60);
+          }
+          throw Error('No Forest decision for 1,000 frames at '+s.distance);
+        }finally{s.drawScene=draw;s.drawScene();}
+      },{held,actedX,stopMeters});
+      if(event.done)return;
+      if(event.release){
+        await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});held=null;
+      }else{
+        await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:buttons[event.press]});
+        actedX=event.x;
+        if(event.press==='attack')await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        else held=event.press;
+      }
+    }
+    throw Error('Forest traversal exceeded the encounter budget');
+  }finally{
+    if(held)await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    await touch.detach();
+  }
+}
+
 async function untilBossPhase(page,phase,ms=0){
   return page.evaluate(({phase,ms})=>{
     const s=grimRun.scene.scenes[0],draw=s.drawScene;
@@ -216,17 +268,45 @@ async function reachGuardian(page){
   assert.equal(arrival.world.player.hp,arrival.world.player.maxHp);
   return arrival;
 }
-async function freshClear(browser,viewport){
+async function freshClear(browser,viewport,seed){
   const ctx=await browser.newContext({viewport,hasTouch:true});
   try{
-    let page=await ctx.newPage();await boot(page);
-    const arrival=await reachGuardian(page);
+    url.searchParams.set('seed',String(seed));
+    let page=await ctx.newPage();await boot(page);await start(page);
+    await touchApproach(page);
+    assert.equal((await saved(page)).mode,'vendorIntro');
+    await page.locator('#vendor-intro-skip').tap();
+    await page.getByRole('button',{name:'CONTINUE RUN'}).tap();
+    // Stop on a clear trail between phrases, reload, and finish the same seed.
+    await touchApproach(page,2420);
+    const middle=await saved(page);
+    assert.ok(middle.world.distance>=2420);assert.equal(middle.world.player.hp,3);
+    page=await reopen(ctx,page);assert.deepEqual(comparable(await saved(page)),comparable(middle));
+    await resume(page);
+    await touchApproach(page,6340);
+    const rehearsal=await saved(page);
+    assert.equal(rehearsal.world.player.hp,3);
+    assert.deepEqual(await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];
+      return {forest:s.biomeBackdrops.forest.visible,snow:s.snowCoverAt(s.player.x),
+        skin:s.obstacleBiomeFor({x:s.player.x}),gun:s.gunUnlocked,portal:s.hasTeleported,
+        boss:s.campaign.guardian?.phase??null};
+    }),{forest:true,snow:0,skin:'forest',gun:false,portal:false,boss:null});
+    if(seed===33)await mistimedRehearsal(browser,viewport,rehearsal);
+    await page.bringToFront();
+    if(await page.evaluate(()=>grimRun.scene.scenes[0].campaign.frozen))await resume(page);
+    await touchApproach(page);
+    const arrival=await saved(page);
+    assert.equal(arrival.world.guardian.phase,'arrival');assert.equal(arrival.world.player.hp,3);
+    assert.ok(arrival.world.distance>=6500);
     assert.ok(Object.values(arrival.run.runLoadout.levels).every(rank=>rank===0));
     const bank=await wallet(page);
     await defeatGuardian(page);
     const finished=await saved(page);
-    console.log('Fresh Forest clear',viewport,'approach',arrival.world.elapsed.toFixed(2),
-      'fight',(finished.world.elapsed-arrival.world.elapsed+.95).toFixed(2),'seconds');
+    const total=finished.world.elapsed+.95;
+    assert.ok(total>=240&&total<=300,'Active clear took '+total+' seconds');
+    console.log('Fresh Forest touch clear',seed,viewport,'approach',arrival.world.elapsed.toFixed(2),
+      'fight',(total-arrival.world.elapsed).toFixed(2),'total',total.toFixed(2),'seconds');
     // Interrupt specifically between the chapter record and attempt cleanup.
     await page.evaluate(()=>{
       const remove=Storage.prototype.removeItem;
@@ -246,6 +326,47 @@ async function freshClear(browser,viewport){
     const replay=await saved(page);
     assert.notEqual(replay.id,arrival.id);assert.equal(replay.world.distance,0);
     assert.equal(replay.world.guardian,undefined);assert.deepEqual(await wallet(page),bank);
+  }finally{url.searchParams.set('seed','33');await ctx.close();}
+}
+// Replay the last lower obstacle from the same frame with deliberately bad
+// touch timing. The following overhang still leaves time to recover.
+async function mistimedRehearsal(browser,viewport,frame){
+  for(const timing of ['early','late','missed']){
+    const ctx=await browser.newContext({viewport,hasTouch:true});
+    try{
+      const page=await ctx.newPage();await boot(page);
+      await page.evaluate(({key,frame})=>localStorage.setItem(key,JSON.stringify(frame)),{key,frame});
+      await boot(page);await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+      await resume(page);
+      if(timing==='early')await page.locator('#jump-btn').tap();
+      await advance(page,'meters',timing==='late'?6359:6370);
+      if(timing==='late')await page.locator('#jump-btn').tap();
+      await advance(page,'meters',6380);
+      const after=await saved(page);
+      assert.equal(after.world.player.hp,2,timing+' jump should cost one HP');
+      assert.equal(after.mode,'playing');
+    }finally{await ctx.close();}
+  }
+}
+// Captured after the original guardian build's vendor, before routeVersion existed.
+async function originalAttempt(browser){
+  const old=require('./fixtures/forest-900m-save.json');
+  const ctx=await browser.newContext({viewport:{width:844,height:390},hasTouch:true});
+  try{
+    const page=await ctx.newPage();await boot(page);
+    await page.evaluate(({old,key})=>localStorage.setItem(key,JSON.stringify(old)),{old,key});
+    await boot(page);await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.equal((await saved(page)).world.distance,old.world.distance);
+    await resume(page);await runForest(page);
+    const arrival=await saved(page);
+    assert.equal(arrival.id,old.id);assert.equal(arrival.world.guardian.phase,'arrival');
+    assert.ok(arrival.world.distance>=900&&arrival.world.distance<901);
+    await defeatGuardian(page);await advance(page,'frames',70);
+    await page.getByRole('button',{name:'REPLAY FOREST'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    const replay=await saved(page);assert.equal(replay.routeVersion,2);
+    assert.equal(replay.world.distance,0);assert.notEqual(replay.id,old.id);
+    console.log('Original 900 m save cleared on its own route. Replay started the full chapter.');
   }finally{await ctx.close();}
 }
 async function guardianRevivals(browser){
@@ -450,8 +571,10 @@ async function saveRecovery(browser){
     console.log('Forest pickup, revivals, retry, loadout and Endless passed.');
     await merchantAndInterruption(browser);
     await saveRecovery(browser);
-    for(const viewport of [{width:844,height:390},{width:390,height:844}])await freshClear(browser,viewport);
+    await freshClear(browser,{width:844,height:390},33);
+    await freshClear(browser,{width:390,height:844},91);
     await guardianRevivals(browser);
+    await originalAttempt(browser);
     console.log('Scythe-only clears, interrupted victory, missed counters and both boss revivals passed.');
   }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
