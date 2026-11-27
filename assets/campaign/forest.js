@@ -74,7 +74,9 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         this.release();
         scene.goToMenu();
       });
+      listen(el('forest-story-skip'),'click',()=>this.finishStory?.());
       const suspend=()=>{
+        this.finishStory?.();
         if(!this.active)return false;
         if(this.guardian?.phase!=='cleared')this.pause();
         return true;
@@ -103,18 +105,44 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       }
       scene.ui.holdActions={jump:[a.jump,a.jumpEnd],slide:[a.slideStart,a.slideEnd]};
       scene.events.once('shutdown',()=>{
+        this.stopStory?.();
         this.release();
         this.score.dispose();
         delete el('music-settings').dataset.available;
       });
     }
     syncScore(mode){
-      if(this.showingVictory&&mode==='campaignMenu')return;
+      if(this.showingVictory&&(mode==='campaignMenu'||mode==='forestStory'))return;
       if(!this.active||this.frozen||mode!=='playing'){this.score.select(null);return;}
       const b=this.guardian;
       if(b?.phase==='fall'||b?.phase==='cleared')this.score.select('victory',b.ms/1000);
       else if(b)this.score.select('guardian',this.scene.elapsed-(b.musicStart??this.scene.elapsed));
       else this.score.select('walk',this.scene.elapsed);
+    }
+    playStory(ending,done){
+      const s=this.scene,film=el('forest-story-film');
+      s.state='forestStory';s.ui.setMode(s.state);
+      el('forest-story').setAttribute('aria-label',ending
+        ? 'The roots part. Escaped Souls climb into the Foothills.'
+        : 'Escaped Souls slip past tangled roots before the passage closes.');
+      el('forest-story-skip').focus({preventScroll:true});
+      // A missing or stalled decorative film must always yield to the run or reward.
+      const finish=()=>{
+        if(this.finishStory!==finish)return;
+        this.stopStory();
+        done();
+      };
+      const timer=setTimeout(finish,8000);
+      this.finishStory=finish;
+      this.stopStory=()=>{
+        this.finishStory=null;this.stopStory=null;
+        clearTimeout(timer);
+        film.onended=null;film.onerror=null;
+        film.pause();film.removeAttribute('src');film.load();
+      };
+      film.onended=finish;film.onerror=finish;
+      film.src=new URL(ending?'./passage-open.webm':'./passage-sealed.webm',import.meta.url).href;
+      film.play().catch(finish);
     }
     screen(title,detail,primary,secondary,back){
       const s=this.scene;
@@ -190,7 +218,19 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
             el('god-mode-checkbox').closest('label').classList.add('hidden');
             document.querySelector('.god-mode-desc').classList.add('hidden');
             if(d){this.restore(d);this.pause();}
-            else this.save();
+            else if(this.save()){
+              const record=progress();
+              if(!record.forest&&!record.forestOpeningSeen&&!this.openingSeen){
+                this.openingSeen=true;
+                // The attempt is durable at the starting frame before the first image.
+                try{localStorage.setItem(PROGRESS,JSON.stringify({...record,forestOpeningSeen:true}));}catch{}
+                this.frozen=true;this.resumeMode=s.state;
+                this.playStory(false,()=>{
+                  this.frozen=false;s.state=this.resumeMode;s.ui.setMode(s.state);
+                  s.wakeGameLoop();
+                });
+              }
+            }
             await held;
           }catch(e){this.release();throw e;}
         });
@@ -253,9 +293,11 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       }
       const reward=bonus===3?'First Forest clear · +3 Souls':'Forest cleared · +1 Soul';
       this.showingVictory=true;
-      this.screen('FOREST CLEARED',reward+' · Wallet: '+balance+' Souls. Foothills unlocked · chapter in development.',
-        ['REPLAY FOREST',()=>this.enter()],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
-      this.showingVictory=false;
+      this.playStory(true,()=>{
+        this.screen('FOREST CLEARED',reward+' · Wallet: '+balance+' Souls. Foothills unlocked · chapter in development.',
+          ['REPLAY FOREST',()=>this.enter()],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
+        this.showingVictory=false;
+      });
     }
     togglePause(){
       if(this.frozen)this.continueAttempt();
