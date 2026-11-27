@@ -35,7 +35,7 @@ export class ForestGuardian {
     }
     if(edge<p.x+rootMargin)return;
     const standX=Math.min(p.x+88,edge-rootMargin);
-    this.campaign.guardian={standX,phase:'arrival',ms:0,hp:3,hit:false,round:0};
+    this.campaign.guardian={standX,phase:'arrival',musicStart:s.elapsed,ms:0,hp:3,hit:false,round:0};
     s.enemies=[];s.obstacles=[];s.fireballs=[];s.bullets=[];
     s.coins=[];s.souls=[];
     for(const tip of s.tips)tip.label.destroy();
@@ -48,7 +48,9 @@ export class ForestGuardian {
   step(dt){
     const b=this.campaign.guardian,s=this.scene,p=s.player;
     if(b.phase==='cleared')return;
+    const previousMs=b.ms;
     b.ms+=dt;
+    if(b.phase==='exposed'&&previousMs<120&&b.ms>=120)window.GRIM_ACTION_AUDIO?.play('knot');
     const phase=b.phase;
     const strike=phase==='eruption'||phase==='sweep';
     if(strike&&!b.hit&&p.invulMs<=0){

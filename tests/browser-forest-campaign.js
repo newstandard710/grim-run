@@ -269,13 +269,47 @@ async function reachGuardian(page){
   assert.equal(arrival.world.player.hp,arrival.world.player.maxHp);
   return arrival;
 }
+async function expectScore(page, section){
+  await page.waitForFunction(section=>{
+    const score=grimRun.scene.scenes[0].campaign.score;
+    if(!section)return !score.voice;
+    return score.target===section&&score.voice?.source.buffer?.duration>1;
+  },section);
+}
+async function audibleMusic(page){
+  // Sample the decoded signal after the player's music volume control.
+  return page.evaluate(async()=>{
+    const score=grimRun.scene.scenes[0].campaign.score;
+    const analyser=score.context.createAnalyser();
+    score.bus.connect(analyser);
+    try{
+      const samples=new Float32Array(analyser.fftSize);
+      for(let i=0;i<40;i++){
+        await new Promise(r=>setTimeout(r,25));
+        analyser.getFloatTimeDomainData(samples);
+        if(samples.some(v=>Math.abs(v)>.001))return true;
+      }
+      return false;
+    }finally{score.bus.disconnect(analyser);analyser.disconnect();}
+  });
+}
+
 async function freshClear(browser,viewport,seed){
   const ctx=await browser.newContext({viewport,hasTouch:true});
   try{
     url.searchParams.set('seed',String(seed));
     let page=await ctx.newPage();await boot(page);await start(page);
+    await expectScore(page,'walk');
+    assert.ok(await audibleMusic(page),'The woodland score reaches the music bus');
+    await page.locator('#pause-btn').tap();
+    await expectScore(page,null);
+    await page.locator('#music-volume').fill('67');
+    if(seed===91)await page.locator('#mute-music').check();
+    await resume(page);
+    await expectScore(page,seed===91?null:'walk');
     await touchApproach(page);
     assert.equal((await saved(page)).mode,'vendorIntro');
+    await expectScore(page,null);
     await page.locator('#vendor-intro-skip').tap();
     await page.getByRole('button',{name:'CONTINUE RUN'}).tap();
     // Stop on a clear trail between phrases, reload, and finish the same seed.
@@ -283,6 +317,9 @@ async function freshClear(browser,viewport,seed){
     const middle=await saved(page);
     assert.ok(middle.world.distance>=2420);assert.equal(middle.world.player.hp,3);
     page=await reopen(ctx,page);assert.deepEqual(comparable(await saved(page)),comparable(middle));
+    assert.equal(await page.locator('#music-volume').inputValue(),'67');
+    assert.equal(await page.locator('#mute-music').isChecked(),seed===91);
+    assert.equal(await page.locator('#mute-actions').isChecked(),false);
     await resume(page);
     await touchApproach(page,6340);
     const rehearsal=await saved(page);
@@ -301,8 +338,11 @@ async function freshClear(browser,viewport,seed){
     assert.equal(arrival.world.guardian.phase,'arrival');assert.equal(arrival.world.player.hp,3);
     assert.ok(arrival.world.distance>=6500);
     assert.ok(Object.values(arrival.run.runLoadout.levels).every(rank=>rank===0));
+    await expectScore(page,seed===91?null:'guardian');
+    if(seed===33)assert.ok(await audibleMusic(page),'The Guardian score reaches the music bus');
     const bank=await wallet(page);
     await defeatGuardian(page);
+    await expectScore(page,seed===91?null:'victory');
     const finished=await saved(page);
     const total=finished.world.elapsed+.95;
     assert.ok(total>=240&&total<=300,'Active clear took '+total+' seconds');
@@ -342,6 +382,10 @@ async function freshClear(browser,viewport,seed){
     if(seed===91){
       // Pay for a revival during the replay and finish with the same attempt.
       const replayStart=await wallet(page);
+      await page.locator('#pause-btn').tap();
+      await page.locator('#mute-actions').check();
+      await resume(page);
+      await expectScore(page,null);
       await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'rock');});
       await advance(page,'frames',180);await page.locator('#revive-yes-btn').tap();
       assert.equal((await wallet(page)).souls,replayStart.souls-3);
@@ -517,10 +561,13 @@ async function merchantAndInterruption(browser){
     await resume(page);
     await runForest(page);
     const inFight=await untilBossPhase(page,'roots',340);
+    await expectScore(page,'guardian');
     page=await reopen(ctx,page);
+    await expectScore(page,null);
     const restored=await saved(page);
     assert.equal(restored.world.guardian.ms,inFight.ms);
     await resume(page);
+    await expectScore(page,'guardian');
     await defeatGuardian(page);
     page=await reopen(ctx,page);await resume(page);await advance(page,'frames',70);
     assert.equal(await page.locator('#campaign-title').innerText(),'FOREST CLEARED');
