@@ -139,3 +139,19 @@ for pursuit in (False, True):
         if bar >= 8:
             score.note(at+3, fifth+12, .8, "reed", .075)
     score.write("foothills-pursuit" if pursuit else "foothills-climb", True)
+
+# Let each bell answer decay into open space over a single bowed pedal.
+# The Crown compresses the same falling call over a two-beat bass pulse.
+for crown in (False, True):
+    ice = Score(104 if crown else 72, 32)
+    for bar, (root, fifth, color) in enumerate(chords):
+        at = bar * 4
+        ice.note(at, root - 5, 3.5, "bow", .09)
+        for pos, pitch, length in phrases[bar]:
+            ice.note(at + pos, pitch + (0 if crown else 12), length, "bell", .135)
+        ice.note(at + 3, fifth, .48, "harp", .075)
+        if crown:
+            for pos in (0, 2):
+                ice.note(at + pos, root - 12, .55, "drum", .17)
+            ice.note(at + 1.5, color, 1.6, "reed", .08)
+    ice.write("tundra-crown" if crown else "tundra-crossing", True)

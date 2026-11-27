@@ -1,14 +1,17 @@
+import {FrostCrown} from './frost-crown.js?v=ae5176d81a91';
 import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
-import {ForestScore} from '../audio/forest-score.js?v=3d10dd3e0f2d';
+import {ForestScore} from '../audio/forest-score.js?v=d3741c338284';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
-import {forestRoute} from './route.js?v=9592a02df38a';
+import {forestRoute} from './route.js?v=5db8b9835ee6';
 
 (function(scope){
   'use strict';
   const KEY='grim-run-forest-attempt-v1', LEGACY_END=900;
   const slot=chapter=>'grim-run-'+chapter+'-attempt-v1';
-  const title=chapter=>chapter==='foothills'?'Foothills':'Forest';
+  const title=chapter=>chapter[0].toUpperCase()+chapter.slice(1);
+  const nextChapter={forest:'foothills',foothills:'tundra',tundra:'caves'};
+  const tracks={forest:['walk','guardian'],foothills:['climb','pursuit'],tundra:['crossing','crown']};
   const PROGRESS=scope.GRIM_META.CAMPAIGN_PROGRESS;
   const OPENING_SEEN='grim-run-forest-opening-seen-v1';
   const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
@@ -38,7 +41,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
     }
     if(!record?.forestRecovery)return;
     const chapter=JSON.parse(record.forestRecovery).chapter;
-    if(!['forest','foothills'].includes(chapter))throw Error('Invalid Campaign recovery record.');
+    if(!['forest','foothills','tundra'].includes(chapter))throw Error('Invalid Campaign recovery record.');
     localStorage.setItem(slot(chapter),record.forestRecovery);
     delete record.forestRecovery;
     localStorage.setItem(meta().KEY,JSON.stringify(record));
@@ -64,7 +67,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
       scene.ui.actions.syncCampaignScore=mode=>this.syncScore(mode);
       el('music-settings').dataset.available='1';
       this.chapter='forest';
-      this.encounters={forest:new ForestGuardian(this),foothills:new StoneGuardian(this)};
+      this.encounters={forest:new ForestGuardian(this),foothills:new StoneGuardian(this),tundra:new FrostCrown(this)};
       this.encounter=this.encounters.forest;
       this.active=false;
       this.frozen=false;
@@ -77,6 +80,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
       };
       for(const [index,id] of ['campaign-primary','campaign-secondary'].entries())
         listen(el(id),'click',()=>this.actions[index]?.());
+      listen(el('campaign-tundra'),'click',()=>this.enter('tundra'));
       listen(el('campaign-save-menu'),'click',()=>{
         if(!this.active||!this.save())return;
         this.release();
@@ -96,7 +100,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
       // Button actions can happen between simulation frames (including a
       // purchase, a paid revival or the beginning of a jump).
       const a=scene.ui.actions;
-      for(const name of ['jump','jumpEnd','slideStart','slideEnd','attack','rush','rewind',
+      for(const name of ['jump','jumpEnd','slideStart','slideEnd','attack','fireCrossbow','rush','rewind',
         'chooseUpgrade','reroll','heal','declineDeal','leaveVendor','finishVendorIntro','revive','declineRevive']){
         const perform=a[name];
         a[name]=(...args)=>{
@@ -125,8 +129,8 @@ import {forestRoute} from './route.js?v=9592a02df38a';
       if(!this.active||this.frozen||mode!=='playing'){this.score.select(null);return;}
       const b=this.guardian;
       if(b?.phase==='fall'||b?.phase==='cleared')this.score.select('victory',b.ms/1000);
-      else if(b)this.score.select(this.chapter==='foothills'?'pursuit':'guardian',this.scene.elapsed-(b.musicStart??this.scene.elapsed));
-      else this.score.select(this.chapter==='foothills'?'climb':'walk',this.scene.elapsed);
+      else if(b)this.score.select(tracks[this.chapter][1],this.scene.elapsed-(b.musicStart??this.scene.elapsed));
+      else this.score.select(tracks[this.chapter][0],this.scene.elapsed);
     }
     playStory(ending,done){
       const s=this.scene,film=el('forest-story-film');
@@ -160,7 +164,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
       const s=this.scene;
       s.state='campaignMenu';s.ui.setMode('campaignMenu');
       el('campaign-title').textContent=title;el('campaign-detail').textContent=detail;
-      visible('campaign-story-replay',false);
+      visible('campaign-story-replay',false);visible('campaign-tundra',false);
       this.actions=[primary[1],secondary?.[1]];
       this.back=back;
       el('campaign-primary').textContent=primary[0];
@@ -177,11 +181,15 @@ import {forestRoute} from './route.js?v=9592a02df38a';
           catch{return 'OPEN '+title(chapter).toUpperCase()+' SAVE';}
         };
         const forest=savedLabel('forest','START FOREST','REPLAY FOREST');
-        const detail=record.tundraUnlocked?'Foothills cleared. Tundra is unlocked and in development.':
+        const tundra=Boolean(record.tundraUnlocked||record.foothills?.cleared);
+        const detail=record.cavesUnlocked?'Tundra cleared. Caves is in development.':tundra?'Foothills cleared. Tundra is unlocked. Cross the ice field.':
           cleared?'Forest cleared. Foothills is unlocked. Follow the Souls up the ridge.':'A guardian keeps watch at the edge of the woods.';
         this.screen('CAMPAIGN',detail,[forest,()=>this.enter('forest')],
           cleared?[savedLabel('foothills','START FOOTHILLS','REPLAY FOOTHILLS'),()=>this.enter('foothills')]:
             ['FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
+        visible('campaign-tundra',cleared);
+        el('campaign-tundra').disabled=!tundra;
+        el('campaign-tundra').textContent=tundra?savedLabel('tundra','START TUNDRA','REPLAY TUNDRA'):'TUNDRA · LOCKED';
         visible('campaign-story-replay',Boolean(forest==='RESUME FOREST'||cleared||this.openingSeen||localStorage.getItem(OPENING_SEEN)==='1'));
       }catch(e){this.unreadable(e);}
     }
@@ -212,6 +220,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
     async enter(chapter=this.chapter){
       if(this.busy||this.active)return;
       if(chapter==='foothills'&&!progress().foothillsUnlocked&&!progress().forest?.cleared)return;
+      if(chapter==='tundra'&&!progress().tundraUnlocked&&!progress().foothills?.cleared)return;
       this.chapter=chapter;this.encounter=this.encounters[chapter];
       const name=title(chapter),label=name.toUpperCase();
       this.busy=true;
@@ -243,6 +252,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
             document.querySelector('.god-mode-desc').classList.add('hidden');
             if(d){this.openingSeen=true;this.restore(d);this.pause();}
             else if(this.save()){
+              if(chapter==='tundra'&&!localStorage.getItem('grim-run-tundra-intro-seen'))this.crossbowOpening();
               if(chapter==='forest'&&!this.openingSeen&&!progress().forest&&localStorage.getItem(OPENING_SEEN)!=='1'){
                 this.openingSeen=true;
                 // The attempt is durable at the starting frame before the first image.
@@ -259,6 +269,21 @@ import {forestRoute} from './route.js?v=9592a02df38a';
         });
       }catch(e){this.unreadable(e);}
       finally{this.busy=false;}
+    }
+    crossbowOpening(){
+      const s=this.scene;
+      localStorage.setItem('grim-run-tundra-intro-seen','1');
+      this.resumeMode=s.state;this.frozen=true;
+      const finish=()=>{
+        if(this.finishStory!==finish)return;
+        clearTimeout(timer);this.finishStory=null;delete el('campaign-screen').dataset.crossbow;
+        this.frozen=false;s.state=this.resumeMode;s.ui.setMode(s.state);s.wakeGameLoop();
+      };
+      this.finishStory=finish;
+      el('campaign-screen').dataset.crossbow='1';
+      this.screen('THE BONE CROSSBOW','At the ice line, a frost wisp stirs. Press Shoot when its light gathers. The crossbow aims for you.',
+        ['SKIP',finish]);
+      const timer=setTimeout(finish,4200);
     }
     release(keepVictory=false){
       if(!keepVictory)this.score.select(null);
@@ -284,7 +309,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
       if(!this.guardian&&s.player.x>=this.entranceX&&s.state==='playing'&&!s.graveRush)
         this.encounter.enter();
       if(!this.finalePrepared&&s.player.x>=this.entranceX-200*scope.GRIM_CONFIG.pxPerMeter&&this.score.enabled){
-        this.score.prepareFinale(this.chapter==='foothills'?'pursuit':'guardian');this.finalePrepared=true;
+        this.score.prepareFinale(tracks[this.chapter][1]);this.finalePrepared=true;
       }
       this.syncScore(s.state);
       this.save();
@@ -299,7 +324,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
           const prior=record[chapter]?.bonusTotal||0;
           bonus=prior?1:3;
           record[chapter]={...record[chapter],cleared:true,attempt:this.id,bonus,bonusTotal:prior+bonus};
-          record[chapter==='forest'?'foothillsUnlocked':'tundraUnlocked']=true;
+          record[nextChapter[chapter]+'Unlocked']=true;
           localStorage.setItem(PROGRESS,JSON.stringify(record));
         }else bonus=record[chapter].bonus;
         // The wallet can derive its balance from the committed chapter record
@@ -316,7 +341,7 @@ import {forestRoute} from './route.js?v=9592a02df38a';
         return;
       }
       const reward=bonus===3?'First '+name+' clear · +3 Souls':name+' cleared · +1 Soul';
-      const destination=chapter==='forest'?'Foothills unlocked.':'Tundra unlocked · chapter in development.';
+      const destination=title(nextChapter[chapter])+' unlocked'+(chapter==='tundra'?' · chapter in development.':'.');
       const victory=()=>{
         this.screen(label+' CLEARED',reward+' · Wallet: '+balance+' Souls. '+destination,
           ['REPLAY '+label,()=>this.enter(chapter)],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());

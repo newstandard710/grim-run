@@ -80,3 +80,5 @@ jobs:
         run: node tests/browser-forest-campaign.js
       - name: Verify Foothills unlock, touch pursuit, rewards and interrupted attempts
         run: node tests/browser-forest-campaign.js --foothills
+      - name: Verify Tundra touch clears, ranged combat, revival and interrupted rewards
+        run: node tests/browser-forest-campaign.js --tundra

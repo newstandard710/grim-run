@@ -227,6 +227,7 @@ async function touchApproach(page,stopMeters=Infinity){
           for(let frame=0;frame<1000;frame++){
             if(s.state!=='playing'||s.campaign.guardian||s.distance>=stopMeters)return {done:true};
             const p=s.player,x=p.x;
+            if(!held&&p.wispMs!=null&&s.gunCooldownMs<=0)return {shoot:true};
             if(held==='jump'&&(p.grounded||p.jumpAgeMs>=540))return {release:true};
             const ob=s.obstacles.find(o=>!o.destroyed&&!o.dealtDamage&&o.x+o.width>x-32);
             if(held==='slide'&&(!ob||ob.x!==actedX))return {release:true};
@@ -244,6 +245,7 @@ async function touchApproach(page,stopMeters=Infinity){
         }finally{s.drawScene=draw;s.drawScene();}
       },{held,actedX,stopMeters});
       if(event.done)return;
+      if(event.shoot){await page.locator('#crossbow-btn').tap();continue;}
       if(event.release){
         await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});held=null;
       }else{
@@ -792,6 +794,7 @@ async function foothillsClear(browser,viewport,seed,earnUnlock){
     assert.equal((await wallet(page)).souls,balance+3);
     await boot(page);await openChapters(page);
     await page.getByRole('button',{name:'REPLAY FOOTHILLS'}).waitFor();
+    await page.getByRole('button',{name:'START TUNDRA'}).waitFor();
     assert.match(await page.locator('#campaign-detail').innerText(),/Tundra is unlocked/);
     assert.equal(await attempt(page),null);
     assert.equal((await wallet(page)).souls,balance+3);
@@ -816,6 +819,10 @@ async function foothillsClear(browser,viewport,seed,earnUnlock){
         const s=grimRun.scene.scenes[0];return [s.campaign.active,s.forestRoute,s.gunUnlocked,s.obstacleBiomeFor(s.player)];
       }),[false,null,false,'forest']);
       assert.equal((await attempt(page)).id,fresh.id);
+      await boot(page);await openChapters(page);
+      await page.getByRole('button',{name:'START TUNDRA'}).tap();
+      await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+      assert.equal(await page.locator('#crossbow-btn').isVisible(),true);
     }else{
       // Revisit the fight, try wrong inputs, buy a same-attempt revival and finish.
       await runForest(page);
@@ -840,6 +847,121 @@ async function foothillsClear(browser,viewport,seed,earnUnlock){
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 
+async function tundraClear(browser,viewport,seed){
+  const ctx=await browser.newContext({viewport,hasTouch:true});
+  const attempt=page=>page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-tundra-attempt-v1')));
+  let page=await ctx.newPage();
+  const restore=async()=>{
+    const before=await attempt(page);
+    await page.close();page=await ctx.newPage();await boot(page);await openChapters(page);
+    await page.getByRole('button',{name:'RESUME TUNDRA'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.deepEqual(comparable(await attempt(page)),comparable(before));
+    await resume(page);
+  };
+  try{
+    url.searchParams.set('seed',String(seed));await boot(page);
+    await page.evaluate(()=>localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify({
+      forest:{cleared:true},foothills:{cleared:true,bonusTotal:3},foothillsUnlocked:true,tundraUnlocked:true})));
+    await openChapters(page);await page.getByRole('button',{name:'START TUNDRA'}).tap();
+    await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+    await expectScore(page,'crossing');assert.ok(await audibleMusic(page));
+    await advance(page,'meters',48);
+    assert.ok((await attempt(page)).world.player.wispMs>0);
+    await page.locator('#crossbow-btn').tap();
+    const shot=await attempt(page);assert.equal(shot.world.bullets.at(-1).kind,'frost');
+    await restore();await advance(page,'frames',20);
+    assert.equal((await attempt(page)).world.player.wispMs,null);
+    await touchApproach(page);await page.locator('#vendor-intro-skip').tap();
+    await page.getByRole('button',{name:'CONTINUE RUN'}).tap();await touchApproach(page);
+    const arrival=await attempt(page);
+    assert.equal(arrival.world.guardian.phase,'arrival');assert.equal(arrival.world.player.hp,3);
+    assert.ok(Object.values(arrival.run.runLoadout.levels).every(n=>n===0));
+    await expectScore(page,'crown');assert.ok(await audibleMusic(page));
+    assert.deepEqual(await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];
+      return [s.biomeBackdrops.tundra.visible,s.campaign.encounter.carving?.visible,s.portalSummitArt.sky.visible];
+    }),[true,true,false]);
+    await untilBossPhase(page,'warning',210);await restore();
+    // Shoot before exposure and let the first low wave pass without jumping.
+    await page.locator('#crossbow-btn').tap();await untilBossPhase(page,'open',70);
+    assert.equal((await attempt(page)).world.player.hp,2);
+    assert.equal((await attempt(page)).world.guardian.hp,3);
+    await restore();await untilBossPhase(page,'recover',20);
+    await page.locator('#crossbow-btn').tap(); // late shot misses the closed core
+    const durations=await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0],times=[];
+      for(let i=0;i<60;i++){const start=performance.now();s.update(0,1000/60);times.push(performance.now()-start);}
+      return times.sort((a,b)=>a-b);
+    });
+    for(let hit=0;hit<3;hit++){
+      const b=await untilBossPhase(page,'warning',965);
+      await holdControl(page,b.cycle%2?'slide':'jump',30);
+      await untilBossPhase(page,'open',150);await page.locator('#crossbow-btn').tap();
+      await untilBossPhase(page,hit===2?'fall':'struck');
+    }
+    const win=await attempt(page),balance=(await wallet(page)).souls;
+    assert.equal(win.world.player.hp,2);assert.equal(win.powers.powerShot||0,0);
+    assert.ok(win.world.elapsed>=335&&win.world.elapsed<=385);
+    await advance(page,'frames',75);await page.getByText('TUNDRA CLEARED',{exact:true}).waitFor();
+    assert.equal((await wallet(page)).souls,balance+3);
+    assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem(GRIM_META.CAMPAIGN_PROGRESS)).cavesUnlocked));
+    await boot(page);await openChapters(page);
+    assert.equal((await wallet(page)).souls,balance+3);
+    await page.getByRole('button',{name:'REPLAY TUNDRA'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    assert.equal((await attempt(page)).world.distance,0);
+    console.log('Tundra touch clear',seed,viewport,'seconds',win.world.elapsed.toFixed(2),
+      'boss update + draw p95 ms',durations[56].toFixed(2),'max',durations.at(-1).toFixed(2));
+    if(viewport.width<viewport.height){
+      const id=(await attempt(page)).id;
+      await touchApproach(page);await page.locator('#vendor-intro-skip').tap();
+      await page.getByRole('button',{name:'CONTINUE RUN'}).tap();await touchApproach(page);
+      const before=(await wallet(page)).souls;
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'ice wave');});
+      await advance(page,'frames',175);await page.locator('#revive-yes-btn').tap();
+      assert.equal((await wallet(page)).souls,before-3);
+      await restore();assert.equal((await attempt(page)).id,id);
+      assert.ok((await attempt(page)).run.reviveUsed);await advance(page,'frames',310);
+      for(let i=0;i<3;i++){
+        const b=await untilBossPhase(page,'warning',965);
+        await holdControl(page,b.cycle%2?'slide':'jump',30);await untilBossPhase(page,'open',100);
+        await page.locator('#crossbow-btn').tap();
+        await untilBossPhase(page,i===2?'fall':'struck');
+      }
+      // Close after the progress write and before cleanup. The wallet reconciles once.
+      await page.evaluate(()=>{
+        const remove=Storage.prototype.removeItem;
+        Storage.prototype.removeItem=function(key){
+          if(key==='grim-run-tundra-attempt-v1')throw Error('simulated interrupted cleanup');
+          return remove.call(this,key);
+        };
+      });
+      await advance(page,'frames',75);await page.getByText('TUNDRA CLEAR PENDING',{exact:true}).waitFor();
+      await boot(page);await openChapters(page);await page.getByRole('button',{name:'REPLAY TUNDRA'}).waitFor();
+      assert.equal((await wallet(page)).souls,before-3+1);
+    }else{
+      // An equipped Death Denied is evaluated on a fresh start, before paid revival.
+      await page.locator('#pause-btn').tap();await page.locator('#campaign-save-menu').tap();
+      await page.evaluate(()=>{
+        const m=GRIM_META.load();m.levels.deathDenied=1;m.equipped=['deathDenied'];GRIM_META.save(m);
+      });
+      await page.getByRole('button',{name:'CAMPAIGN',exact:true}).tap();
+      await page.getByRole('button',{name:'RESUME TUNDRA'}).tap();await resume(page);
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'ice wave');});
+      await advance(page,'frames',175);await page.locator('#revive-no-btn').tap();
+      assert.equal(await attempt(page),null);
+      await page.getByRole('button',{name:'RETRY TUNDRA'}).tap();
+      await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+      const fresh=await attempt(page);assert.equal(fresh.world.distance,0);assert.equal(fresh.run.freeLifeAvailable,true);
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'frost wisp');});
+      await advance(page,'frames',175);const free=await attempt(page);
+      assert.equal(free.id,fresh.id);assert.ok(free.run.freeLifeUsed);assert.equal(free.run.reviveUsed,false);
+      await restore();assert.ok((await attempt(page)).run.freeLifeUsed);
+    }
+  }finally{url.searchParams.set('seed','33');await ctx.close();}
+}
+
 (async()=>{
   if(!process.env.GRIM_BASE_URL){
     await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -848,6 +970,11 @@ async function foothillsClear(browser,viewport,seed,earnUnlock){
   const browser=await chromium.launch({executablePath:process.env.GRIM_CHROME||undefined,
     args:[...(renderer==='canvas'?['--disable-webgl']:[]),'--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
   try{
+    if(process.argv.includes('--tundra')){
+      await tundraClear(browser,{width:390,height:844},17);
+      await tundraClear(browser,{width:844,height:390},91);
+      return;
+    }
     if(process.argv.includes('--foothills')){
       await foothillsClear(browser,{width:390,height:844},91,false);
       await foothillsClear(browser,{width:844,height:390},33,true);
