@@ -2565,7 +2565,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=e3b84eec618d');
+        await import('./assets/campaign/forest.js?v=1ca17e660921');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');

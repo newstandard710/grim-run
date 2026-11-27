@@ -1,4 +1,4 @@
-import {StoneGuardian} from './stone-guardian.js?v=2f3b0445662f';
+import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
 import {ForestScore} from '../audio/forest-score.js?v=3d10dd3e0f2d';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
@@ -230,6 +230,7 @@ import {forestRoute} from './route.js?v=c206bc3f05f2';
             s.meta=meta().load();
             this.id=d?.id||crypto.randomUUID();
             this.active=true;this.frozen=false;this.walletDirty=false;this.retryForest=true;
+            this.encounter.prepare?.();
             s.frame=0;s.lastRevivePayment=null;s.lastResurrection=null;
             this.routeVersion=d?(d.routeVersion??1):2;
             s.startRun(d?.seed);

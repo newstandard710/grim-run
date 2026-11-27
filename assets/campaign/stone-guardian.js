@@ -2,11 +2,26 @@
 // same moving coordinates for the artwork, collision and scythe contact.
 const lengths={arrival:1500,ridge:1050,break:320,pace:850,draw:980,sweep:320,drag:1650,recover:760,struck:720,fall:1100};
 const next={arrival:'ridge',ridge:'break',break:'pace',pace:'draw',draw:'sweep',sweep:'drag',drag:'recover',recover:'ridge',struck:'ridge',fall:'cleared'};
+const atlas='foothills-guardian-slate';
 const clamp=t=>Math.min(1,Math.max(0,t));
 const ease=t=>{const k=clamp(t);return k*k*(3-2*k);};
 
 export class StoneGuardian {
   constructor(campaign){this.campaign=campaign;this.scene=campaign.scene;}
+  prepare(){
+    const s=this.scene;
+    if(this.loading||s.textures.exists(atlas))return;
+    this.loading=true;
+    const art=new Image();
+    art.onload=()=>{
+      if(s.sys.isActive()&&!s.textures.exists(atlas)){
+        const texture=s.textures.addImage(atlas,art);
+        for(let i=0;i<6;i++)texture.add(i,0,i*192,0,192,192);
+      }
+    };
+    art.onerror=()=>{this.loading=false;};
+    art.src=new URL('./stone-guardian.webp',import.meta.url).href;
+  }
   enter(){
     const s=this.scene;
     this.campaign.guardian={phase:'arrival',ms:0,hp:3,round:0,hit:false,musicStart:s.elapsed,pursuit:true};
@@ -51,16 +66,23 @@ export class StoneGuardian {
     this.scene.puff(fist,y-high,0xf6ce90,11);
     window.GRIM_ACTION_AUDIO?.play('cut');
   }
-  hide(){this.rocks?.setVisible(false);this.label?.setVisible(false);}
+  hide(){
+    this.rocks?.setVisible(false);this.glow?.setVisible(false);this.label?.setVisible(false);
+    for(const plate of this.plates||[])plate.setVisible(false);
+  }
   render(){
     const s=this.scene,b=this.campaign.guardian;
     if(!this.campaign.active){this.hide();return;}
     if(!this.rocks){
       this.rocks=s.add.graphics().setDepth(7.5);
+      this.glow=s.add.graphics().setDepth(7.8);
+      this.plates=[];
       this.label=s.add.text(0,0,'',{fontFamily:'Georgia, serif',fontStyle:'bold',fontSize:'14px',color:'#fff2d3',stroke:'#172027',strokeThickness:4}).setOrigin(.5,1).setDepth(12);
     }
     const g=this.rocks;g.setVisible(true).clear();
+    const glow=this.glow.setVisible(true).clear();
     if(!b){
+      for(const plate of this.plates)plate.setVisible(false);
       this.label.setVisible(false);
       // The three souls from the Forest exit lead the runner up the first rise.
       if(s.distance<110)for(let i=0;i<3;i++){
@@ -73,7 +95,17 @@ export class StoneGuardian {
     const {body,y,fist,high,ridge}=this.geometry(b),phase=b.phase,t=clamp(b.ms/this.length(b));
     const drop=phase==='fall'?ease(t)*57:0,alpha=phase==='fall'?1-t:1;
     const stride=Math.sin(s.elapsed*7),shoulder=y-98+drop+3*Math.abs(stride),fy=y-high+drop;
-    const stone=(x,cy,w,h,shade=0x546170)=>{
+    let plateIndex=0;
+    const painted=s.textures.exists(atlas);
+    const stone=(part,x,cy,w,h,angle=0)=>{
+      if(painted){
+        let plate=this.plates[plateIndex];
+        if(!plate)plate=this.plates[plateIndex]=s.add.image(0,0,atlas,part).setDepth(7.6+plateIndex*.005);
+        plateIndex++;
+        plate.setVisible(true).setPosition(x,cy).setDisplaySize(w*1.15,h*1.14).setAngle(angle).setAlpha(alpha);
+        return;
+      }
+      const shade=0x546170;
       const pts=[{x:x-w*.5,y:cy-h*.22},{x:x-w*.18,y:cy-h*.52},{x:x+w*.4,y:cy-h*.35},{x:x+w*.53,y:cy+h*.2},{x:x+w*.11,y:cy+h*.5},{x:x-w*.43,y:cy+h*.36}];
       g.fillStyle(shade,alpha).fillPoints(pts,true);
       g.fillStyle(0x889296,alpha).fillTriangle(pts[0].x,pts[0].y,pts[1].x,pts[1].y,pts[2].x,pts[2].y);
@@ -81,15 +113,15 @@ export class StoneGuardian {
     };
     for(const side of [-1,1]){
       const foot=body+side*stride*30,ankle=y-8-13*Math.max(0,side*stride);
-      stone((body+foot)/2+side*10,shoulder+46,29,54);stone(foot,ankle,43,19);
+      stone(4,(body+foot)/2+side*10,shoulder+46,32,60,-side*stride*17);stone(5,foot,ankle,46,22);
     }
-    stone(body,shoulder+18,63,73);stone(body-5,shoulder-28,41,36);
-    g.lineStyle(3,0xffde93,alpha).lineBetween(body-20,shoulder-29,body-9,shoulder-31);
-    stone(body-18,shoulder,47,35);
+    stone(0,body,shoulder+18,70,80);stone(1,body-8,shoulder-28,46,43);
+    if(!painted)g.lineStyle(3,0xffde93,alpha).lineBetween(body-20,shoulder-29,body-9,shoulder-31);
+    stone(2,body-18,shoulder,48,39);
     const elbow=(body+fist)/2,ey=Math.min(fy,shoulder+14);
     g.lineStyle(17,0x3b4956,alpha).lineBetween(body-18,shoulder,elbow,ey).lineBetween(elbow,ey,fist,fy);
-    stone(elbow,ey,30,30);stone(fist,fy,42,33);
-    if(phase==='drag'&&b.ms>=200)g.lineStyle(4,0xffd48c,alpha).lineBetween(fist-9,fy-11,fist+2,fy).lineBetween(fist+2,fy,fist-5,fy+10);
+    stone(2,elbow,ey,31,28);stone(3,fist,fy,42,33);
+    if(phase==='drag'&&b.ms>=200)glow.lineStyle(4,0xffd48c,alpha).lineBetween(fist-9,fy-11,fist+2,fy).lineBetween(fist+2,fy,fist-5,fy+10);
     if(phase==='ridge'||phase==='break'){
       const h=phase==='break'?38:5+8*t;
       for(const offset of [-16,0,14])g.fillStyle(0x849094,1).fillTriangle(ridge+offset-8,y,ridge+offset+4,y-h+Math.abs(offset)*.35,ridge+offset+10,y);
