@@ -102,6 +102,14 @@ async function check(browser,viewport,url) {
     assert.equal(saved.souls,38);assert.deepEqual(saved.levels,{...levels,soulReach:0});
     assert.equal(saved.openingSouls,4);assert.equal(saved.brambleSouls,3);
     assert.equal(saved.equipped.length,6);assert.deepEqual(errors,[]);
+    // The run is already stepped by the test clock. Park its renderer while
+    // the second tab is foregrounded; the first tab still receives storage
+    // events and its live loadout is asserted below.
+    await page.evaluate(()=>{
+      const scene=grimRun.scene.scenes[0];
+      clearInterval(scene.loopWatchdogId);
+      grimRun.loop.sleep();
+    });
     const other=await context.newPage();
     await other.goto(url.href,{waitUntil:'domcontentloaded'});
     await other.bringToFront();

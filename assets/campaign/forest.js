@@ -1,4 +1,4 @@
-import {ForestGuardian} from './guardian.js';
+import {ForestGuardian} from './guardian.js?v=d865e9aa3930';
 
 (function(scope){
   'use strict';
@@ -40,11 +40,12 @@ import {ForestGuardian} from './guardian.js';
     const raw=localStorage.getItem(KEY);
     if(!raw)return null;
     const d=JSON.parse(raw);
+    // Completion is authoritative even if cleanup was interrupted during a menu transition.
+    if(typeof d?.id==='string'&&progress().forest?.attempt===d.id)return null;
     if(d.version!==1||d.chapter!=='forest'||typeof d.id!=='string'||!Number.isInteger(d.seed)||
       !MODES.has(d.mode)||!Number.isFinite(d.world?.player?.x)||!Array.isArray(d.history))
       throw Error('This Forest save could not be read.');
-    // A crash after the clear was committed can leave its old attempt slot behind.
-    return progress().forest?.attempt===d.id?null:d;
+    return d;
   }
 
   class ForestCampaign {
@@ -69,7 +70,7 @@ import {ForestGuardian} from './guardian.js';
       });
       const suspend=()=>{
         if(!this.active)return false;
-        this.pause();
+        if(this.guardian?.phase!=='cleared')this.pause();
         return true;
       };
       scene.ui.actions.suspendCampaign=suspend;
@@ -294,7 +295,7 @@ import {ForestGuardian} from './guardian.js';
         nextHistory:this.historySerial};
     }
     save(){
-      if(!this.active)return false;
+      if(!this.active||this.guardian?.phase==='cleared')return false;
       try{
         const raw=JSON.stringify(this.snapshot());
         if(this.walletDirty){

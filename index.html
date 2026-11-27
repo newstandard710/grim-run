@@ -2488,7 +2488,7 @@ window.GRIM_CONFIG = Object.freeze({
         document.getElementById('start-btn').disabled=true;
       }
       if(new URLSearchParams(scope.location?.search).get('campaign')==='review'){
-        this.campaignReady=import('./assets/campaign/forest.js').then(()=>{
+        this.campaignReady=import('./assets/campaign/forest.js?v=22088ded3739').then(()=>{
           this.campaign=new scope.GrimForestCampaign(this);
           this.campaign.openSavedOnLoad();
           return this.campaign;
