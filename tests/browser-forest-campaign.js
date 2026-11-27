@@ -1103,6 +1103,14 @@ async function cavesClear(browser,viewport,seed){
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 
+async function finishRevival(page){
+  await page.evaluate(()=>{
+    const s=grimRun.scene.scenes[0];
+    for(let frame=0;frame<360&&s.state!=='playing';frame++)s.update(0,1000/60);
+    if(s.state!=='playing')throw Error('Revival stopped in '+s.state);
+  });
+}
+
 async function crystalsClear(browser,viewport,seed){
   const ctx=await browser.newContext({viewport,hasTouch:true}),portrait=viewport.width<viewport.height;
   let page=await ctx.newPage();
@@ -1194,11 +1202,7 @@ async function crystalsClear(browser,viewport,seed){
       const before=(await wallet(page)).souls,id=(await attempt()).id;
       await page.locator('#revive-yes-btn').tap();await restore();
       assert.equal((await wallet(page)).souls,before-3);assert.equal((await attempt()).id,id);
-      await page.evaluate(()=>{
-        const s=grimRun.scene.scenes[0];
-        for(let frame=0;frame<360&&s.state!=='playing';frame++)s.update(0,1000/60);
-        if(s.state!=='playing')throw Error('Revival stopped in '+s.state);
-      });
+      await finishRevival(page);
       await route();await fight(false);
       const beforeReward=(await wallet(page)).souls;
       await page.evaluate(()=>{
@@ -1266,6 +1270,7 @@ async function ashlandsClear(browser,viewport,seed){
     assert.deepEqual(await page.evaluate(()=>{const s=grimRun.scene.scenes[0];
       return [s.gunUnlocked,s.biomeBackdrops.ashlands.visible,s.hasTeleported];}),[true,true,false]);
     await expectScore(page,'keeper');assert.ok(await audibleMusic(page));
+    assert.ok(await page.evaluate(()=>grimRun.scene.scenes[0].textures.exists('ashlands-keeper')));
     if(!portrait){
       await page.locator('#pause-btn').tap();await page.locator('#mute-music').check();
       await page.locator('#mute-actions').check();await resume(page);
@@ -1290,7 +1295,7 @@ async function ashlandsClear(browser,viewport,seed){
       const before=(await wallet(page)).souls,id=(await attempt()).id;
       await page.locator('#revive-yes-btn').tap();await restore();
       assert.equal((await wallet(page)).souls,before-3);assert.equal((await attempt()).id,id);
-      await advance(page,'frames',200);await route();await fight(false);
+      await finishRevival(page);await route();await fight(false);
       const beforeReward=(await wallet(page)).souls;
       await page.evaluate(()=>{
         const remove=Storage.prototype.removeItem;

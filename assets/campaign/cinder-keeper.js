@@ -41,6 +41,24 @@ function wraith(g,x,y,size,time,boss){
 
 export class CinderKeeper {
   constructor(campaign){this.campaign=campaign;this.scene=campaign.scene;}
+  prepare(){
+    const s=this.scene,key='ashlands-keeper';
+    if(this.loading||s.textures.exists(key))return;
+    const image=new Image();this.loading=true;
+    image.onload=()=>{
+      this.loading=false;
+      if(s.sys.isActive()&&!s.textures.exists(key))s.textures.addImage(key,image);
+    };
+    image.onerror=()=>{this.loading=false;};
+    image.src=new URL('./cinder-keeper.webp',import.meta.url).href;
+  }
+  drawWraith(g,x,y,scale,boss){
+    const s=this.scene;
+    if(!s.textures.exists('ashlands-keeper')){wraith(g,x,y,scale,s.elapsed,boss);return;}
+    if(!this.body)this.body=s.add.image(0,0,'ashlands-keeper').setDepth(7.85);
+    const size=(boss?138:103)*scale;
+    this.body.setVisible(true).setDisplaySize(size,size).setPosition(x,y+Math.sin(s.elapsed*4)*2);
+  }
   crossing(dt){
     const s=this.scene,p=s.player,index=p.nextEmber??0;
     if(!p.ashPhase){
@@ -116,7 +134,7 @@ export class CinderKeeper {
     this.scene.puff(x,y,amber,14);window.GRIM_ACTION_AUDIO?.play('impact');
     b.hp--;b.cycle++;b.ms=0;b.phase=b.hp?'struck':'fall';
   }
-  hide(){this.ink?.setVisible(false);this.label?.setVisible(false);}
+  hide(){this.body?.setVisible(false);this.ink?.setVisible(false);this.label?.setVisible(false);}
   render(){
     const s=this.scene,b=this.campaign.guardian,p=s.player,phase=b?.phase??p?.ashPhase;
     if(!this.campaign.active||!phase){this.hide();return;}
@@ -126,6 +144,7 @@ export class CinderKeeper {
         color:'#ffead1',stroke:'#261b25',strokeThickness:4}).setOrigin(.5,1).setDepth(12);
     }
     const g=this.ink.clear().setVisible(true),ms=b?.ms??p.ashMs;
+    this.body?.setVisible(false);
     const floor=s.terrain.anchorAt(p.x),destination=b?this.vessel((b.cycle+1)%3):p.x;
     if(b)for(let i=0;i<3;i++){
       const x=this.vessel(i);
@@ -141,10 +160,10 @@ export class CinderKeeper {
     }else if(phase==='erupt'){
       g.lineStyle(4,amber,.96).beginPath().moveTo(p.x-26,floor-3).lineTo(p.x-13,floor-22)
         .lineTo(p.x-7,floor-8).lineTo(p.x+1,floor-30).lineTo(p.x+12,floor-9).lineTo(p.x+24,floor-2).strokePath();
-      wraith(g,destination,s.terrain.anchorAt(destination)-mix(11,41,ms/150),b?1:.71,s.elapsed,!!b);
+      this.drawWraith(g,destination,s.terrain.anchorAt(destination)-mix(11,41,ms/150),b?1:.71,!!b);
     }else if(b&&['stunned','open','struck','fall'].includes(phase)){
       const pos=this.keeper();
-      wraith(g,pos.x,pos.y+(phase==='fall'?40*clamp(ms/1400):0),1.15,s.elapsed,true);
+      this.drawWraith(g,pos.x,pos.y+(phase==='fall'?40*clamp(ms/1400):0),1,true);
     }
     const cue=phase==='arrival'?'THE CINDER KEEPER':phase==='travel'?'SHOOT EMBER · OR JUMP':
       phase==='stunned'?'INTERCEPTED · CUT':phase==='open'?'EXPOSED · CUT':'';
