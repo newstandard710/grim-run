@@ -586,6 +586,7 @@
         name=tuckLanding&&p.sliding?'reaper-tuck-slide':tucked?'reaper-tuck':'reaper-jump';
         t=jumpFrame(p);
       }
+      else if(s.guardianStance)return; // The planted player uses the illustrated idle pose.
       else {name='reaper-run';t=runFrame(distance);loop=true;}
       s.powerArt?.hideBase();s.powerArt?.action?.setVisible(false);
       for(const v of s.combatArt?.reaper||[])v.setVisible(false);

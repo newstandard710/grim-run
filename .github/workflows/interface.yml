@@ -5,6 +5,9 @@ on:
     paths:
       - index.html
       - assets/ui/**
+      - assets/campaign/**
+      - tests/browser-forest-campaign.js
+      - tests/browser-reliquary-loadout.js
       - tests/beyond-death.cjs
       - tests/browser-beyond-death.js
       - tests/browser-obstacle-smoke.js
@@ -42,8 +45,6 @@ jobs:
       - name: Verify four screen sizes, two thumbs, finger swipes and resurrection scenes
         if: steps.scope.outputs.interface == 'true'
         run: node tests/browser-beyond-death.js
-      - name: Verify Forest Campaign interruption, revival and retry
-        run: node tests/browser-forest-campaign.js
       - name: Verify hosted startup retry, Home and Reliquary focus, and combined controls
         if: steps.scope.outputs.interface == 'true'
         run: |
@@ -62,3 +63,18 @@ jobs:
           name: grim-run-interface-renders
           path: test-results/beyond-*
           if-no-files-found: ignore
+
+  forest-campaign:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install chromium
+      - name: Verify Forest Campaign, guardian, revival and exact resume
+        run: node tests/browser-forest-campaign.js

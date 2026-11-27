@@ -139,20 +139,149 @@ async function runForest(page){
     const s=grimRun.scene.scenes[0],draw=s.drawScene;
     s.drawScene=()=>{};
     try{
-      for(let tick=0;tick<4500&&s.state==='playing';tick++){
-        const p=s.player;
-        const next=s.obstacles.filter(o=>!o.destroyed&&!o.dealtDamage&&o.x+o.width>p.x-10)
+      let acted,gapUsed;
+      for(let tick=0;tick<4500&&s.state==='playing'&&!s.campaign.guardian;tick++){
+        const p=s.player,x=p.x;
+        const ob=s.obstacles.filter(o=>!o.destroyed&&!o.dealtDamage&&o.x+o.width>x-32)
           .sort((a,b)=>a.x-b.x)[0];
-        const gap=s.terrain.groundAt(p.x+80)===null;
-        if(next?.type==='branch'&&next.x-p.x<69)s.startSlide();
-        else if(p.holdSlide)s.endSlide();
-        if(next?.type==='bramble'&&next.x-p.x<79)s.attack();
-        if(p.grounded&&(gap||next&&['fire','rock'].includes(next.type)&&next.x-p.x<95))s.jump();
+        const gap=s.terrain.segments.find(z=>z.kind==='gap'&&z.start>=x&&z.start-x<s.speed*.17);
+        if(p.holdSlide&&(!ob||ob.type!=='branch'||ob.x-x>s.speed*.25))s.endSlide();
+        if(gap&&p.grounded&&gap!==gapUsed){s.jump();gapUsed=gap;}
+        if(ob&&ob!==acted){
+          const dx=ob.x-x;
+          if(['rock','fire'].includes(ob.type)&&dx<s.speed*.29&&p.grounded){s.jump();acted=ob;}
+          if(ob.type==='branch'&&dx<s.speed*.18){s.startSlide();acted=ob;}
+          if(ob.type==='bramble'&&dx<116&&dx>20){s.attack();acted=ob;}
+        }
         s.update(0,1000/60);
       }
     }finally{s.drawScene=draw;}
     s.drawScene();
   });
+}
+async function untilBossPhase(page,phase,ms=0){
+  return page.evaluate(({phase,ms})=>{
+    const s=grimRun.scene.scenes[0],draw=s.drawScene;
+    s.drawScene=()=>{};
+    try{
+      for(let i=0;i<900;i++){
+        const b=s.campaign.guardian;
+        if(!b||s.state!=='playing')break;
+        if(b.phase===phase&&b.ms>=ms)return {...b,elapsed:s.elapsed,playerHp:s.player.hp};
+        s.update(0,1000/60);
+      }
+      throw Error('Expected '+phase+' at '+ms+' ms; got '+JSON.stringify(s.campaign.guardian)+' in '+s.state);
+    }finally{s.drawScene=draw;s.drawScene();}
+  },{phase,ms});
+}
+async function holdControl(page,name,frames){
+  const box=await page.locator('#'+name+'-btn').boundingBox();
+  const touch=await page.context().newCDPSession(page);
+  try{
+    await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2,id:1}]});
+    if(typeof frames==='string')await untilBossPhase(page,frames);
+    else await advance(page,'frames',frames);
+    await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }finally{await touch.detach();}
+}
+async function defeatGuardian(page){
+  const start=await untilBossPhase(page,'roots',700);
+  for(let round=0;round<3;round++){
+    if(round)await untilBossPhase(page,'roots',700);
+    await holdControl(page,'jump',30);
+    await untilBossPhase(page,'bough',800);
+    await holdControl(page,'slide','exposed');
+    await untilBossPhase(page,'exposed',220);
+    await page.locator('#attack-btn').tap();
+    await untilBossPhase(page,round===2?'fall':'struck');
+  }
+  const final=await saved(page);
+  assert.equal(final.world.guardian.hp,0);
+  assert.equal(final.world.player.hp,start.playerHp,'Each visible attack can be avoided');
+
+}
+async function reachGuardian(page){
+  await start(page);
+  await runForest(page);
+  const merchant=await saved(page);
+  if(merchant.mode==='vendorIntro')await page.locator('#vendor-intro-skip').tap();
+  await page.getByRole('button',{name:'CONTINUE RUN'}).tap();
+  await runForest(page);
+  const arrival=await saved(page);
+  assert.equal(arrival.world.guardian.phase,'arrival');
+  assert.equal(arrival.world.player.hp,arrival.world.player.maxHp);
+  return arrival;
+}
+async function freshClear(browser,viewport){
+  const ctx=await browser.newContext({viewport,hasTouch:true});
+  try{
+    let page=await ctx.newPage();await boot(page);
+    const arrival=await reachGuardian(page);
+    assert.ok(Object.values(arrival.run.runLoadout.levels).every(rank=>rank===0));
+    const bank=await wallet(page);
+    await defeatGuardian(page);
+    const finished=await saved(page);
+    console.log('Fresh Forest clear',viewport,'approach',arrival.world.elapsed.toFixed(2),
+      'fight',(finished.world.elapsed-arrival.world.elapsed+.95).toFixed(2),'seconds');
+    // Interrupt specifically between the chapter record and attempt cleanup.
+    await page.evaluate(()=>{
+      const remove=Storage.prototype.removeItem;
+      Storage.prototype.removeItem=function(k){
+        if(k==='grim-run-forest-attempt-v1')throw Error('injected cleanup interruption');
+        return remove.call(this,k);
+      };
+    });
+    await advance(page,'frames',70);
+    assert.equal(await page.locator('#campaign-title').innerText(),'FOREST CLEAR PENDING');
+    await page.close();page=await ctx.newPage();await boot(page);
+    await page.locator('#home-screen').tap({position:{x:18,y:30}});
+    await page.locator('#start-btn').tap();await page.locator('#campaign-primary').tap();
+    assert.match(await page.locator('#campaign-detail').innerText(),/Foothills is unlocked/);
+    await page.getByRole('button',{name:'REPLAY FOREST'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    const replay=await saved(page);
+    assert.notEqual(replay.id,arrival.id);assert.equal(replay.world.distance,0);
+    assert.equal(replay.world.guardian,undefined);assert.deepEqual(await wallet(page),bank);
+  }finally{await ctx.close();}
+}
+async function guardianRevivals(browser){
+  const ctx=await browser.newContext({viewport:{width:390,height:844},hasTouch:true});
+  try{
+    let page=await ctx.newPage();await boot(page);
+    await page.evaluate(()=>GRIM_META.save(GRIM_META.normalize({souls:5,levels:{deathDenied:1}})));
+    const arrival=await reachGuardian(page);
+    await untilBossPhase(page,'roots',10);
+    await holdControl(page,'jump',15); // Too early: lands before roots erupt.
+    await untilBossPhase(page,'breath');
+    assert.equal((await saved(page)).world.player.hp,arrival.world.player.hp-1);
+    await untilBossPhase(page,'bough',350);await page.locator('#attack-btn').tap();
+    await untilBossPhase(page,'exposed',150); // No Slide: a second hit. Early Cut cannot damage bark.
+    const missed=await saved(page);
+    assert.equal(missed.world.guardian.hp,3);assert.equal(missed.world.player.hp,1);
+    await page.locator('#attack-btn').tap();await untilBossPhase(page,'struck');
+    await untilBossPhase(page,'roots',800);await advance(page,'frames',185);
+    assert.equal((await saved(page)).run.freeLifeUsed,true);
+    page=await reopen(ctx,page);await resume(page);await advance(page,'frames',390);
+    let d=await saved(page);assert.equal(d.id,arrival.id);assert.equal(d.world.guardian.hp,2);
+    // Let attacks finish this life. Reload the offer and buy exactly one revival.
+    const waitFor=async mode=>page.evaluate(mode=>{
+      const s=grimRun.scene.scenes[0],draw=s.drawScene;s.drawScene=()=>{};
+      try{for(let n=0;n<3200&&s.state!==mode;n++)s.update(0,1000/60);}
+      finally{s.drawScene=draw;s.drawScene();}
+      if(s.state!==mode)throw Error('Expected '+mode+', got '+s.state);
+    },mode);
+    await waitFor('revive');
+    const bank=await wallet(page);
+    page=await reopen(ctx,page);await resume(page);await page.locator('#revive-yes-btn').tap();
+    page=await reopen(ctx,page);assert.equal((await wallet(page)).souls,bank.souls-3);
+    d=await saved(page);assert.equal(d.world.guardian.hp,2);assert.equal(d.run.reviveUsed,true);
+    await resume(page);await waitFor('dead');
+    assert.equal(await saved(page),null);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('grim-run-campaign-progress-v1')),null);
+    await page.locator('#retry-btn').tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    assert.equal((await saved(page)).world.distance,0);
+  }finally{await ctx.close();}
 }
 async function merchantAndInterruption(browser){
   const ctx=await browser.newContext({viewport:{width:844,height:390},hasTouch:true});
@@ -204,8 +333,19 @@ async function merchantAndInterruption(browser){
     assert.equal((await saved(other)).id,beforeCrash.id);await other.close();
     await resume(page);
     await runForest(page);
-    assert.match(await page.locator('#campaign-title').innerText(),/FOREST REVIEW COMPLETE/);
+    const inFight=await untilBossPhase(page,'roots',340);
+    page=await reopen(ctx,page);
+    const restored=await saved(page);
+    assert.equal(restored.world.guardian.ms,inFight.ms);
+    await resume(page);
+    await defeatGuardian(page);
+    page=await reopen(ctx,page);await resume(page);await advance(page,'frames',70);
+    assert.equal(await page.locator('#campaign-title').innerText(),'FOREST CLEARED');
     assert.equal(await saved(page),null);
+    const progress=await page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-campaign-progress-v1')));
+    assert.equal(progress.foothillsUnlocked,true);assert.equal(progress.forest.attempt,bought.id);
+    await page.locator('#campaign-secondary').tap();
+    assert.match(await page.locator('#campaign-secondary').innerText(),/COMING SOON/);
     await page.locator('#campaign-primary').tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
     await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'rock');});
@@ -213,7 +353,7 @@ async function merchantAndInterruption(browser){
     await page.locator('#revive-no-btn').tap();
     assert.equal(await saved(page),null);
     assert.equal((await wallet(page)).souls,4+Number(bought.run.soulCount));
-    console.log('Merchant, renderer crash, exclusive tab, Forest boundary and declined revival passed.');
+    console.log('Merchant, renderer crash, exclusive tab, guardian victory, unlock and declined revival passed.');
   }finally{await ctx.close();}
 }
 async function saveRecovery(browser){
@@ -306,5 +446,8 @@ async function saveRecovery(browser){
     console.log('Forest pickup, revivals, retry, loadout and Endless passed.');
     await merchantAndInterruption(browser);
     await saveRecovery(browser);
+    for(const viewport of [{width:844,height:390},{width:390,height:844}])await freshClear(browser,viewport);
+    await guardianRevivals(browser);
+    console.log('Scythe-only clears, interrupted victory, missed counters and both boss revivals passed.');
   }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
