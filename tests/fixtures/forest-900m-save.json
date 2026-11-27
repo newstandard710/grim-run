@@ -1,0 +1,250 @@
+{
+  "version": 1,
+  "chapter": "forest",
+  "id": "8fc84b63-b679-448e-a546-f6349d3ac255",
+  "seed": 33,
+  "mode": "playing",
+  "width": 844,
+  "height": 390,
+  "world": {
+    "at": 0,
+    "player": {
+      "x": 7967.100125870585,
+      "y": 242.8330485910856,
+      "grounded": true,
+      "coyoteMs": 0,
+      "velocityY": 0,
+      "hp": 3,
+      "maxHp": 3,
+      "invulMs": 0,
+      "slowMs": 0,
+      "slowCooldownMs": 0,
+      "slideConsumed": false,
+      "airTuck": false,
+      "slideReleaseBufferMs": 0,
+      "jumpsUsed": 0,
+      "attackMs": 0,
+      "attackCooldownMs": 0,
+      "slideMs": 533.3333333333335,
+      "sliding": false,
+      "holdSlide": false,
+      "jumpHeld": false,
+      "jumpAgeMs": 0,
+      "hovering": false,
+      "hoverBudgetMs": 0,
+      "onSoulPlatform": false,
+      "airJumpUsed": false,
+      "hoverHoldMs": 0,
+      "hoverPressKind": "none",
+      "fireproofCooldownMs": 0,
+      "openingGateX": -1,
+      "previousAttackMs": 0,
+      "visualLandingMs": 0,
+      "visualTuckMs": 0,
+      "visualTuckReleaseMs": 0,
+      "visualWasAirborne": false,
+      "visualHurtMs": 0,
+      "visualLaunchVelocity": 610,
+      "visualTouchdown": null,
+      "risingCut": {
+        "sequence": 4,
+        "mode": "rise"
+      }
+    },
+    "speed": 316.1814585955637,
+    "distance": 647.2583438225487,
+    "elapsed": 25.216666666666516,
+    "frame": 1512,
+    "cameraX": 7697.020125870585,
+    "cameraY": -66.13371870874214,
+    "nextEncounterX": 9149.67770462852,
+    "nextEnemySpawnX": 61040,
+    "nextGroundSpawnX": 61880,
+    "nextSnapSpawnX": 39320,
+    "gunCooldownMs": 350,
+    "blastCooldownMs": 0,
+    "blastFlashMs": 0,
+    "damageFlashMs": 0,
+    "bonesBlastMs": 0,
+    "brittleClearUntilX": 0,
+    "fallFeedbackMs": 0,
+    "goFlashMs": 0,
+    "swingSequence": 4,
+    "coinCount": 5,
+    "goldCollected": 5,
+    "points": 772,
+    "enemies": [],
+    "obstacles": [],
+    "bullets": [],
+    "fireballs": [],
+    "coins": [
+      {
+        "x": 9191,
+        "baseY": 235.17333263437442,
+        "offset": -43,
+        "kind": "free",
+        "taken": false,
+        "interval": 1
+      },
+      {
+        "x": 10190,
+        "baseY": 207.4684216750151,
+        "offset": -43,
+        "kind": "free",
+        "taken": false,
+        "interval": 1
+      },
+      {
+        "x": 11189,
+        "baseY": 246.65456987616884,
+        "offset": -101,
+        "kind": "air",
+        "taken": false,
+        "interval": 1
+      },
+      {
+        "x": 12188,
+        "baseY": 246.9935785024129,
+        "offset": -43,
+        "kind": "free",
+        "taken": false,
+        "interval": 1
+      }
+    ],
+    "souls": [],
+    "combatViews": [],
+    "slideRotation": {
+      "biome": "forest",
+      "last": "forest_slide_nurse-log-colonnade",
+      "remaining": [
+        "forest_slide_thorn-canopy",
+        "forest_slide_cathedral-cedar"
+      ]
+    },
+    "rubble": [],
+    "rngState": 3979480422
+  },
+  "run": {
+    "runLoadout": {
+      "levels": {
+        "boneheart": 0,
+        "graveWealth": 0,
+        "deathsLeap": 0,
+        "graveGlide": 0,
+        "fatesBargain": 0,
+        "deathDenied": 0,
+        "soulReach": 0
+      }
+    },
+    "soulCount": 2,
+    "runSoulsAvailable": 2,
+    "freeLifeAvailable": false,
+    "freeLifeUsed": false,
+    "reviveUsed": false,
+    "lastRevivePayment": null,
+    "lastResurrection": null,
+    "openingSoulClaimed": true,
+    "brambleSoulClaimed": true,
+    "rerollsRemaining": 0,
+    "lastVendorNumber": 1,
+    "nextVendorNumber": 2,
+    "vendorType": null,
+    "vendorPhase": "deal",
+    "vendorPurchased": false,
+    "vendorAcquiredId": null,
+    "pendingOffers": [],
+    "vendorIntroMs": 0,
+    "vendorIntroSeen": {
+      "angel": true,
+      "devil": false
+    },
+    "rushCooldownMs": 0,
+    "rushNoticeMs": 0,
+    "rewindClockMs": 0,
+    "rewindSampleMs": 0,
+    "rewindCooldownMs": 0,
+    "rewindFlashMs": 0,
+    "respawnMs": 0,
+    "respawnCamera": null,
+    "respawnNextMode": "playing",
+    "deathPoseMs": 0,
+    "fallCount": 0,
+    "countdownMs": 0,
+    "goFlashMs": 0,
+    "encounterTelemetry": {
+      "attempts": 0,
+      "spawned": 0,
+      "dropped": 0,
+      "rejectedVendor": 0,
+      "rejectedGeometry": 0,
+      "rejectedOverlap": 0,
+      "enteredView": 0,
+      "visibleFor650ms": 0,
+      "kills": 0,
+      "byKind": {}
+    }
+  },
+  "powers": {
+    "soulCleave": 0,
+    "ravenWings": 0,
+    "deathsDelay": 0,
+    "brittleBones": 0,
+    "deathsReversal": 0,
+    "graveRush": 0,
+    "skeletalWings": 0,
+    "infernalBoots": 0,
+    "rapidFire": 0,
+    "powerShot": 0,
+    "chainShot": 0
+  },
+  "terrain": [],
+  "downhill": 0,
+  "history": [],
+  "playback": null,
+  "rush": null,
+  "motion": {
+    "registeredAir": null,
+    "forwardActive": true,
+    "forwardAir": null,
+    "forwardSwing": null
+  },
+  "art": [
+    "forwardReady",
+    "airReady",
+    "airCutReady",
+    "cutHandoffReady",
+    "cutWeaponReady"
+  ],
+  "particles": [],
+  "chainArcs": [],
+  "defeat": null,
+  "tipped": [
+    "tuckGate",
+    "airBramble",
+    "branch",
+    "rock",
+    "bramble",
+    "abyss"
+  ],
+  "tips": [
+    [
+      89696.6902453087,
+      3586.212113345441,
+      89736.6902453087,
+      "JUMP + SLIDE"
+    ],
+    [
+      21928.983094000007,
+      -654.2912763624681,
+      21968.983094000007,
+      "JUMP + CUT"
+    ],
+    [
+      9032,
+      85.45679450317135,
+      9032,
+      "JUMP THE ABYSS \u2191"
+    ]
+  ],
+  "nextHistory": 0
+}

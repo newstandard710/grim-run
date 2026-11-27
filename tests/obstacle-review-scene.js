@@ -286,6 +286,17 @@
       objects:s.obstacles.filter(o=>Math.abs(o.x-s.player.x)<s.width).map(o=>o.type),
       coins:s.coins.filter(c=>!c.taken&&Math.abs(c.x-s.player.x)<s.width).length};
   }
+  function inspectRoute() {
+    const front=s.obstacleSpriteObjects.get(obstacle);
+    if(!front?.visible)throw Error('Missing route foreground: '+skin.id);
+    if(s.player.x>=obstacle.x-22)throw Error('Foreground never entered view before contact: '+skin.id);
+    // On the steep Lava descent the approach starts with the entire lip
+    // below the screen. Read its painted pixels as it enters the real camera.
+    const bounds=front.getBounds(),view=s.cameras.main.worldView;
+    const visibleHeight=Math.min(bounds.bottom,view.bottom)-Math.max(bounds.top,view.top);
+    if(visibleHeight<Math.min(16,bounds.height))return null;
+    return inspect();
+  }
   function routeFrame() {
     const states=[];
     for(let i=0;i<4;i++){
@@ -359,6 +370,6 @@
     const leaked=Object.keys(s.textures.list).filter(k=>k.startsWith('obstacle-mounted-')||k.startsWith('obstacle-registered-'));
     if (leaked.length) throw Error('Leaked obsolete art: '+leaked.join(', '));
   }
-  window.obstacleReview={prepare,ready,diagnostics,inspect,step,signature,image,cleanup,render,startPortal,exerciseMountLifecycle,beginRoute,scanRoute,loadRoute,routeRecord:id=>selected.get(id),routeFrame,
+  window.obstacleReview={prepare,ready,diagnostics,inspect,step,signature,image,cleanup,render,startPortal,exerciseMountLifecycle,beginRoute,scanRoute,loadRoute,routeRecord:id=>selected.get(id),routeFrame,inspectRoute,
     get result(){return {firstCut,firstHit,airTucked,inputSent,passed:s.player.x>obstacle.x+obstacle.width};}};
 })();

@@ -346,7 +346,7 @@
       const s=this.scene,p=s.player;
       if(this.shrine){
         const x=s.startX+SHRINE_METERS*scope.GRIM_CONFIG.pxPerMeter;
-        const visible=Boolean(s.startX)&&Math.abs(p.x-x)<s.width+300&&!s.hasTeleported&&s.state!=='chest'&&s.state!=='menu';
+        const visible=!s.forestRoute&&Boolean(s.startX)&&Math.abs(p.x-x)<s.width+300&&!s.hasTeleported&&s.state!=='chest'&&s.state!=='menu';
         this.shrine.setVisible(visible);
         if(visible)this.shrine.setPosition(x,s.terrain.groundAt(x)+12).setOrigin(.5,1).setDisplaySize(315,210);
       }

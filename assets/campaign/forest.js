@@ -1,8 +1,10 @@
 import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
 
+import {forestRoute} from './route.js?v=e6a55d65cebd';
+
 (function(scope){
   'use strict';
-  const KEY='grim-run-forest-attempt-v1', HISTORY=KEY+'-rewind-', END=900;
+  const KEY='grim-run-forest-attempt-v1', HISTORY=KEY+'-rewind-', LEGACY_END=900;
   const PROGRESS='grim-run-campaign-progress-v1';
   const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
   const MODES=new Set(['playing','countdown','dying','revive','respawning','vendorIntro','upgrade','rewinding']);
@@ -42,7 +44,7 @@ import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
     const d=JSON.parse(raw);
     // Completion is authoritative even if cleanup was interrupted during a menu transition.
     if(typeof d?.id==='string'&&progress().forest?.attempt===d.id)return null;
-    if(d.version!==1||d.chapter!=='forest'||typeof d.id!=='string'||!Number.isInteger(d.seed)||
+    if((d.routeVersion!==undefined&&![1,2].includes(d.routeVersion))||d.version!==1||d.chapter!=='forest'||typeof d.id!=='string'||!Number.isInteger(d.seed)||
       !MODES.has(d.mode)||!Number.isFinite(d.world?.player?.x)||!Array.isArray(d.history))
       throw Error('This Forest save could not be read.');
     return d;
@@ -174,9 +176,10 @@ import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
             this.id=d?.id||crypto.randomUUID();
             this.active=true;this.frozen=false;this.walletDirty=false;this.retryForest=true;
             s.frame=0;s.lastRevivePayment=null;s.lastResurrection=null;
+            this.routeVersion=d?(d.routeVersion??1):2;
             s.startRun(d?.seed);
             // Items and preplaced obstacles in later biomes never enter this chapter.
-            const limit=s.startX+END*scope.GRIM_CONFIG.pxPerMeter+1500;
+            const limit=this.entranceX+1500;
             for(const key of ['coins','souls','obstacles'])s[key]=s[key].filter(o=>o.x<limit);
             el('retry-btn').textContent='RETRY FOREST';
             visible('campaign-save-menu',true);
@@ -201,7 +204,10 @@ import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
       for(let i=0;i<256;i++)localStorage.removeItem(HISTORY+i);
       this.release();
     }
-    get entranceX(){return this.scene.startX+END*scope.GRIM_CONFIG.pxPerMeter;}
+    prepareRoute(seed,origin,unit){
+      return this.routeVersion===2?forestRoute(seed,origin,unit):null;
+    }
+    get entranceX(){return this.scene.startX+(this.scene.forestRoute?.end??LEGACY_END)*scope.GRIM_CONFIG.pxPerMeter;}
     afterFrame(){
       if(!this.active)return;
       const s=this.scene;
@@ -280,7 +286,7 @@ import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
     }
     snapshot(){
       const s=this.scene,r=s.graveRush,clip=s.rewindPlayback;
-      return {version:1,chapter:'forest',id:this.id,seed:s.seed,mode:this.frozen?this.resumeMode:s.state,
+      return {version:1,chapter:'forest',routeVersion:this.routeVersion,id:this.id,seed:s.seed,mode:this.frozen?this.resumeMode:s.state,
         width:s.width,height:s.height,world:s.worldSnapshot(),
         run:Object.fromEntries(fields.map(k=>[k,s[k]])),powers:s.powerManager.levels,
         terrain:[...s.rewindTerrainBase],downhill:s.downhillCamera?.offset||0,

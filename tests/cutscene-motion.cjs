@@ -5,7 +5,8 @@ for(const p of ['assets/visuals/cutscene-motion.js','assets/visuals/vendor-art-d
 const A=w.GRIM_CUTSCENES,D=w.GRIM_CUTSCENE_DATA;
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 assert(html.includes('assets/cutscenes/v0197/animation-data.js?v=vendor-greetings1'));
-assert(html.includes('assets/visuals/power-animations.js?v=tuck-scale1"></script>'),'Bow uses the versioned power renderer');
+const powerHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'assets/visuals/power-animations.js'))).digest('hex').slice(0,12);
+assert(html.includes('assets/visuals/power-animations.js?v='+powerHash+'"></script>'),'Bow uses the versioned power renderer');
 assert(html.includes('assets/visuals/cutscene-motion.js?v=vendor-greetings1"></script>'));
 const loaded=[];A.preload({load:{spritesheet:(key,url)=>loaded.push([key,url])}});
 assert.equal(loaded.length,3);
