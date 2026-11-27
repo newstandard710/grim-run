@@ -1,4 +1,5 @@
-import {ForestGuardian} from './guardian.js?v=882978b6f7ce';
+import {ForestScore} from '../audio/forest-score.js?v=48e148e8cef9';
+import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
 import {forestRoute} from './route.js?v=e6a55d65cebd';
 
@@ -53,6 +54,9 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
   class ForestCampaign {
     constructor(scene){
       this.scene=scene;
+      this.score=new ForestScore();
+      scene.ui.actions.syncCampaignScore=mode=>this.syncScore(mode);
+      el('music-settings').dataset.available='1';
       this.encounter=new ForestGuardian(this);
       this.active=false;
       this.frozen=false;
@@ -98,7 +102,19 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         };
       }
       scene.ui.holdActions={jump:[a.jump,a.jumpEnd],slide:[a.slideStart,a.slideEnd]};
-      scene.events.once('shutdown',()=>this.release());
+      scene.events.once('shutdown',()=>{
+        this.release();
+        this.score.dispose();
+        delete el('music-settings').dataset.available;
+      });
+    }
+    syncScore(mode){
+      if(this.showingVictory&&mode==='campaignMenu')return;
+      if(!this.active||this.frozen||mode!=='playing'){this.score.select(null);return;}
+      const b=this.guardian;
+      if(b?.phase==='fall'||b?.phase==='cleared')this.score.select('victory',b.ms/1000);
+      else if(b)this.score.select('guardian',this.scene.elapsed-(b.musicStart??this.scene.elapsed));
+      else this.score.select('walk',this.scene.elapsed);
     }
     screen(title,detail,primary,secondary,back){
       const s=this.scene;
@@ -143,6 +159,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
     }
     resetMenu(){
       this.retryForest=false;
+      visible('music-settings',false);
       el('retry-btn').textContent='RUN AGAIN ↻';
       visible('campaign-save-menu',false);el('resume-btn').disabled=false;
       el('god-mode-checkbox').closest('label').classList.remove('hidden');
@@ -182,7 +199,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
             const limit=this.entranceX+1500;
             for(const key of ['coins','souls','obstacles'])s[key]=s[key].filter(o=>o.x<limit);
             el('retry-btn').textContent='RETRY FOREST';
-            visible('campaign-save-menu',true);
+            visible('campaign-save-menu',true);visible('music-settings',true);
             el('god-mode-checkbox').closest('label').classList.add('hidden');
             document.querySelector('.god-mode-desc').classList.add('hidden');
             if(d){this.restore(d);this.pause();}
@@ -193,16 +210,18 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       }catch(e){this.unreadable(e);}
       finally{this.busy=false;}
     }
-    release(){
+    release(keepVictory=false){
+      if(!keepVictory)this.score.select(null);
+      this.finalePrepared=false;
       this.active=false;this.frozen=false;this.walletDirty=false;this.reconnect=null;
       this.guardian=null;this.encounter.hide();
       this.requiredArt=null;cancelAnimationFrame(this.artWait);
       this.unlock?.();this.unlock=null;
     }
-    endAttempt(){
+    endAttempt(keepVictory=false){
       localStorage.removeItem(KEY);
       for(let i=0;i<256;i++)localStorage.removeItem(HISTORY+i);
-      this.release();
+      this.release(keepVictory);
     }
     prepareRoute(seed,origin,unit){
       return this.routeVersion===2?forestRoute(seed,origin,unit):null;
@@ -214,6 +233,10 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       if(this.guardian?.phase==='cleared'){this.finishChapter();return;}
       if(!this.guardian&&s.player.x>=this.entranceX&&s.state==='playing'&&!s.graveRush)
         this.encounter.enter();
+      if(!this.finalePrepared&&s.player.x>=this.entranceX-200*scope.GRIM_CONFIG.pxPerMeter&&this.score.enabled){
+        this.score.prepareFinale();this.finalePrepared=true;
+      }
+      this.syncScore(s.state);
       this.save();
     }
     finishChapter(){
@@ -234,7 +257,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         meta().save(this.scene.meta);
         balance=this.scene.totalSouls=this.scene.meta.souls;
         el('banked-souls').textContent=String(balance);
-        this.endAttempt();
+        this.endAttempt(true);
       }catch(e){
         this.frozen=true;
         this.screen('FOREST CLEAR PENDING','Free some browser storage to record your victory.',
@@ -242,8 +265,10 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
         return;
       }
       const reward=bonus===3?'First Forest clear · +3 Souls':'Forest cleared · +1 Soul';
+      this.showingVictory=true;
       this.screen('FOREST CLEARED',reward+' · Wallet: '+balance+' Souls. Foothills unlocked · chapter in development.',
         ['REPLAY FOREST',()=>this.enter()],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
+      this.showingVictory=false;
     }
     togglePause(){
       if(this.frozen)this.continueAttempt();
@@ -340,6 +365,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       Object.assign(s.powerManager.levels,d.powers);
       for(const name of fields)s[name]=d.run[name];
       s.applyRewindSnapshot(w);
+      if(this.guardian&&!Number.isFinite(this.guardian.musicStart))this.guardian.musicStart=s.elapsed;
       Object.assign(s.player,w.player); // Rewind cancels held actions. A resumed frame preserves them.
       s.goFlashMs=d.run.goFlashMs;s.downhillCamera&&(s.downhillCamera.offset=d.downhill);
       s.graveRush=d.rush?{...d.rush,hit:new Set(d.rush.hit.map(i=>s.enemies[i]))}:null;

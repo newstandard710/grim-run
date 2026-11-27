@@ -10,6 +10,7 @@
     imp:    ['sawtooth', 140, 295, .15, .075],
     impact: ['triangle', 345, 175, .07, .11],
     defeat: ['triangle', 245, 66, .14, .13],
+    knot:   ['sine', 660, 990, .115, .19],
     damage: ['triangle', 182, 46, .21, .20]
   };
   const key = 'grimRun.actionSoundsMuted';
@@ -24,7 +25,8 @@
     active.clear();
   }
   function unlock(event) {
-    if (!event.isTrusted || muted || document.hidden) return;
+    if (!event.isTrusted || document.hidden) return;
+    if (muted && !document.getElementById('music-settings')?.dataset.available) return;
     try {
       if (!context) {
         const Audio = window.AudioContext || window.webkitAudioContext;
@@ -45,6 +47,7 @@
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) silence(); });
   window.GRIM_ACTION_AUDIO = {
+    get context() { return context; },
     setPlaying(value) {
       playing = value;
       if (!value) silence();
