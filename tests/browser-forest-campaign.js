@@ -52,6 +52,7 @@ async function playingStory(page,name){
       &&film.videoWidth>0&&film.currentTime>0;
   },name);
   assert.equal(await page.locator('#controls').isVisible(),false);
+  assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].cameras.main.visible),false);
 }
 async function openingStory(browser){
   let firstWorld;
@@ -63,6 +64,7 @@ async function openingStory(browser){
       await playingStory(page,'passage-sealed.webm');
       const before=await saved(page);
       assert.equal(before.world.distance,0);
+      assert.equal(await page.evaluate(()=>localStorage.getItem(GRIM_META.CAMPAIGN_PROGRESS)),null);
       await advance(page,'frames',90);
       assert.deepEqual(comparable(await saved(page)),comparable(before));
       if(action==='skip')await page.getByRole('button',{name:'SKIP',exact:true}).tap();

@@ -7,6 +7,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
   'use strict';
   const KEY='grim-run-forest-attempt-v1', HISTORY=KEY+'-rewind-', LEGACY_END=900;
   const PROGRESS=scope.GRIM_META.CAMPAIGN_PROGRESS;
+  const OPENING_SEEN='grim-run-forest-opening-seen-v1';
   const progress=()=>JSON.parse(localStorage.getItem(PROGRESS)||'{}');
   const MODES=new Set(['playing','countdown','dying','revive','respawning','vendorIntro','upgrade','rewinding']);
   const fields=[
@@ -121,7 +122,9 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
     }
     playStory(ending,done){
       const s=this.scene,film=el('forest-story-film');
+      const camera=s.cameras.main,worldVisible=camera.visible;
       s.state='forestStory';s.ui.setMode(s.state);
+      camera.visible=false;
       el('forest-story').setAttribute('aria-label',ending
         ? 'The roots part. Escaped Souls climb into the Foothills.'
         : 'Escaped Souls slip past tangled roots before the passage closes.');
@@ -136,6 +139,7 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
       this.finishStory=finish;
       this.stopStory=()=>{
         this.finishStory=null;this.stopStory=null;
+        camera.visible=worldVisible;
         clearTimeout(timer);
         film.onended=null;film.onerror=null;
         film.pause();film.removeAttribute('src');film.load();
@@ -217,13 +221,12 @@ import {forestRoute} from './route.js?v=e6a55d65cebd';
             visible('campaign-save-menu',true);visible('music-settings',true);
             el('god-mode-checkbox').closest('label').classList.add('hidden');
             document.querySelector('.god-mode-desc').classList.add('hidden');
-            if(d){this.restore(d);this.pause();}
+            if(d){this.openingSeen=true;this.restore(d);this.pause();}
             else if(this.save()){
-              const record=progress();
-              if(!record.forest&&!record.forestOpeningSeen&&!this.openingSeen){
+              if(!this.openingSeen&&!progress().forest&&localStorage.getItem(OPENING_SEEN)!=='1'){
                 this.openingSeen=true;
                 // The attempt is durable at the starting frame before the first image.
-                try{localStorage.setItem(PROGRESS,JSON.stringify({...record,forestOpeningSeen:true}));}catch{}
+                try{localStorage.setItem(OPENING_SEEN,'1');}catch{}
                 this.frozen=true;this.resumeMode=s.state;
                 this.playStory(false,()=>{
                   this.frozen=false;s.state=this.resumeMode;s.ui.setMode(s.state);
