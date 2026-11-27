@@ -1,6 +1,6 @@
 // Forest Campaign music streams in once per track. A single shared AudioContext
 // owns both the independent music bus and the existing action-sound bus.
-const files = {gallery:'crystals-gallery.ogg',sentinel:'crystals-sentinel.ogg',descent:'caves-descent.ogg',brood:'caves-brood.ogg',crossing:'tundra-crossing.ogg',crown:'tundra-crown.ogg',climb:'foothills-climb.ogg',pursuit:'foothills-pursuit.ogg',walk:'forest-walk.ogg', guardian:'forest-guardian.ogg', victory:'forest-victory.ogg'};
+const files = {march:'ashlands-march.ogg',keeper:'ashlands-keeper.ogg',gallery:'crystals-gallery.ogg',sentinel:'crystals-sentinel.ogg',descent:'caves-descent.ogg',brood:'caves-brood.ogg',crossing:'tundra-crossing.ogg',crown:'tundra-crown.ogg',climb:'foothills-climb.ogg',pursuit:'foothills-pursuit.ogg',walk:'forest-walk.ogg', guardian:'forest-guardian.ogg', victory:'forest-victory.ogg'};
 const mute = document.getElementById('mute-music');
 const volume = document.getElementById('music-volume');
 try {

@@ -294,6 +294,7 @@ button {cursor:pointer;}
   content:""; display:block; height:min(16vh,110px); margin:0 auto 6px;
   background:url('assets/powers/bone-crossbow.png') center/contain no-repeat;
 }
+#campaign-screen[data-ash] .modal {background:linear-gradient(#28171b99,#180f17eb),url('assets/visuals/biomes/ashlands-ravine-v1.webp') center/cover}
 #campaign-screen[data-prism] .modal {background:linear-gradient(#18133299,#090d1ee8),url('assets/visuals/biomes/deep-underground-ravine-v1.webp') center/cover}
 #campaign-screen[data-silk] .modal {background:linear-gradient(#151223c9,#0b0b17e8),url('assets/visuals/biomes/underground-caves-ravine-v1.webp') center/cover}
 #campaign-screen[data-silk] .modal::before {position:relative;display:block;top:auto;left:auto;margin:0 auto 8px;width:60%;height:clamp(38px,11vh,90px);border:0;z-index:0;background:repeating-conic-gradient(from 155deg at 50% -100%,transparent 0deg 5deg,#ded0e1 5.2deg 5.5deg,transparent 5.8deg 13deg);transform-origin:top;animation:silkSway 1.8s ease-in-out infinite alternate}
@@ -383,6 +384,7 @@ button {cursor:pointer;}
       <button id="campaign-tundra" class="secondary hidden">TUNDRA</button>
       <button id="campaign-caves" class="secondary hidden">CAVES</button>
       <button id="campaign-crystals" class="secondary hidden">CRYSTALS</button>
+      <button id="campaign-ashlands" class="secondary hidden">ASHLANDS</button>
       <button id="campaign-story-replay" class="secondary hidden">WATCH FOREST OPENING</button>
       <button id="campaign-back" class="secondary">BACK</button>
     </div>
@@ -875,6 +877,7 @@ window.GRIM_CONFIG = Object.freeze({
     const owned=DEFINITIONS.map(entry=>entry.id).filter(id=>levels[id]>0);
     const selected=Array.isArray(obj.equipped)?owned.filter(id=>obj.equipped.includes(id)):owned;
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,equipped:selected.slice(0,SLOT_LIMIT),
+      ashlandsBonusBanked:boundedInt(obj.ashlandsBonusBanked,0,Number.MAX_SAFE_INTEGER),
       crystalsBonusBanked:boundedInt(obj.crystalsBonusBanked,0,Number.MAX_SAFE_INTEGER),
       cavesBonusBanked:boundedInt(obj.cavesBonusBanked,0,Number.MAX_SAFE_INTEGER),
       tundraBonusBanked:boundedInt(obj.tundraBonusBanked,0,Number.MAX_SAFE_INTEGER),
@@ -888,7 +891,7 @@ window.GRIM_CONFIG = Object.freeze({
   function applyChapterBonuses(state){
     let record;
     try{record=JSON.parse(localStorage.getItem(saveKey(CAMPAIGN_PROGRESS))||'null');}catch(_){return state;}
-    for(const chapter of ['forest','foothills','tundra','caves','crystals']){
+    for(const chapter of ['forest','foothills','tundra','caves','crystals','ashlands']){
       const earned=record?.[chapter]?.bonusTotal,field=chapter+'BonusBanked';
       if(Number.isSafeInteger(earned)&&earned>state[field]){
         state.souls=boundedInt(state.souls+earned-state[field],0,MAX_SOULS);
@@ -2236,12 +2239,12 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
   <script src="assets/visuals/forest-midground.js?v=b2667f2d1990"></script>
-  <script src="assets/visuals/biome-midground.js?v=171cac6a7316"></script>
+  <script src="assets/visuals/biome-midground.js?v=f66c073ba0a6"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
   <script src="assets/motion/v0200/rising-cut-data.js?v=continuous1"></script>
-  <script src="assets/visuals/rising-cut.js?v=ground-drag1"></script>
+  <script src="assets/visuals/rising-cut.js?v=7cfa518c963f"></script>
   <script src="assets/visuals/motion-animations.js?v=c1a918ce0f7e"></script>
   <script src="assets/motion/landing/poses.js?v=1"></script>
   <script src="assets/visuals/landing-motion.js?v=1"></script>
@@ -2295,6 +2298,7 @@ window.GRIM_CONFIG = Object.freeze({
       ['tundra','tundra.webp']
     ],
     cavern:[CAVES_BACKDROP],
+    wastes:[['ashlands','ashlands-ravine-v1.webp']],
     gallery:[['crystals','deep-underground-ravine-v1.webp']],
     underworld:[
       CAVES_BACKDROP,
@@ -2646,7 +2650,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=6d7b730d3eb4');
+        await import('./assets/campaign/forest.js?v=60f752d222ea');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -3955,7 +3959,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.tipped.add('abyss');
         const x=this.terrain.firstGapX-360;
         const y=this.terrain.anchorAt(x)-150;
-        const hint=['caves','crystals'].includes(route?.biome)?'JUMP THE RAVINE':route?.biome==='tundra'?'JUMP · LAND · SHOOT':route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
+        const hint=['caves','crystals','ashlands'].includes(route?.biome)?'JUMP THE RAVINE':route?.biome==='tundra'?'JUMP · LAND · SHOOT':route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
         const label=this.add.text(x,y,hint,{fontFamily:'system-ui,Arial,sans-serif',
           fontSize:'20px',fontStyle:'900',color:'#b9fff1',stroke:'#061521',strokeThickness:6,align:'center'})
           .setOrigin(.5).setDepth(35);
@@ -4359,7 +4363,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.state!=='playing'||this.practiceScale()===0||!this.gunUnlocked||this.gunCooldownMs>0)return false;
       const p=this.player,left=p.x-this.width*C.reaperXRatio,right=left+this.width;
       const aim=this.campaign?.active&&this.campaign.encounter.target?.();
-      const target=aim?{kind:this.forestRoute.biome==='tundra'?'frost':this.forestRoute.biome==='crystals'?'prism':'brood',ref:null}:Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,
+      const target=aim?{kind:aim.kind??(this.forestRoute.biome==='tundra'?'frost':this.forestRoute.biome==='crystals'?'prism':'brood'),ref:null}:Combat.pickTarget(this.enemies,this.obstacles,p.x,left,right,
         this.powerManager.level('powerShot'),0,this.hasFlameBolts());
       this.fireSoulcaster(target);
       if(aim)this.bullets.at(-1).campaignTarget=aim.id;
@@ -4527,7 +4531,7 @@ window.GRIM_CONFIG = Object.freeze({
           }else if(b.x>right+70)b.dead=true;
           continue;
         }
-        if(b.kind==='frost'||b.kind==='brood'||b.kind==='prism'){
+        if(b.kind==='ember'||b.kind==='frost'||b.kind==='brood'||b.kind==='prism'){
           const encounter=this.campaign?.encounter,aim=encounter?.target?.();
           if(!aim||aim.id!==(b.campaignTarget??b.frostId)){b.kind='free';continue;}
           const dx=aim.x-b.x,dy=aim.y-b.y,dist=Math.hypot(dx,dy),step=1550*dt;
@@ -5155,7 +5159,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.downhillOffset!==(this.appliedDownhillOffset??0))this.syncWorldScroll();
       const g=this.bg;
       g.clear();
-      this.ensureBiomeBackdropGroup(this.forestRoute?.biome==='crystals'?'gallery':this.forestRoute?.biome==='caves'?'cavern':this.hasTeleported?'underworld':'surface');
+      this.ensureBiomeBackdropGroup(this.forestRoute?.biome==='ashlands'?'wastes':this.forestRoute?.biome==='crystals'?'gallery':this.forestRoute?.biome==='caves'?'cavern':this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
       this.updateBackdropGroundVeil();
       this.worldPolish?.beginFrame();

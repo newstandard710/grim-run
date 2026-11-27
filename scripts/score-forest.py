@@ -190,3 +190,20 @@ for battle in (False, True):
             for pos in (0, 1, 2.75, 4):
                 glass.note(at+pos, root-5, .3, "drum", .16)
     glass.write("crystals-sentinel" if battle else "crystals-gallery", True)
+
+# A slow kiln-drum heartbeat under the falling call. In the arena, bell strikes
+# answer the drums off the beat as the keeper passes from vessel to vessel.
+for battle in (False, True):
+    ash = Score(108 if battle else 83, 48)
+    for bar in range(12):
+        at = bar * 4
+        root, fifth, color = chords[bar % 8]
+        ash.note(at, root-12, 3.65, "bow", .112)
+        for pos in ((0, .75, 2, 3.25) if battle else (0, 2.5)):
+            ash.note(at+pos, root-7, .4, "drum", .175 if battle else .14)
+        for pos, pitch, length in phrases[bar % 8]:
+            ash.note(at+pos, pitch-12, length, "reed", .13)
+        ash.note(at+1.5, color, .55, "bell" if battle else "harp", .085)
+        if bar % 3 == 2:
+            ash.note(at+3, fifth, .8, "bow", .095)
+    ash.write("ashlands-keeper" if battle else "ashlands-march", True)
