@@ -66,7 +66,7 @@ jobs:
 
   forest-campaign:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -84,3 +84,5 @@ jobs:
         run: node tests/browser-forest-campaign.js --tundra
       - name: Verify Caves progression, touch counters, revival and interrupted rewards
         run: node tests/browser-forest-campaign.js --caves
+      - name: Verify Crystals touch clears, beam timing and interrupted rewards
+        run: node tests/browser-forest-campaign.js --crystals

@@ -43,14 +43,17 @@ const ridges=[
 ];
 
 export function forestRoute(seed,origin,unit,chapter='forest'){
-  const hills=chapter==='foothills',ice=chapter==='tundra',cave=chapter==='caves',end=cave?10000:ice?9050:hills?8100:END;
-  const wisps=[],spiders=[];
+  const crystal=chapter==='crystals';
+  const hills=chapter==='foothills',ice=chapter==='tundra',cave=chapter==='caves',end=crystal?11420:cave?10000:ice?9050:hills?8100:END;
+  const wisps=[],spiders=[],prisms=[];
   const rng=window.GRIM_CORE.makeRng(seed ^ 0x476c6164);
   const iceOpening=[[45,'wisp'],[135,'rock'],[170,'wisp'],[265,'branch'],[300,'wisp'],
     [414,'gap'],[451,'wisp'],[557,'bramble'],[790,'branch'],[831,'wisp']];
   const caveOpening=[[65,'spider'],[157,'spider'],[228,'rock'],[305,'branch'],[398,'spider'],[432,'rock'],
     [546,'bramble'],[778,'gap'],[861,'spider'],[897,'rock']];
-  const beats=(cave?caveOpening:ice?iceOpening:hills?foothillsOpening:opening).map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
+  const crystalOpening=[[52,'low'],[208,'high'],[365,'low'],[463,'rock'],[552,'branch'],
+    [766,'gap'],[811,'high'],[918,'bramble']];
+  const beats=(crystal?crystalOpening:cave?caveOpening:ice?iceOpening:hills?foothillsOpening:opening).map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
   function section(start,count,stride,phrases){
     let bag=[],last;
     for(let i=0;i<count;i++){
@@ -67,7 +70,22 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
       for(const [offset,type] of last)beats.push([at+offset,type]);
     }
   }
-  if(cave){
+  if(crystal){
+    const galleries=[
+      [[0,'low'],[115,'rock'],[177,'branch']],
+      [[0,'branch'],[43,'high'],[169,'bramble']],
+      [[0,'gap'],[39,'low'],[164,'rock']],
+      [[0,'high'],[116,'gap'],[167,'bramble']]
+    ];
+    const vaults=[
+      [[0,'gap'],[25,'low'],[142,'rock'],[189,'branch']],
+      [[0,'rock'],[29,'high'],[144,'gap'],[187,'bramble']],
+      [[0,'branch'],[31,'low'],[138,'bramble'],[184,'rock']],
+      [[0,'bramble'],[54,'high'],[166,'branch'],[204,'rock']]
+    ];
+    section(1030,15,270,galleries);section(5150,22,265,vaults);
+    beats.push([11060,'gap'],[11089,'low'],[11234,'high']);
+  }else if(cave){
     const galleries=[
       [[0,'spider'],[39,'rock'],[118,'branch']],
       [[0,'gap'],[56,'spider'],[117,'bramble']],
@@ -103,14 +121,15 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
       [6358,'rock'],[6394,'branch'],[6438,'bramble']);
   }
   const entries=beats.map(([m,type])=>({x:origin+m*unit,type}));
-  const obstacles=entries.filter(e=>e.type!=='gap'&&e.type!=='wisp'&&e.type!=='spider');
+  const obstacles=entries.filter(e=>e.type!=='gap'&&e.type!=='wisp'&&e.type!=='spider'&&e.type!=='high'&&e.type!=='low');
+  for(const e of entries)if(e.type==='high'||e.type==='low')prisms.push({x:e.x,high:e.type==='high'});
   for(const e of entries)if(e.type==='wisp')wisps.push(e.x);
   for(const e of entries)if(e.type==='spider')spiders.push(e.x);
   const gaps=entries.filter(e=>e.type==='gap');
   const encounters=new Map(obstacles.map((ob,i)=>[ob.x,{type:ob.type,
     nextX:obstacles[i+1]?.x??origin+(end+500)*unit}]));
   return {
-    end, biome:chapter, artMeters:cave?5510:ice?3270:hills?1530:0, wisps, spiders, crossbow:ice||cave, pursuit:hills||ice||cave, first:obstacles[0].x, gaps,
+    end, biome:chapter, artMeters:crystal?6500:cave?5510:ice?3270:hills?1530:0, wisps, spiders, prisms, crossbow:ice||cave||crystal, pursuit:hills||ice||cave||crystal, first:obstacles[0].x, gaps,
     encounters,
     // Generate fixed world geometry once so reload, rotation and Rewind all use
     // the terrain engine's existing segment identities and interpolation.
@@ -119,6 +138,7 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
       const elevation=x=>{
         const m=(x-origin)/unit;
         if(m<110 || (m>=625&&m<=713) || m>=end-40)return baseY;
+        if(crystal)return baseY+17*Math.sin(x/730+phase)+9*Math.cos(x/440+phase);
         if(cave)return baseY+22*Math.sin(x/680+phase)-14*Math.cos(x/320+phase);
         if(ice)return baseY+14*Math.sin(x/790+phase)+7*Math.sin(x/360+phase);
         if(hills)return baseY-55*Math.min(1,m/250)+35*Math.sin(x/640+phase)+13*Math.sin(x/275+phase);
