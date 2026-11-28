@@ -1,12 +1,13 @@
+import {BasaltColossus} from './basalt-colossus.js?v=1fa2ef9a706d';
 import {CinderKeeper} from './cinder-keeper.js?v=fde6937bc070';
 import {PrismSentinel} from './prism-sentinel.js?v=8d6ca4290ea8';
 import {Broodmother} from './broodmother.js?v=e635a13845b5';
 import {FrostCrown} from './frost-crown.js?v=ae5176d81a91';
 import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
-import {ForestScore} from '../audio/forest-score.js?v=60f760efcdd7';
+import {ForestScore} from '../audio/forest-score.js?v=689897823a22';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
-import {forestRoute} from './route.js?v=884e0c8038cb';
+import {forestRoute} from './route.js?v=8275b2e64856';
 
 (function(scope){
   'use strict';
@@ -14,8 +15,8 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
   const meta=()=>scope.GRIM_META;
   const slot=chapter=>meta().saveKey('grim-run-'+chapter+'-attempt-v1');
   const title=chapter=>chapter[0].toUpperCase()+chapter.slice(1);
-  const nextChapter={forest:'foothills',foothills:'tundra',tundra:'caves',caves:'crystals',crystals:'ashlands',ashlands:'lava'};
-  const tracks={forest:['walk','guardian'],foothills:['climb','pursuit'],tundra:['crossing','crown'],caves:['descent','brood'],crystals:['gallery','sentinel'],ashlands:['march','keeper']};
+  const nextChapter={forest:'foothills',foothills:'tundra',tundra:'caves',caves:'crystals',crystals:'ashlands',ashlands:'lava',lava:'finalRealm'};
+  const tracks={forest:['walk','guardian'],foothills:['climb','pursuit'],tundra:['crossing','crown'],caves:['descent','brood'],crystals:['gallery','sentinel'],ashlands:['march','keeper'],lava:['causeway','colossus']};
   const openingKey=chapter=>meta().saveKey(chapter==='forest'?'grim-run-forest-opening-seen-v1':'grim-run-'+chapter+'-intro-seen');
   const canEnter=(chapter,record)=>Object.hasOwn(nextChapter,chapter)&&(meta().testSave||chapter==='forest'||
     record[chapter+'Unlocked']||Object.keys(nextChapter).some(previous=>nextChapter[previous]===chapter&&record[previous]?.cleared));
@@ -45,7 +46,7 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
     }
     if(!record?.forestRecovery)return;
     const chapter=JSON.parse(record.forestRecovery).chapter;
-    if(!['forest','foothills','tundra','caves','crystals','ashlands'].includes(chapter))throw Error('Invalid Campaign recovery record.');
+    if(!['forest','foothills','tundra','caves','crystals','ashlands','lava'].includes(chapter))throw Error('Invalid Campaign recovery record.');
     localStorage.setItem(slot(chapter),record.forestRecovery);
     delete record.forestRecovery;
     localStorage.setItem(meta().KEY,JSON.stringify(record));
@@ -71,7 +72,7 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
       scene.ui.actions.syncCampaignScore=mode=>this.syncScore(mode);
       el('music-settings').dataset.available='1';
       this.chapter='forest';
-      this.encounters={forest:new ForestGuardian(this),foothills:new StoneGuardian(this),tundra:new FrostCrown(this),caves:new Broodmother(this),crystals:new PrismSentinel(this),ashlands:new CinderKeeper(this)};
+      this.encounters={forest:new ForestGuardian(this),foothills:new StoneGuardian(this),tundra:new FrostCrown(this),caves:new Broodmother(this),crystals:new PrismSentinel(this),ashlands:new CinderKeeper(this),lava:new BasaltColossus(this)};
       this.encounter=this.encounters.forest;
       this.active=false;
       this.frozen=false;
@@ -84,6 +85,7 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
       };
       for(const [index,id] of ['campaign-primary','campaign-secondary'].entries())
         listen(el(id),'click',()=>this.actions[index]?.());
+      listen(el('campaign-lava'),'click',()=>this.enter('lava'));
       listen(el('campaign-ashlands'),'click',()=>this.enter('ashlands'));
       listen(el('campaign-crystals'),'click',()=>this.enter('crystals'));
       listen(el('campaign-caves'),'click',()=>this.enter('caves'));
@@ -144,7 +146,7 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
       const camera=s.cameras.main,worldVisible=camera.visible;
       s.state='forestStory';s.ui.setMode(s.state);
       camera.visible=false;
-      el('forest-story').setAttribute('aria-label',chapter==='ashlands'?'The last coals blow across the ash and reveal a river of lava.':chapter==='crystals'?'A seam of ember light opens through the crystals onto the Ashlands.':ending
+      el('forest-story').setAttribute('aria-label',chapter==='lava'?'Beyond the cooling river, the gates of the final realm appear.':chapter==='ashlands'?'The last coals blow across the ash and reveal a river of lava.':chapter==='crystals'?'A seam of ember light opens through the crystals onto the Ashlands.':ending
         ? 'The roots part. Escaped Souls climb into the Foothills.'
         : 'Escaped Souls slip past tangled roots before the passage closes.');
       el('forest-story-skip').focus({preventScroll:true});
@@ -164,14 +166,14 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
         film.pause();film.removeAttribute('src');film.load();
       };
       film.onended=finish;film.onerror=finish;
-      film.src=new URL(chapter==='ashlands'?'./lava-passage.webm':chapter==='crystals'?'./ashlands-passage.webm':ending?'./passage-open.webm':'./passage-sealed.webm',import.meta.url).href;
+      film.src=new URL(chapter==='lava'?'./final-realm-passage.webm':chapter==='ashlands'?'./lava-passage.webm':chapter==='crystals'?'./ashlands-passage.webm':ending?'./passage-open.webm':'./passage-sealed.webm',import.meta.url).href;
       film.play().catch(finish);
     }
     screen(title,detail,primary,secondary,back){
       const s=this.scene;
       s.state='campaignMenu';s.ui.setMode('campaignMenu');
       el('campaign-title').textContent=title;el('campaign-detail').textContent=detail;
-      visible('campaign-story-replay',false);visible('campaign-tundra',false);visible('campaign-caves',false);visible('campaign-crystals',false);visible('campaign-ashlands',false);
+      visible('campaign-story-replay',false);visible('campaign-tundra',false);visible('campaign-caves',false);visible('campaign-crystals',false);visible('campaign-ashlands',false);visible('campaign-lava',false);
       this.actions=[primary[1],secondary?.[1]];
       this.back=back;
       el('campaign-primary').textContent=primary[0];
@@ -190,12 +192,15 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
         const forest=savedLabel('forest','START FOREST','REPLAY FOREST');
         const tundra=canEnter('tundra',record);
         const caves=canEnter('caves',record);
-        const crystals=canEnter('crystals',record),ashlands=canEnter('ashlands',record);
-        const detail=meta().testSave?'Test save · Choose any playable chapter.':record.lavaUnlocked?'Ashlands cleared. Lava is in development.':ashlands?'Crystals cleared. Ashlands is unlocked. Follow the embers.':crystals?'Caves cleared. Crystals is unlocked. Follow the light.':caves?'Tundra cleared. Caves is unlocked. Follow the silk underground.':tundra?'Foothills cleared. Tundra is unlocked. Cross the ice field.':
+        const crystals=canEnter('crystals',record),ashlands=canEnter('ashlands',record),lava=canEnter('lava',record);
+        const detail=meta().testSave?'Test save · Choose any playable chapter.':record.finalRealmUnlocked?'Lava cleared. The final realm is in development.':lava?'Ashlands cleared. Lava is unlocked. Cross the cooling basalt.':ashlands?'Crystals cleared. Ashlands is unlocked. Follow the embers.':crystals?'Caves cleared. Crystals is unlocked. Follow the light.':caves?'Tundra cleared. Caves is unlocked. Follow the silk underground.':tundra?'Foothills cleared. Tundra is unlocked. Cross the ice field.':
           foothills?'Forest cleared. Foothills is unlocked. Follow the Souls up the ridge.':'A guardian keeps watch at the edge of the woods.';
         this.screen('CAMPAIGN',detail,[forest,()=>this.enter('forest')],
           foothills?[savedLabel('foothills','START FOOTHILLS','REPLAY FOOTHILLS'),()=>this.enter('foothills')]:
             ['FOOTHILLS · LOCKED',null],()=>this.scene.closeCampaignMenu());
+        visible('campaign-lava',ashlands||lava);
+        el('campaign-lava').disabled=!lava;
+        el('campaign-lava').textContent=lava?savedLabel('lava','START LAVA','REPLAY LAVA'):'LAVA · LOCKED';
         visible('campaign-ashlands',crystals||ashlands);
         el('campaign-ashlands').disabled=!ashlands;
         el('campaign-ashlands').textContent=ashlands?savedLabel('ashlands','START ASHLANDS','REPLAY ASHLANDS'):'ASHLANDS · LOCKED';
@@ -269,7 +274,7 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
             document.querySelector('.god-mode-desc').classList.add('hidden');
             if(d){this.openingSeen=true;this.restore(d);this.pause();}
             else if(this.save()){
-              if(['tundra','caves','crystals','ashlands'].includes(chapter)&&!localStorage.getItem(openingKey(chapter)))this.chapterOpening();
+              if(['tundra','caves','crystals','ashlands','lava'].includes(chapter)&&!localStorage.getItem(openingKey(chapter)))this.chapterOpening();
               if(chapter==='forest'&&!this.openingSeen&&!progress().forest&&localStorage.getItem(openingKey('forest'))!=='1'){
                 this.openingSeen=true;
                 // The attempt is durable at the starting frame before the first image.
@@ -289,7 +294,7 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
     }
     chapterOpening(){
       const s=this.scene;
-      const ash=this.chapter==='ashlands',crystals=this.chapter==='crystals',caves=this.chapter==='caves',sceneArt=ash?'ash':crystals?'prism':caves?'silk':'crossbow';
+      const lava=this.chapter==='lava',ash=this.chapter==='ashlands',crystals=this.chapter==='crystals',caves=this.chapter==='caves',sceneArt=lava?'lava':ash?'ash':crystals?'prism':caves?'silk':'crossbow';
       localStorage.setItem(openingKey(this.chapter),'1');
       this.resumeMode=s.state;this.frozen=true;
       const finish=()=>{
@@ -299,7 +304,7 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
       };
       this.finishStory=finish;
       el('campaign-screen').dataset[sceneArt]='1';
-      this.screen(ash?'THE CINDER ROAD':crystals?'THE GLASS GALLERY':caves?'BENEATH THE SILK':'THE BONE CROSSBOW',ash?'An ember moves beneath the ash. Shoot it, or jump as the ring at your feet closes.':crystals?'A line of light crosses the gallery. Jump a low beam. Slide beneath a high one.':caves?'A thread trembles in the still air. Something above you lets go.':'At the ice line, a frost wisp stirs. Press Shoot when its light gathers. The crossbow aims for you.',
+      this.screen(lava?'THE BASALT CAUSEWAY':ash?'THE CINDER ROAD':crystals?'THE GLASS GALLERY':caves?'BENEATH THE SILK':'THE BONE CROSSBOW',lava?'The crust splits from the near edge. Jump the fracture and land on solid basalt.':ash?'An ember moves beneath the ash. Shoot it, or jump as the ring at your feet closes.':crystals?'A line of light crosses the gallery. Jump a low beam. Slide beneath a high one.':caves?'A thread trembles in the still air. Something above you lets go.':'At the ice line, a frost wisp stirs. Press Shoot when its light gathers. The crossbow aims for you.',
         ['SKIP',finish]);
       const timer=setTimeout(finish,4200);
     }
@@ -359,14 +364,14 @@ import {forestRoute} from './route.js?v=884e0c8038cb';
         return;
       }
       const reward=bonus===3?'First '+name+' clear · +3 Souls':name+' cleared · +1 Soul';
-      const destination=title(nextChapter[chapter])+' unlocked'+(chapter==='ashlands'?' · chapter in development.':'.');
+      const destination=chapter==='lava'?'Final realm unlocked · chapter in development.':title(nextChapter[chapter])+' unlocked.';
       const victory=()=>{
         this.screen(label+' CLEARED',reward+' · Wallet: '+balance+' Souls. '+destination,
           ['REPLAY '+label,()=>this.enter(chapter)],['CHAPTERS',()=>this.chapters()],()=>this.scene.goToMenu());
         this.showingVictory=false;
       };
       this.showingVictory=true;
-      if(chapter==='forest'||chapter==='crystals'||chapter==='ashlands')this.playStory(true,victory,chapter);
+      if(chapter==='forest'||chapter==='crystals'||chapter==='ashlands'||chapter==='lava')this.playStory(true,victory,chapter);
       else victory();
     }
     togglePause(){
