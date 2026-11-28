@@ -1320,6 +1320,8 @@ async function ashlandsClear(browser,viewport,seed){
 async function lavaClear(browser,viewport,seed){
   const portrait=viewport.height>viewport.width;
   const ctx=await browser.newContext({viewport,hasTouch:true,ignoreHTTPSErrors:Boolean(process.env.GRIM_BASE_URL)});
+  const errors=[];
+  ctx.on('page',opened=>opened.on('pageerror',error=>errors.push(error.message)));
   let page=await ctx.newPage();
   const attempt=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-lava-attempt-v1')));
   async function restore(){
@@ -1357,6 +1359,7 @@ async function lavaClear(browser,viewport,seed){
     assert.deepEqual(await page.evaluate(()=>{const s=grimRun.scene.scenes[0];
       return [s.gunUnlocked,s.biomeBackdrops.lava?.visible,s.hasTeleported];}),[true,true,false]);
     await expectScore(page,'colossus');assert.ok(await audibleMusic(page));
+    assert.ok(await page.evaluate(()=>grimRun.scene.scenes[0].textures.exists('lava-colossus-body')));
     if(!portrait){
       await page.locator('#pause-btn').tap();await page.locator('#mute-music').check();
       await page.locator('#mute-actions').check();await resume(page);
@@ -1409,6 +1412,7 @@ async function lavaClear(browser,viewport,seed){
       await advance(page,'frames',175);assert.ok((await attempt()).run.freeLifeUsed);
       await restore();assert.equal((await attempt()).id,fresh.id);
     }
+    assert.deepEqual(errors,[],'Lava renders throughout the crossing and fight');
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 
@@ -1520,7 +1524,7 @@ async function publicGodMode(browser,viewport){
       const s=grimRun.scene.scenes[0];return [s.campaign.id,s.distance,s.player.hp,s.player.maxHp];
     }),[original.id,original.world.distance,original.world.player.hp,4]);
     assert.deepEqual(errors,[]);
-    console.log('Public God Mode: six chapter starts, seven free ranks, loadout, damage, first clear, reload and normal resume passed.',viewport);
+    console.log('Public God Mode: seven chapter starts, seven free ranks, loadout, damage, first clear, reload and normal resume passed.',viewport);
   }finally{await context.close();}
 }
 
