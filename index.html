@@ -2874,8 +2874,8 @@ window.GRIM_CONFIG = Object.freeze({
         this.coinCount,this.points,this.powerManager.summary());
       if(campaign)campaign.resumeAtTeleport(x);
       this.captureRewind();this.updateRewindButton();
-      this.biomeMidground?.prioritizeTeleport(this.distance);
       if(campaign)campaign.save();
+      this.biomeMidground?.prioritizeTeleport(this.distance);
       this.drawScene();
       return true;
     }
