@@ -43,8 +43,8 @@ const ridges=[
 ];
 
 export function forestRoute(seed,origin,unit,chapter='forest'){
-  const ash=chapter==='ashlands',crystal=chapter==='crystals';
-  const hills=chapter==='foothills',ice=chapter==='tundra',cave=chapter==='caves',end=ash?12420:crystal?11420:cave?10000:ice?9050:hills?8100:END;
+  const lava=chapter==='lava',ash=chapter==='ashlands',crystal=chapter==='crystals';
+  const hills=chapter==='foothills',ice=chapter==='tundra',cave=chapter==='caves',end=lava?12380:ash?12420:crystal?11420:cave?10000:ice?9050:hills?8100:END;
   const wisps=[],spiders=[],prisms=[],embers=[];
   const rng=window.GRIM_CORE.makeRng(seed ^ 0x476c6164);
   const iceOpening=[[45,'wisp'],[135,'rock'],[170,'wisp'],[265,'branch'],[300,'wisp'],
@@ -55,7 +55,9 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
     [766,'gap'],[811,'high'],[918,'bramble']];
   const ashOpening=[[52,'ember'],[168,'ember'],[286,'rock'],[374,'ember'],[474,'branch'],
     [566,'bramble'],[776,'gap'],[824,'ember'],[934,'rock']];
-  const beats=(ash?ashOpening:crystal?crystalOpening:cave?caveOpening:ice?iceOpening:hills?foothillsOpening:opening).map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
+  const lavaOpening=[[58,'gap'],[164,'gap'],[262,'rock'],[352,'gap'],[386,'branch'],
+    [484,'bramble'],[575,'gap'],[775,'rock'],[831,'gap'],[868,'bramble']];
+  const beats=(lava?lavaOpening:ash?ashOpening:crystal?crystalOpening:cave?caveOpening:ice?iceOpening:hills?foothillsOpening:opening).map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
   function section(start,count,stride,phrases){
     let bag=[],last;
     for(let i=0;i<count;i++){
@@ -72,7 +74,22 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
       for(const [offset,type] of last)beats.push([at+offset,type]);
     }
   }
-  if(ash){
+  if(lava){
+    const shelves=[
+      [[0,'gap'],[52,'rock'],[146,'branch']],
+      [[0,'branch'],[54,'gap'],[112,'bramble']],
+      [[0,'rock'],[71,'gap'],[118,'branch']],
+      [[0,'gap'],[80,'gap'],[155,'bramble']]
+    ];
+    const bridges=[
+      [[0,'gap'],[36,'branch'],[104,'gap'],[155,'rock']],
+      [[0,'rock'],[48,'gap'],[89,'bramble'],[164,'gap']],
+      [[0,'gap'],[44,'bramble'],[112,'gap'],[149,'branch']],
+      [[0,'branch'],[59,'gap'],[101,'rock'],[164,'gap']]
+    ];
+    section(1020,16,264,shelves);section(5360,25,260,bridges);
+    beats.push([12020,'gap'],[12061,'branch'],[12162,'gap'],[12210,'bramble']);
+  }else if(ash){
     const gullies=[
       [[0,'ember'],[96,'rock'],[153,'branch']],
       [[0,'branch'],[46,'ember'],[143,'bramble']],
@@ -147,7 +164,7 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
   const encounters=new Map(obstacles.map((ob,i)=>[ob.x,{type:ob.type,
     nextX:obstacles[i+1]?.x??origin+(end+500)*unit}]));
   return {
-    end, biome:chapter, artMeters:ash?7470:crystal?6500:cave?5510:ice?3270:hills?1530:0, wisps, spiders, prisms, embers, crossbow:ice||cave||crystal||ash, pursuit:hills||ice||cave||crystal||ash, first:obstacles[0].x, gaps,
+    end, biome:chapter, artMeters:lava?8950:ash?7470:crystal?6500:cave?5510:ice?3270:hills?1530:0, wisps, spiders, prisms, embers, crossbow:ice||cave||crystal||ash||lava, pursuit:hills||ice||cave||crystal||ash||lava, first:obstacles[0].x, gaps,
     encounters,
     // Generate fixed world geometry once so reload, rotation and Rewind all use
     // the terrain engine's existing segment identities and interpolation.
@@ -156,6 +173,7 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
       const elevation=x=>{
         const m=(x-origin)/unit;
         if(m<110 || (m>=625&&m<=713) || m>=end-40)return baseY;
+        if(lava)return baseY+12*Math.sin(x/660+phase)+7*Math.cos(x/370+phase);
         if(ash)return baseY+18*Math.sin(x/810+phase)-12*Math.cos(x/425+phase);
         if(crystal)return baseY+17*Math.sin(x/730+phase)+9*Math.cos(x/440+phase);
         if(cave)return baseY+22*Math.sin(x/680+phase)-14*Math.cos(x/320+phase);
@@ -173,7 +191,7 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
         slopes(gap.x-200);
         const y=elevation(gap.x-200);
         add(gap.x,y);
-        const end=gap.x+(id===0?88:92+rng.integer(0,22));
+        const end=gap.x+(lava ? [64,82,94,74,100][id%5] : id===0?88:92+rng.integer(0,22));
         add(end,y,'gap',id);
         sequences.push({id,startX:gap.x,endX:end,respawnX:end+155,initialY:y});
         add(end+190,y);

@@ -294,6 +294,7 @@ button {cursor:pointer;}
   content:""; display:block; height:min(16vh,110px); margin:0 auto 6px;
   background:url('assets/powers/bone-crossbow.png') center/contain no-repeat;
 }
+#campaign-screen[data-lava] .modal {background:linear-gradient(#25151b88,#150e17ed),url('assets/visuals/biomes/lava-ravine-v1.webp') center/cover}
 #campaign-screen[data-ash] .modal {background:linear-gradient(#28171b99,#180f17eb),url('assets/visuals/biomes/ashlands-ravine-v1.webp') center/cover}
 #campaign-screen[data-prism] .modal {background:linear-gradient(#18133299,#090d1ee8),url('assets/visuals/biomes/deep-underground-ravine-v1.webp') center/cover}
 #campaign-screen[data-silk] .modal {background:linear-gradient(#151223c9,#0b0b17e8),url('assets/visuals/biomes/underground-caves-ravine-v1.webp') center/cover}
@@ -385,6 +386,7 @@ button {cursor:pointer;}
       <button id="campaign-caves" class="secondary hidden">CAVES</button>
       <button id="campaign-crystals" class="secondary hidden">CRYSTALS</button>
       <button id="campaign-ashlands" class="secondary hidden">ASHLANDS</button>
+      <button id="campaign-lava" class="secondary hidden">LAVA</button>
       <button id="campaign-story-replay" class="secondary hidden">WATCH FOREST OPENING</button>
       <button id="campaign-back" class="secondary">BACK</button>
     </div>
@@ -877,6 +879,7 @@ window.GRIM_CONFIG = Object.freeze({
     const owned=DEFINITIONS.map(entry=>entry.id).filter(id=>levels[id]>0);
     const selected=Array.isArray(obj.equipped)?owned.filter(id=>obj.equipped.includes(id)):owned;
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,equipped:selected.slice(0,SLOT_LIMIT),
+      lavaBonusBanked:boundedInt(obj.lavaBonusBanked,0,Number.MAX_SAFE_INTEGER),
       ashlandsBonusBanked:boundedInt(obj.ashlandsBonusBanked,0,Number.MAX_SAFE_INTEGER),
       crystalsBonusBanked:boundedInt(obj.crystalsBonusBanked,0,Number.MAX_SAFE_INTEGER),
       cavesBonusBanked:boundedInt(obj.cavesBonusBanked,0,Number.MAX_SAFE_INTEGER),
@@ -891,7 +894,7 @@ window.GRIM_CONFIG = Object.freeze({
   function applyChapterBonuses(state){
     let record;
     try{record=JSON.parse(localStorage.getItem(saveKey(CAMPAIGN_PROGRESS))||'null');}catch(_){return state;}
-    for(const chapter of ['forest','foothills','tundra','caves','crystals','ashlands']){
+    for(const chapter of ['forest','foothills','tundra','caves','crystals','ashlands','lava']){
       const earned=record?.[chapter]?.bonusTotal,field=chapter+'BonusBanked';
       if(Number.isSafeInteger(earned)&&earned>state[field]){
         state.souls=boundedInt(state.souls+earned-state[field],0,MAX_SOULS);
@@ -2239,7 +2242,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
   <script src="assets/visuals/forest-midground.js?v=b2667f2d1990"></script>
-  <script src="assets/visuals/biome-midground.js?v=f66c073ba0a6"></script>
+  <script src="assets/visuals/biome-midground.js?v=86f8bb798b6e"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
@@ -2298,6 +2301,7 @@ window.GRIM_CONFIG = Object.freeze({
       ['tundra','tundra.webp']
     ],
     cavern:[CAVES_BACKDROP],
+    causeway:[['lava','lava-ravine-v1.webp']],
     wastes:[['ashlands','ashlands-ravine-v1.webp']],
     gallery:[['crystals','deep-underground-ravine-v1.webp']],
     underworld:[
@@ -2650,7 +2654,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=60f752d222ea');
+        await import('./assets/campaign/forest.js?v=b0d96331a31d');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -3959,7 +3963,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.tipped.add('abyss');
         const x=this.terrain.firstGapX-360;
         const y=this.terrain.anchorAt(x)-150;
-        const hint=['caves','crystals','ashlands'].includes(route?.biome)?'JUMP THE RAVINE':route?.biome==='tundra'?'JUMP · LAND · SHOOT':route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
+        const hint=route?.biome==='lava'?'JUMP THE SPLIT': ['caves','crystals','ashlands'].includes(route?.biome)?'JUMP THE RAVINE':route?.biome==='tundra'?'JUMP · LAND · SHOOT':route?.pursuit?'JUMP · LAND · SLIDE':'JUMP THE ABYSS ↑';
         const label=this.add.text(x,y,hint,{fontFamily:'system-ui,Arial,sans-serif',
           fontSize:'20px',fontStyle:'900',color:'#b9fff1',stroke:'#061521',strokeThickness:6,align:'center'})
           .setOrigin(.5).setDepth(35);
@@ -4734,9 +4738,9 @@ window.GRIM_CONFIG = Object.freeze({
       const damage=hell?this.powerManager.lavaDamage():1;
       this.fallCount++;
       document.getElementById('fall-notice').textContent=this.godMode?'GOD MODE · FALL RECOVERED':
-        hell?`LAVA · −${damage} HP`:'ABYSS · −1 HP';
+        hell?`LAVA · −${damage} HP`:this.forestRoute?.biome==='lava'?'BASALT FALL · −1 HP':'ABYSS · −1 HP';
       p.x=group.respawnX;
-      this.takeDamage(damage,hell?'lava':'abyss',group.endX);
+      this.takeDamage(damage,hell?'lava':this.forestRoute?.biome==='lava'?'broken basalt':'abyss',group.endX);
       // Free resurrection owns its landing, invulnerability and smoke scene.
       // Do not overwrite them with the surviving-fall recovery below.
       if(this.state==='respawning')return false;
@@ -5159,7 +5163,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.downhillOffset!==(this.appliedDownhillOffset??0))this.syncWorldScroll();
       const g=this.bg;
       g.clear();
-      this.ensureBiomeBackdropGroup(this.forestRoute?.biome==='ashlands'?'wastes':this.forestRoute?.biome==='crystals'?'gallery':this.forestRoute?.biome==='caves'?'cavern':this.hasTeleported?'underworld':'surface');
+      this.ensureBiomeBackdropGroup(this.forestRoute?.biome==='lava'?'causeway':this.forestRoute?.biome==='ashlands'?'wastes':this.forestRoute?.biome==='crystals'?'gallery':this.forestRoute?.biome==='caves'?'cavern':this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
       this.updateBackdropGroundVeil();
       this.worldPolish?.beginFrame();
@@ -5380,7 +5384,7 @@ window.GRIM_CONFIG = Object.freeze({
         for(const t of [.25,.5,.75,1])
           gradient.addColorStop(t*leftFade/span,'rgba(255,255,255,'+(1-t*t*(3-2*t))+')');
         for(const t of [0,.25,.5,.75,1])
-          gradient.addColorStop((leftFade+b-a+t*rightFade)/span,'rgba(255,255,255,'+(t*t*(3-2*t))+')');
+          gradient.addColorStop(clamp((leftFade+(b-a)+t*rightFade)/span,0,1),'rgba(255,255,255,'+(t*t*(3-2*t))+')');
         ctx.fillStyle=gradient;ctx.fillRect(left,top,width,height);
       }
       if(sprite.fogFadesSnow){

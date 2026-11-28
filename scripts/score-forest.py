@@ -207,3 +207,20 @@ for battle in (False, True):
         if bar % 3 == 2:
             ash.note(at+3, fifth, .8, "bow", .095)
     ash.write("ashlands-keeper" if battle else "ashlands-march", True)
+
+# A low seven-beat ostinato under the causeway. At the Colossus the same
+# falling figure is split between struck metal and a bowed bass line.
+for battle in (False, True):
+    lava = Score(126 if battle else 96, 56)
+    for bar, (root, fifth, color) in enumerate(chords):
+        at = bar * 7
+        lava.note(at, root-12, 5.4, "bow", .13)
+        for pulse in ((0, 1, 2.5, 4, 5.5, 6) if battle else (0, 3, 5)):
+            lava.note(at+pulse, root-7, .37, "drum", .17 if battle else .085)
+        for pos, pitch in [(0, fifth), (2, color), (4.5, fifth-2), (6, root)]:
+            lava.note(at+pos, pitch, .65, "harp", .095)
+        for pos, pitch, length in phrases[bar]:
+            lava.note(at+1+pos*1.55, pitch-(12 if battle else 5), length*1.2,
+                      "bow" if battle else "reed", .14)
+        lava.note(at+5, color+7, .8, "bell", .09)
+    lava.write("lava-colossus" if battle else "lava-causeway", True)

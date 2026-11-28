@@ -1281,7 +1281,7 @@ async function ashlandsClear(browser,viewport,seed){
     await page.locator('#forest-story-skip').tap();await page.getByText('ASHLANDS CLEARED',{exact:true}).waitFor();
     assert.equal((await wallet(page)).souls,balance+3);
     await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
-    assert.match(await page.locator('#campaign-detail').innerText(),/Lava is in development/);
+    assert.match(await page.locator('#campaign-detail').innerText(),/Lava is unlocked/);
     await page.getByRole('button',{name:'REPLAY ASHLANDS'}).tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
     console.log('Ashlands touch clear',viewport,seed,'seconds',win.world.elapsed.toFixed(2),'HP',win.world.player.hp);
@@ -1314,6 +1314,105 @@ async function ashlandsClear(browser,viewport,seed){
       await advance(page,'frames',175);assert.ok((await attempt()).run.freeLifeUsed);await restore();
       assert.equal((await attempt()).id,fresh.id);
     }
+  }finally{url.searchParams.set('seed','33');await ctx.close();}
+}
+
+async function lavaClear(browser,viewport,seed){
+  const portrait=viewport.height>viewport.width;
+  const ctx=await browser.newContext({viewport,hasTouch:true,ignoreHTTPSErrors:Boolean(process.env.GRIM_BASE_URL)});
+  const errors=[];
+  ctx.on('page',opened=>opened.on('pageerror',error=>errors.push(error.message)));
+  let page=await ctx.newPage();
+  const attempt=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('grim-run-lava-attempt-v1')));
+  async function restore(){
+    const before=await attempt();await page.close();page=await ctx.newPage();
+    await boot(page);await openChapters(page);await page.getByRole('button',{name:'RESUME LAVA'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+    assert.deepEqual(comparable(await attempt()),comparable(before));await resume(page);
+  }
+  async function route(){
+    await touchApproach(page);await page.locator('#vendor-intro-skip').tap();
+    await page.getByRole('button',{name:'CONTINUE RUN'}).tap();await touchApproach(page);
+  }
+  async function fight(interrupt){
+    for(let i=0;i<3;i++){
+      await untilBossPhase(page,'split',115);
+      if(i===1&&interrupt)await restore();
+      await holdControl(page,'jump',32);
+      await untilBossPhase(page,'exposed',210);
+      await page.locator('#attack-btn').tap();
+      await untilBossPhase(page,i===2?'fall':'struck');
+    }
+  }
+  try{
+    url.searchParams.set('seed',String(seed));await boot(page);
+    await page.evaluate(()=>localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify({ashlandsUnlocked:true})));
+    await openChapters(page);assert.ok(await page.getByRole('button',{name:'LAVA · LOCKED'}).isDisabled());
+    await page.evaluate(()=>localStorage.setItem(GRIM_META.CAMPAIGN_PROGRESS,JSON.stringify({ashlands:{cleared:true}})));
+    await boot(page);await openChapters(page);await page.getByRole('button',{name:'START LAVA'}).tap();
+    await page.getByRole('button',{name:'SKIP',exact:true}).tap();
+    await expectScore(page,'causeway');assert.ok(await audibleMusic(page));
+    await advance(page,'meters',49);await restore();
+    await route();const arrival=await attempt();
+    assert.equal(arrival.world.player.hp,3);
+    assert.ok(Object.values(arrival.run.runLoadout.levels).every(n=>!n));
+    assert.deepEqual(await page.evaluate(()=>{const s=grimRun.scene.scenes[0];
+      return [s.gunUnlocked,s.biomeBackdrops.lava?.visible,s.hasTeleported];}),[true,true,false]);
+    await expectScore(page,'colossus');assert.ok(await audibleMusic(page));
+    assert.ok(await page.evaluate(()=>grimRun.scene.scenes[0].textures.exists('lava-colossus-body')));
+    if(!portrait){
+      await page.locator('#pause-btn').tap();await page.locator('#mute-music').check();
+      await page.locator('#mute-actions').check();await resume(page);
+    }
+    await fight(true);
+    const win=await attempt(),before=(await wallet(page)).souls;
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=450&&win.world.elapsed<=510,String(win.world.elapsed));
+    console.log('Lava touch clear',viewport,seed,'seconds',win.world.elapsed.toFixed(2),'HP',win.world.player.hp);
+    await advance(page,'frames',100);await playingStory(page,'final-realm-passage.webm');
+    await page.locator('#forest-story-skip').tap();await page.getByText('LAVA CLEARED',{exact:true}).waitFor();
+    assert.equal((await wallet(page)).souls,before+3);
+    await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
+    assert.match(await page.locator('#campaign-detail').innerText(),/final realm is in development/);
+    await page.getByRole('button',{name:'REPLAY LAVA'}).tap();
+    await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+    // A short early jump lands before the crust. A jump after the fall cannot
+    // refund the hit. A missed third jump/rock uses ordinary revival rules.
+    await advance(page,'meters',35);await holdControl(page,'jump',5);
+    await advance(page,'frames',145);
+    assert.equal((await attempt()).world.player.hp,2);
+    await finishRevival(page);
+    await advance(page,'meters',169);await page.locator('#jump-btn').tap();
+    await advance(page,'frames',65);assert.equal((await attempt()).world.player.hp,1);
+    await finishRevival(page);
+    await advance(page,'meters',246);await advance(page,'frames',275);
+    assert.equal((await attempt()).mode,'revive');
+    if(portrait){
+      const bank=(await wallet(page)).souls,id=(await attempt()).id;
+      await page.locator('#revive-yes-btn').tap();await restore();
+      assert.equal((await wallet(page)).souls,bank-3);assert.equal((await attempt()).id,id);
+      await finishRevival(page);await route();
+      // The boss keeps its armour if the player walks into the split.
+      await untilBossPhase(page,'split');await untilBossPhase(page,'recover');
+      assert.ok((await attempt()).world.guardian.missed);
+      await fight(false);const reward=(await wallet(page)).souls;
+      await page.evaluate(()=>{
+        const remove=Storage.prototype.removeItem;
+        Storage.prototype.removeItem=function(key){if(key==='grim-run-lava-attempt-v1')throw Error('interrupted cleanup');return remove.call(this,key);};
+      });
+      await advance(page,'frames',100);await page.getByText('LAVA CLEAR PENDING',{exact:true}).waitFor();
+      await boot(page);await openChapters(page);await page.getByRole('button',{name:'REPLAY LAVA'}).waitFor();
+      assert.equal((await wallet(page)).souls,reward+1);await boot(page);assert.equal((await wallet(page)).souls,reward+1);
+    }else{
+      await page.evaluate(()=>{const m=GRIM_META.load();m.levels.deathDenied=1;m.equipped=['deathDenied'];GRIM_META.save(m);});
+      await page.locator('#revive-no-btn').tap();assert.equal(await attempt(),null);
+      await page.getByRole('button',{name:'RETRY LAVA'}).tap();
+      await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
+      const fresh=await attempt();assert.equal(fresh.world.distance,0);
+      await page.evaluate(()=>{const s=grimRun.scene.scenes[0];s.takeDamage(s.player.hp,'broken basalt');});
+      await advance(page,'frames',175);assert.ok((await attempt()).run.freeLifeUsed);
+      await restore();assert.equal((await attempt()).id,fresh.id);
+    }
+    assert.deepEqual(errors,[],'Lava renders throughout the crossing and fight');
   }finally{url.searchParams.set('seed','33');await ctx.close();}
 }
 
@@ -1372,7 +1471,7 @@ async function publicGodMode(browser,viewport){
     assert.equal((await wallet(page)).souls,0);
     await tap('reliquary-back-btn');
 
-    for(const chapter of ['forest','foothills','tundra','caves','crystals','ashlands']){
+    for(const chapter of ['forest','foothills','tundra','caves','crystals','ashlands','lava']){
       await tap('campaign-btn');
       await page.getByRole('button',{name:'START '+chapter.toUpperCase(),exact:true}).tap();
       await playing();
@@ -1425,7 +1524,7 @@ async function publicGodMode(browser,viewport){
       const s=grimRun.scene.scenes[0];return [s.campaign.id,s.distance,s.player.hp,s.player.maxHp];
     }),[original.id,original.world.distance,original.world.player.hp,4]);
     assert.deepEqual(errors,[]);
-    console.log('Public God Mode: six chapter starts, seven free ranks, loadout, damage, first clear, reload and normal resume passed.',viewport);
+    console.log('Public God Mode: seven chapter starts, seven free ranks, loadout, damage, first clear, reload and normal resume passed.',viewport);
   }finally{await context.close();}
 }
 
@@ -1440,6 +1539,11 @@ async function publicGodMode(browser,viewport){
     if(process.argv.includes('--public-god-mode')){
       url.search='';
       for(const viewport of [{width:390,height:844},{width:844,height:390}])await publicGodMode(browser,viewport);
+      return;
+    }
+    if(process.argv.includes('--lava')){
+      await lavaClear(browser,{width:390,height:844},17);
+      await lavaClear(browser,{width:844,height:390},91);
       return;
     }
     if(process.argv.includes('--ashlands')){
