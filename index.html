@@ -294,6 +294,7 @@ button {cursor:pointer;}
   content:""; display:block; height:min(16vh,110px); margin:0 auto 6px;
   background:url('assets/powers/bone-crossbow.png') center/contain no-repeat;
 }
+#campaign-screen[data-gate] .modal {background:linear-gradient(#1c172599,#110e19e6),url('assets/visuals/biomes/boss-castle-ravine-v1.webp') center/cover}
 #campaign-screen[data-lava] .modal {background:linear-gradient(#25151b88,#150e17ed),url('assets/visuals/biomes/lava-ravine-v1.webp') center/cover}
 #campaign-screen[data-ash] .modal {background:linear-gradient(#28171b99,#180f17eb),url('assets/visuals/biomes/ashlands-ravine-v1.webp') center/cover}
 #campaign-screen[data-prism] .modal {background:linear-gradient(#18133299,#090d1ee8),url('assets/visuals/biomes/deep-underground-ravine-v1.webp') center/cover}
@@ -387,6 +388,7 @@ button {cursor:pointer;}
       <button id="campaign-crystals" class="secondary hidden">CRYSTALS</button>
       <button id="campaign-ashlands" class="secondary hidden">ASHLANDS</button>
       <button id="campaign-lava" class="secondary hidden">LAVA</button>
+      <button id="campaign-final" class="secondary hidden">THE LAST GATE</button>
       <button id="campaign-story-replay" class="secondary hidden">WATCH FOREST OPENING</button>
       <button id="campaign-back" class="secondary">BACK</button>
     </div>
@@ -879,6 +881,7 @@ window.GRIM_CONFIG = Object.freeze({
     const owned=DEFINITIONS.map(entry=>entry.id).filter(id=>levels[id]>0);
     const selected=Array.isArray(obj.equipped)?owned.filter(id=>obj.equipped.includes(id)):owned;
     return {version:1,souls:boundedInt(obj.souls,0,MAX_SOULS),levels,equipped:selected.slice(0,SLOT_LIMIT),
+      finalRealmBonusBanked:boundedInt(obj.finalRealmBonusBanked,0,Number.MAX_SAFE_INTEGER),
       lavaBonusBanked:boundedInt(obj.lavaBonusBanked,0,Number.MAX_SAFE_INTEGER),
       ashlandsBonusBanked:boundedInt(obj.ashlandsBonusBanked,0,Number.MAX_SAFE_INTEGER),
       crystalsBonusBanked:boundedInt(obj.crystalsBonusBanked,0,Number.MAX_SAFE_INTEGER),
@@ -894,7 +897,7 @@ window.GRIM_CONFIG = Object.freeze({
   function applyChapterBonuses(state){
     let record;
     try{record=JSON.parse(localStorage.getItem(saveKey(CAMPAIGN_PROGRESS))||'null');}catch(_){return state;}
-    for(const chapter of ['forest','foothills','tundra','caves','crystals','ashlands','lava']){
+    for(const chapter of ['forest','foothills','tundra','caves','crystals','ashlands','lava','finalRealm']){
       const earned=record?.[chapter]?.bonusTotal,field=chapter+'BonusBanked';
       if(Number.isSafeInteger(earned)&&earned>state[field]){
         state.souls=boundedInt(state.souls+earned-state[field],0,MAX_SOULS);
@@ -2242,7 +2245,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
   <script src="assets/visuals/forest-midground.js?v=b2667f2d1990"></script>
-  <script src="assets/visuals/biome-midground.js?v=86f8bb798b6e"></script>
+  <script src="assets/visuals/biome-midground.js?v=25015b3757bc"></script>
   <script src="assets/motion/v0180/animation-data.js?v=0.19.10-cut2"></script>
   <script src="assets/motion/v0194/animation-data.js?v=3"></script>
   <script src="assets/motion/v0200/animation-data.js?v=run-drag2"></script>
@@ -2301,6 +2304,7 @@ window.GRIM_CONFIG = Object.freeze({
       ['tundra','tundra.webp']
     ],
     cavern:[CAVES_BACKDROP],
+    lastGate:[['boss','boss-castle-ravine-v1.webp']],
     causeway:[['lava','lava-ravine-v1.webp']],
     wastes:[['ashlands','ashlands-ravine-v1.webp']],
     gallery:[['crystals','deep-underground-ravine-v1.webp']],
@@ -2654,7 +2658,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=b0d96331a31d');
+        await import('./assets/campaign/forest.js?v=f769b9c95852');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -2903,7 +2907,8 @@ window.GRIM_CONFIG = Object.freeze({
       this.cameras.main.setScroll(this.cameraX,this.cameraY+this.appliedDownhillOffset);
     }
     get guardianStance(){
-      return Boolean(this.campaign?.guardian&&!this.campaign.guardian.pursuit&&this.player.x>=this.campaign.guardian.standX-.5);
+      const gate=this.campaign?.guardian||this.player?.gate;
+      return Boolean(gate&&!gate.pursuit&&this.player.x>=gate.standX-.5);
     }
     get feetY(){return this.player.y;}
     get onGround(){return this.player.grounded;}
@@ -4058,6 +4063,8 @@ window.GRIM_CONFIG = Object.freeze({
         else if(this.campaign?.guardian&&!this.campaign.guardian.pursuit){
           const remaining=this.campaign.guardian.standX-p.x;
           p.x+=Math.min(Math.max(0,remaining),this.speed*dt*worldFactor,Math.max(0,remaining)*dt*5+dt*10);
+        }else if(p.gate){
+          p.x+=Math.min(Math.max(0,p.gate.standX-p.x),this.speed*dt*worldFactor);
         }else p.x += this.speed*dt*worldFactor*(this.campaign?.guardian?.scrollRate??1);
         if(this.powerManager.level('graveRush')||this.rushCooldownMs>0){
           this.rushCooldownMs=Math.max(0,this.rushCooldownMs-frameMs);
@@ -4265,6 +4272,8 @@ window.GRIM_CONFIG = Object.freeze({
     }
     rushBossInPath(from,to){
       if(this.campaign?.active&&(this.campaign.guardian||to>=this.campaign.entranceX))return true;
+      if(this.forestRoute?.gates?.length&&(this.player.gate||
+          this.forestRoute.gates.some(x=>from<=x&&to>=x)))return true;
       return this.enemies.some(e=>{
         if(e.dead||!(e.isBoss||e.kind==='boss'))return false;
         const box=Combat.rectFor(e),left=e.x-(e.width??box.width)/2;
@@ -4535,7 +4544,7 @@ window.GRIM_CONFIG = Object.freeze({
           }else if(b.x>right+70)b.dead=true;
           continue;
         }
-        if(b.kind==='ember'||b.kind==='frost'||b.kind==='brood'||b.kind==='prism'){
+        if(b.kind==='seal'||b.kind==='ember'||b.kind==='frost'||b.kind==='brood'||b.kind==='prism'){
           const encounter=this.campaign?.encounter,aim=encounter?.target?.();
           if(!aim||aim.id!==(b.campaignTarget??b.frostId)){b.kind='free';continue;}
           const dx=aim.x-b.x,dy=aim.y-b.y,dist=Math.hypot(dx,dy),step=1550*dt;
@@ -5163,7 +5172,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(this.downhillOffset!==(this.appliedDownhillOffset??0))this.syncWorldScroll();
       const g=this.bg;
       g.clear();
-      this.ensureBiomeBackdropGroup(this.forestRoute?.biome==='lava'?'causeway':this.forestRoute?.biome==='ashlands'?'wastes':this.forestRoute?.biome==='crystals'?'gallery':this.forestRoute?.biome==='caves'?'cavern':this.hasTeleported?'underworld':'surface');
+      this.ensureBiomeBackdropGroup(this.forestRoute?.biome==='boss'?'lastGate':this.forestRoute?.biome==='lava'?'causeway':this.forestRoute?.biome==='ashlands'?'wastes':this.forestRoute?.biome==='crystals'?'gallery':this.forestRoute?.biome==='caves'?'cavern':this.hasTeleported?'underworld':'surface');
       this.updateBiomeBackdrops();
       this.updateBackdropGroundVeil();
       this.worldPolish?.beginFrame();

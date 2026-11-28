@@ -43,8 +43,8 @@ const ridges=[
 ];
 
 export function forestRoute(seed,origin,unit,chapter='forest'){
-  const lava=chapter==='lava',ash=chapter==='ashlands',crystal=chapter==='crystals';
-  const hills=chapter==='foothills',ice=chapter==='tundra',cave=chapter==='caves',end=lava?12380:ash?12420:crystal?11420:cave?10000:ice?9050:hills?8100:END;
+  const final=chapter==='finalRealm',lava=chapter==='lava',ash=chapter==='ashlands',crystal=chapter==='crystals';
+  const hills=chapter==='foothills',ice=chapter==='tundra',cave=chapter==='caves',end=final?16300:lava?12380:ash?12420:crystal?11420:cave?10000:ice?9050:hills?8100:END;
   const wisps=[],spiders=[],prisms=[],embers=[];
   const rng=window.GRIM_CORE.makeRng(seed ^ 0x476c6164);
   const iceOpening=[[45,'wisp'],[135,'rock'],[170,'wisp'],[265,'branch'],[300,'wisp'],
@@ -57,7 +57,8 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
     [566,'bramble'],[776,'gap'],[824,'ember'],[934,'rock']];
   const lavaOpening=[[58,'gap'],[164,'gap'],[262,'rock'],[352,'gap'],[386,'branch'],
     [484,'bramble'],[575,'gap'],[775,'rock'],[831,'gap'],[868,'bramble']];
-  const beats=(lava?lavaOpening:ash?ashOpening:crystal?crystalOpening:cave?caveOpening:ice?iceOpening:hills?foothillsOpening:opening).map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
+  const finalOpening=[[70,'rock'],[260,'branch'],[395,'bramble'],[550,'rock'],[790,'gap']];
+  const beats=(final?finalOpening:lava?lavaOpening:ash?ashOpening:crystal?crystalOpening:cave?caveOpening:ice?iceOpening:hills?foothillsOpening:opening).map(([m,type])=>[m+(m===205?seed%13:m===365?seed%17:0),type]);
   function section(start,count,stride,phrases){
     let bag=[],last;
     for(let i=0;i<count;i++){
@@ -74,7 +75,13 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
       for(const [offset,type] of last)beats.push([at+offset,type]);
     }
   }
-  if(lava){
+  if(final){
+    // The three courts leave a level, empty approach on either side of each gate.
+    section(1020,16,255,practice);
+    section(5590,18,260,combinations);
+    section(11040,19,260,approach);
+    beats.push([16012,'gap'],[16065,'branch'],[16150,'bramble']);
+  }else if(lava){
     const shelves=[
       [[0,'gap'],[52,'rock'],[146,'branch']],
       [[0,'branch'],[54,'gap'],[112,'bramble']],
@@ -164,7 +171,9 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
   const encounters=new Map(obstacles.map((ob,i)=>[ob.x,{type:ob.type,
     nextX:obstacles[i+1]?.x??origin+(end+500)*unit}]));
   return {
-    end, biome:chapter, artMeters:lava?8950:ash?7470:crystal?6500:cave?5510:ice?3270:hills?1530:0, wisps, spiders, prisms, embers, crossbow:ice||cave||crystal||ash||lava, pursuit:hills||ice||cave||crystal||ash||lava, first:obstacles[0].x, gaps,
+    end, biome:final?'boss':chapter,
+    gates:final?[155,868,5160,5390,10460,10730,15840].map(m=>origin+m*unit):[],
+    artMeters:final?10500:lava?8950:ash?7470:crystal?6500:cave?5510:ice?3270:hills?1530:0, wisps, spiders, prisms, embers, crossbow:ice||cave||crystal||ash||lava||final, pursuit:hills||ice||cave||crystal||ash||lava||final, first:obstacles[0].x, gaps,
     encounters,
     // Generate fixed world geometry once so reload, rotation and Rewind all use
     // the terrain engine's existing segment identities and interpolation.
@@ -173,6 +182,7 @@ export function forestRoute(seed,origin,unit,chapter='forest'){
       const elevation=x=>{
         const m=(x-origin)/unit;
         if(m<110 || (m>=625&&m<=713) || m>=end-40)return baseY;
+        if(final)return baseY+13*Math.sin(x/830+phase)+8*Math.cos(x/510+phase);
         if(lava)return baseY+12*Math.sin(x/660+phase)+7*Math.cos(x/370+phase);
         if(ash)return baseY+18*Math.sin(x/810+phase)-12*Math.cos(x/425+phase);
         if(crystal)return baseY+17*Math.sin(x/730+phase)+9*Math.cos(x/440+phase);
