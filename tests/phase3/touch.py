@@ -7,12 +7,14 @@ from playwright.sync_api import sync_playwright
 
 fixtures = Path(__file__).resolve().parents[1] / "phase2"
 renderer = sys.argv[1]
+audio_modes = {"audible": (False,), "muted": (True,), "both": (False, True)}
+mute_states = audio_modes[sys.argv[4] if len(sys.argv) > 4 else "both"]
 rows = {}
 performance = {}
 with sync_playwright() as playwright:
     args = ["--disable-webgl"] if renderer == "canvas" else ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
     browser = playwright.chromium.launch(args=args)
-    for build, url in zip(("before", "after"), sys.argv[2:]):
+    for build, url in zip(("before", "after"), sys.argv[2:4]):
         page = browser.new_page(viewport={"width": 844, "height": 390}, has_touch=True)
         page.goto(url + "?seed=33")
         page.locator("#home-enter-btn").tap()
@@ -29,7 +31,7 @@ with sync_playwright() as playwright:
           const create=AudioContext.prototype.createOscillator;
           AudioContext.prototype.createOscillator=function(){oscillators++;return create.call(this)};
         }""")
-        for muted in (False, True):
+        for muted in mute_states:
             page.evaluate("""muted => {const toggle=document.querySelector('#mute-actions');
               toggle.checked=muted;toggle.dispatchEvent(new Event('change'));}""", muted)
             # Replay the same generated pair and ordinary inputs on both builds.
@@ -41,7 +43,7 @@ with sync_playwright() as playwright:
                     page.locator("#attack-btn").tap()
                 return page.evaluate("x=>travelTo(x)", pair["next"]+115)
 
-            if build == "before" and not muted:
+            if build == "before" and muted == mute_states[0]:
                 winning_lead = None
                 for lead in (180, 160, 200, 220, 240, 190, 170, 210, 150, 130, 110, 90, 70, 50):
                     pair = page.evaluate(start)
