@@ -203,6 +203,13 @@ async function travelWithVendors(page,travel){
     }
     if(!['upgrade','vendorIntro'].includes(stop.mode))return;
     if(stop.version===3){
+      const pad=await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];
+        s.vendorArt.renderWorld();
+        const floor=s.vendorArt.views.get(s.lastVendorNumber)?.floor;
+        return floor&&[(floor.x-s.startX)/GRIM_CONFIG.pxPerMeter,floor.texture.key];
+      });
+      assert.deepEqual(pad,[stop.number*interval,'sanctuary-'+(stop.number*interval>=5000?'devil':'angel')+'-floor']);
       assert.equal(stop.next,stop.number+1);
       assert.ok(Math.abs(stop.distance-stop.number*interval)<28,'Shop opened at '+stop.distance);
     }
@@ -1632,7 +1639,7 @@ async function publicGodMode(browser,viewport){
       await tap('pause-btn');
       await tap('god-mode-checkbox');
       const end=bossMeters[chapter];
-      assert.equal(await page.locator('#god-teleport-boss').inputValue(),String(end));
+      assert.equal(await page.locator('#god-teleport-boss').getAttribute('value'),String(end));
       if(chapter==='forest'){
         await tap('god-abilities-btn');
         await page.locator('#god-rank-deathsReversal').selectOption('2');
@@ -1640,7 +1647,7 @@ async function publicGodMode(browser,viewport){
         await tap('practice-slow-btn');
         assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].practiceScale()),.5);
         await advance(page,'frames',810);
-        await tap('rewind-btn');await advance(page,'frames',220);
+        await tap('rewind-btn');await advance(page,'frames',300);
         assert.deepEqual(await page.evaluate(()=>{
           const s=grimRun.scene.scenes[0];return [s.state,s.rewindCooldownMs,s.rewindLevel()];
         }),['playing',0,2]);

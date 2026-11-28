@@ -258,6 +258,7 @@ import {forestRoute} from './route.js?v=fccb40ffeccf';
       el('retry-btn').textContent='RUN AGAIN ↻';
       visible('campaign-save-menu',false);el('resume-btn').disabled=false;
       this.scene.ui.setTeleportChapter(null);
+      el('pause-screen').removeAttribute('data-travel-locked');
     }
     async enter(chapter=this.chapter){
       if(this.busy||this.active)return;
@@ -342,6 +343,7 @@ import {forestRoute} from './route.js?v=fccb40ffeccf';
     prepareRoute(seed,origin,unit){
       return this.routeVersion>=2?forestRoute(seed,origin,unit,this.chapter,this.routeVersion):null;
     }
+    canTeleport(){return ['playing','countdown'].includes(this.resumeMode)&&!this.requiredArt;}
     get endMeters(){return this.scene.forestRoute?.end??LEGACY_END;}
     get entranceX(){return this.scene.startX+this.endMeters*scope.GRIM_CONFIG.pxPerMeter;}
     resumeAtTeleport(x){
@@ -356,11 +358,10 @@ import {forestRoute} from './route.js?v=fccb40ffeccf';
           const next=markers.findIndex(marker=>(marker.x??marker)>x);
           p[field]=next<0?markers.length:next;
         }
-        p.gate=null;p.spiderX=null;p.wispMs=null;p.ashPhase=null;p.prismPhase=null;
+        p.gate=null;p.spiderX=null;p.wispMs=null;p.wispHit=false;p.ashPhase=null;p.prismPhase=null;
       }
       if(x>=this.entranceX)this.encounter.enter();
       this.syncScore('playing');
-      this.save();
     }
     afterFrame(){
       if(!this.active)return;
@@ -444,6 +445,7 @@ import {forestRoute} from './route.js?v=fccb40ffeccf';
         if(!MODES.has(this.scene.state))return;
         this.resumeMode=this.scene.state;this.frozen=true;
       }
+      el('pause-screen').toggleAttribute('data-travel-locked',!this.canTeleport());
       this.scene.state='paused';this.scene.ui.setMode('paused');
       this.scene.drawScene();
       this.save();
@@ -578,7 +580,8 @@ import {forestRoute} from './route.js?v=fccb40ffeccf';
           if(this.requiredArt.some(k=>!s.motionArt?.[k])){
             this.artWait=requestAnimationFrame(ready);return;
           }
-          this.requiredArt=null;el('resume-btn').disabled=false;s.drawScene();
+          this.requiredArt=null;el('resume-btn').disabled=false;
+          el('pause-screen').toggleAttribute('data-travel-locked',!this.canTeleport());s.drawScene();
         };
         this.artWait=requestAnimationFrame(ready);
       }

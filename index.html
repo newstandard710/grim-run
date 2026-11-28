@@ -146,6 +146,7 @@ button {cursor:pointer;}
 .god-mode-desc{font-size:clamp(9px,1.7vh,11px);margin:4px auto 8px}
 #music-settings{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
 .music-level{display:inline-flex;align-items:center;gap:6px;font-size:13px}.music-level input{width:84px;accent-color:#8cebe7}
+#pause-screen[data-travel-locked] #god-teleport-panel{display:none}
 .god-mode-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
 .god-abilities-launch{min-height:44px;margin:0;padding:5px 14px;touch-action:manipulation}
 #vendor-abilities-btn{margin:5px auto 0}
@@ -2248,9 +2249,9 @@ window.GRIM_CONFIG = Object.freeze({
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=surface1"></script>
   <script src="assets/visuals/lavafall-detail.js?v=1"></script>
-  <script src="assets/visuals/snow-tread.js?v=planted1"></script>
+  <script src="assets/visuals/snow-tread.js?v=85b5712a800f"></script>
   <script src="assets/visuals/downhill-camera.js?v=1"></script>
-  <script src="assets/visuals/surface-dressing.js?v=ed351d97e79d"></script>
+  <script src="assets/visuals/surface-dressing.js?v=8b6d0030febb"></script>
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
   <script src="assets/visuals/forest-midground.js?v=b2667f2d1990"></script>
@@ -2275,7 +2276,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=da703a4f290e"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=landforms-2"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=landforms-1"></script>
-  <script src="assets/visuals/obstacle-mounts.js?v=d2928f84a547"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=dd86fb465da0"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=vendor-greetings1"></script>
   <script src="assets/visuals/cutscene-motion.js?v=vendor-greetings1"></script>
@@ -2283,7 +2284,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=a6d1859f739b"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=a4cb496709f3"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/reaper-formation.js?v=portal-summit1"></script>
   <script src="assets/visuals/portal-summit.js?v=portal-summit1"></script>
@@ -2667,7 +2668,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=e996d6d14dd8');
+        await import('./assets/campaign/forest.js?v=9dfadb92a9e1');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -2773,7 +2774,7 @@ window.GRIM_CONFIG = Object.freeze({
       return Number.isInteger(d)&&d>=500&&d<=end&&(d%500===0||d===end);
     }
     askTeleport(value){
-      if(!this.godMode||this.state!=='paused')return false;
+      if(!this.godMode||this.state!=='paused'||(this.campaign?.active&&!this.campaign.canTeleport()))return false;
       const d=Number(value);
       if(!this.validTeleport(d))return false;
       this.pendingTeleport=d;
@@ -2874,6 +2875,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(campaign)campaign.resumeAtTeleport(x);
       this.captureRewind();this.updateRewindButton();
       this.biomeMidground?.prioritizeTeleport(this.distance);
+      if(campaign)campaign.save();
       this.drawScene();
       return true;
     }

@@ -74,9 +74,10 @@
     renderWorld(){
       const s=this.scene,active=new Set();
       if(Number.isFinite(s.startX)&&s.state!=='menu')for(let k=1;k<=(s.vendorCount??14);k++){
-        const x=s.startX+k*scope.GRIM_CONFIG.vendorEveryMeters*scope.GRIM_CONFIG.pxPerMeter;
+        const meters=k*(s.vendorInterval??scope.GRIM_CONFIG.vendorEveryMeters);
+        const x=s.startX+meters*scope.GRIM_CONFIG.pxPerMeter;
         if(Math.abs(x-s.player.x)>s.width*1.5+300)continue;
-        const kind=k>=8?'devil':'angel',key='sanctuary-'+kind,y=s.terrain.groundAt(x)??s.terrain.anchorAt(x);
+        const kind=meters>=5000?'devil':'angel',key='sanctuary-'+kind,y=s.terrain.groundAt(x)??s.terrain.anchorAt(x);
         if(!s.textures.exists(key+'-floor'))continue;
         let view=this.views.get(k);
         if(!view){
