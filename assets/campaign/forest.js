@@ -8,7 +8,7 @@ import {StoneGuardian} from './stone-guardian.js?v=311b7559c68b';
 import {ForestScore} from '../audio/forest-score.js?v=0ad3fe00daea';
 import {ForestGuardian} from './guardian.js?v=7c5c7044c30f';
 
-import {forestRoute} from './route.js?v=5b7d5efb4a61';
+import {forestRoute} from './route.js?v=fccb40ffeccf';
 
 (function(scope){
   'use strict';
@@ -60,7 +60,7 @@ import {forestRoute} from './route.js?v=5b7d5efb4a61';
     const d=JSON.parse(raw);
     // Completion is authoritative even if cleanup was interrupted during a menu transition.
     if(typeof d?.id==='string'&&progress()[chapter]?.attempt===d.id)return null;
-    if((d.routeVersion!==undefined&&![1,2].includes(d.routeVersion))||d.version!==1||d.chapter!==chapter||typeof d.id!=='string'||!Number.isInteger(d.seed)||
+    if((d.routeVersion!==undefined&&![1,2,3].includes(d.routeVersion))||d.version!==1||d.chapter!==chapter||typeof d.id!=='string'||!Number.isInteger(d.seed)||
       !MODES.has(d.mode)||!Number.isFinite(d.world?.player?.x)||!Array.isArray(d.history))
       throw Error('This '+title(chapter)+' save could not be read.');
     return d;
@@ -257,8 +257,7 @@ import {forestRoute} from './route.js?v=5b7d5efb4a61';
       visible('music-settings',false);
       el('retry-btn').textContent='RUN AGAIN ↻';
       visible('campaign-save-menu',false);el('resume-btn').disabled=false;
-      el('god-mode-checkbox').closest('label').classList.remove('hidden');
-      document.querySelector('.god-mode-desc').classList.remove('hidden');
+      this.scene.ui.setTeleportChapter(null);
     }
     async enter(chapter=this.chapter){
       if(this.busy||this.active)return;
@@ -283,15 +282,14 @@ import {forestRoute} from './route.js?v=5b7d5efb4a61';
             this.active=true;this.frozen=false;this.walletDirty=false;this.retryForest=true;
             this.encounter.prepare?.();
             s.frame=0;s.lastRevivePayment=null;s.lastResurrection=null;
-            this.routeVersion=d?(d.routeVersion??1):2;
+            this.routeVersion=d?(d.routeVersion??1):3;
             s.startRun(d?.seed);
             // Items and preplaced obstacles in later biomes never enter this chapter.
             const limit=this.entranceX+1500;
             for(const key of ['coins','souls','obstacles'])s[key]=s[key].filter(o=>o.x<limit);
             el('retry-btn').textContent='RETRY '+label;
             visible('campaign-save-menu',true);visible('music-settings',true);
-            el('god-mode-checkbox').closest('label').classList.add('hidden');
-            document.querySelector('.god-mode-desc').classList.add('hidden');
+            s.ui.setTeleportChapter(this.endMeters);
             if(d){this.openingSeen=true;this.restore(d);this.pause();}
             else if(this.save()){
               if(['tundra','caves','crystals','ashlands','lava','finalRealm'].includes(chapter)&&!localStorage.getItem(openingKey(chapter)))this.chapterOpening();
@@ -342,9 +340,28 @@ import {forestRoute} from './route.js?v=5b7d5efb4a61';
       this.release(keepVictory);
     }
     prepareRoute(seed,origin,unit){
-      return this.routeVersion===2?forestRoute(seed,origin,unit,this.chapter):null;
+      return this.routeVersion>=2?forestRoute(seed,origin,unit,this.chapter,this.routeVersion):null;
     }
-    get entranceX(){return this.scene.startX+(this.scene.forestRoute?.end??LEGACY_END)*scope.GRIM_CONFIG.pxPerMeter;}
+    get endMeters(){return this.scene.forestRoute?.end??LEGACY_END;}
+    get entranceX(){return this.scene.startX+this.endMeters*scope.GRIM_CONFIG.pxPerMeter;}
+    resumeAtTeleport(x){
+      const s=this.scene,p=s.player,route=s.forestRoute;
+      this.guardian=null;this.encounter.hide();
+      this.frozen=false;this.reconnect=null;this.resumeMode='playing';
+      if(route){
+        const upcoming=[...route.encounters.keys()].find(at=>at>x+80);
+        s.nextEncounterX=upcoming??this.entranceX+1500;
+        for(const [field,markers] of [['nextGate',route.gates],['nextWisp',route.wisps],
+          ['nextSpider',route.spiders],['nextEmber',route.embers],['nextPrism',route.prisms]]){
+          const next=markers.findIndex(marker=>(marker.x??marker)>x);
+          p[field]=next<0?markers.length:next;
+        }
+        p.gate=null;p.spiderX=null;p.wispMs=null;p.ashPhase=null;p.prismPhase=null;
+      }
+      if(x>=this.entranceX)this.encounter.enter();
+      this.syncScore('playing');
+      this.save();
+    }
     afterFrame(){
       if(!this.active)return;
       const s=this.scene;
@@ -473,6 +490,8 @@ import {forestRoute} from './route.js?v=5b7d5efb4a61';
       return {version:1,chapter:this.chapter,routeVersion:this.routeVersion,id:this.id,seed:s.seed,mode:this.frozen?this.resumeMode:s.state,
         width:s.width,height:s.height,world:s.worldSnapshot(),
         run:Object.fromEntries(fields.map(k=>[k,s[k]])),powers:s.powerManager.levels,
+        practice:{enabled:s.godMode,time:s.practiceTimeMode,levels:s.practicePowerLevels,
+          teleported:s.teleportUsed,used:s.forestPracticeUsed},
         terrain:[...s.rewindTerrainBase],downhill:s.downhillCamera?.offset||0,
         history:s.rewindFrames.map(f=>this.historyId(f)),
         playback:clip?{elapsedMs:clip.elapsedMs,durationMs:clip.durationMs,lastIndex:clip.lastIndex,
@@ -512,6 +531,12 @@ import {forestRoute} from './route.js?v=5b7d5efb4a61';
       s.rewindTerrainBase=new Map(d.terrain);
       Object.assign(s.powerManager.levels,d.powers);
       for(const name of fields)s[name]=d.run[name];
+      const practice=d.practice;
+      s.godMode=Boolean(practice?.enabled);s.teleportUsed=Boolean(practice?.teleported);
+      s.forestPracticeUsed=Boolean(practice?.used);s.practiceTimeMode=s.godMode?(practice.time||0):0;
+      s.practiceSlow=s.practiceTimeMode!==0;s.practicePowerLevels=practice?.levels??null;
+      s.powerManager.setPracticeLevels(s.godMode?s.practicePowerLevels:null);
+      s.ui.showGodMode(s.godMode);s.ui.showPracticeSlow(s.practiceScale());
       s.applyRewindSnapshot(w);
       if(this.guardian&&!Number.isFinite(this.guardian.musicStart))this.guardian.musicStart=s.elapsed;
       Object.assign(s.player,w.player); // Rewind cancels held actions. A resumed frame preserves them.
