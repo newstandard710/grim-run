@@ -224,3 +224,19 @@ for battle in (False, True):
                       "bow" if battle else "reed", .14)
         lava.note(at+5, color+7, .8, "bell", .09)
     lava.write("lava-colossus" if battle else "lava-causeway", True)
+
+# The last procession stretches the Forest call across six tolls. In battle
+# low strings repeat the call against a three-against-two hammer rhythm.
+for battle in (False, True):
+    gate = Score(114 if battle else 72, 48)
+    for bar, (root, fifth, color) in enumerate(chords):
+        at = 6 * bar
+        gate.note(at, root-12, 5.1, "bow", .13)
+        gate.note(at+.1, fifth, 3.8, "reed", .075)
+        for pos, pitch, length in phrases[bar]:
+            gate.note(at+pos*1.6, pitch-(12 if battle else 0), length*1.3,
+                      "bow" if battle else "bell", .145)
+        for beat in ([0, 1.5, 3, 4, 5] if battle else [0, 3]):
+            gate.note(at+beat, root-7, .45, "drum", .16 if battle else .06)
+        gate.note(at+4.5, color+7, .86, "harp", .102)
+    gate.write("gatekeeper" if battle else "last-gate", True)
