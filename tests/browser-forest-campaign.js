@@ -183,7 +183,44 @@ async function transactions(browser){
   }finally{await ctx.close();}
 }
 // Travel the generated approach at a fixed clock; menu selections use touch.
-async function runForest(page){
+const bossMeters={forest:3500,foothills:3700,tundra:3900,caves:4100,crystals:4300,ashlands:4500,lava:4700,finalRealm:6666};
+
+// The first stop is inspected by each chapter test. Visit the remaining shops
+// through the visible controls and check every scheduled stop before the boss.
+async function travelWithVendors(page,travel){
+  while(true){
+    await travel();
+    const stop=await page.evaluate(()=>{
+      const s=grimRun.scene.scenes[0];
+      return {chapter:s.campaign.chapter,version:s.campaign.routeVersion,mode:s.state,boss:!!s.campaign.guardian,
+        number:s.lastVendorNumber,next:s.nextVendorNumber,distance:s.distance};
+    });
+    const interval=stop.chapter==='caves'?950:1000;
+    if(stop.boss&&stop.version===3){
+      const end=bossMeters[stop.chapter];
+      assert.ok(stop.distance>=end&&stop.distance<end+1,'Boss entered at '+stop.distance);
+      assert.equal(stop.number,Math.floor(end/interval));
+    }
+    if(!['upgrade','vendorIntro'].includes(stop.mode))return;
+    if(stop.version===3){
+      const pad=await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];
+        s.vendorArt.renderWorld();
+        const floor=s.vendorArt.views.get(s.lastVendorNumber)?.floor;
+        return floor&&[(floor.x-s.startX)/GRIM_CONFIG.pxPerMeter,floor.texture.key];
+      });
+      assert.deepEqual(pad,[stop.number*interval,'sanctuary-'+(stop.number*interval>=5000?'devil':'angel')+'-floor']);
+      assert.equal(stop.next,stop.number+1);
+      assert.ok(Math.abs(stop.distance-stop.number*interval)<28,'Shop opened at '+stop.distance);
+    }
+    if(stop.number===1)return;
+    if(stop.mode==='vendorIntro')await page.locator('#vendor-intro-skip').tap();
+    await page.getByRole('button',{name:'CONTINUE RUN'}).tap();
+  }
+}
+
+async function runForest(page){return travelWithVendors(page,()=>runForestSegment(page));}
+async function runForestSegment(page){
   await page.evaluate(()=>{
     const s=grimRun.scene.scenes[0],draw=s.drawScene;
     s.drawScene=()=>{};
@@ -211,6 +248,9 @@ async function runForest(page){
 // Advance the normal game clock between decisions, then press the visible
 // controls through Chromium's touch input. Draw each approach at game scale.
 async function touchApproach(page,stopMeters=Infinity){
+  return travelWithVendors(page,()=>touchSegment(page,stopMeters));
+}
+async function touchSegment(page,stopMeters){
   const ctx=page.context(),touch=await ctx.newCDPSession(page);
   const buttons={};
   for(const key of ['jump','slide','attack']){
@@ -390,7 +430,7 @@ async function freshClear(browser,viewport,seed){
     assert.equal(await page.locator('#mute-music').isChecked(),seed===91);
     assert.equal(await page.locator('#mute-actions').isChecked(),false);
     await resume(page);
-    await touchApproach(page,6340);
+    await touchApproach(page,3340);
     const rehearsal=await saved(page);
     assert.equal(rehearsal.world.player.hp,3);
     assert.deepEqual(await page.evaluate(()=>{
@@ -405,7 +445,7 @@ async function freshClear(browser,viewport,seed){
     await touchApproach(page);
     const arrival=await saved(page);
     assert.equal(arrival.world.guardian.phase,'arrival');assert.equal(arrival.world.player.hp,3);
-    assert.ok(arrival.world.distance>=6500);
+    assert.ok(arrival.world.distance>=3500&&arrival.world.distance<3501);
     assert.ok(Object.values(arrival.run.runLoadout.levels).every(rank=>rank===0));
     await expectScore(page,seed===91?null:'guardian');
     if(seed===33)assert.ok(await audibleMusic(page),'The Guardian score reaches the music bus');
@@ -414,7 +454,7 @@ async function freshClear(browser,viewport,seed){
     await expectScore(page,seed===91?null:'victory');
     const finished=await saved(page);
     const total=finished.world.elapsed+.95;
-    assert.ok(total>=240&&total<=300,'Active clear took '+total+' seconds');
+    assert.ok(total>=127&&total<=188,'Active clear took '+total+' seconds');
     console.log('Fresh Forest touch clear',seed,viewport,'approach',arrival.world.elapsed.toFixed(2),
       'fight',(total-arrival.world.elapsed).toFixed(2),'total',total.toFixed(2),'seconds');
     // A competing Campaign tab must see one credit from the winning tab.
@@ -492,9 +532,9 @@ async function mistimedRehearsal(browser,viewport,frame){
       await boot(page);await restoreForest(page);
       await resume(page);
       if(timing==='early')await page.locator('#jump-btn').tap();
-      await advance(page,'meters',timing==='late'?6359:6370);
+      await advance(page,'meters',timing==='late'?3359:3370);
       if(timing==='late')await page.locator('#jump-btn').tap();
-      await advance(page,'meters',6380);
+      await advance(page,'meters',3380);
       const after=await saved(page);
       assert.equal(after.world.player.hp,2,timing+' jump should cost one HP');
       assert.equal(after.mode,'playing');
@@ -544,7 +584,7 @@ async function originalAttempt(browser){
     assert.match(await page.locator('#campaign-detail').innerText(),/First Forest clear · \+3 Souls/);
     await page.getByRole('button',{name:'REPLAY FOREST'}).tap();
     await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='playing');
-    const replay=await saved(page);assert.equal(replay.routeVersion,2);
+    const replay=await saved(page);assert.equal(replay.routeVersion,3);
     assert.equal(replay.world.distance,0);assert.notEqual(replay.id,old.id);
     console.log('Original 900 m save cleared on its own route. Replay started the full chapter.');
   }finally{await ctx.close();}
@@ -806,7 +846,7 @@ async function foothillsClear(browser,viewport,seed,earnUnlock){
     await defeatStoneGuardian(page);
     const end=await attempt(page),total=end.world.elapsed+1.1;
     assert.equal(end.world.player.hp,3);assert.ok(end.world.distance-start.world.distance>300);
-    assert.ok(total>=300&&total<=360);
+    assert.ok(total>=135&&total<=195);
     const balance=(await wallet(page)).souls;
     await advance(page,'frames',75);
     await page.getByText('FOOTHILLS CLEARED',{exact:true}).waitFor();
@@ -921,7 +961,7 @@ async function tundraClear(browser,viewport,seed){
     }
     const win=await attempt(page),balance=(await wallet(page)).souls;
     assert.equal(win.world.player.hp,2);assert.equal(win.powers.powerShot||0,0);
-    assert.ok(win.world.elapsed>=335&&win.world.elapsed<=385);
+    assert.ok(win.world.elapsed>=141&&win.world.elapsed<=193);
     await advance(page,'frames',75);await page.getByText('TUNDRA CLEARED',{exact:true}).waitFor();
     assert.equal((await wallet(page)).souls,balance+3);
     assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem(GRIM_META.CAMPAIGN_PROGRESS)).cavesUnlocked));
@@ -1059,7 +1099,7 @@ async function cavesClear(browser,viewport,seed){
     await untilBossPhase(page,'silk',100);await restore();
     await fight(true);
     const win=await attempt(),balance=(await wallet(page)).souls;
-    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=360&&win.world.elapsed<=420);
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=138&&win.world.elapsed<=199);
     await advance(page,'frames',76);await page.getByText('CAVES CLEARED',{exact:true}).waitFor();
     assert.equal((await wallet(page)).souls,balance+3);
     await page.getByRole('button',{name:'CHAPTERS',exact:true}).tap();
@@ -1185,7 +1225,7 @@ async function crystalsClear(browser,viewport,seed){
       return [s.gunUnlocked,s.biomeBackdrops.crystals.visible,s.hasTeleported];}),[true,true,false]);
     await expectScore(page,'sentinel');assert.ok(await audibleMusic(page));
     await fight(true);const win=await attempt(),balance=(await wallet(page)).souls;
-    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=420&&win.world.elapsed<=480,String(win.world.elapsed));
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=152&&win.world.elapsed<=214,String(win.world.elapsed));
     await advance(page,'frames',100);await playingStory(page,'ashlands-passage.webm');
     await page.locator('#forest-story-skip').tap();await page.getByText('CRYSTALS CLEARED',{exact:true}).waitFor();
     assert.equal((await wallet(page)).souls,balance+3);
@@ -1282,7 +1322,7 @@ async function ashlandsClear(browser,viewport,seed){
       await page.locator('#mute-actions').check();await resume(page);
     }
     await fight(true);const win=await attempt(),balance=(await wallet(page)).souls;
-    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=450&&win.world.elapsed<=510,String(win.world.elapsed));
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=152&&win.world.elapsed<=214,String(win.world.elapsed));
     await advance(page,'frames',100);await playingStory(page,'lava-passage.webm');
     await page.locator('#forest-story-skip').tap();await page.getByText('ASHLANDS CLEARED',{exact:true}).waitFor();
     assert.equal((await wallet(page)).souls,balance+3);
@@ -1372,7 +1412,7 @@ async function lavaClear(browser,viewport,seed){
     }
     await fight(true);
     const win=await attempt(),before=(await wallet(page)).souls;
-    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=450&&win.world.elapsed<=510,String(win.world.elapsed));
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=161&&win.world.elapsed<=223,String(win.world.elapsed));
     console.log('Lava touch clear',viewport,seed,'seconds',win.world.elapsed.toFixed(2),'HP',win.world.player.hp);
     await advance(page,'frames',100);await playingStory(page,'final-realm-passage.webm');
     await page.locator('#forest-story-skip').tap();await page.getByText('LAVA CLEARED',{exact:true}).waitFor();
@@ -1481,7 +1521,7 @@ async function lastGateClear(browser,viewport,seed){
     if(portrait){await expectScore(page,'gatekeeper');assert.ok(await audibleMusic(page));}
     await fight(true);
     const win=await attempt(),before=(await wallet(page)).souls;
-    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=600&&win.world.elapsed<=720,String(win.world.elapsed));
+    assert.equal(win.world.player.hp,3);assert.ok(win.world.elapsed>=238&&win.world.elapsed<=360,String(win.world.elapsed));
     console.log('Last Gate touch clear',viewport,seed,'seconds',win.world.elapsed.toFixed(2),'HP',win.world.player.hp);
     await advance(page,'frames',100);await playingStory(page,'souls-crossing.webm');
     assert.equal((await wallet(page)).souls,before+3);
@@ -1596,7 +1636,38 @@ async function publicGodMode(browser,viewport){
         return [s.campaign.chapter,stats,s.player.hp];
       });
       assert.deepEqual(result,[chapter,[5,2,true,1,false],4]);
-      await tap('jump-btn');
+      await tap('pause-btn');
+      await tap('god-mode-checkbox');
+      const end=bossMeters[chapter];
+      assert.equal(await page.locator('#god-teleport-boss').getAttribute('value'),String(end));
+      if(chapter==='forest'){
+        await tap('god-abilities-btn');
+        await page.locator('#god-rank-deathsReversal').selectOption('2');
+        await tap('god-abilities-done');await tap('resume-btn');
+        await tap('practice-slow-btn');
+        assert.equal(await page.evaluate(()=>grimRun.scene.scenes[0].practiceScale()),.5);
+        await advance(page,'frames',810);
+        await tap('rewind-btn');await advance(page,'frames',300);
+        assert.deepEqual(await page.evaluate(()=>{
+          const s=grimRun.scene.scenes[0];return [s.state,s.rewindCooldownMs,s.rewindLevel()];
+        }),['playing',0,2]);
+        await tap('pause-btn');await tap('campaign-save-menu');await tap('campaign-btn');
+        await page.getByRole('button',{name:'RESUME FOREST'}).tap();
+        await page.waitForFunction(()=>grimRun.scene.scenes[0].state==='paused');
+        assert.deepEqual(await page.evaluate(()=>{
+          const s=grimRun.scene.scenes[0];return [s.godMode,s.practiceScale(),s.rewindLevel()];
+        }),[true,.5,2]);
+        await tap('god-teleport-boss');await tap('teleport-confirm-cancel');
+      }
+      await tap('god-teleport-boss');await tap('teleport-confirm-yes');
+      const arrival=await page.evaluate(()=>{
+        const s=grimRun.scene.scenes[0];s.player.invulMs=0;s.takeDamage(1,'rock');
+        return [s.distance,s.campaign.guardian.phase,s.campaign.frozen,s.player.hp,s.gunUnlocked];
+      });
+      assert.deepEqual(arrival,[end,'arrival',false,4,!['forest','foothills'].includes(chapter)]);
+      await tap('pause-btn');await tap('god-mode-checkbox');
+      assert.equal(await page.locator('#god-teleport-panel').isVisible(),false);
+      await tap('resume-btn');
       if(chapter==='ashlands'){
         // Exercise the ordinary clear transaction in the test profile.
         await page.evaluate(()=>{

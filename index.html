@@ -146,6 +146,7 @@ button {cursor:pointer;}
 .god-mode-desc{font-size:clamp(9px,1.7vh,11px);margin:4px auto 8px}
 #music-settings{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
 .music-level{display:inline-flex;align-items:center;gap:6px;font-size:13px}.music-level input{width:84px;accent-color:#8cebe7}
+#pause-screen[data-travel-locked] #god-teleport-panel{display:none}
 .god-mode-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
 .god-abilities-launch{min-height:44px;margin:0;padding:5px 14px;touch-action:manipulation}
 #vendor-abilities-btn{margin:5px auto 0}
@@ -444,7 +445,7 @@ button {cursor:pointer;}
         <label class="god-mode-setting"><input id="god-mode-checkbox" type="checkbox"><span> GOD MODE — INVINCIBLE</span></label>
         <button id="god-abilities-btn" type="button" class="secondary god-abilities-launch hidden">ABILITIES</button>
       </div>
-      <p class="god-mode-desc">Practice with invincibility, Rewind, slow motion and teleport. Continue beyond the final gate.</p>
+      <p class="god-mode-desc">Practice with invincibility, Rewind, slow motion and teleport.</p>
       <div id="god-teleport-panel" class="god-teleport-panel hidden">
         <label for="god-teleport-range">TEST TELEPORT <strong id="god-teleport-value">5,000M</strong></label>
         <input id="god-teleport-range" type="range" min="500" max="20000" step="500" value="5000" aria-label="Select destination in 500m increments">
@@ -453,6 +454,7 @@ button {cursor:pointer;}
           <button id="god-teleport-confirm-open" class="secondary">TELEPORT ▶</button>
           <button id="god-teleport-plus" class="secondary" aria-label="500 meters later">+500M</button>
         </div>
+        <button id="god-teleport-boss" type="button" class="secondary hidden">BOSS ENTRANCE</button>
       </div>
       <button id="campaign-save-menu" class="secondary hidden">SAVE &amp; RETURN TO MENU</button>
       <button id="resume-btn" class="primary">RESUME ▶</button><button id="quit-btn" class="secondary">QUIT RUN</button></div>
@@ -1641,6 +1643,7 @@ window.GRIM_CONFIG = Object.freeze({
       el('god-teleport-range').addEventListener('input',event=>this.updateTeleportValue(Number(event.target.value)));
       el('god-teleport-minus').addEventListener('click',()=>this.updateTeleportValue(Number(el('god-teleport-range').value)-500));
       el('god-teleport-plus').addEventListener('click',()=>this.updateTeleportValue(Number(el('god-teleport-range').value)+500));
+      el('god-teleport-boss').addEventListener('click',event=>actions.askTeleport(Number(event.currentTarget.value)));
       el('god-teleport-confirm-open').addEventListener('click',()=>actions.askTeleport(Number(el('god-teleport-range').value)));
       el('teleport-confirm-cancel').addEventListener('click',()=>actions.cancelTeleport());
       el('teleport-confirm-yes').addEventListener('click',()=>actions.confirmTeleport());
@@ -1925,8 +1928,15 @@ window.GRIM_CONFIG = Object.freeze({
       el('practice-slow-btn').title='Tap for '+next+' speed';
       writeText('practice-time-label',label);
     }
+    setTeleportChapter(end){
+      const boss=el('god-teleport-boss'),range=el('god-teleport-range');
+      show('god-teleport-boss',Boolean(end));
+      if(end){boss.value=String(end);boss.textContent='Boss entrance · '+end.toLocaleString()+' m';}
+      range.max=String(end?Math.floor(end/500)*500:20000);
+      this.updateTeleportValue(5000);
+    }
     updateTeleportValue(value){
-      const rounded=Math.max(500,Math.min(20000,Math.round((Number(value)||500)/500)*500));
+      const rounded=Math.max(500,Math.min(Number(el('god-teleport-range').max)||20000,Math.round((Number(value)||500)/500)*500));
       el('god-teleport-range').value=String(rounded);
       el('god-teleport-value').textContent=rounded.toLocaleString()+'M';
     }
@@ -2239,9 +2249,9 @@ window.GRIM_CONFIG = Object.freeze({
   <!-- Optional artwork layer. Core mechanics and procedural visuals work if unavailable. -->
   <script src="assets/visuals/world-art.js?v=surface1"></script>
   <script src="assets/visuals/lavafall-detail.js?v=1"></script>
-  <script src="assets/visuals/snow-tread.js?v=planted1"></script>
+  <script src="assets/visuals/snow-tread.js?v=85b5712a800f"></script>
   <script src="assets/visuals/downhill-camera.js?v=1"></script>
-  <script src="assets/visuals/surface-dressing.js?v=ed351d97e79d"></script>
+  <script src="assets/visuals/surface-dressing.js?v=8b6d0030febb"></script>
   <script src="assets/visuals/ridge-shoulder.js?v=1"></script>
   <script src="assets/visuals/midground-terrain.js?v=downhill1"></script>
   <script src="assets/visuals/forest-midground.js?v=b2667f2d1990"></script>
@@ -2266,7 +2276,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/visual-system.js?v=da703a4f290e"></script>
   <script src="assets/visuals/obstacle-catalog.js?v=landforms-2"></script>
   <script src="assets/visuals/obstacle-mount-data.js?v=landforms-1"></script>
-  <script src="assets/visuals/obstacle-mounts.js?v=d2928f84a547"></script>
+  <script src="assets/visuals/obstacle-mounts.js?v=dd86fb465da0"></script>
   <script src="assets/encounters/v0190/animation-data.js?v=0.19.3"></script>
   <script src="assets/cutscenes/v0197/animation-data.js?v=vendor-greetings1"></script>
   <script src="assets/visuals/cutscene-motion.js?v=vendor-greetings1"></script>
@@ -2274,7 +2284,7 @@ window.GRIM_CONFIG = Object.freeze({
   <script src="assets/visuals/bone-bridges.js?v=1"></script>
   <script src="assets/visuals/revision-art.js?v=0.15.1"></script>
   <script src="assets/visuals/vendor-art-data.js?v=0.15.2"></script>
-  <script src="assets/visuals/vendor-sanctuaries.js?v=a6d1859f739b"></script>
+  <script src="assets/visuals/vendor-sanctuaries.js?v=a4cb496709f3"></script>
   <script src="assets/visuals/world-polish-data.js?v=0.15.3"></script>
   <script src="assets/visuals/reaper-formation.js?v=portal-summit1"></script>
   <script src="assets/visuals/portal-summit.js?v=portal-summit1"></script>
@@ -2658,7 +2668,7 @@ window.GRIM_CONFIG = Object.freeze({
       for(const id of ['campaign-primary','campaign-secondary'])document.getElementById(id).classList.add('hidden');
       document.getElementById('campaign-title').focus({preventScroll:true});
       try{
-        await import('./assets/campaign/forest.js?v=f769b9c95852');
+        await import('./assets/campaign/forest.js?v=9dfadb92a9e1');
         if(this.state!=='campaignMenu'||this.campaign)return;
         this.campaign=new scope.GrimForestCampaign(this);
         document.getElementById('campaign-primary').classList.remove('hidden');
@@ -2759,10 +2769,14 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showPracticeSlow(this.practiceScale());
       return true;
     }
+    validTeleport(d){
+      const end=this.campaign?.active?this.campaign.endMeters:20000;
+      return Number.isInteger(d)&&d>=500&&d<=end&&(d%500===0||d===end);
+    }
     askTeleport(value){
-      if(!this.godMode||this.state!=='paused')return false;
+      if(!this.godMode||this.state!=='paused'||(this.campaign?.active&&!this.campaign.canTeleport()))return false;
       const d=Number(value);
-      if(!Number.isFinite(d)||d<500||d>20000||d%500!==0)return false;
+      if(!this.validTeleport(d))return false;
       this.pendingTeleport=d;
       this.state='teleportConfirm';
       this.ui.teleportConfirmation(d);
@@ -2783,11 +2797,12 @@ window.GRIM_CONFIG = Object.freeze({
     teleportForTesting(meters){
       if(!this.godMode||this.state!=='teleportConfirm')return false;
       const d=Number(meters);
-      if(!Number.isFinite(d)||d<500||d>20000||d%500!==0)return false;
+      if(!this.validTeleport(d))return false;
       const wanted=this.startX+d*C.pxPerMeter;
       // Procedural terrain is generated deterministically for the whole world.
       // At exactly 5000m the canonical portal destination begins at portalExitX.
-      const destination=d===5000?this.terrain.portalExitX:wanted;
+      const campaign=this.campaign?.active?this.campaign:null;
+      const destination=!campaign&&d===5000?this.terrain.portalExitX:wanted;
       const safeAt=x=>{
         const y=this.terrain.groundAt(x);
         if(y===null)return null;
@@ -2802,7 +2817,7 @@ window.GRIM_CONFIG = Object.freeze({
         const forward=destination+i*18;
         if(forward<this.terrain.worldEndX-160){const test=safeAt(forward);if(test!==null){x=forward;y=test;break;}}
         const backward=destination-i*18;
-        if(backward>this.startX+15&&((backward>=this.terrain.portalExitX)===(d>=5000))){
+        if(backward>this.startX+15&&(campaign||(backward>=this.terrain.portalExitX)===(d>=5000))){
           const test=safeAt(backward);if(test!==null){x=backward;y=test;break;}
         }
       }
@@ -2812,7 +2827,7 @@ window.GRIM_CONFIG = Object.freeze({
       this.surfaceDressing?.clear();
       this.downhillCamera?.reset();
       this.teleportUsed=true;
-      if(d>C.finishMeters)this.godModePastFinish=true;
+      if(!campaign&&d>C.finishMeters)this.godModePastFinish=true;
       this.resetRewindHistory();
       this.rewindTerrainBase=new Map();
       this.rewindPlayback=null;this.rewindFlashMs=0;this.ui.rewindFlash(false);
@@ -2826,16 +2841,17 @@ window.GRIM_CONFIG = Object.freeze({
       p.slideMs=0;p.slideReleaseBufferMs=0;p.attackMs=0;p.attackCooldownMs=0;
       p.invulMs=Math.max(p.invulMs,1400);p.visualLandingMs=0;p.previousAttackMs=0;
       this.distance=(x-this.startX)/C.pxPerMeter;
-      this.speed=Core.runSpeed(this.distance);
+      this.speed=Core.runSpeed(this.forestRoute?Math.min(800,this.distance):this.distance);
       this.cameraX=x-this.width*C.reaperXRatio;
       this.cameraY=y-this.groundY;
-      this.hasTeleported=d>=5000;
-      this.gunUnlocked=this.hasTeleported;
+      this.hasTeleported=!campaign&&d>=5000;
+      this.gunUnlocked=campaign?Boolean(this.forestRoute?.crossbow):this.hasTeleported;
       this.shrineClaimed=this.gunUnlocked;
       this.powerArt?.reset();this.combatArt?.reset();this.worldPolish?.reset();
       this.gunCooldownMs=0;this.blastCooldownMs=0;
       this.ui.showGun(this.gunUnlocked,this.hasFlameBolts());this.ui.showGunCooldown(0);
-      this.lastVendorNumber=Math.min(14,Math.floor(this.distance/C.vendorEveryMeters));
+      const passed=Math.min(this.vendorCount,Math.floor(this.distance/this.vendorInterval));
+      this.lastVendorNumber=campaign?Math.max(this.lastVendorNumber,passed):passed;
       this.nextVendorNumber=this.lastVendorNumber+1;
       this.graveRush=null;
       this.vendorType=null;this.pendingOffers=[];this.vendorPhase='deal';this.vendorIntroMs=0;
@@ -2856,7 +2872,9 @@ window.GRIM_CONFIG = Object.freeze({
       this.ui.showPracticeSlow(this.practiceScale());
       this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,
         this.coinCount,this.points,this.powerManager.summary());
+      if(campaign)campaign.resumeAtTeleport(x);
       this.captureRewind();this.updateRewindButton();
+      if(campaign)campaign.save();
       this.biomeMidground?.prioritizeTeleport(this.distance);
       this.drawScene();
       return true;
@@ -3338,6 +3356,7 @@ window.GRIM_CONFIG = Object.freeze({
       if(!Object.keys(this.practicePowerLevels).length)this.practicePowerLevels=null;
       this.powerManager.setPracticeLevels(this.practicePowerLevels);
       this.applyPracticeAbilityChange(previous);
+      if(this.campaign?.active)this.campaign.save();
       return true;
     }
     clearPracticePowers(){
@@ -3345,7 +3364,6 @@ window.GRIM_CONFIG = Object.freeze({
       this.powerManager.setPracticeLevels(null);
     }
     setGodMode(on){
-      if(this.campaign?.active)return false;
       const had=this.rewindLevel();
       const previous=this.practicePowerLevels?this.practiceAbilityEffects():null;
       this.godMode=Boolean(on);
@@ -3359,6 +3377,7 @@ window.GRIM_CONFIG = Object.freeze({
       const changed=previous&&this.applyPracticeAbilityChange(previous);
       if(!changed&&((had===0)!==(this.rewindLevel()===0)))this.resetRewindHistory();
       this.updateRewindButton();
+      if(this.campaign?.active)this.campaign.save();
     }
     beginCountdown(){
       this.wakeGameLoop();
@@ -3478,12 +3497,12 @@ window.GRIM_CONFIG = Object.freeze({
     populateGold(){
       // Seven, and only seven, pickups per 666m vendor interval.
       // Special portal interval keeps pickups after portal clear of the midway Soul.
-      const interval=C.vendorEveryMeters;
-      for(let k=0;k<=(this.forestRoute?0:14);k++){
-        const lower=k*interval,upper=Math.min(C.finishMeters,(k+1)*interval);
+      const interval=this.vendorInterval;
+      for(let k=0;k<=(this.forestRoute?this.vendorCount-1:14);k++){
+        const lower=k*interval,upper=Math.min(this.forestRoute?.end??C.finishMeters,(k+1)*interval);
         for(let i=0;i<C.goldPerInterval;i++){
           let m=lower+(upper-lower)*(i+1)/8;
-          if(k===7)m=5108+(i+1)*25; // Interval 4662–5328: avoid Soul and portal.
+          if(!this.forestRoute&&k===7)m=5108+(i+1)*25; // Interval 4662–5328: avoid Soul and portal.
           let x=this.startX+m*C.pxPerMeter;
           // Avoid holes, and don't put pickups on steep lips or terrain seams.
           for(let j=0;j<250;j++){
@@ -3499,26 +3518,30 @@ window.GRIM_CONFIG = Object.freeze({
         }
       }
     }
-    get vendorCount(){return this.forestRoute?1:14;}
+    get vendorCount(){return this.forestRoute?.vendorCount??14;}
+    get vendorInterval(){return this.forestRoute?.vendorInterval??C.vendorEveryMeters;}
+    intersectsVendorCorridor(x,width){
+      return Core.intersectsVendorCorridor(x,width,this.startX,this.vendorInterval,C.pxPerMeter,this.vendorCount);
+    }
     touchingVendorFloor(number){
-      const p=this.player,center=this.startX+number*C.vendorEveryMeters*C.pxPerMeter;
+      const p=this.player,center=this.startX+number*this.vendorInterval*C.pxPerMeter;
       const half=C.vendorSanctuaryHalfMeters*C.pxPerMeter,floor=this.terrain.groundAt(p.x);
       return p.x+14>=center-half&&p.x-14<=center+half&&p.grounded&&!p.onSoulPlatform&&
         Number.isFinite(floor)&&Math.abs(p.y-floor)<=2;
     }
     readyForVendor(number){
       if(!this.touchingVendorFloor(number))return false;
-      const type=number*C.vendorEveryMeters<5000?'angel':'devil';
+      const type=number*this.vendorInterval<5000?'angel':'devil';
       if(!this.vendorIntroSeen?.[type])return true;
-      const center=this.startX+number*C.vendorEveryMeters*C.pxPerMeter;
+      const center=this.startX+number*this.vendorInterval*C.pxPerMeter;
       return this.player.x+14>=center-34;
     }
     triggerVendor(number){
-      if(this.state!=='playing'||number>14||number<=this.lastVendorNumber)return;
+      if(this.state!=='playing'||number>this.vendorCount||number<=this.lastVendorNumber)return;
       this.downhillCamera?.reset();
       this.resetRewindHistory();
       this.lastVendorNumber=number;
-      this.vendorType=number*C.vendorEveryMeters<5000?'angel':'devil';
+      this.vendorType=number*this.vendorInterval<5000?'angel':'devil';
       this.vendorPhase='deal';
       this.vendorPurchased=false;this.vendorAcquiredId=null;this.ui.vendorUiKey=null;this.ui.vendorUiModeKey=null;
       this.ui.vendorFeedback();
@@ -3528,7 +3551,7 @@ window.GRIM_CONFIG = Object.freeze({
       const p=this.player;
       p.jumpHeld=false;p.hovering=false;p.hoverHoldMs=0;p.hoverPressKind='none';
       p.holdSlide=false;p.slideReleaseBufferMs=0;p.airTuck=false;
-      this.clearUpgradeCorridor(this.startX+number*C.vendorEveryMeters*C.pxPerMeter);
+      this.clearUpgradeCorridor(this.startX+number*this.vendorInterval*C.pxPerMeter);
       this.vendorIntroSeen??={angel:false,devil:false};
       if(!this.vendorIntroSeen[this.vendorType]){
         this.vendorIntroSeen[this.vendorType]=true;
@@ -3545,7 +3568,7 @@ window.GRIM_CONFIG = Object.freeze({
     showVendor(){
       if(this.state!=='upgrade')return;
       this.ui.offerVendor(this.pendingOffers,this.vendorType,this.vendorPhase,
-        this.lastVendorNumber*C.vendorEveryMeters,this.player.hp,this.player.maxHp,this.coinCount,
+        this.lastVendorNumber*this.vendorInterval,this.player.hp,this.player.maxHp,this.coinCount,
         {purchased:this.vendorPurchased,acquiredId:this.vendorAcquiredId,rerolls:this.rerollsRemaining,canReroll:this.canRerollVendor()});
     }
     canRerollVendor(){
@@ -3728,7 +3751,7 @@ window.GRIM_CONFIG = Object.freeze({
     }
     vendorObstacleBlocked(type,x,width){
       const b=this.vendorObstacleBounds(type,x,width);
-      return Core.intersectsVendorCorridor(b.x,b.width,this.startX,C.vendorEveryMeters,C.pxPerMeter,this.vendorCount);
+      return this.intersectsVendorCorridor(b.x,b.width);
     }
     populateComboObstacles(){
       // Explicit encounter allocation. Old alternating gap logic sometimes
@@ -3787,7 +3810,7 @@ window.GRIM_CONFIG = Object.freeze({
       const stats=this.encounterTelemetry;
       const flying=Combat.enemyIsFlying({kind});
       const width=Math.max(50,flying?46:kind==='crawler'?Combat.CRAWLER_HITBOX.width:42);
-      if(Core.intersectsVendorCorridor(x-width/2,width,this.startX,C.vendorEveryMeters,C.pxPerMeter)){
+      if(this.intersectsVendorCorridor(x-width/2,width)){
         stats.rejectedVendor++;return false;
       }
       // Protect actual pickup-platform geometry, not hundreds of meters nearby.
@@ -4178,7 +4201,7 @@ window.GRIM_CONFIG = Object.freeze({
         this.snowTread?.step(dt,previousX,snowRun,snowLanding);
         this.surfaceDressing?.step(previousX,snowRun);
         // A real foot contact on the decorated floor owns encounter timing.
-        while(this.nextVendorNumber<=this.vendorCount&&p.x-14>this.startX+(this.nextVendorNumber*C.vendorEveryMeters+C.vendorSanctuaryHalfMeters)*C.pxPerMeter)
+        while(this.nextVendorNumber<=this.vendorCount&&p.x-14>this.startX+(this.nextVendorNumber*this.vendorInterval+C.vendorSanctuaryHalfMeters)*C.pxPerMeter)
           this.nextVendorNumber++;
         if(this.nextVendorNumber<=this.vendorCount&&this.readyForVendor(this.nextVendorNumber)){
           this.ui.update(p.hp,p.maxHp,this.distance,this.soulCount,this.coinCount,
@@ -4265,7 +4288,7 @@ window.GRIM_CONFIG = Object.freeze({
       else if(!this.hasTeleported)limit=this.startX+(this.shrineClaimed?5000:4900)*C.pxPerMeter;
       else if(!this.godMode)limit=this.startX+C.finishMeters*C.pxPerMeter;
       if(this.nextVendorNumber<=this.vendorCount){
-        const center=this.startX+this.nextVendorNumber*C.vendorEveryMeters*C.pxPerMeter;
+        const center=this.startX+this.nextVendorNumber*this.vendorInterval*C.pxPerMeter;
         if(center>=this.player.x)limit=Math.min(limit,center);
       }
       return limit;
@@ -4445,7 +4468,7 @@ window.GRIM_CONFIG = Object.freeze({
       // Bats wind up their dive so a player can react before they descend.
       for(const e of this.enemies){
         if(e.dead)continue;
-        if(Core.intersectsVendorCorridor(e.x-25,50,this.startX)){e.dead=true;continue;}
+        if(this.intersectsVendorCorridor(e.x-25,50)){e.dead=true;continue;}
         if(e.burnMs>0){
           e.burnMs=Math.max(0,e.burnMs-frameMs);
           if(!e.burnMs)this.hitEnemy(e,1);
@@ -4528,7 +4551,7 @@ window.GRIM_CONFIG = Object.freeze({
           }
         }
       }
-      for(const e of this.enemies)if(Core.intersectsVendorCorridor(e.x-25,50,this.startX))e.dead=true;
+      for(const e of this.enemies)if(this.intersectsVendorCorridor(e.x-25,50))e.dead=true;
       // No automatic firing. The crossbow only launches a bolt from FIRE input.
       this.ui.showGunCooldown(this.gunCooldownMs);
       for(const b of this.bullets){
@@ -4569,7 +4592,7 @@ window.GRIM_CONFIG = Object.freeze({
       }
       for(const ball of this.fireballs){
         if(ball.dead)continue;
-        if(Core.intersectsVendorCorridor(ball.x-9,18,this.startX)){ball.dead=true;continue;}
+        if(this.intersectsVendorCorridor(ball.x-9,18)){ball.dead=true;continue;}
         ball.ageMs+=frameMs;
         if(ball.reflected){
           const owner=ball.owner;
@@ -4581,7 +4604,7 @@ window.GRIM_CONFIG = Object.freeze({
           }else ball.x+=520*dt;
         }else {
           ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;
-          if(Core.intersectsVendorCorridor(ball.x-9,18,this.startX)){ball.dead=true;continue;}
+          if(this.intersectsVendorCorridor(ball.x-9,18)){ball.dead=true;continue;}
           if(Core.overlaps(Core.collisionBox(p.x,p.y,this.lowProfile),
             {x:ball.x-9,y:ball.y-9,width:18,height:18})){
             ball.dead=true;
@@ -4610,10 +4633,10 @@ window.GRIM_CONFIG = Object.freeze({
       // beyond the visible right edge, so legitimate spawns aren't culled.
       this.enemies=this.enemies.filter(e=>!e.dead&&e.x>left-130&&
         e.x<this.terrain.worldEndX+100&&
-        !Core.intersectsVendorCorridor(e.x-22,44,this.startX,C.vendorEveryMeters,C.pxPerMeter));
+        !this.intersectsVendorCorridor(e.x-22,44));
       this.bullets=this.bullets.filter(b=>!b.dead);
       this.fireballs=this.fireballs.filter(b=>!b.dead&&
-        !Core.intersectsVendorCorridor(b.x-9,18,this.startX,C.vendorEveryMeters,C.pxPerMeter));
+        !this.intersectsVendorCorridor(b.x-9,18));
     }
     resolveOpeningTrial(){
       const gate=this.obstacles.find(ob=>ob.x===this.player.openingGateX);
@@ -5570,9 +5593,9 @@ window.GRIM_CONFIG = Object.freeze({
       }
       const active=new Set();
       for(let k=1;k<=this.vendorCount;k++){
-        const x=this.startX+k*C.vendorEveryMeters*C.pxPerMeter;
+        const x=this.startX+k*this.vendorInterval*C.pxPerMeter;
         if(Math.abs(x-this.player.x)>this.width*1.4)continue;
-        const devil=k>=8,y=this.terrain.groundAt(x)??this.terrain.anchorAt(x);
+        const devil=k*this.vendorInterval>=5000,y=this.terrain.groundAt(x)??this.terrain.anchorAt(x);
         scope.GRIM_VENDOR_ART?.drawAura(glow,x,y,devil,this.elapsed,1.75);
         const key=devil?'vendor-demon':'vendor-angel';
         if(this.textures?.exists?.(key)&&this.add?.image){

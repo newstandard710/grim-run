@@ -31,7 +31,7 @@
       const section=s.terrain.sectionAt(x);
       if(section?.kind!=='ground')return 0;
       const meter=(x-s.startX)/scope.GRIM_CONFIG.pxPerMeter;
-      const vendor=scope.GRIM_CONFIG.vendorEveryMeters;
+      const vendor=s.vendorInterval??scope.GRIM_CONFIG.vendorEveryMeters;
       if(Math.abs(meter-Math.round(meter/vendor)*vendor)<scope.GRIM_CONFIG.vendorSanctuaryHalfMeters)return 0;
       return weight;
     }

@@ -67,7 +67,7 @@
           Math.max(0,Math.abs(dx)-halfSpan)*breadth);
         const a=project(leftExtent),b=project(rightExtent);
         if(scope.GRIM_CORE.intersectsVendorCorridor?.(center+Math.min(a,b),Math.abs(b-a),
-          scene.startX,C.vendorEveryMeters,C.pxPerMeter,scene.vendorCount??14))continue;
+          scene.startX,scene.vendorInterval??C.vendorEveryMeters,C.pxPerMeter,scene.vendorCount??14))continue;
         const feet=offsets.map(dx=>center+project(dx));
         if(feet.every(x=>[.25,.5,.75,1].every(t=>Number.isFinite(terrain.groundAt(lerp(center,x,t))))))
           return {breadth,facing,project,feet:feet.map(x=>({x,y:terrain.groundAt(x)+13}))};

@@ -33,15 +33,15 @@
       if(section.kind!=='ground')return EMPTY;
       let patches=this.layouts.get(section);
       if(patches)return patches;
-      const s=this.scene,c=scope.GRIM_CONFIG;
+      const s=this.scene,c=scope.GRIM_CONFIG,interval=s.vendorInterval??c.vendorEveryMeters;
       patches=[];
       // Leave room for the complete painted footprint at section ends and gap banks.
       for(let cell=Math.floor(section.start/CELL);cell<=Math.floor(section.end/CELL);cell++){
         const x=(cell+.18+.64*sample(cell,47))*CELL;
         if(x<section.start+40||x>section.end-40)continue;
         const m=(x-s.startX)/c.pxPerMeter;
-        const vendor=Math.round(m/c.vendorEveryMeters);
-        if(vendor>=1&&vendor<=(s.vendorCount??14)&&Math.abs(m-vendor*c.vendorEveryMeters)<c.vendorSanctuaryHalfMeters+4)continue;
+        const vendor=Math.round(m/interval);
+        if(vendor>=1&&vendor<=(s.vendorCount??14)&&Math.abs(m-vendor*interval)<c.vendorSanctuaryHalfMeters+4)continue;
         if(!s.forestRoute&&m>=4880&&m<=5030)continue;
         const weights=s.terrainBiomeWeights(m);
         let choice=sample(cell,887),id;
