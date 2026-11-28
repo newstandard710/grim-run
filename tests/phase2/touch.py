@@ -22,6 +22,11 @@ with sync_playwright() as w:
         const osc=create.call(this); const start=osc.start.bind(osc);
         osc.start=(...args)=>{notes.push({frame:window.sample?.frame,state:this.state,type:osc.type});return start(...args)};
         return osc;
+      };
+      const startBuffer=AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start=function(...args){
+        notes.push({frame:window.sample?.frame,state:this.context.state,type:'buffer'});
+        return startBuffer.apply(this,args);
       };""")
     page.goto(base + "?seed=33")
     page.locator("#home-enter-btn").tap()
@@ -85,6 +90,10 @@ with sync_playwright() as w:
         return result
 
     run("foothills","timed",capture=os.getenv("CAPTURE")=="1")
+    if not baseline:
+        # This Endless encounter has one Cut and no score. The blade plays one
+        # sampled swish even when a separate oscillator supplies the contact.
+        assert page.evaluate("notes.filter(n=>n.type==='buffer' && n.frame!=null).length") == 1
     if baseline: run("chain","timed")
     if not baseline:
         if renderer=="canvas":

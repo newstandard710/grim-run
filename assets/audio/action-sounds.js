@@ -3,7 +3,7 @@
   const voices = {
     jump:   ['sine', 195, 425, .105, .12],
     land:   ['triangle', 138, 62, .085, .18],
-    swing:  ['triangle', 560, 126, .095, .085],
+    rush:   ['triangle', 560, 126, .095, .085],
     cut:    ['sawtooth', 315, 82, .075, .11],
     plant:  ['triangle', 410, 215, .11, .09],
     bat:    ['sine', 820, 1160, .12, .08],
@@ -19,10 +19,42 @@
   try { muted = localStorage.getItem(key) === '1'; } catch {}
   const toggle = document.getElementById('mute-actions');
   toggle.checked = muted;
-  let context, output, playing = false;
+  let context, output, bladeSwing, playing = false;
   const active = new Set();
+  // Bake a mono swish once on audio unlock. The passing blade pushes air first,
+  // then its edge hisses and rings briefly as it reaches the active cut.
+  function makeBladeSwing(audio) {
+    const rate = 24000, duration = .235;
+    const buffer = audio.createBuffer(1, Math.round(rate * duration), rate);
+    const samples = buffer.getChannelData(0);
+    let air = 0, rumble = 0, edge = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const t = i / rate;
+      const pass = t < .072 ? (t / .072) ** 1.4 : Math.exp(-35 * (t - .072));
+      const noise = Math.random() * 2 - 1;
+      air += (.14 + .36 * pass) * (noise - air);
+      rumble += .065 * (air - rumble);
+      // The edge has a brighter, shorter scrape and three quiet steel resonances.
+      const edgeTime = Math.max(0, t - .044);
+      const scrape = (1 - Math.exp(-95 * edgeTime)) * Math.exp(-29 * edgeTime);
+      edge += .76 * (noise - edge);
+      const phase = 2 * Math.PI * edgeTime;
+      const ring = Math.sin(phase * 1847) + .65 * Math.sin(phase * 3023) + .36 * Math.sin(phase * 4379);
+      const fade = Math.min(1, (samples.length - 1 - i) / (rate * .012));
+      samples[i] = fade * (.32 * pass * (air - rumble) + scrape * (.13 * (edge - air) + .030 * ring));
+    }
+    return buffer;
+  }
+  function track(source, envelope) {
+    active.add(source);
+    source.onended = () => {
+      active.delete(source);
+      source.disconnect();
+      envelope?.disconnect();
+    };
+  }
   function silence() {
-    for (const oscillator of active) oscillator.stop();
+    for (const source of active) source.stop();
     active.clear();
   }
   function unlock(event) {
@@ -36,6 +68,7 @@
         output = context.createGain();
         output.gain.value = .68;
         output.connect(context.destination);
+        bladeSwing = makeBladeSwing(context);
       }
       if (context.state !== 'running') context.resume().catch(() => {});
     } catch { /* Gameplay can continue when device audio is unavailable. */ }
@@ -55,6 +88,15 @@
     },
     play(name) {
       if (!playing || muted || document.hidden || context?.state !== 'running') return;
+      if (name === 'swing') {
+        const blade = context.createBufferSource();
+        blade.buffer = bladeSwing;
+        blade.playbackRate.value = .97 + .06 * Math.random();
+        blade.connect(output);
+        track(blade);
+        blade.start();
+        return;
+      }
       const [type, start, end, length, volume] = voices[name];
       const oscillator = context.createOscillator(), envelope = context.createGain();
       const now = context.currentTime;
@@ -66,12 +108,7 @@
       envelope.gain.exponentialRampToValueAtTime(.0001, now + length);
       oscillator.connect(envelope);
       envelope.connect(output);
-      oscillator.onended = () => {
-        active.delete(oscillator);
-        oscillator.disconnect();
-        envelope.disconnect();
-      };
-      active.add(oscillator);
+      track(oscillator, envelope);
       oscillator.start(now);
       oscillator.stop(now + length);
     }
